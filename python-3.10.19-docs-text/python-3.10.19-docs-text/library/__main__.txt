@@ -1,0 +1,335 @@
+"__main__" --- Top-level code environment
+*****************************************
+
+======================================================================
+
+파이썬에서 특수 이름 "__main__" 은 두 가지 중요한 구조에 사용됩니다:
+
+1. 프로그램의 최상위 환경 이름으로, "__name__ == '__main__'" 식을 사용
+   하여 확인 할 수 있습니다; 그리고
+
+2. 파이썬 패키지의 "__main__.py" 파일입니다.
+
+이 두 메커니즘은 파이썬 모듈과 관련이 있으며, 사용자가 그것과 상호작용
+을 하는 방식과 그들끼리 상호작용을 하는 방식에 관한 것입니다. 자세한
+내용은 아래에서 설명합니다. 파이썬의 모듈이 처음이라면 자습서의 모듈
+를 참고하십시오.
+
+
+"__name__ == '__main__'"
+========================
+
+파이썬 모듈이나 패키지가 임포트 되면, "__name__" 은 해당 모듈의 이름으
+로 설정됩니다. 보통, 이름은 ".py" 확장자를 제외한 파이썬 파일 자체의
+이름입니다:
+
+   >>> import configparser
+   >>> configparser.__name__
+   'configparser'
+
+파일이 패키지의 일부라면, "__name__" 은 상위 패키지 경로도 포함합니다:
+
+   >>> from concurrent.futures import process
+   >>> process.__name__
+   'concurrent.futures.process'
+
+그러나 모듈이 최상위 코드 환경에서 실행될 경우, "__name__" 은 문자열
+"__main__" 으로 설정됩니다.
+
+
+"최상위 코드 환경" 이란 무엇인가요?
+-----------------------------------
+
+"__main__" 은 최상위 코드가 실행되는 환경의 이름입니다. "최상위 코드"
+란 사용자가 지정한 첫 번째 파이썬 모듈로, 실행을 시작하는 모듈입니다.
+"최상위" 라고 부르는 이유는 프로그램이 필요로 하는 다른 모든 모듈을 임
+포트하기 때문입니다. 때때로 "최상위 코드" 는 응용 프로그램의 *진입 지
+점* 이라고도 합니다.
+
+최상위 코드 환경은 다음과 같습니다:
+
+* 대화형 프롬프트의 스코프:
+
+     >>> __name__
+     '__main__'
+
+* 파이썬 인터프리터에 파일 인자로 전달된 파이썬 모듈:
+
+        $ python3 helloworld.py
+        Hello, world!
+
+* 파이썬 인터프리터 "-m" 인자로 전달된 파이썬 모듈이나 패키지:
+
+        $ python3 -m tarfile
+        usage: tarfile.py [-h] [-v] (...)
+
+* 표준 입력으로부터 파이썬 인터프리터가 읽은 코드:
+
+        $ echo "import this" | python3
+        The Zen of Python, by Tim Peters
+
+        Beautiful is better than ugly.
+        Explicit is better than implicit.
+        ...
+
+* 파이썬 인터프리터에 "-c" 인자로 전달된 파이썬 코드:
+
+        $ python3 -c "import this"
+        The Zen of Python, by Tim Peters
+
+        Beautiful is better than ugly.
+        Explicit is better than implicit.
+        ...
+
+이러한 모든 경우에서, 최상위 모듈의 "__name__" 은 "'__main__'" 으로 설
+정됩니다.
+
+결과적으로, 모듈은 자신의 "__name__" 을 검사하여 최상위 환경에서 실행
+중인지를 확인할 수 있습니다. 이 때문에 모듈이 임포트 문에서 초기화되지
+않을 때 조건부로 코드를 실행하는 공통 관용구를 사용할 수 있습니다:
+
+   if __name__ == '__main__':
+       # Execute when the module is not initialized from an import statement.
+       ...
+
+더 보기: "__name__" 이 다양한 상황에서 어떻게 설정되는 것에 대한 자세한 내용
+      은 자습서의 모듈 을 참고하십시오.
+
+
+관용적 사용법
+-------------
+
+일부 모듈에는 명령줄 인자를 분석하거나 표준 입력에서 데이터를 가져오는
+등, 스크립트용으로만 의도된 코드가 포함되어 있습니다. 이러한 모듈을 다
+른 모듈에서 임포트하면, 예를 들어 유닛 테스트를 위해 임포트를 할 때도,
+스크립트 코드가 의도치 않게 실행될 수 있습니다.
+
+이럴 때 "if __name__ == '__main__'" 코드 블록을 사용하면 유용합니다.
+이 블록 안의 코드는 모듈이 최상위 환경에서 실행되지 않는 한 실행되지
+않습니다.
+
+Putting as few statements as possible in the block below "if __name___
+== '__main__'" can improve code clarity and correctness. Most often, a
+function named "main" encapsulates the program's primary behavior:
+
+   # echo.py
+
+   import shlex
+   import sys
+
+   def echo(phrase: str) -> None:
+      """A dummy wrapper around print."""
+      # for demonstration purposes, you can imagine that there is some
+      # valuable and reusable logic inside this function
+      print(phrase)
+
+   def main() -> int:
+       """Echo the input arguments to standard output"""
+       phrase = shlex.join(sys.argv)
+       echo(phrase)
+       return 0
+
+   if __name__ == '__main__':
+       sys.exit(main())  # next section explains the use of sys.exit
+
+모듈이 코드를 "main" 함수 안에 캡슐화하지 않고 "if __name__ ==
+'__main__'" 블록 안에 직접 작성한다면, "phrase" 는 모듈 전체에서 전역
+변수가 됩니다. 이 경우 모듈 내의 다른 함수들이 지역 이름 대신 전역 변
+수를 의도치 않게 사용할 수 있어 오류가 발생하기 쉽습니다. "main" 함수
+는 이러한 문제를 해결합니다.
+
+"main" 함수를 사용하는 또 다른 장점은 "echo" 함수 자체와 분리되어 다른
+곳에서도 임포트 할 수 있다는 점입니다. "echo.py" 가 임포트 되면 "echo"
+와 "main" 함수가 정의되지만, "__name__ != '__main__'" 이므로 두 함수
+중 어느 것도 호출되지 않습니다.
+
+
+패키징 고려 사항
+----------------
+
+"main" 함수는 콘솔 스크립트의 진입 지점으로 지정하여 명령줄 도구를 만
+들 때 자주 사용됩니다. 이 경우 pip 는 함수 호출을 템플릿 스크립트에 삽
+입하며, "main" 의 반환 값은 "sys.exit()" 로 전달됩니다. 예를 들면:
+
+   sys.exit(main())
+
+"main" 호출이 "sys.exit()" 로 감싸져 있으므로, 함수는 "sys.exit()" 의
+입력으로 사용될 수 있는 값을 반환해야 합니다. 일반적으로 이는 정수이거
+나, 함수의 반환문이 없는 경우 암묵적으로 반환되는 "None" 입니다.
+
+By proactively following this convention ourselves, our module will
+have the same behavior when run directly (i.e. "python3 echo.py") as
+it will have if we later package it as a console script entry-point in
+a pip-installable package.
+
+특히 "main" 에서 문자열을 반환할 때 주의해야 합니다. "sys.exit()" 함수
+는 문자열 인자를 실패 메시지로 해석하므로, 프로그램의 종료 코드는 실패
+를 의미하는 "1" 이 되고, 문자열은 "sys.stderr" 에 기록됩니다. 앞서 언
+급한 "echo.py" 의 예제는 "sys.exit(main())" 규칙 사용을 잘 보여줍니다.
+
+더 보기:
+
+  Python Packaging User Guide 는 현대적인 도구를 사용하여 파이썬 패키
+  지를 배포하고 설치하는 방법에 대한 자습서와 참고 자료를 제공합니다.
+
+
+파이썬 패키지의 "__main__.py"
+=============================
+
+파이썬 패키지에 익숙하지 않다면, 자습서의 패키지 를 참고하십시오. 대부
+분의 경우 "__main.py__" 파일은 패키지에 명령줄 인터페이스를 제공하는
+데 사용됩니다. 다음은 가상의 패키지 "bandclass" 예시입니다:
+
+   bandclass
+     ├── __init__.py
+     ├── __main__.py
+     └── student.py
+
+"-m" 플래그를 사용해 명령줄에서 패키지 자체를 직접 호출하면,
+"__main__.py" 가 실행됩니다. 예를 들어:
+
+   $ python3 -m bandclass
+
+이 명령은 "__main__.py" 를 실행시킵니다. 이 메커니즘을 어떻게 활용할지
+는 작성 중인 패키지의 성격에 따라 달라지지만, 이 가상의 예시에서는 교
+사가 학생을 검색할 수 있도록 하는 것이 합리적일 것입니다:
+
+   # bandclass/__main__.py
+
+   import sys
+   from .student import search_students
+
+   student_name = sys.argv[2] if len(sys.argv) >= 2 else ''
+   print(f'Found student: {search_students(student_name)}')
+
+"from .student import search_students" 는 상대 임포트의 예시입니다. 이
+임포트 방식은 패키지 내부의 모듈을 참조할 때 사용할 수 있습니다. 자세
+한 내용은 자습서의 모듈 부분의 패키지 내부 간의 참조 를 참고하십시오.
+
+
+관용적 사용법
+-------------
+
+The contents of "__main__.py" typically isn't fenced with "if __name__
+== '__main__'" blocks.  Instead, those files are kept short, functions
+to execute from other modules.  Those other modules can then be easily
+unit-tested and are properly reusable.
+
+만약 사용할 때에도, 패키지 내의 "__main__.py" 파일에서는 "if __name__
+== '__main__'" 블록이 예상대로 동작합니다. 임포트될 때 "__name__" 속성
+에 패키지의 경로가 포함되기 때문입니다:
+
+   >>> import asyncio.__main__
+   >>> asyncio.__main__.__name__
+   'asyncio.__main__'
+
+This won't work for "__main__.py" files in the root directory of a
+.zip file though.  Hence, for consistency, minimal "__main__.py" like
+the "venv" one mentioned below are preferred.
+
+더 보기:
+
+  표준 라이브러리에서 최소한의 "__main__.py" 를 가진 패키지 예시로는
+  "venv" 를 들 수 있습니다. 이 모듈에는 "if __name__ == '__main__'" 블
+  록이 포함되어 있지 않으며, "python -m venv [directory]" 명령으로 호
+  출할 수 있습니다.
+
+  "-m" 플래그에 대한 자세한 내용은 "runpy" 모듈을 참고하십시오.
+
+  *.zip* 파일로 패키징된 애플리케이션을 실행하는 방법은 "zipapp" 모듈
+  을 참고하십시오. 이 경우 파이썬은 아카이브의 루트 디렉터리에서
+  "__main__.py" 파일을 찾습니다.
+
+
+"import __main__"
+=================
+
+파이썬 프로그램이 어떤 모듈에서 시작되었는지와 관계없이, 같은 프로그램
+내의 다른 모듈들은 "__main__" 모듈을 임포트하여 최상위 환경의 스코프
+(*namespace*)를 불러올 수 있습니다. 이는 "__main__.py" 파일을 임포트하
+는 것이 아니라, 특수한 이름 "'__main__'" 을 부여받은 모듈을 임포트하는
+것입니다.
+
+다음은 "__main__" 네임스페이스를 사용하는 모듈의 예시입니다:
+
+   # namely.py
+
+   import __main__
+
+   def did_user_define_their_name():
+       return 'my_name' in dir(__main__)
+
+   def print_user_name():
+       if not did_user_define_their_name():
+           raise ValueError('Define the variable `my_name`!')
+
+       if '__file__' in dir(__main__):
+           print(__main__.my_name, "found in file", __main__.__file__)
+       else:
+           print(__main__.my_name)
+
+이 모듈의 사용 예시는 다음과 같습니다:
+
+   # start.py
+
+   import sys
+
+   from namely import print_user_name
+
+   # my_name = "Dinsdale"
+
+   def main():
+       try:
+           print_user_name()
+       except ValueError as ve:
+           return str(ve)
+
+   if __name__ == "__main__":
+       sys.exit(main())
+
+이제 프로그램을 실행하면 결과는 다음과 같을 것입니다:
+
+   $ python3 start.py
+   Define the variable `my_name`!
+
+프로그램의 종료 코드는 오류를 나타내는 1이 됩니다. "my_name =
+"Dinsdale"" 줄의 주석을 해제하면 프로그램이 정상 동작하며, 이제 상태
+코드 0으로 종료되어 성공을 의미하게 됩니다:
+
+   $ python3 start.py
+   Dinsdale found in file /path/to/start.py
+
+"__main__" 을 임포트하더라도, "start" 모듈의 "if __name__ ==
+'__main__'" 블록에 있는 스크립트 전용 코드가 의도치 않게 실행되는 문제
+는 발생하지 않습니다. 왜 그럴까요?
+
+Python inserts an empty "__main__" module in "sys.modules" at
+interpreter startup, and populates it by running top-level code. In
+our example this is the "start" module which runs line by line and
+imports "namely". In turn, "namely" imports "__main__" (which is
+really "start"). That's an import cycle! Fortunately, since the
+partially populated "__main__" module is present in "sys.modules",
+Python passes that to "namely". See Special considerations for
+__main__ in the import system's reference for details on how this
+works.
+
+파이썬 REPL은 또 다른 형태의 '최상위 환경' 예시이므로, REPL에서 정의된
+모든 것은 "__main__" 스코프의 일부가 됩니다:
+
+   >>> import namely
+   >>> namely.did_user_define_their_name()
+   False
+   >>> namely.print_user_name()
+   Traceback (most recent call last):
+   ...
+   ValueError: Define the variable `my_name`!
+   >>> my_name = 'Jabberwocky'
+   >>> namely.did_user_define_their_name()
+   True
+   >>> namely.print_user_name()
+   Jabberwocky
+
+이 경우 REPL은 대화형 환경이므로, "__main__" 스코프에는 "__file__" 속
+성이 존재하지 않습니다.
+
+"__main__" 스코프는 "pdb" 와 "rlcompleter" 의 구현에서도 사용됩니다.

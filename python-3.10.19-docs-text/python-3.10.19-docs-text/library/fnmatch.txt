@@ -1,0 +1,81 @@
+"fnmatch" --- Unix filename pattern matching
+********************************************
+
+**소스 코드:** Lib/fnmatch.py
+
+======================================================================
+
+이 모듈은 유닉스 셸 스타일의 와일드카드를 지원하며, 이는 정규식("re"
+모듈에서 설명합니다)과는 *다릅니다*. 셸 스타일 와일드카드에 사용되는
+특수 문자는 다음과 같습니다:
+
++--------------+--------------------------------------+
+| 패턴         | 의미                                 |
+|==============|======================================|
+| "*"          | 모든 것과 일치합니다                 |
++--------------+--------------------------------------+
+| "?"          | 모든 단일 문자와 일치합니다          |
++--------------+--------------------------------------+
+| "[seq]"      | *seq*의 모든 문자와 일치합니다.      |
++--------------+--------------------------------------+
+| "[!seq]"     | *seq*에 없는 모든 문자와 일치합니다  |
++--------------+--------------------------------------+
+
+리터럴 일치의 경우, 대괄호 안에 메타 문자를 넣습니다. 예를 들어,
+"'[?]'"는 "'?'" 문자와 일치합니다.
+
+파일명 분리 기호(유닉스에서 "'/'")는 이 모듈에서 특수하지 *않습니다*.
+경로명 확장은 모듈 "glob"을 참조하십시오 ("glob"은 경로명 세그먼트와
+일치시키기 위해 "filter()"를 사용합니다). 마찬가지로, 마침표로 시작하
+는 파일명은 이 모듈에서 특수하지 않으며, "*" 및 "?" 패턴과 일치합니다.
+
+fnmatch.fnmatch(filename, pattern)
+
+   Test whether the *filename* string matches the *pattern* string,
+   returning "True" or "False".  Both parameters are case-normalized
+   using "os.path.normcase()". "fnmatchcase()" can be used to perform
+   a case-sensitive comparison, regardless of whether that's standard
+   for the operating system.
+
+   이 예제는 현재 디렉터리의 확장자 ".txt" 인 모든 파일 이름을 인쇄합
+   니다:
+
+      import fnmatch
+      import os
+
+      for file in os.listdir('.'):
+          if fnmatch.fnmatch(file, '*.txt'):
+              print(file)
+
+fnmatch.fnmatchcase(filename, pattern)
+
+   Test whether *filename* matches *pattern*, returning "True" or
+   "False"; the comparison is case-sensitive and does not apply
+   "os.path.normcase()".
+
+fnmatch.filter(names, pattern)
+
+   Construct a list from those elements of the iterable *names* that
+   match *pattern*. It is the same as "[n for n in names if fnmatch(n,
+   pattern)]", but implemented more efficiently.
+
+fnmatch.translate(pattern)
+
+   Return the shell-style *pattern* converted to a regular expression
+   for using with "re.match()".
+
+   예제:
+
+   >>> import fnmatch, re
+   >>>
+   >>> regex = fnmatch.translate('*.txt')
+   >>> regex
+   '(?s:.*\\.txt)\\Z'
+   >>> reobj = re.compile(regex)
+   >>> reobj.match('foobar.txt')
+   <re.Match object; span=(0, 10), match='foobar.txt'>
+
+더 보기:
+
+  모듈 "glob"
+     유닉스 셸 스타일 경로 확장.

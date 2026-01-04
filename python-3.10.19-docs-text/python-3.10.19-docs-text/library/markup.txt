@@ -1,0 +1,167 @@
+구조화된 마크업 처리 도구
+*************************
+
+파이썬은 다양한 형태의 구조화된 데이터 마크업을 다루는 다양한 모듈을
+지원합니다. 여기에는 SGML (Standard Generalized Markup Language) 및
+HTML (Hypertext Markup Language) 을 다루는 모듈과 XML (Extensible
+Markup Language) 작업을 위한 여러 인터페이스가 포함됩니다.
+
+* "html" --- HyperText Markup Language support
+
+* "html.parser" --- Simple HTML and XHTML parser
+
+  * HTML 구문 분석기 응용 프로그램 예제
+
+  * "HTMLParser" 메서드
+
+  * 예제
+
+* "html.entities" --- Definitions of HTML general entities
+
+* XML 처리 모듈
+
+  * XML 취약점
+
+  * The "defusedxml" Package
+
+* "xml.etree.ElementTree" --- The ElementTree XML API
+
+  * 자습서
+
+    * XML 트리와 엘리먼트
+
+    * XML 구문 분석하기
+
+    * 비 블로킹 구문 분석을 위한 풀(pull) API
+
+    * 흥미로운 엘리먼트 찾기
+
+    * XML 파일 수정하기
+
+    * XML 문서 구축하기
+
+    * 이름 공간이 있는 XML 구문 분석하기
+
+  * XPath 지원
+
+    * 예
+
+    * 지원되는 XPath 문법
+
+  * 레퍼런스
+
+    * 함수
+
+  * XInclude 지원
+
+    * 예
+
+  * 레퍼런스
+
+    * 함수
+
+    * Element 객체
+
+    * ElementTree 객체
+
+    * QName 객체
+
+    * TreeBuilder 객체
+
+    * XMLParser 객체
+
+    * XMLPullParser 객체
+
+    * 예외
+
+* "xml.dom" --- The Document Object Model API
+
+  * 모듈 내용
+
+  * DOM의 객체
+
+    * DOMImplementation 객체
+
+    * Node 객체
+
+    * NodeList 객체
+
+    * DocumentType 객체
+
+    * Document 객체
+
+    * Element 객체
+
+    * Attr 객체
+
+    * NamedNodeMap 객체
+
+    * Comment 객체
+
+    * Text와 CDATASection 객체
+
+    * ProcessingInstruction 객체
+
+    * 예외
+
+  * 규격 준수
+
+    * 형 매핑
+
+    * 접근자 메서드
+
+* "xml.dom.minidom" --- Minimal DOM implementation
+
+  * DOM 객체
+
+  * DOM 예제
+
+  * minidom과 DOM 표준
+
+* "xml.dom.pulldom" --- Support for building partial DOM trees
+
+  * DOMEventStream 객체
+
+* "xml.sax" --- Support for SAX2 parsers
+
+  * SAXException 객체
+
+* "xml.sax.handler" --- Base classes for SAX handlers
+
+  * ContentHandler 객체
+
+  * DTDHandler 객체
+
+  * EntityResolver 객체
+
+  * ErrorHandler 객체
+
+  * LexicalHandler 객체
+
+* "xml.sax.saxutils" --- SAX Utilities
+
+* "xml.sax.xmlreader" --- Interface for XML parsers
+
+  * XMLReader 객체
+
+  * IncrementalParser 객체
+
+  * Locator 객체
+
+  * InputSource 객체
+
+  * "Attributes" 인터페이스
+
+  * "AttributesNS" 인터페이스
+
+* "xml.parsers.expat" --- Fast XML parsing using Expat
+
+  * XMLParser 객체
+
+  * ExpatError 예외
+
+  * 예
+
+  * 콘텐츠 모델 기술
+
+  * Expat 에러 상수

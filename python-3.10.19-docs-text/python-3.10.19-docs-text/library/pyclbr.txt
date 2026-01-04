@@ -1,0 +1,135 @@
+"pyclbr" --- Python module browser support
+******************************************
+
+**소스 코드:** Lib/pyclbr.py
+
+======================================================================
+
+"pyclbr" 모듈은 파이썬 코드 모듈에 정의된 함수, 클래스 및 메서드에 대
+한 제한된 정보를 제공합니다. 이 정보는 모듈 브라우저를 구현하기에 충분
+합니다. 정보는 모듈을 임포트 하기보다는 파이썬 소스 코드에서 추출되므
+로 이 모듈은 신뢰할 수 없는 코드와 함께 사용하는 것이 안전합니다. 이
+제한으로 인해 이 모듈을 모든 표준 및 선택 확장 모듈을 포함하여 파이썬
+으로 구현되지 않은 모듈에 사용할 수 없습니다.
+
+pyclbr.readmodule(module, path=None)
+
+   모듈 수준의 클래스 이름을 클래스 설명자에 매핑하는 딕셔너리를 돌려
+   줍니다. 가능하면, 임포트 된 베이스 클래스에 관한 설명자가 포함됩니
+   다. 매개 변수 *module*은 읽을 모듈 이름이 들어있는 문자열입니다; 패
+   키지 내의 모듈 이름일 수 있습니다. 주어지면, *path*는 "sys.path" 앞
+   에 추가된 디렉터리 경로 시퀀스인데, 모듈 소스 코드의 위치를 찾는 데
+   사용됩니다.
+
+   이 함수는 원래 인터페이스이며 이전 버전과의 호환성을 위해서만 유지
+   됩니다. 다음 함수의 필터링 된 버전을 반환합니다.
+
+pyclbr.readmodule_ex(module, path=None)
+
+   "def" 나 "class" 문을 사용하여 모듈에 정의된 각 함수 및 클래스에 대
+   한 함수나 클래스 설명자를 포함하는 딕셔너리 기반 트리를 반환합니다.
+   반환된 딕셔너리는 모듈 수준의 함수와 클래스 이름을 해당 설명자에 대
+   응합니다. 중첩된 객체는 그들의 parent의 children 딕셔너리에 들어갑
+   니다. readmodule과 마찬가지로, *module*은 읽을 모듈의 이름을 지정하
+   고 *path*는 sys.path의 앞에 추가됩니다. 읽히는 모듈이 패키지면, 반
+   환된 딕셔너리는 키 "'__path__'"를 가지는데, 값은 패키지 검색 경로를
+   포함하는 리스트입니다.
+
+버전 3.7에 추가: 중첩된 정의에 대한 설명자. 새로운 children 어트리뷰트
+를 통해 액세스할 수 있습니다. 각에는 새로운 parent 어트리뷰트가 있습니
+다.
+
+이러한 함수에 의해 반환되는 설명자는 Function과 Class 클래스의 인스턴
+스입니다. 사용자가 이러한 클래스의 인스턴스를 만들 것으로 기대하지 않
+습니다.
+
+
+Function 객체
+=============
+
+Class "Function" instances describe functions defined by def
+statements.  They have the following attributes:
+
+Function.file
+
+   함수가 정의된 파일의 이름.
+
+Function.module
+
+   설명된 함수를 정의하는 모듈의 이름.
+
+Function.name
+
+   함수의 이름.
+
+Function.lineno
+
+   정의가 시작되는 파일의 줄 번호.
+
+Function.parent
+
+   For top-level functions, None.  For nested functions, the parent.
+
+   버전 3.7에 추가.
+
+Function.children
+
+   이름을 중첩된 함수와 클래스에 관한 설명자로 매핑하는 딕셔너리.
+
+   버전 3.7에 추가.
+
+Function.is_async
+
+   "True" for functions that are defined with the "async" prefix,
+   "False" otherwise.
+
+   버전 3.10에 추가.
+
+
+Class 객체
+==========
+
+Class "Class" instances describe classes defined by class statements.
+They have the same attributes as Functions and two more.
+
+Class.file
+
+   클래스가 정의된 파일의 이름.
+
+Class.module
+
+   설명된 클래스를 정의하는 모듈의 이름.
+
+Class.name
+
+   클래스의 이름.
+
+Class.lineno
+
+   정의가 시작되는 파일의 줄 번호.
+
+Class.parent
+
+   For top-level classes, None.  For nested classes, the parent.
+
+   버전 3.7에 추가.
+
+Class.children
+
+   이름을 중첩된 함수와 클래스에 관한 설명자로 매핑하는 딕셔너리.
+
+   버전 3.7에 추가.
+
+Class.super
+
+   A list of "Class" objects which describe the immediate base classes
+   of the class being described.  Classes which are named as
+   superclasses but which are not discoverable by "readmodule_ex()"
+   are listed as a string with the class name instead of as "Class"
+   objects.
+
+Class.methods
+
+   A dictionary mapping method names to line numbers.  This can be
+   derived from the newer children dictionary, but remains for back-
+   compatibility.

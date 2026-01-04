@@ -1,0 +1,876 @@
+1. 명령 줄과 환경
+*****************
+
+CPython 인터프리터는 명령 줄과 환경에서 다양한 설정을 찾습니다.
+
+**CPython 구현 상세:** 다른 구현의 명령 줄 체계는 다를 수 있습니다. 자
+세한 내용은 대안 구현들 참조하십시오.
+
+
+1.1. 명령 줄
+============
+
+파이썬을 호출할 때 다음 옵션들을 지정할 수 있습니다:
+
+   python [-bBdEhiIOqsSuvVWx?] [-c command | -m module-name | script | - ] [args]
+
+물론, 가장 일반적인 사용 사례는 간단한 스크립트 호출입니다:
+
+   python myscript.py
+
+
+1.1.1. 인터페이스 옵션
+----------------------
+
+인터프리터 인터페이스는 유닉스 셸의 인터페이스와 비슷하지만, 몇 가지
+추가 호출 방법을 제공합니다:
+
+* When called with standard input connected to a tty device, it
+  prompts for commands and executes them until an EOF (an end-of-file
+  character, you can produce that with "Ctrl-D" on UNIX or "Ctrl-Z,
+  Enter" on Windows) is read.
+
+* 파일 이름 인자나 파일을 표준 입력으로 사용해서 호출하면, 해당 파일에
+  서 스크립트를 읽고 실행합니다.
+
+* 디렉터리 이름 인자로 호출되면, 해당 디렉터리에서 적절히 이름 붙은 스
+  크립트를 읽고 실행합니다.
+
+* "-c command" 로 호출되면, *command*로 주어지는 파이썬 문장을 실행합
+  니다. 여기서 *command*는 개행 문자로 구분된 여러 개의 문장을 포함할
+  수 있습니다. 선행 공백은 파이썬 문장에서 중요합니다!
+
+* "-m module-name" 으로 호출되면, 주어진 모듈을 파이썬 모듈 경로에서
+  찾은 후에 스크립트로 실행합니다.
+
+비대화형 모드에서는, 실행하기 전에 전체 입력을 구문 분석합니다.
+
+인터페이스 옵션은 인터프리터에 의해 소비되는 옵션의 목록을 종료합니다,
+뒤따르는 모든 인자는 "sys.argv" 로 들어갑니다 -- 첫 번째 요소, 서브 스
+크립트 0("sys.argv[0]")은 프로그램 소스를 반영하는 문자열임에 유의하세
+요.
+
+-c <command>
+
+   *command* 의 파이썬 코드를 실행합니다. *command* 는 개행 문자로 구
+   분된 하나 이상의 문장일 수 있는데, 일반 모듈 코드에서와같이 선행 공
+   백은 의미가 있습니다.
+
+   이 옵션을 주면, "sys.argv" 의 첫 번째 요소는 ""-c"" 가 되고, 현재
+   디렉터리를 "sys.path" 의 시작 부분에 추가합니다 (그 디렉터리에 있는
+   모듈을 최상위 모듈로 임포트 할 수 있게 합니다).
+
+   "command"를 인자로 감사 이벤트(auditing event)
+   "cpython.run_command"를 발생시킵니다.
+
+-m <module-name>
+
+   제공된 이름의 모듈을 "sys.path" 에서 검색하고 그 내용을 "__main__"
+   모듈로서 실행합니다.
+
+   인자가 *모듈* 이름이기 때문에, 파일 확장자(".py")를 주지 않아야 합
+   니다. 모듈 이름은 유효한 절대 파이썬 모듈 이름이어야 하지만, 구현이
+   항상 이를 강제하는 것은 아닙니다 (예를 들어, 하이픈을 포함하는 이름
+   을 허락할 수도 있습니다).
+
+   패키지 이름(이름 공간 패키지 포함)도 허용됩니다. 일반 모듈 대신 패
+   키지 이름이 제공되면, 인터프리터는 "<pkg>.__main__" 을 메인 모듈로
+   실행합니다. 이 동작은 인터프리터에 스크립트 인자로 전달되는 디렉터
+   리 및 zip 파일의 처리와 의도적으로 유사합니다.
+
+   참고:
+
+     이 옵션은 내장 모듈이나 확장 모듈에는 사용될 수 없는데, 이것들은
+     파이썬 모듈 파일을 갖고 있지 않기 때문입니다. 그러나, 원래 소스
+     파일이 없는 사전 컴파일된 모듈에는 여전히 사용할 수 있습니다.
+
+   이 옵션을 주면, "sys.argv" 의 첫 번째 요소는 모듈 파일의 전체 경로
+   가 됩니다 (모듈 파일을 찾는 동안에는 첫 번째 요소를 ""-m"" 으로 설
+   정합니다). "-c" 옵션과 마찬가지로, 현재 디렉터리가 "sys.path" 의 시
+   작 부분에 추가됩니다.
+
+   "-I" option can  be used to run the script in isolated mode where
+   "sys.path" contains neither the current directory nor the user's
+   site-packages directory. All "PYTHON*" environment variables are
+   ignored, too.
+
+   많은 표준 라이브러리 모듈에는 스크립트로 실행할 때 호출되는 코드가
+   들어 있습니다. 한 예는 "timeit" 모듈입니다:
+
+      python -m timeit -s 'setup here' 'benchmarked code here'
+      python -m timeit -h # for details
+
+   "module-name"을 인자로 감사 이벤트(auditing event)
+   "cpython.run_module"을 발생시킵니다.
+
+   더 보기:
+
+     "runpy.run_module()"
+        파이썬 코드에서 직접 사용할 수 있는 동등한 기능
+
+     **PEP 338** -- 모듈을 스크립트로 실행하기
+
+   버전 3.1에서 변경: "__main__" 서브 모듈을 실행할 패키지 이름을 제공
+   할 수 있습니다.
+
+   버전 3.4에서 변경: 이름 공간 패키지도 지원됩니다.
+
+-
+
+   표준 입력("sys.stdin")에서 명령을 읽습니다. 표준 입력이 터미널이면,
+   "-i" 가 묵시적으로 적용됩니다.
+
+   이 옵션을 주면, "sys.argv" 의 첫 번째 요소는 ""-"" 이 되고, 현재 디
+   렉터리가 "sys.path" 의 처음에 추가됩니다.
+
+   인자 없이 감사 이벤트(auditing event) "cpython.run_stdin"을 발생시
+   킵니다.
+
+<script>
+
+   *script* 에 담긴 파이썬 코드를 실행합니다. *script* 는 파이썬 파일
+   이나 "__main__.py" 파일이 들어있는 디렉터리나 "__main__.py" 파일을
+   포함하는 zip 파일을 가리키는 파일 시스템 경로(절대나 상대)여야 합니
+   다.
+
+   이 옵션을 주면, "sys.argv" 의 첫 번째 요소는 명령 줄에서 주어진 스
+   크립트 이름이 됩니다.
+
+   스크립트 이름이 파이썬 파일을 직접 가리키면, 해당 파일을 포함하는
+   디렉터리가 "sys.path" 의 시작 부분에 추가되고, 파일은 "__main__" 모
+   듈로 실행됩니다.
+
+   스크립트 이름이 디렉터리 나 zip 파일을 가리키면, 스크립트 이름이
+   "sys.path" 의 시작 부분에 추가되고, 해당 위치의 "__main__.py" 파일
+   을 "__main__" 모듈로 실행합니다.
+
+   "-I" option can  be used to run the script in isolated mode where
+   "sys.path" contains neither the script's directory nor the user's
+   site-packages directory. All "PYTHON*" environment variables are
+   ignored, too.
+
+   "filename"을 인자로 감사 이벤트(auditing event) "cpython.run_file"
+   을 발생시킵니다.
+
+   더 보기:
+
+     "runpy.run_path()"
+        파이썬 코드에서 직접 사용할 수 있는 동등한 기능
+
+인터페이스 옵션을 주지 않으면, "-i" 가 묵시적으로 적용되고,
+"sys.argv[0]" 는 빈 문자열("""")이 되고, 현재 디렉터리가 "sys.path" 의
+처음에 추가됩니다. 또한, 플랫폼에서 사용 가능한 경우 (Readline 구성 를
+참조하세요), 탭 완성 및 히스토리 편집이 자동으로 활성화됩니다.
+
+더 보기: 인터프리터 실행하기
+
+버전 3.4에서 변경: 탭 완성과 히스토리 편집의 자동 활성화.
+
+
+1.1.2. 일반 옵션
+----------------
+
+-?
+-h
+--help
+
+   Print a short description of all command line options.
+
+-V
+--version
+
+   파이썬 버전 번호를 출력하고 종료합니다. 출력 예는 다음과 같습니다:
+
+      Python 3.8.0b2+
+
+   두 번 지정하면, 다음과 같이 빌드에 관한 추가 정보를 인쇄합니다:
+
+      Python 3.8.0b2+ (3.8:0c076caaa8, Apr 20 2019, 21:55:00)
+      [GCC 6.2.0 20161005]
+
+   버전 3.6에 추가: "-VV" 옵션.
+
+
+1.1.3. 기타 옵션
+----------------
+
+-b
+
+   Issue a warning when comparing "bytes" or "bytearray" with "str" or
+   "bytes" with "int".  Issue an error when the option is given twice
+   ("-bb").
+
+   버전 3.5에서 변경: Affects comparisons of "bytes" with "int".
+
+-B
+
+   주어지면, 파이썬은 소스 모듈을 임포트 할 때 ".pyc" 파일을 쓰려고 하
+   지 않습니다. "PYTHONDONTWRITEBYTECODE" 도 참조하십시오.
+
+--check-hash-based-pycs default|always|never
+
+   해시 기반 ".pyc" 파일의 검증 동작을 제어합니다. 캐시된 바이트 코드
+   무효화를 참조하세요. "default" 로 설정하면, 검사형과 비검사형 해시
+   기반 바이트 코드 캐시 파일은 기본 의미에 따라 유효성이 검사됩니다.
+   "always" 로 설정하면, 모든 해시 기반 ".pyc" 파일들은, 검사형과 비검
+   사형을 가리지 않고, 해당 소스 파일에 대해 유효성이 검사됩니다.
+   "never" 로 설정되면, 해시 기반 ".pyc" 파일은 해당 소스 파일에 대해
+   유효성이 검사되지 않습니다.
+
+   타임스탬프 기반 ".pyc" 파일의 의미는 이 옵션의 영향을 받지 않습니다
+   .
+
+-d
+
+   Turn on parser debugging output (for expert only, depending on
+   compilation options).  See also "PYTHONDEBUG".
+
+-E
+
+   Ignore all "PYTHON*" environment variables, e.g. "PYTHONPATH" and
+   "PYTHONHOME", that might be set.
+
+-i
+
+   When a script is passed as first argument or the "-c" option is
+   used, enter interactive mode after executing the script or the
+   command, even when "sys.stdin" does not appear to be a terminal.
+   The "PYTHONSTARTUP" file is not read.
+
+   이것은 스크립트가 예외를 발생시킬 때 전역 변수나 스택 트레이스를 검
+   사하는 데 유용할 수 있습니다. "PYTHONINSPECT" 도 참조하십시오.
+
+-I
+
+   Run Python in isolated mode. This also implies -E and -s. In
+   isolated mode "sys.path" contains neither the script's directory
+   nor the user's site-packages directory. All "PYTHON*" environment
+   variables are ignored, too. Further restrictions may be imposed to
+   prevent the user from injecting malicious code.
+
+   버전 3.4에 추가.
+
+-O
+
+   assert 문과 "__debug__" 의 값에 대한 조건부 코드를 제거합니다.
+   ".pyc" 확장자 앞에 ".opt-1" 을 추가하여 컴파일된 (*바이트 코드*) 파
+   일의 이름을 구분합니다 (**PEP 488**을 참조하세요). "PYTHONOPTIMIZE"
+   도 참조하십시오.
+
+   버전 3.5에서 변경: **PEP 488** 에 따라 ".pyc" 파일명을 수정합니다.
+
+-OO
+
+   "-O"를 적용하고 독스트링도 버립니다. ".pyc" 확장자 앞에 ".opt-2" 를
+   추가하여 컴파일 된(*바이트 코드*) 파일의 이름을 구분합니다 (참조
+   **PEP 488**을 참조하세요).
+
+   버전 3.5에서 변경: **PEP 488** 에 따라 ".pyc" 파일명을 수정합니다.
+
+-q
+
+   대화형 모드에서도 저작권과 버전 메시지를 표시하지 않습니다.
+
+   버전 3.2에 추가.
+
+-R
+
+   해시 무작위화를 켭니다. 이 옵션은 "PYTHONHASHSEED" 환경 변수가 "0"
+   으로 설정된 경우에만 효과가 있습니다, 해시 무작위화는 기본적으로 활
+   성화되기 때문입니다.
+
+   On previous versions of Python, this option turns on hash
+   randomization, so that the "__hash__()" values of str and bytes
+   objects are "salted" with an unpredictable random value.  Although
+   they remain constant within an individual Python process, they are
+   not predictable between repeated invocations of Python.
+
+   Hash randomization is intended to provide protection against a
+   denial-of-service caused by carefully chosen inputs that exploit
+   the worst case performance of a dict construction, O(n^2)
+   complexity.  See
+   http://www.ocert.org/advisories/ocert-2011-003.html for details.
+
+   "PYTHONHASHSEED" 는 해시 시드 시크릿에 고정값을 설정할 수 있게 합니
+   다.
+
+   버전 3.7에서 변경: 이 옵션은 더는 무시되지 않습니다.
+
+   버전 3.2.3에 추가.
+
+-s
+
+   "사용자 site-packages 디렉터리" 를 "sys.path" 에 추가하지 않습니다.
+
+   더 보기: **PEP 370** -- 사용자별 site-packages 디렉터리
+
+-S
+
+   "site" 모듈의 임포트와 이 모듈이 수반하는 "sys.path" 의 사이트 의존
+   적 조작을 비활성화합니다. 또한 "site" 가 나중에 명시적으로 임포트될
+   때도 이 조작을 비활성화합니다 (조작하기를 원하면 "site.main()" 을
+   호출하십시오).
+
+-u
+
+   stdout 과 stderr 스트림을 버퍼링하지 않도록 만듭니다. 이 옵션은
+   stdin 스트림에는 영향을 미치지 않습니다.
+
+   "PYTHONUNBUFFERED" 도 참조하세요.
+
+   버전 3.7에서 변경: stdout 과 stderr 스트림의 텍스트 계층은 이제 버
+   퍼링 되지 않습니다.
+
+-v
+
+   모듈이 초기화될 때마다 메시지를 인쇄하여, 로드된 위치(파일명이나 내
+   장 모듈)를 표시합니다. 두 번 주어지면 ("-vv"), 모듈을 검색할 때 검
+   사되는 각 파일에 대한 메시지를 인쇄합니다. 종료 시 모듈 정리에 대한
+   정보도 제공합니다.
+
+   버전 3.10에서 변경: The "site" module reports the site-specific
+   paths and ".pth" files being processed.
+
+   "PYTHONVERBOSE" 도 참조하세요.
+
+-W arg
+
+   경고 제어. 파이썬의 경고 장치는 기본적으로 "sys.stderr" 로 경고 메
+   시지를 인쇄합니다.
+
+   가장 단순한 설정은 프로세스가 만드는 모든 경고에 무조건 특정 액션을
+   적용합니다 (그렇지 않으면 기본적으로 무시되는 경고조차도):
+
+      -Wdefault  # Warn once per call location
+      -Werror    # Convert to exceptions
+      -Walways   # Warn every time
+      -Wmodule   # Warn once per calling module
+      -Wonce     # Warn once per Python process
+      -Wignore   # Never warn
+
+   액션 이름은 원하면 줄일 수 있고, 인터프리터는 이를 적절한 액션 이름
+   으로 해석합니다. 예를 들어, "-Wi"는 "-Wignore"와 같습니다.
+
+   The full form of argument is:
+
+      action:message:category:module:lineno
+
+   Empty fields match all values; trailing empty fields may be
+   omitted. For example "-W ignore::DeprecationWarning" ignores all
+   DeprecationWarning warnings.
+
+   The *action* field is as explained above but only applies to
+   warnings that match the remaining fields.
+
+   The *message* field must match the whole warning message; this
+   match is case-insensitive.
+
+   The *category* field matches the warning category (ex:
+   "DeprecationWarning"). This must be a class name; the match test
+   whether the actual warning category of the message is a subclass of
+   the specified warning category.
+
+   The *module* field matches the (fully qualified) module name; this
+   match is case-sensitive.
+
+   The *lineno* field matches the line number, where zero matches all
+   line numbers and is thus equivalent to an omitted line number.
+
+   다중 "-W" 옵션이 주어질 수 있습니다; 경고가 두 개 이상의 옵션과 일
+   치하면 마지막으로 일치하는 옵션의 액션이 수행됩니다. 유효하지 않은
+   "-W" 옵션은 무시됩니다 (하지만, 최초의 경고가 발생할 때 유효하지 않
+   은 옵션에 관한 경고 메시지가 출력됩니다).
+
+   경고는 "PYTHONWARNINGS" 환경 변수와 파이썬 프로그램 내에서
+   "warnings" 모듈을 사용해서 제어할 수도 있습니다. 예를 들어,
+   "warnings.filterwarnings()" 함수는 경고 메시지에 정규식을 적용하는
+   데 사용할 수 있습니다.
+
+   자세한 내용은 경고 필터와 경고 필터 설명를 참조하십시오.
+
+-x
+
+   소스의 첫 번째 줄을 건너 뛰어서, 유닉스 이외의 형식의 "#!cmd" 을 사
+   용할 수 있게 합니다. 이것은 DOS 전용 핵(hack)을 위한 것입니다.
+
+-X
+
+   다양한 구현 특정 옵션을 위해 예약되어 있습니다. CPython은 현재 다음
+   과 같은 가능한 값을 정의합니다:
+
+   * "-X faulthandler" to enable "faulthandler";
+
+   * "-X showrefcount" 는 프로그램이 끝나거나 대화형 인터프리터에서 각
+     각의 문장 뒤에서, 총 참조 횟수와 사용된 메모리 블록의 수를 출력합
+     니다. 이것은 디버그 빌드에서만 작동합니다.
+
+   * "-X tracemalloc" to start tracing Python memory allocations using
+     the "tracemalloc" module. By default, only the most recent frame
+     is stored in a traceback of a trace. Use "-X tracemalloc=NFRAME"
+     to start tracing with a traceback limit of *NFRAME* frames. See
+     the "tracemalloc.start()" for more information.
+
+   * "-X int_max_str_digits" configures the integer string conversion
+     length limitation.  See also "PYTHONINTMAXSTRDIGITS".
+
+   * "-X importtime" 은 각 임포트가 얼마나 오래 걸렸는지 보여줍니다.
+     모듈 이름, 누적 시간(중첩된 임포트 포함), 자체 시간(중첩 임포트
+     제외)을 표시합니다. 다중 스레드 응용 프로그램에서 출력이 깨질 수
+     있음에 유의하십시오. 일반적인 사용법은 "python3 -X importtime -c
+     'import asyncio'" 입니다. "PYTHONPROFILEIMPORTTIME" 도 참조하십시
+     오.
+
+   * "-X dev": enable Python Development Mode, introducing additional
+     runtime checks that are too expensive to be enabled by default.
+
+   * "-X utf8" enables the Python UTF-8 Mode. "-X utf8=0" explicitly
+     disables Python UTF-8 Mode (even when it would otherwise activate
+     automatically).
+
+   * "-X pycache_prefix=PATH"는 ".pyc" 파일을 코드 트리 대신에 지정된
+     디렉터리를 루트로 하는 병렬 트리에 쓰도록 합니다.
+     "PYTHONPYCACHEPREFIX"도 참조하십시오.
+
+   * "-X warn_default_encoding" issues a "EncodingWarning" when the
+     locale-specific default encoding is used for opening files. See
+     also "PYTHONWARNDEFAULTENCODING".
+
+   또한 "sys._xoptions" 딕셔너리를 통해 임의의 값을 전달하고 조회할 수
+   있도록 합니다.
+
+   버전 3.2에서 변경: The "-X" option was added.
+
+   버전 3.3에 추가: The "-X faulthandler" option.
+
+   버전 3.4에 추가: The "-X showrefcount" and "-X tracemalloc"
+   options.
+
+   버전 3.6에 추가: The "-X showalloccount" option.
+
+   버전 3.7에 추가: The "-X importtime", "-X dev" and "-X utf8"
+   options.
+
+   버전 3.8에 추가: The "-X pycache_prefix" option. The "-X dev"
+   option now logs "close()" exceptions in "io.IOBase" destructor.
+
+   버전 3.9에서 변경: Using "-X dev" option, check *encoding* and
+   *errors* arguments on string encoding and decoding operations.The
+   "-X showalloccount" option has been removed.
+
+   버전 3.10에 추가: The "-X warn_default_encoding" option.
+
+   버전 3.10.7에 추가: The "-X int_max_str_digits" option.
+
+   Deprecated since version 3.9, removed in version 3.10: The "-X
+   oldparser" option.
+
+
+1.1.4. 사용해서는 안 되는 옵션
+------------------------------
+
+-J
+
+   Jython 이 사용하기 위해 예약되었습니다.
+
+
+1.2. 환경 변수
+==============
+
+이 환경 변수들은 파이썬의 동작에 영향을 주며, -E와 -I 이외의 명령 줄
+스위치보다 먼저 처리됩니다. 충돌하면 명령 줄 스위치가 환경 변수에 우선
+하는 것이 관례입니다.
+
+PYTHONHOME
+
+   표준 파이썬 라이브러리의 위치를 변경합니다. 기본적으로, 라이브러리
+   는 "*prefix*/lib/python*version*"과
+   "*exec_prefix*/lib/python*version*"에서 검색되는데, "*prefix*" 와
+   "*exec_prefix*" 는 설치 의존적인 디렉터리이고, 둘 다 기본값은
+   "/usr/local" 입니다.
+
+   "PYTHONHOME" 이 하나의 디렉터리로 설정되면, 그 값은 "*prefix*" 와
+   "*exec_prefix*" 를 모두 대체합니다. 이들에 대해 다른 값을 지정하려
+   면, "PYTHONHOME" 을 "*prefix*:*exec_prefix*" 로 설정하십시오.
+
+PYTHONPATH
+
+   모듈 파일의 기본 검색 경로를 보강합니다. 형식은 셸의 "PATH" 와 같습
+   니다: 하나 이상의 디렉터리 경로명이 "os.pathsep" (예를 들어, 유닉스
+   에서는 콜론, 윈도우에서는 세미콜론) 로 구분됩니다. 존재하지 않는 디
+   렉터리는 조용히 무시됩니다.
+
+   일반 디렉터리 외에도, 개별 "PYTHONPATH" 엔트리는 순수 파이썬 모듈(
+   소스 또는 컴파일된 형식)을 포함하는 zip 파일을 가리킬 수 있습니다.
+   확장 모듈은 zip 파일에서 임포트될 수 없습니다.
+
+   기본 검색 경로는 설치 의존적이지만, 일반적으로
+   "*prefix*/lib/python*version*"으로 시작합니다 (위의 "PYTHONHOME" 을
+   참조하세요). *항상* "PYTHONPATH" 에 추가됩니다.
+
+   위에서 설명한 대로 인터페이스 옵션 하에서는 "PYTHONPATH" 앞에 검색
+   경로에 추가 디렉터리가 삽입됩니다. 검색 경로는 파이썬 프로그램 내에
+   서 "sys.path" 변수로 조작할 수 있습니다.
+
+PYTHONPLATLIBDIR
+
+   이것을 비어 있지 않은 문자열로 설정하면, "sys.platlibdir" 값을 재정
+   의합니다.
+
+   버전 3.9에 추가.
+
+PYTHONSTARTUP
+
+   이것이 읽을 수 있는 파일의 이름이면, 첫 번째 프롬프트가 대화형 모드
+   에 표시되기 전에, 해당 파일의 파이썬 명령이 실행됩니다. 이 파일은
+   대화형 명령이 실행되는 것과 같은 이름 공간에서 실행되므로, 여기에서
+   정의되거나 임포트 한 객체를 대화형 세션에서 그대로 사용할 수 있습니
+   다. 이 파일에서 프롬프트 "sys.ps1" 과 "sys.ps2" 와 훅
+   "sys.__interactivehook__" 도 바꿀 수 있습니다.
+
+   시작 시 호출될 때 filename을 인자로 감사 이벤트(auditing event)
+   "cpython.run_startup"을 발생시킵니다.
+
+PYTHONOPTIMIZE
+
+   비어 있지 않은 문자열로 설정하면 "-O" 옵션을 지정하는 것과 같습니다
+   . 정수로 설정하면, "-O"를 여러 번 지정하는 것과 같습니다.
+
+PYTHONBREAKPOINT
+
+   설정되면, 점으로 구분된 경로 표기법을 사용하여 콜러블의 이름을 지정
+   합니다. 콜러블을 포함하는 모듈이 임포트 된 후에 콜러블은, 내장
+   "breakpoint()" 에 의해 호출되는 "sys.breakpointhook()" 의 기본 구현
+   이 실행합니다. 설정되지 않았거나 빈 문자열로 설정하면, 값
+   "pdb.set_trace"와 동등합니다. 문자열 "0"으로 설정하면,
+   "sys.breakpointhook()" 의 기본 구현은 아무것도 하지 않고 즉시 반환
+   합니다.
+
+   버전 3.7에 추가.
+
+PYTHONDEBUG
+
+   비어 있지 않은 문자열로 설정하면, "-d" 옵션을 지정하는 것과 같습니
+   다. 정수로 설정하면, "-d"를 여러 번 지정하는 것과 같습니다.
+
+PYTHONINSPECT
+
+   비어 있지 않은 문자열로 설정하면, "-i" 옵션을 지정하는 것과 같습니
+   다.
+
+   이 변수는 프로그램 종료 시 검사 모드를 강제하기 위해, "os.environ"
+   을 사용해서 파이썬 코드에 의해 수정될 수도 있습니다.
+
+   인자 없이 감사 이벤트(auditing event) "cpython.run_stdin"을 발생시
+   킵니다.
+
+   버전 3.10.15에서 변경: (also 3.9.20, and 3.8.20) Emits audit
+   events.
+
+PYTHONUNBUFFERED
+
+   비어 있지 않은 문자열로 설정하면, "-u" 옵션을 지정하는 것과 같습니
+   다.
+
+PYTHONVERBOSE
+
+   비어 있지 않은 문자열로 설정하면, "-v" 옵션을 지정하는 것과 같습니
+   다. 정수로 설정하면 "-v"를 여러 번 지정하는 것과 같습니다.
+
+PYTHONCASEOK
+
+   설정되면, 파이썬은 "import" 문에서 대소 문자를 무시합니다. 이것은
+   윈도우와 macOS에서만 작동합니다.
+
+PYTHONDONTWRITEBYTECODE
+
+   비어 있지 않은 문자열로 설정되면, 파이썬은 소스 모듈을 임포트 할 때
+   ".pyc" 파일을 쓰지 않습니다. 이는 "-B" 옵션을 지정하는 것과 같습니
+   다.
+
+PYTHONPYCACHEPREFIX
+
+   설정되면, 파이썬은 소스 트리 내의 "__pycache__" 디렉터리 대신에 이
+   경로에 있는 미러 디렉터리 트리에 ".pyc" 파일을 씁니다. 이것은 "-X"
+   "pycache_prefix=PATH" 옵션을 지정하는 것과 동등합니다.
+
+   버전 3.8에 추가.
+
+PYTHONHASHSEED
+
+   이 변수가 설정되어 있지 않거나 "random" 으로 설정되면, str과 bytes
+   객체의 해시 시드에 난수가 사용됩니다.
+
+   "PYTHONHASHSEED" 가 정숫값으로 설정되면, 해시 무작위화가 적용되는
+   형의 hash()를 생성하기 위한 고정 시드로 사용됩니다.
+
+   목적은 인터프리터 자체에 대한 셀프 테스트와 같은 이유로 반복 가능한
+   해싱을 허용하거나, 파이썬 프로세스 클러스터가 해시값을 공유하도록
+   허용하는 것입니다.
+
+   정수는 [0,4294967295] 범위의 십진수여야 합니다. 값 0을 지정하면 해
+   시 무작위화가 비활성화됩니다.
+
+   버전 3.2.3에 추가.
+
+PYTHONINTMAXSTRDIGITS
+
+   If this variable is set to an integer, it is used to configure the
+   interpreter's global integer string conversion length limitation.
+
+   버전 3.10.7에 추가.
+
+PYTHONIOENCODING
+
+   인터프리터를 실행하기 전에 이것이 설정되면, stdin/stdout/stderr에
+   사용되는 인코딩을 대체합니다. 문법은 "encodingname:errorhandler" 형
+   식입니다. "encodingname" 과 ":errorhandler" 부분은 모두 선택 사항이
+   며 "str.encode()" 에서와 같은 의미입니다.
+
+   stderr의 경우, ":errorhandler" 부분은 무시됩니다; 처리기는 항상
+   "'backslashreplace'" 입니다.
+
+   버전 3.4에서 변경: "encodingname" 부분은 이제 선택적입니다.
+
+   버전 3.6에서 변경: Windows에서, "PYTHONLEGACYWINDOWSSTDIO" 도 지정
+   하지 않는 한, 대화형 콘솔 버퍼에서 이 변수로 지정된 인코딩이 무시됩
+   니다. 표준 스트림을 통해 리디렉션 된 파일과 파이프는 영향을 받지 않
+   습니다.
+
+PYTHONNOUSERSITE
+
+   설정되면, 파이썬은 "사용자 site-packages 디렉터리" 를 "sys.path" 에
+   추가하지 않습니다.
+
+   더 보기: **PEP 370** -- 사용자별 site-packages 디렉터리
+
+PYTHONUSERBASE
+
+   Defines the "user base directory", which is used to compute the
+   path of the "user site-packages directory" and Distutils
+   installation paths for "python setup.py install --user".
+
+   더 보기: **PEP 370** -- 사용자별 site-packages 디렉터리
+
+PYTHONEXECUTABLE
+
+   이 환경 변수가 설정되면, "sys.argv[0]" 는 C 런타임을 통해 얻은 값
+   대신에 이 값으로 설정됩니다. macOS에서만 작동합니다.
+
+PYTHONWARNINGS
+
+   "-W" 옵션과 동등합니다. 쉼표로 구분된 문자열로 설정하면, "-W"를 여
+   러 번 지정하는 것과 같습니다. 목록의 뒷부분에 있는 필터는 목록의 이
+   전 필터보다 우선합니다.
+
+   가장 단순한 설정은 프로세스가 만드는 모든 경고에 무조건 특정 액션을
+   적용합니다 (그렇지 않으면 기본적으로 무시되는 경고조차도):
+
+      PYTHONWARNINGS=default  # Warn once per call location
+      PYTHONWARNINGS=error    # Convert to exceptions
+      PYTHONWARNINGS=always   # Warn every time
+      PYTHONWARNINGS=module   # Warn once per calling module
+      PYTHONWARNINGS=once     # Warn once per Python process
+      PYTHONWARNINGS=ignore   # Never warn
+
+   자세한 내용은 경고 필터와 경고 필터 설명를 참조하십시오.
+
+PYTHONFAULTHANDLER
+
+   If this environment variable is set to a non-empty string,
+   "faulthandler.enable()" is called at startup: install a handler for
+   "SIGSEGV", "SIGFPE", "SIGABRT", "SIGBUS" and "SIGILL" signals to
+   dump the Python traceback.  This is equivalent to "-X"
+   "faulthandler" option.
+
+   버전 3.3에 추가.
+
+PYTHONTRACEMALLOC
+
+   If this environment variable is set to a non-empty string, start
+   tracing Python memory allocations using the "tracemalloc" module.
+   The value of the variable is the maximum number of frames stored in
+   a traceback of a trace. For example, "PYTHONTRACEMALLOC=1" stores
+   only the most recent frame. See the "tracemalloc.start()" for more
+   information.
+
+   버전 3.4에 추가.
+
+PYTHONPROFILEIMPORTTIME
+
+   If this environment variable is set to a non-empty string, Python
+   will show how long each import takes.  This is exactly equivalent
+   to setting "-X importtime" on the command line.
+
+   버전 3.7에 추가.
+
+PYTHONASYNCIODEBUG
+
+   이 환경 변수가 비어 있지 않은 문자열로 설정되면, "asyncio" 모듈의
+   디버그 모드 를 활성화합니다.
+
+   버전 3.4에 추가.
+
+PYTHONMALLOC
+
+   파이썬 메모리 할당자를 설정하거나 디버그 훅을 설치합니다.
+
+   파이썬이 사용하는 메모리 할당자를 설정합니다:
+
+   * "default": 기본 메모리 할당자 를 사용합니다.
+
+   * "malloc": use the "malloc()" function of the C library for all
+     domains ("PYMEM_DOMAIN_RAW", "PYMEM_DOMAIN_MEM",
+     "PYMEM_DOMAIN_OBJ").
+
+   * "pymalloc": use the pymalloc allocator for "PYMEM_DOMAIN_MEM" and
+     "PYMEM_DOMAIN_OBJ" domains and use the "malloc()" function for
+     the "PYMEM_DOMAIN_RAW" domain.
+
+   Install debug hooks:
+
+   * "debug": 기본 메모리 할당자 위에 디버그 훅을 설치합니다.
+
+   * "malloc_debug": "malloc" 과 같지만, 디버그 훅도 설치합니다.
+
+   * "pymalloc_debug": "pymalloc" 과 같지만, 디버그 훅도 설치합니다.
+
+   버전 3.7에서 변경: ""default"" 할당자를 추가했습니다.
+
+   버전 3.6에 추가.
+
+PYTHONMALLOCSTATS
+
+   비어 있지 않은 문자열로 설정되면, 파이썬은 새로운 pymalloc 객체 영
+   역이 생성될 때마다, 그리고 종료할 때 pymalloc 메모리 할당자 의 통계
+   를 인쇄합니다.
+
+   "PYTHONMALLOC" 환경 변수를 사용하여 C 라이브러리의 "malloc()" 할당
+   자를 강제로 사용하거나, "pymalloc" 지원 없이 파이썬을 구성하면, 이
+   변수는 무시됩니다.
+
+   버전 3.6에서 변경: 이 변수는 이제 배포 모드로 컴파일된 파이썬에서도
+   사용할 수 있습니다. 이제 빈 문자열로 설정하면 효과가 없습니다.
+
+PYTHONLEGACYWINDOWSFSENCODING
+
+   비어 있지 않은 문자열로 설정하면, 기본 *파일 시스템 인코딩과 에러
+   처리기* 모드를 3.6 이전의 값인 'mbcs'와 'replace'로 각각 되돌립니다
+   . 그렇지 않으면, 새 기본값 'utf-8'과 'surrogatepass'가 사용됩니다.
+
+   This may also be enabled at runtime with
+   "sys._enablelegacywindowsfsencoding()".
+
+   Availability: Windows.
+
+   버전 3.6에 추가: 자세한 내용은 **PEP 529**를 참조하십시오.
+
+PYTHONLEGACYWINDOWSSTDIO
+
+   비어 있지 않은 문자열로 설정하면, 새 콘솔 입력기와 출력기를 사용하
+   지 않습니다. 이것은 유니코드 문자가 utf-8을 사용하는 대신 활성 콘솔
+   코드 페이지에 따라 인코딩됨을 의미합니다.
+
+   이 변수는 표준 스트림이 콘솔 버퍼를 참조하는 대신 리디렉트 된 (파일
+   또는 파이프로) 경우 무시됩니다.
+
+   Availability: Windows.
+
+   버전 3.6에 추가.
+
+PYTHONCOERCECLOCALE
+
+   값 "0" 으로 설정하면, 주 파이썬 명령 줄 응용 프로그램이 레거시
+   ASCII 기반 C와 POSIX 로케일을 보다 유능한 UTF-8 기반 대안으로 강제
+   변환하지 않습니다.
+
+   이 변수가 설정되지 *않고* (또는 "0" 이외의 값으로 설정되고), 환경
+   변수에 우선하는 "LC_ALL" 로케일도 설정되지 않고, "LC_CTYPE" 범주에
+   대해 보고되는 현재 로케일이 기본 "C" 로케일이거나 명시적인 ASCII 기
+   반의 "POSIX" 로케일이면, 파이썬 CLI는 인터프리터 런타임을 로드하기
+   전에 "LC_CTYPE" 범주에 대해 다음 로케일을 나열된 순서대로 구성하려
+   고 시도합니다:
+
+   * "C.UTF-8"
+
+   * "C.utf8"
+
+   * "UTF-8"
+
+   이러한 로케일 범주 중 하나를 설정하는 데 성공하면, 파이썬 런타임이
+   초기화되기 전에 "LC_CTYPE" 환경 변수도 현재 프로세스 환경에서 적절
+   히 설정됩니다. 이렇게 하면 인터프리터 자신과 같은 프로세스에서 실행
+   되는 다른 로케일 인식 구성 요소(가령 GNU "readline" 라이브러리)가
+   볼 수 있는 것에 더해, 갱신된 설정을 현재 C 로케일이 아닌 환경을 조
+   회하는 연산(가령 파이썬 자체의 "locale.getdefaultlocale()")뿐만 아
+   니라, 자식 프로세스에서도 (이 프로세스가 파이썬 인터프리터를 실행하
+   는지에 관계없이) 볼 수 있습니다.
+
+   이러한 로케일 중 하나를 구성하면 (명시적으로나 위의 묵시적 로케일
+   강제 변경을 통해) "sys.stdin" 과 "sys.stdout" 에 대해
+   "surrogateescape" 에러 처리기 를 자동으로 활성화합니다
+   ("sys.stderr" 는 다른 로케일에서처럼 "backslashreplace" 를 계속 사
+   용합니다). 이 스트림 처리 동작은 평소처럼 "PYTHONIOENCODING"을 사용
+   하여 대체할 수 있습니다.
+
+   디버깅을 위해, "PYTHONCOERCECLOCALE=warn" 을 설정하면, 로케일 강제
+   변경이 일어나거나, 그렇지 않고 강제 변경을 *유발할* 로케일이 파이썬
+   런타임이 초기화될 때 여전히 활성 상태면 파이썬은 "stderr" 로 경고
+   메시지를 보냅니다.
+
+   또한, 로케일 강제 변환이 비활성화되거나 적절한 대상 로케일을 찾지
+   못할 때도, 레거시 ASCII 기반 로케일에서 "PYTHONUTF8" 은 기본적으로
+   활성화됨에 유의하십시오. 인터프리터가 시스템 인터페이스에 대해
+   "UTF-8" 대신에 "ASCII" 를 사용하게 하려면, 두 가지 기능을 모두 비활
+   성화시켜야 합니다.
+
+   Availability: *nix.
+
+   버전 3.7에 추가: 자세한 내용은 **PEP 538**을 참조하십시오.
+
+PYTHONDEVMODE
+
+   If this environment variable is set to a non-empty string, enable
+   Python Development Mode, introducing additional runtime checks that
+   are too expensive to be enabled by default.
+
+   버전 3.7에 추가.
+
+PYTHONUTF8
+
+   If set to "1", enable the Python UTF-8 Mode.
+
+   If set to "0", disable the Python UTF-8 Mode.
+
+   다른 모든 비어 있지 않은 문자열로 설정하면, 인터프리터를 초기화하는
+   동안 에러가 발생합니다.
+
+   버전 3.7에 추가.
+
+PYTHONWARNDEFAULTENCODING
+
+   If this environment variable is set to a non-empty string, issue a
+   "EncodingWarning" when the locale-specific default encoding is
+   used.
+
+   See Opt-in EncodingWarning for details.
+
+   버전 3.10에 추가.
+
+
+1.2.1. 디버그 모드 변수
+-----------------------
+
+PYTHONTHREADDEBUG
+
+   If set, Python will print threading debug info into stdout.
+
+   Need a debug build of Python.
+
+   Deprecated since version 3.10, will be removed in version 3.12.
+
+PYTHONDUMPREFS
+
+   설정되면, 파이썬은 인터프리터를 종료한 후에도 살아있는 객체와 참조
+   횟수를 덤프합니다.
+
+   Need Python configured with the "--with-trace-refs" build option.

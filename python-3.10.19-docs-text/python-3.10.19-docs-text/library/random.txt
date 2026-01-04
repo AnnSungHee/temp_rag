@@ -1,0 +1,571 @@
+"random" --- Generate pseudo-random numbers
+*******************************************
+
+**소스 코드:** Lib/random.py
+
+======================================================================
+
+이 모듈은 다양한 분포에 대한 의사 난수 생성기를 구현합니다.
+
+정수에 대해서는, 범위에서 균일한 선택이 있습니다. 시퀀스에 대해서는,
+무작위 요소의 균일한 선택, 리스트를 제자리(in-place)에서 임의 순열을
+생성하는 함수 및 중복 없는(without replacement) 무작위 표본 추출
+(sampling)을 위한 함수가 있습니다.
+
+실수에 대해서는, 균일(uniform), 정규(normal) (가우시안(Gaussian)), 로
+그 정규(lognormal), 음의 지수(negative exponential), 감마(gamma) 및 베
+타(beta) 분포를 계산하는 함수가 있습니다. 각도 분포를 생성하기 위해,
+폰 미제스(von Mises) 분포를 사용할 수 있습니다.
+
+Almost all module functions depend on the basic function "random()",
+which generates a random float uniformly in the semi-open range [0.0,
+1.0).  Python uses the Mersenne Twister as the core generator.  It
+produces 53-bit precision floats and has a period of 2**19937-1.  The
+underlying implementation in C is both fast and threadsafe.  The
+Mersenne Twister is one of the most extensively tested random number
+generators in existence.  However, being completely deterministic, it
+is not suitable for all purposes, and is completely unsuitable for
+cryptographic purposes.
+
+이 모듈에서 제공하는 함수는 실제로는 "random.Random" 클래스의 숨겨진
+인스턴스에 대해 연결된 메서드입니다. "Random" 인스턴스를 직접 인스턴스
+화하여 상태를 공유하지 않는 생성기를 얻을 수 있습니다.
+
+Class "Random" can also be subclassed if you want to use a different
+basic generator of your own devising: in that case, override the
+"random()", "seed()", "getstate()", and "setstate()" methods.
+Optionally, a new generator can supply a "getrandbits()" method ---
+this allows "randrange()" to produce selections over an arbitrarily
+large range.
+
+"random" 모듈은 운영 체제에서 제공하는 소스에서 난수를 생성하는 시스템
+함수 "os.urandom()"을 사용하는 "SystemRandom" 클래스도 제공합니다.
+
+경고:
+
+  이 모듈의 의사 난수 생성기를 보안 목적으로 사용해서는 안 됩니다. 보
+  안이나 암호화 용도를 위해서는, "secrets" 모듈을 참조하십시오.
+
+더 보기:
+
+  M. Matsumoto and T. Nishimura, "Mersenne Twister: A
+  623-dimensionally equidistributed uniform pseudorandom number
+  generator", ACM Transactions on Modeling and Computer Simulation
+  Vol. 8, No. 1, January pp.3--30 1998.
+
+  Complementary-Multiply-with-Carry recipe for a compatible
+  alternative random number generator with a long period and
+  comparatively simple update operations.
+
+
+관리 함수
+=========
+
+random.seed(a=None, version=2)
+
+   난수 생성기를 초기화합니다.
+
+   *a*가 생략되거나 "None"이면, 현재 시스템 시간이 사용됩니다. 운영 체
+   제에서 임의성 소스(randomness sources)를 제공하면, 시스템 시간 대신
+   사용됩니다 (가용성에 대한 자세한 내용은 "os.urandom()" 함수를 참조
+   하십시오).
+
+   *a*가 int이면, 직접 사용됩니다.
+
+   버전(version) 2(기본값)에서는, "str", "bytes" 또는 "bytearray" 객체
+   가 "int"로 변환되어 모든 비트가 사용됩니다.
+
+   버전(version) 1(이전 버전의 파이썬에서 온 임의의 시퀀스를 재현하기
+   위해 제공됩니다)에서는, "str"과 "bytes"를 위한 알고리즘은 더 좁은
+   범위의 시드(seed)를 생성합니다.
+
+   버전 3.2에서 변경: 문자열 시드의 모든 비트를 사용하는 버전 2 체계로
+   이동했습니다.
+
+   버전 3.9부터 폐지: In the future, the *seed* must be one of the
+   following types: *NoneType*, "int", "float", "str", "bytes", or
+   "bytearray".
+
+random.getstate()
+
+   생성기의 현재 내부 상태를 포착하는 객체를 반환합니다. 이 객체는
+   "setstate()"로 전달되어 상태를 복원 할 수 있습니다.
+
+random.setstate(state)
+
+   *state*는 "getstate()"에 대한 이전 호출에서 얻은 것이어야 하고,
+   "setstate()"는 생성기의 내부 상태를 "getstate()"가 호출될 당시의 상
+   태로 복원합니다.
+
+
+바이트열 함수
+=============
+
+random.randbytes(n)
+
+   *n* 무작위 바이트를 생성합니다.
+
+   이 메서드를 사용하여 보안 토큰을 생성해서는 안 됩니다. 대신
+   "secrets.token_bytes()"를 사용하십시오.
+
+   버전 3.9에 추가.
+
+
+정수 함수
+=========
+
+random.randrange(stop)
+random.randrange(start, stop[, step])
+
+   Return a randomly selected element from "range(start, stop, step)".
+   This is equivalent to "choice(range(start, stop, step))", but
+   doesn't actually build a range object.
+
+   The positional argument pattern matches that of "range()".  Keyword
+   arguments should not be used because the function may use them in
+   unexpected ways.
+
+   버전 3.2에서 변경: "randrange()"는 균일하게 분포된 값을 생성하는 데
+   있어 더욱 정교합니다. 이전에는 약간 고르지 않은 분포를 생성 할 수
+   있는 "int(random()*n)"와 같은 스타일을 사용했습니다.
+
+   버전 3.10부터 폐지: The automatic conversion of non-integer types
+   to equivalent integers is deprecated.  Currently "randrange(10.0)"
+   is losslessly converted to "randrange(10)".  In the future, this
+   will raise a "TypeError".
+
+   버전 3.10부터 폐지: The exception raised for non-integral values
+   such as "randrange(10.5)" or "randrange('10')" will be changed from
+   "ValueError" to "TypeError".
+
+random.randint(a, b)
+
+   "a <= N <= b"를 만족하는 임의의 정수 *N*을 반환합니다.
+   "randrange(a, b+1)"의 별칭.
+
+random.getrandbits(k)
+
+   Returns a non-negative Python integer with *k* random bits. This
+   method is supplied with the MersenneTwister generator and some
+   other generators may also provide it as an optional part of the
+   API. When available, "getrandbits()" enables "randrange()" to
+   handle arbitrarily large ranges.
+
+   버전 3.9에서 변경: 이 메서드는 이제 *k*에 0을 허용합니다.
+
+
+시퀀스 함수
+===========
+
+random.choice(seq)
+
+   비어 있지 않은 시퀀스 *seq*에서 임의의 요소를 반환합니다. *seq*가
+   비어 있으면, "IndexError"를 발생시킵니다.
+
+random.choices(population, weights=None, *, cum_weights=None, k=1)
+
+   *population*에서 중복을 허락하면서(with replacement) 선택한 *k* 크
+   기의 요소 리스트를 반환합니다. *population*이 비어 있으면,
+   "IndexError"를 발생시킵니다.
+
+   *weights* 시퀀스가 지정되면, 상대 가중치에 따라 선택됩니다. 대안적
+   으로, *cum_weights* 시퀀스가 제공되면, (아마도
+   "itertools.accumulate()"를 사용하여 계산된) 누적 가중치(cumulative
+   weights)에 따라 선택이 이루어집니다. 예를 들어, 상대 가중치 "[10,
+   5, 30, 5]"는 누적 가중치 "[10, 15, 45, 50]"과 동등합니다. 내부적으
+   로, 상대 가중치는 선택하기 전에 누적 가중치로 변환되므로, 누적 가중
+   치를 제공하면 작업이 줄어듭니다.
+
+   *weights*나 *cum_weights*를 지정하지 않으면, 같은 확률로 선택됩니다
+   . weights 시퀀스가 제공되면, *population* 시퀀스와 길이가 같아야 합
+   니다. *weights*와 *cum_weights*를 모두 지정하는 것은 "TypeError"입
+   니다.
+
+   *weights*나 *cum_weights*는 "random()"이 반환하는 "float" 값과 상호
+   운용되는 모든 숫자 형을 사용할 수 있습니다 (정수, 부동 소수점
+   (float) 및 유리수(fractions)는 포함하지만, 십진수(decimal)는 제외합
+   니다). 가중치는 음수가 아니고 유한하다고 가정합니다. 모든 가중치가
+   0이면 "ValueError"가 발생합니다.
+
+   For a given seed, the "choices()" function with equal weighting
+   typically produces a different sequence than repeated calls to
+   "choice()".  The algorithm used by "choices()" uses floating point
+   arithmetic for internal consistency and speed.  The algorithm used
+   by "choice()" defaults to integer arithmetic with repeated
+   selections to avoid small biases from round-off error.
+
+   버전 3.6에 추가.
+
+   버전 3.9에서 변경: 모든 가중치가 0이면 "ValueError"를 발생시킵니다.
+
+random.shuffle(x[, random])
+
+   시퀀스 *x*를 제자리에서 섞습니다.
+
+   The optional argument *random* is a 0-argument function returning a
+   random float in [0.0, 1.0); by default, this is the function
+   "random()".
+
+   불변 시퀀스를 섞고 새로운 섞인 리스트를 반환하려면, 대신 "sample(x,
+   k=len(x))"를 사용하십시오.
+
+   작은 "len(x)"의 경우에조차, *x*의 총 순열 수는 대부분의 난수 생성기
+   주기보다 빠르게 커질 수 있습니다. 이것은 긴 시퀀스의 대부분 순열이
+   절대로 생성될 수 없음을 의미합니다. 예를 들어, 길이가 2080인 시퀀스
+   가 메르센 트위스터 난수 생성기의 주기 안에 들어갈 수 있는 최대입니
+   다.
+
+   Deprecated since version 3.9, will be removed in version 3.11: The
+   optional parameter *random*.
+
+random.sample(population, k, *, counts=None)
+
+   Return a *k* length list of unique elements chosen from the
+   population sequence or set. Used for random sampling without
+   replacement.
+
+   원래 population을 변경하지 않고, population의 요소를 포함하는 새 리
+   스트를 반환합니다. 결과 리스트는 선택 순서를 따라서, 모든 서브 슬라
+   이스도 유효한 임의의 표본이 됩니다. 이것은 추첨 당첨자(표본)를 대상
+   (grand prize)과 차점자들(서브 슬라이스)로 나눌 수 있도록 합니다.
+
+   population의 멤버는 *해시 가능*하거나 고유할 필요가 없습니다.
+   population이 반복을 포함하면, 각 등장(occurrence)은 표본에서 가능한
+   선택입니다.
+
+   반복되는 요소는 한 번에 하나씩 또는 선택적 키워드 전용 *counts* 매
+   개 변수로 지정할 수 있습니다. 예를 들어 "sample(['red', 'blue'],
+   counts=[4, 2], k=5)"는 "sample(['red', 'red', 'red', 'red', 'blue',
+   'blue'], k=5)"와 동등합니다.
+
+   정수 범위에서 표본을 선택하려면, "range()" 객체를 인자로 사용하십시
+   오. 이는 큰 population에서 표본 추출할 때 특히 빠르고 공간 효율적입
+   니다: "sample(range(10000000), k=60)".
+
+   표본 크기가 population 크기보다 크면 "ValueError"가 발생합니다.
+
+   버전 3.9에서 변경: *counts* 매개 변수를 추가했습니다.
+
+   버전 3.9부터 폐지: In the future, the *population* must be a
+   sequence.  Instances of "set" are no longer supported.  The set
+   must first be converted to a "list" or "tuple", preferably in a
+   deterministic order so that the sample is reproducible.
+
+
+실수 분포
+=========
+
+다음 함수는 특정 실수 분포를 생성합니다. 함수 매개 변수는 일반적인 수
+학적 관행에 사용되는 분포 방정식에서 해당 변수의 이름을 따서 명명됩니
+다; 이러한 방정식의 대부분은 모든 통계 교과서에서 찾을 수 있습니다.
+
+random.random()
+
+   Return the next random floating point number in the range [0.0,
+   1.0).
+
+random.uniform(a, b)
+
+   Return a random floating point number *N* such that "a <= N <= b"
+   for "a <= b" and "b <= N <= a" for "b < a".
+
+   The end-point value "b" may or may not be included in the range
+   depending on floating-point rounding in the equation "a + (b-a) *
+   random()".
+
+random.triangular(low, high, mode)
+
+   Return a random floating point number *N* such that "low <= N <=
+   high" and with the specified *mode* between those bounds.  The
+   *low* and *high* bounds default to zero and one.  The *mode*
+   argument defaults to the midpoint between the bounds, giving a
+   symmetric distribution.
+
+random.betavariate(alpha, beta)
+
+   베타 분포. 매개 변수의 조건은 "alpha > 0"과 "beta > 0"입니다. 반환
+   된 값의 범위는 0에서 1입니다.
+
+random.expovariate(lambd)
+
+   지수 분포. *lambd*는 1.0을 원하는 평균으로 나눈 값입니다. 0이 아니
+   어야 합니다. (매개 변수는 "lambda"라고 부르지만, 파이썬에서는 예약
+   어입니다.) 반환된 값의 범위는, *lambd*가 양수이면 0에서 양의 무한대
+   이고, *lambd*가 음수이면 음의 무한대에서 0입니다.
+
+random.gammavariate(alpha, beta)
+
+   Gamma distribution.  (*Not* the gamma function!)  Conditions on the
+   parameters are "alpha > 0" and "beta > 0".
+
+   확률 분포 함수는 다음과 같습니다:
+
+                x ** (alpha - 1) * math.exp(-x / beta)
+      pdf(x) =  --------------------------------------
+                  math.gamma(alpha) * beta ** alpha
+
+random.gauss(mu, sigma)
+
+   Normal distribution, also called the Gaussian distribution.  *mu*
+   is the mean, and *sigma* is the standard deviation.  This is
+   slightly faster than the "normalvariate()" function defined below.
+
+   다중 스레딩 참고: 두 스레드가 이 함수를 동시에 호출하면, 같은 반환
+   값을 받을 수 있습니다. 이것은 세 가지 방법으로 피할 수 있습니다. 1)
+   각 스레드가 난수 생성기의 다른 인스턴스를 사용하도록 합니다. 2) 모
+   든 호출에 록을 둡니다. 3) 더 느리지만, 스레드 안전한
+   "normalvariate()" 함수를 대신 사용합니다.
+
+random.lognormvariate(mu, sigma)
+
+   로그 정규 분포. 이 분포의 자연로그를 취하면, 평균 *mu*와 표준 편차
+   *sigma*를 갖는 정규 분포를 얻게 됩니다. *mu*는 아무 값이나 될 수 있
+   으며, *sigma*는 0보다 커야 합니다.
+
+random.normalvariate(mu, sigma)
+
+   정규 분포. *mu*는 평균이고, *sigma*는 표준 편차입니다.
+
+random.vonmisesvariate(mu, kappa)
+
+   *mu*는 0과 2**pi* 사이의 라디안으로 표현된 평균 각도이며, *kappa*는
+   0 이상이어야 하는 집중도(concentration) 매개 변수입니다.  *kappa*가
+   0이면, 이 분포는 0에서 2**pi*에 걸친 균등한 임의의 각도로 환원됩니
+   다.
+
+random.paretovariate(alpha)
+
+   파레토 분포. *alpha*는 모양(shape) 매개 변수입니다.
+
+random.weibullvariate(alpha, beta)
+
+   베이불 분포. *alpha*는 크기(scale) 매개 변수이고 *beta*는 모양
+   (shape) 매개 변수입니다.
+
+
+대체 생성기
+===========
+
+class random.Random([seed])
+
+   "random" 모듈에서 사용하는 기본 의사 난수 생성기를 구현하는 클래스.
+
+   버전 3.9부터 폐지: In the future, the *seed* must be one of the
+   following types: "NoneType", "int", "float", "str", "bytes", or
+   "bytearray".
+
+class random.SystemRandom([seed])
+
+   운영 체제에서 제공하는 소스에서 난수를 생성하기 위해 "os.urandom()"
+   함수를 사용하는 클래스. 모든 시스템에서 사용 가능한 것은 아닙니다.
+   소프트웨어 상태에 의존하지 않으며, 시퀀스는 재현되지 않습니다. 따라
+   서, "seed()" 메서드는 효과가 없으며, 무시됩니다. "getstate()"와
+   "setstate()" 메서드는 호출되면 "NotImplementedError"를 발생시킵니다
+   .
+
+
+재현성에 대한 참고 사항
+=======================
+
+Sometimes it is useful to be able to reproduce the sequences given by
+a pseudo-random number generator.  By re-using a seed value, the same
+sequence should be reproducible from run to run as long as multiple
+threads are not running.
+
+random 모듈의 알고리즘과 시딩(seeding) 함수의 대부분은 파이썬 버전에
+따라 변경될 수 있지만, 두 가지 측면은 변경되지 않음이 보장됩니다:
+
+* 새로운 시딩 메서드가 추가되면, 이전 버전과 호환되는 시더(seeder)가
+  제공될 것입니다.
+
+* 호환 시더에 같은 시드가 제공되면 생성기의 "random()" 메서드는 같은
+  시퀀스를 계속 생성할 것입니다.
+
+
+예제
+====
+
+기본 예제:
+
+   >>> random()                             # Random float:  0.0 <= x < 1.0
+   0.37444887175646646
+
+   >>> uniform(2.5, 10.0)                   # Random float:  2.5 <= x <= 10.0
+   3.1800146073117523
+
+   >>> expovariate(1 / 5)                   # Interval between arrivals averaging 5 seconds
+   5.148957571865031
+
+   >>> randrange(10)                        # Integer from 0 to 9 inclusive
+   7
+
+   >>> randrange(0, 101, 2)                 # Even integer from 0 to 100 inclusive
+   26
+
+   >>> choice(['win', 'lose', 'draw'])      # Single random element from a sequence
+   'draw'
+
+   >>> deck = 'ace two three four'.split()
+   >>> shuffle(deck)                        # Shuffle a list
+   >>> deck
+   ['four', 'two', 'ace', 'three']
+
+   >>> sample([10, 20, 30, 40, 50], k=4)    # Four samples without replacement
+   [40, 10, 50, 30]
+
+시뮬레이션:
+
+   >>> # Six roulette wheel spins (weighted sampling with replacement)
+   >>> choices(['red', 'black', 'green'], [18, 18, 2], k=6)
+   ['red', 'green', 'black', 'black', 'red', 'black']
+
+   >>> # Deal 20 cards without replacement from a deck
+   >>> # of 52 playing cards, and determine the proportion of cards
+   >>> # with a ten-value:  ten, jack, queen, or king.
+   >>> dealt = sample(['tens', 'low cards'], counts=[16, 36], k=20)
+   >>> dealt.count('tens') / 20
+   0.15
+
+   >>> # Estimate the probability of getting 5 or more heads from 7 spins
+   >>> # of a biased coin that settles on heads 60% of the time.
+   >>> def trial():
+   ...     return choices('HT', cum_weights=(0.60, 1.00), k=7).count('H') >= 5
+   ...
+   >>> sum(trial() for i in range(10_000)) / 10_000
+   0.4169
+
+   >>> # Probability of the median of 5 samples being in middle two quartiles
+   >>> def trial():
+   ...     return 2_500 <= sorted(choices(range(10_000), k=5))[2] < 7_500
+   ...
+   >>> sum(trial() for i in range(10_000)) / 10_000
+   0.7958
+
+표본의 평균에 대한 신뢰 구간을 추정하기 위해 중복을 허용하는(with
+replacement) 재표본추출(resampling)을 사용하는 통계적 부트스트래핑
+(statistical bootstrapping)의 예:
+
+   # https://www.thoughtco.com/example-of-bootstrapping-3126155
+   from statistics import fmean as mean
+   from random import choices
+
+   data = [41, 50, 29, 37, 81, 30, 73, 63, 20, 35, 68, 22, 60, 31, 95]
+   means = sorted(mean(choices(data, k=len(data))) for i in range(100))
+   print(f'The sample mean of {mean(data):.1f} has a 90% confidence '
+         f'interval from {means[5]:.1f} to {means[94]:.1f}')
+
+약물과 위약의 효과 간에 관찰된 차이의 통계적 유의성 또는 p-값을 결정하
+기 위한 재표본추출 순열 검증(resampling permutation test)의 예:
+
+   # Example from "Statistics is Easy" by Dennis Shasha and Manda Wilson
+   from statistics import fmean as mean
+   from random import shuffle
+
+   drug = [54, 73, 53, 70, 73, 68, 52, 65, 65]
+   placebo = [54, 51, 58, 44, 55, 52, 42, 47, 58, 46]
+   observed_diff = mean(drug) - mean(placebo)
+
+   n = 10_000
+   count = 0
+   combined = drug + placebo
+   for i in range(n):
+       shuffle(combined)
+       new_diff = mean(combined[:len(drug)]) - mean(combined[len(drug):])
+       count += (new_diff >= observed_diff)
+
+   print(f'{n} label reshufflings produced only {count} instances with a difference')
+   print(f'at least as extreme as the observed difference of {observed_diff:.1f}.')
+   print(f'The one-sided p-value of {count / n:.4f} leads us to reject the null')
+   print(f'hypothesis that there is no difference between the drug and the placebo.')
+
+다중 서버 큐를 위한 도착 시간과 서비스 제공의 시뮬레이션:
+
+   from heapq import heapify, heapreplace
+   from random import expovariate, gauss
+   from statistics import mean, quantiles
+
+   average_arrival_interval = 5.6
+   average_service_time = 15.0
+   stdev_service_time = 3.5
+   num_servers = 3
+
+   waits = []
+   arrival_time = 0.0
+   servers = [0.0] * num_servers  # time when each server becomes available
+   heapify(servers)
+   for i in range(1_000_000):
+       arrival_time += expovariate(1.0 / average_arrival_interval)
+       next_server_available = servers[0]
+       wait = max(0.0, next_server_available - arrival_time)
+       waits.append(wait)
+       service_duration = max(0.0, gauss(average_service_time, stdev_service_time))
+       service_completed = arrival_time + wait + service_duration
+       heapreplace(servers, service_completed)
+
+   print(f'Mean wait: {mean(waits):.1f}   Max wait: {max(waits):.1f}')
+   print('Quartiles:', [round(q, 1) for q in quantiles(waits)])
+
+더 보기:
+
+  시뮬레이션(simulation), 표본 추출(sampling), 섞기(shuffling) 및 교차
+  검증(cross-validation)을 포함하는 몇 가지 기본 개념만을 사용한, 통계
+  분석에 대한 Jake Vanderplas의 비디오 자습서 Statistics for Hackers
+
+  Economics Simulation a simulation of a marketplace by Peter Norvig
+  that shows effective use of many of the tools and distributions
+  provided by this module (gauss, uniform, sample, betavariate,
+  choice, triangular, and randrange).
+
+  A Concrete Introduction to Probability (using Python) a tutorial by
+  Peter Norvig covering the basics of probability theory, how to write
+  simulations, and how to perform data analysis using Python.
+
+
+조리법
+======
+
+기본 "random()"은 *0.0 ≤ x < 1.0* 범위에서 2⁻⁵³의 배수를 반환합니다.
+이러한 모든 숫자는 균등 간격으로 분포되어있고 파이썬 float로 정확하게
+표현할 수 있습니다. 그러나, 해당 범위의 다른 많은 표현 가능한 부동 소
+수점은 가능한 선택이 아닙니다. 예를 들어, "0.05954861408025609"는 2⁻⁵³
+의 정수배가 아닙니다.
+
+다음 조리법은 다른 접근 방식을 사용합니다. 범위의 모든 부동 소수점이
+가능한 선택입니다. 가수(mantissa)는 *2⁵² ≤ mantissa < 2⁵³* 범위에 있는
+정수의 균등 분포(uniform distribution)에서 옵니다. 지수(exponent)는
+*-53*보다 작은 지수가 다음으로 큰 지수의 절반만큼 자주 발생하는 기하
+분포(geometric distribution)에서 옵니다.
+
+   from random import Random
+   from math import ldexp
+
+   class FullRandom(Random):
+
+       def random(self):
+           mantissa = 0x10_0000_0000_0000 | self.getrandbits(52)
+           exponent = -53
+           x = 0
+           while not x:
+               x = self.getrandbits(32)
+               exponent += x.bit_length() - 32
+           return ldexp(mantissa, exponent)
+
+클래스의 모든 실숫값 분포는 새 메서드를 사용합니다:
+
+   >>> fr = FullRandom()
+   >>> fr.random()
+   0.05954861408025609
+   >>> fr.expovariate(0.25)
+   8.87925541791544
+
+조리법은 개념적으로 *0.0 ≤ x < 1.0* 범위의 2⁻¹⁰⁷⁴의 모든 배수에서 선택
+하는 알고리즘과 동등합니다. 이러한 모든 숫자는 균등한 간격이지만, 대부
+분은 가장 가까운 표현 가능한 파이썬 부동 소수점으로 자리 내림해야 합니
+다. (값 2⁻¹⁰⁷⁴은 가장 작은 양의 정규화되지 않은 부동 소수점이며
+"math.ulp(0.0)"과 같습니다.)
+
+더 보기:
+
+  Generating Pseudo-random Floating-Point Values Allen B. Downey의 논
+  문은 "random()"이 일반적으로 생성하는 것보다 더 세밀한 부동 소수점을
+  생성하는 방법을 설명합니다.

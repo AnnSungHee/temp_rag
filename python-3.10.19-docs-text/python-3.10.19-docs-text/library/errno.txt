@@ -1,0 +1,547 @@
+"errno" --- Standard errno system symbols
+*****************************************
+
+======================================================================
+
+이 모듈은 표준 "errno" 시스템 기호를 제공합니다. 각 기호의 값은 해당
+정숫값입니다. 이름과 설명은 "linux/include/errno.h"에서 빌려 왔는데,
+포괄적이어야 합니다.
+
+errno.errorcode
+
+   errno 값에서 하부 시스템의 문자열 이름으로의 매핑을 제공하는 딕셔너
+   리입니다. 예를 들어, "errno.errorcode[errno.EPERM]"는 "'EPERM'"로
+   매핑됩니다.
+
+숫자 에러 코드를 에러 메시지로 변환하려면, "os.strerror()"를 사용하십
+시오.
+
+다음 목록에서, 현재 플랫폼에서 사용되지 않는 기호는 모듈에서 정의하지
+않습니다. 정의된 기호의 구체적인 목록은 "errno.errorcode.keys()"로 사
+용 가능합니다. 사용할 수 있는 기호는 다음과 같습니다:
+
+errno.EPERM
+
+   Operation not permitted. 이 에러는 예외 "PermissionError"로 매핑됩
+   니다.
+
+errno.ENOENT
+
+   No such file or directory -- 그런 파일이나 디렉터리가 없습니다. 이
+   에러는 예외 "FileNotFoundError"로 매핑됩니다.
+
+errno.ESRCH
+
+   No such process -- 그런 프로세스가 없습니다. 이 에러는 예외
+   "ProcessLookupError"로 매핑됩니다.
+
+errno.EINTR
+
+   Interrupted system call -- 중단된 시스템 호출. 이 에러는 예외
+   "InterruptedError"로 매핑됩니다.
+
+errno.EIO
+
+   I/O error -- I/O 에러
+
+errno.ENXIO
+
+   No such device or address -- 그런 장치나 주소가 없습니다.
+
+errno.E2BIG
+
+   Arg list too long -- 인자 목록이 너무 깁니다.
+
+errno.ENOEXEC
+
+   Exec format error -- Exec 포맷 에러
+
+errno.EBADF
+
+   Bad file number -- 잘못된 파일 번호
+
+errno.ECHILD
+
+   No child processes -- 그런 자식 프로세스가 없습니다. 이 에러는 예외
+   "ChildProcessError"로 매핑됩니다.
+
+errno.EAGAIN
+
+   Try again -- 다시 시도하십시오. 이 에러는 예외 "BlockingIOError"로
+   매핑됩니다.
+
+errno.ENOMEM
+
+   Out of memory -- 메모리 부족
+
+errno.EACCES
+
+   Permission denied -- 사용 권한이 거부되었습니다. 이 에러는 예외
+   "PermissionError"로 매핑됩니다.
+
+errno.EFAULT
+
+   Bad address -- 잘못된 주소
+
+errno.ENOTBLK
+
+   Block device required -- 블록 장치가 필요합니다
+
+errno.EBUSY
+
+   Device or resource busy -- 장치나 자원이 사용 중입니다
+
+errno.EEXIST
+
+   File exists -- 파일이 존재합니다. 이 에러는 예외 "FileExistsError"
+   로 매핑됩니다.
+
+errno.EXDEV
+
+   Cross-device link -- 장치 간 링크
+
+errno.ENODEV
+
+   No such device -- 그런 장치가 없습니다
+
+errno.ENOTDIR
+
+   Not a directory -- 디렉터리가 아닙니다. 이 에러는 예외
+   "NotADirectoryError"로 매핑됩니다.
+
+errno.EISDIR
+
+   Is a directory -- 디렉터리입니다. 이 에러는 예외
+   "IsADirectoryError"로 매핑됩니다.
+
+errno.EINVAL
+
+   Invalid argument -- 잘못된 인자
+
+errno.ENFILE
+
+   File table overflow -- 파일 테이블 오버플로
+
+errno.EMFILE
+
+   Too many open files -- 열려있는 파일이 너무 많습니다
+
+errno.ENOTTY
+
+   Not a typewriter -- 타자기가 아닙니다
+
+errno.ETXTBSY
+
+   Text file busy -- 텍스트 파일이 사용 중입니다
+
+errno.EFBIG
+
+   File too large -- 파일이 너무 큽니다
+
+errno.ENOSPC
+
+   No space left on device -- 장치에 남은 공간이 없습니다.
+
+errno.ESPIPE
+
+   Illegal seek -- 잘못된 탐색
+
+errno.EROFS
+
+   Read-only file system -- 읽기 전용 파일 시스템
+
+errno.EMLINK
+
+   Too many links -- 링크가 너무 많습니다
+
+errno.EPIPE
+
+   Broken pipe -- 깨진 파이프. 이 에러는 예외 "BrokenPipeError"로 매핑
+   됩니다.
+
+errno.EDOM
+
+   Math argument out of domain of func -- 함수의 범위를 벗어난 수학 인
+   자
+
+errno.ERANGE
+
+   Math result not representable -- 수학 결과를 표현할 수 없습니다
+
+errno.EDEADLK
+
+   Resource deadlock would occur -- 자원 교착 상태가 발생합니다
+
+errno.ENAMETOOLONG
+
+   File name too long -- 파일 이름이 너무 깁니다
+
+errno.ENOLCK
+
+   No record locks available -- 사용 가능한 레코드 록이 없습니다
+
+errno.ENOSYS
+
+   Function not implemented -- 기능이 구현되지 않았습니다
+
+errno.ENOTEMPTY
+
+   Directory not empty -- 디렉터리가 비어 있지 않습니다
+
+errno.ELOOP
+
+   Too many symbolic links encountered -- 마주친 심볼릭 링크가 너무 많
+   습니다
+
+errno.EWOULDBLOCK
+
+   Operation would block -- 연산이 블록 됩니다. 이 에러는 예외
+   "BlockingIOError"로 매핑됩니다.
+
+errno.ENOMSG
+
+   No message of desired type -- 원하는 유형의 메시지가 없습니다
+
+errno.EIDRM
+
+   Identifier removed -- 식별자가 삭제되었습니다
+
+errno.ECHRNG
+
+   Channel number out of range -- 채널 번호가 범위를 벗어났습니다
+
+errno.EL2NSYNC
+
+   Level 2 not synchronized -- 수준 2가 동기화되지 않았습니다
+
+errno.EL3HLT
+
+   Level 3 halted -- 수준 3이 정지되었습니다
+
+errno.EL3RST
+
+   Level 3 reset -- 수준 3이 재설정되었습니다
+
+errno.ELNRNG
+
+   Link number out of range -- 링크 번호가 범위를 벗어났습니다
+
+errno.EUNATCH
+
+   Protocol driver not attached -- 프로토콜 드라이버가 연결되지 않았습
+   니다
+
+errno.ENOCSI
+
+   No CSI structure available -- 사용 가능한 CSI 구조가 없습니다
+
+errno.EL2HLT
+
+   Level 2 halted -- 수준 2가 중지되었습니다
+
+errno.EBADE
+
+   Invalid exchange -- 잘못된 교환
+
+errno.EBADR
+
+   Invalid request descriptor -- 잘못된 요청 기술자
+
+errno.EXFULL
+
+   Exchange full -- 교환 포화
+
+errno.ENOANO
+
+   No anode -- anode가 없습니다
+
+errno.EBADRQC
+
+   Invalid request code -- 유효하지 않은 요청 코드
+
+errno.EBADSLT
+
+   Invalid slot -- 유효하지 않은 슬롯
+
+errno.EDEADLOCK
+
+   File locking deadlock error -- 파일 잠금 교착 상태 에러
+
+errno.EBFONT
+
+   Bad font file format -- 잘못된 글꼴 파일 형식
+
+errno.ENOSTR
+
+   Device not a stream -- 장치가 스트림이 아닙니다
+
+errno.ENODATA
+
+   No data available -- 데이터가 없습니다
+
+errno.ETIME
+
+   Timer expired -- 타이머가 만료되었습니다
+
+errno.ENOSR
+
+   Out of streams resources -- 스트림 자원 부족
+
+errno.ENONET
+
+   Machine is not on the network -- 기계가 네트워크에 없습니다.
+
+errno.ENOPKG
+
+   Package not installed -- 패키지가 설치되지 않았습니다
+
+errno.EREMOTE
+
+   Object is remote -- 객체가 원격입니다
+
+errno.ENOLINK
+
+   Link has been severed -- 링크가 절단되었습니다
+
+errno.EADV
+
+   Advertise error -- 광고 에러
+
+errno.ESRMNT
+
+   Srmount error -- srmount 에러
+
+errno.ECOMM
+
+   Communication error on send -- 전송 시 통신 에러
+
+errno.EPROTO
+
+   Protocol error -- 프로토콜 에러
+
+errno.EMULTIHOP
+
+   Multihop attempted -- 다중 홉을 시도했습니다
+
+errno.EDOTDOT
+
+   RFS specific error -- RFS 특정 에러
+
+errno.EBADMSG
+
+   Not a data message -- 데이터 메시지가 아닙니다
+
+errno.EOVERFLOW
+
+   Value too large for defined data type -- 정의된 데이터형에 비해 값
+   이 너무 큽니다
+
+errno.ENOTUNIQ
+
+   Name not unique on network -- 이름이 네트워크에서 고유하지 않습니다
+
+errno.EBADFD
+
+   File descriptor in bad state -- 잘못된 상태의 파일 기술자
+
+errno.EREMCHG
+
+   Remote address changed -- 원격 주소가 변경되었습니다
+
+errno.ELIBACC
+
+   Can not access a needed shared library -- 필요한 공유 라이브러리에
+   액세스할 수 없습니다.
+
+errno.ELIBBAD
+
+   Accessing a corrupted shared library -- 손상된 공유 라이브러리 액세
+   스
+
+errno.ELIBSCN
+
+   .lib section in a.out corrupted -- 손상된 a.out의 .lib 섹션
+
+errno.ELIBMAX
+
+   Attempting to link in too many shared libraries -- 너무 많은 공유
+   라이브러리 연결 시도
+
+errno.ELIBEXEC
+
+   Cannot exec a shared library directly -- 공유 라이브러리를 직접 실
+   행할 수 없습니다
+
+errno.EILSEQ
+
+   Illegal byte sequence -- 잘못된 바이트 시퀀스
+
+errno.ERESTART
+
+   Interrupted system call should be restarted -- 중단된 시스템 호출을
+   다시 시작해야 합니다
+
+errno.ESTRPIPE
+
+   Streams pipe error -- 스트림 파이프 에러
+
+errno.EUSERS
+
+   Too many users -- 사용자가 너무 많습니다
+
+errno.ENOTSOCK
+
+   Socket operation on non-socket -- 비 소켓에 대한 소켓 연산
+
+errno.EDESTADDRREQ
+
+   Destination address required -- 목적지 주소가 필요합니다
+
+errno.EMSGSIZE
+
+   Message too long -- 메시지가 너무 깁니다
+
+errno.EPROTOTYPE
+
+   Protocol wrong type for socket -- 소켓에 대한 프로토콜 유형이 잘못
+   되었습니다
+
+errno.ENOPROTOOPT
+
+   Protocol not available -- 프로토콜을 사용할 수 없습니다
+
+errno.EPROTONOSUPPORT
+
+   Protocol not supported -- 지원되지 않는 프로토콜
+
+errno.ESOCKTNOSUPPORT
+
+   Socket type not supported -- 지원되지 않는 소켓 유형
+
+errno.EOPNOTSUPP
+
+   Operation not supported on transport endpoint -- 트랜스포트 끝점에
+   서 지원되지 않는 연산
+
+errno.EPFNOSUPPORT
+
+   Protocol family not supported -- 지원되지 않는 프로토콜 패밀리
+
+errno.EAFNOSUPPORT
+
+   Address family not supported by protocol -- 프로토콜이 지원하지 않
+   는 주소 패밀리
+
+errno.EADDRINUSE
+
+   Address already in use -- 이미 사용 중인 주소
+
+errno.EADDRNOTAVAIL
+
+   Cannot assign requested address -- 요청된 주소를 할당할 수 없습니다
+   .
+
+errno.ENETDOWN
+
+   Network is down -- 네트워크가 다운되었습니다
+
+errno.ENETUNREACH
+
+   Network is unreachable -- 네트워크에 도달할 수 없습니다
+
+errno.ENETRESET
+
+   Network dropped connection because of reset -- 재설정으로 인해 네트
+   워크 연결이 끊겼습니다
+
+errno.ECONNABORTED
+
+   Software caused connection abort -- 소프트웨어로 인해 연결이 중단되
+   었습니다. 이 에러는 예외 "ConnectionAbortedError"로 매핑됩니다.
+
+errno.ECONNRESET
+
+   Connection reset by peer -- 피어에 의한 연결 재설정. 이 에러는 예외
+   "ConnectionResetError"로 매핑됩니다.
+
+errno.ENOBUFS
+
+   No buffer space available -- 사용 가능한 버퍼 공간이 없습니다.
+
+errno.EISCONN
+
+   Transport endpoint is already connected -- 트랜스포트 끝점이 이미
+   연결되어 있습니다.
+
+errno.ENOTCONN
+
+   Transport endpoint is not connected -- 트랜스포트 끝점이 연결되어
+   있지 않습니다.
+
+errno.ESHUTDOWN
+
+   Cannot send after transport endpoint shutdown -- 트랜스포트 끝점 종
+   료 후에 보낼 수 없습니다. 이 에러는 예외 "BrokenPipeError"로 매핑됩
+   니다.
+
+errno.ETOOMANYREFS
+
+   Too many references: cannot splice -- 참조가 너무 많습니다: 연결할
+   수 없습니다
+
+errno.ETIMEDOUT
+
+   Connection timed out -- 연결 시간이 초과하였습니다. 이 에러는 예외
+   "TimeoutError"로 매핑됩니다.
+
+errno.ECONNREFUSED
+
+   Connection refused -- 연결이 거부되었습니다. 이 에러는 예외
+   "ConnectionRefusedError"로 매핑됩니다.
+
+errno.EHOSTDOWN
+
+   Host is down -- 호스트가 다운되었습니다
+
+errno.EHOSTUNREACH
+
+   No route to host -- 호스트로 가는 길이 없습니다
+
+errno.EALREADY
+
+   Operation already in progress -- 이미 진행 중인 연산. 이 에러는 예
+   외 "BlockingIOError"로 매핑됩니다.
+
+errno.EINPROGRESS
+
+   Operation now in progress -- 이제 연산이 진행 중입니다. 이 에러는
+   예외 "BlockingIOError"로 매핑됩니다.
+
+errno.ESTALE
+
+   Stale NFS file handle -- 오래된 NFS 파일 핸들
+
+errno.EUCLEAN
+
+   Structure needs cleaning -- 구조 청소 필요
+
+errno.ENOTNAM
+
+   Not a XENIX named type file -- XENIX 이름 붙은 형식 파일이 아닙니다
+
+errno.ENAVAIL
+
+   No XENIX semaphores available -- 사용할 수 있는 XENIX 세마포어가 없
+   습니다
+
+errno.EISNAM
+
+   Is a named type file -- 이름 붙은 형식 파일입니다
+
+errno.EREMOTEIO
+
+   Remote I/O error -- 원격 I/O 에러
+
+errno.EDQUOT
+
+   Quota exceeded -- 할당량 초과

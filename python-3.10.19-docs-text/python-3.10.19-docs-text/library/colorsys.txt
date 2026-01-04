@@ -1,0 +1,55 @@
+"colorsys" --- Conversions between color systems
+************************************************
+
+**소스 코드:** Lib/colorsys.py
+
+======================================================================
+
+The "colorsys" module defines bidirectional conversions of color
+values between colors expressed in the RGB (Red Green Blue) color
+space used in computer monitors and three other coordinate systems:
+YIQ, HLS (Hue Lightness Saturation) and HSV (Hue Saturation Value).
+Coordinates in all of these color spaces are floating point values.
+In the YIQ space, the Y coordinate is between 0 and 1, but the I and Q
+coordinates can be positive or negative.  In all other spaces, the
+coordinates are all between 0 and 1.
+
+더 보기:
+
+  색 공간에 대한 자세한 내용은 https://poynton.ca/ColorFAQ.html 와
+  https://www.cambridgeincolour.com/tutorials/color-spaces.htm 에서 확
+  인할 수 있습니다.
+
+"colorsys" 모듈은 다음 함수를 정의합니다:
+
+colorsys.rgb_to_yiq(r, g, b)
+
+   RGB 좌표에서 YIQ 좌표로 색을 변환합니다.
+
+colorsys.yiq_to_rgb(y, i, q)
+
+   YIQ 좌표에서 RGB 좌표로 색을 변환합니다.
+
+colorsys.rgb_to_hls(r, g, b)
+
+   RGB 좌표에서 HLS 좌표로 색을 변환합니다.
+
+colorsys.hls_to_rgb(h, l, s)
+
+   HLS 좌표에서 RGB 좌표로 색을 변환합니다.
+
+colorsys.rgb_to_hsv(r, g, b)
+
+   RGB 좌표에서 HSV 좌표로 색을 변환합니다.
+
+colorsys.hsv_to_rgb(h, s, v)
+
+   HSV 좌표에서 RGB 좌표로 색을 변환합니다.
+
+예:
+
+   >>> import colorsys
+   >>> colorsys.rgb_to_hsv(0.2, 0.4, 0.4)
+   (0.5, 0.5, 0.4)
+   >>> colorsys.hsv_to_rgb(0.5, 0.5, 0.4)
+   (0.2, 0.4, 0.4)

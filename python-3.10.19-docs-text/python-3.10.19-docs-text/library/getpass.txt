@@ -1,0 +1,42 @@
+"getpass" --- Portable password input
+*************************************
+
+**소스 코드:** Lib/getpass.py
+
+======================================================================
+
+"getpass" 모듈은 두 함수를 제공합니다:
+
+getpass.getpass(prompt='Password: ', stream=None)
+
+   에코 없이 사용자에게 암호를 묻습니다. 사용자는 *prompt* 문자열을 사
+   용하여 프롬프트 됩니다. 기본값은 "'Password: '"입니다. 유닉스에서
+   프롬프트는 필요하다면 replace 에러 처리기를 사용하여 파일류 객체
+   *stream*에 기록됩니다. *stream*는 제어 터미널("/dev/tty")이나 사용
+   할 수 없으면 "sys.stderr"를 기본값으로 사용합니다 (이 인자는 윈도우
+   에서 무시됩니다).
+
+   에코가 없는 입력을 사용할 수 없으면, getpass()는 *stream*에 경고 메
+   시지를 인쇄하고, "sys.stdin"에서 읽고, "GetPassWarning"을 방출하는
+   것으로 돌아갑니다.
+
+   참고:
+
+     IDLE 내에서 getpass를 호출하면, 대기 중인 창 자체가 아닌 IDLE을
+     시작한 터미널에서 입력이 수행될 수 있습니다.
+
+exception getpass.GetPassWarning
+
+   패스워드 입력이 에코 될 때 방출되는 "UserWarning" 서브 클래스.
+
+getpass.getuser()
+
+   사용자의 "로그인 이름"을 반환합니다.
+
+   This function checks the environment variables "LOGNAME", "USER",
+   "LNAME" and "USERNAME", in order, and returns the value of the
+   first one which is set to a non-empty string.  If none are set, the
+   login name from the password database is returned on systems which
+   support the "pwd" module, otherwise, an exception is raised.
+
+   In general, this function should be preferred over "os.getlogin()".

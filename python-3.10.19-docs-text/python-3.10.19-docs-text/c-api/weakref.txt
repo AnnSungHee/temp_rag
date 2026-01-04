@@ -1,0 +1,75 @@
+약한 참조 객체
+**************
+
+파이썬은 *약한 참조*를 1급 객체로 지원합니다. 약한 참조를 직접 구현하
+는 두 가지 구체적인 객체 형이 있습니다. 첫 번째는 간단한 참조 객체이며
+, 두 번째는 가능한 한 원래 객체의 프락시 역할을 합니다.
+
+int PyWeakref_Check(ob)
+
+   Return true if *ob* is either a reference or proxy object.  This
+   function always succeeds.
+
+int PyWeakref_CheckRef(ob)
+
+   Return true if *ob* is a reference object.  This function always
+   succeeds.
+
+int PyWeakref_CheckProxy(ob)
+
+   Return true if *ob* is a proxy object.  This function always
+   succeeds.
+
+PyObject *PyWeakref_NewRef(PyObject *ob, PyObject *callback)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Return a weak reference object for the object *ob*.  This will
+   always return a new reference, but is not guaranteed to create a
+   new object; an existing reference object may be returned.  The
+   second parameter, *callback*, can be a callable object that
+   receives notification when *ob* is garbage collected; it should
+   accept a single parameter, which will be the weak reference object
+   itself. *callback* may also be "None" or "NULL".  If *ob* is not a
+   weakly referencable object, or if *callback* is not callable,
+   "None", or "NULL", this will return "NULL" and raise "TypeError".
+
+PyObject *PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Return a weak reference proxy object for the object *ob*.  This
+   will always return a new reference, but is not guaranteed to create
+   a new object; an existing proxy object may be returned.  The second
+   parameter, *callback*, can be a callable object that receives
+   notification when *ob* is garbage collected; it should accept a
+   single parameter, which will be the weak reference object itself.
+   *callback* may also be "None" or "NULL".  If *ob* is not a weakly
+   referencable object, or if *callback* is not callable, "None", or
+   "NULL", this will return "NULL" and raise "TypeError".
+
+PyObject *PyWeakref_GetObject(PyObject *ref)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   Return the referenced object from a weak reference, *ref*.  If the
+   referent is no longer live, returns "Py_None".
+
+   참고:
+
+     이 함수는 참조된 객체에 대한 *빌린 참조*를 반환합니다. 이는 빌린
+     참조의 마지막 사용 전에 파괴될 수 없을 때를 제외하고, 객체에 대해
+     항상 "Py_INCREF()"를 호출해야 함을 뜻합니다.
+
+PyObject *PyWeakref_GET_OBJECT(PyObject *ref)
+    *반환값: 빌린 참조.*
+
+   Similar to "PyWeakref_GetObject()", but implemented as a macro that
+   does no error checking.
+
+void PyObject_ClearWeakRefs(PyObject *object)
+    * Part of the Stable ABI.*
+
+   This function is called by the "tp_dealloc" handler to clear weak
+   references.
+
+   This iterates through the weak references for *object* and calls
+   callbacks for those references which have one. It returns when all
+   callbacks have been attempted.

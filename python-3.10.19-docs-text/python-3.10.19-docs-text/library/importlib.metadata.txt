@@ -1,0 +1,306 @@
+Using "importlib.metadata"
+**************************
+
+버전 3.8에 추가.
+
+버전 3.10에서 변경: "importlib.metadata"는 더는 잠정적이지 않습니다.
+
+**Source code:** Lib/importlib/metadata/__init__.py
+
+"importlib.metadata" is a library that provides for access to
+installed package metadata.  Built in part on Python's import system,
+this library intends to replace similar functionality in the entry
+point API and metadata API of "pkg_resources".  Along with
+"importlib.resources" in Python 3.7 and newer (backported as
+importlib_resources for older versions of Python), this can eliminate
+the need to use the older and less efficient "pkg_resources" package.
+
+By "installed package" we generally mean a third-party package
+installed into Python's "site-packages" directory via tools such as
+pip.  Specifically, it means a package with either a discoverable
+"dist-info" or "egg-info" directory, and metadata defined by **PEP
+566** or its older specifications. By default, package metadata can
+live on the file system or in zip archives on "sys.path".  Through an
+extension mechanism, the metadata can live almost anywhere.
+
+
+개요
+====
+
+Let's say you wanted to get the version string for a package you've
+installed using "pip".  We start by creating a virtual environment and
+installing something into it:
+
+   $ python -m venv example
+   $ source example/bin/activate
+   (example) $ pip install wheel
+
+다음을 실행하여 "wheel"에 대한 버전 문자열을 얻을 수 있습니다:
+
+   (example) $ python
+   >>> from importlib.metadata import version  
+   >>> version('wheel')  
+   '0.32.3'
+
+You can also get the set of entry points keyed by group, such as
+"console_scripts", "distutils.commands" and others.  Each group
+contains a sequence of EntryPoint objects.
+
+여러분은 배포 메타데이터를 얻을 수 있습니다:
+
+   >>> list(metadata('wheel'))  
+   ['Metadata-Version', 'Name', 'Version', 'Summary', 'Home-page', 'Author', 'Author-email', 'Maintainer', 'Maintainer-email', 'License', 'Project-URL', 'Project-URL', 'Project-URL', 'Keywords', 'Platform', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Classifier', 'Requires-Python', 'Provides-Extra', 'Requires-Dist', 'Requires-Dist']
+
+또한 배포의 버전 번호를 가져오고, 구성 파일을 나열하고, 배포의 요구사
+항 리스트를 얻을 수 있습니다.
+
+
+기능적 API
+==========
+
+이 패키지는 공용 API를 통해 다음과 같은 기능을 제공합니다.
+
+
+진입 지점
+---------
+
+The "entry_points()" function returns a collection of entry points.
+Entry points are represented by "EntryPoint" instances; each
+"EntryPoint" has a ".name", ".group", and ".value" attributes and a
+".load()" method to resolve the value.  There are also ".module",
+".attr", and ".extras" attributes for getting the components of the
+".value" attribute.
+
+모든 진입 지점을 조회합니다:
+
+   >>> eps = entry_points()  
+
+The "entry_points()" function returns an "EntryPoints" object, a
+sequence of all "EntryPoint" objects with "names" and "groups"
+attributes for convenience:
+
+   >>> sorted(eps.groups)  
+   ['console_scripts', 'distutils.commands', 'distutils.setup_keywords', 'egg_info.writers', 'setuptools.installation']
+
+"EntryPoints" has a "select" method to select entry points matching
+specific properties. Select entry points in the "console_scripts"
+group:
+
+   >>> scripts = eps.select(group='console_scripts')  
+
+Equivalently, since "entry_points" passes keyword arguments through to
+select:
+
+   >>> scripts = entry_points(group='console_scripts')  
+
+Pick out a specific script named "wheel" (found in the wheel project):
+
+   >>> 'wheel' in scripts.names  
+   True
+   >>> wheel = scripts['wheel']  
+
+Equivalently, query for that entry point during selection:
+
+   >>> (wheel,) = entry_points(group='console_scripts', name='wheel')  
+   >>> (wheel,) = entry_points().select(group='console_scripts', name='wheel')  
+
+Inspect the resolved entry point:
+
+   >>> wheel  
+   EntryPoint(name='wheel', value='wheel.cli:main', group='console_scripts')
+   >>> wheel.module  
+   'wheel.cli'
+   >>> wheel.attr  
+   'main'
+   >>> wheel.extras  
+   []
+   >>> main = wheel.load()  
+   >>> main  
+   <function main at 0x103528488>
+
+"group"과 "name"은 패키지 저자가 정의한 임의의 값이며 일반적으로 클라
+이언트는 특정 그룹에 대한 모든 진입 지점을 찾으려고 합니다. 진입 지점
+의 정의와 사용법에 대한 자세한 정보는 the setuptools docs를 읽으십시오
+.
+
+*Compatibility Note*
+
+The "selectable" entry points were introduced in "importlib_metadata"
+3.6 and Python 3.10. Prior to those changes, "entry_points" accepted
+no parameters and always returned a dictionary of entry points, keyed
+by group. For compatibility, if no parameters are passed to
+entry_points, a "SelectableGroups" object is returned, implementing
+that dict interface. In the future, calling "entry_points" with no
+parameters will return an "EntryPoints" object. Users should rely on
+the selection interface to retrieve entry points by group.
+
+
+배포 메타데이터
+---------------
+
+Every distribution includes some metadata, which you can extract using
+the "metadata()" function:
+
+   >>> wheel_metadata = metadata('wheel')  
+
+The keys of the returned data structure, a "PackageMetadata", name the
+metadata keywords, and the values are returned unparsed from the
+distribution metadata:
+
+   >>> wheel_metadata['Requires-Python']  
+   '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*'
+
+"PackageMetadata" also presents a "json" attribute that returns all
+the metadata in a JSON-compatible form per **PEP 566**:
+
+   >>> wheel_metadata.json['requires_python']
+   '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*'
+
+버전 3.10에서 변경: The "Description" is now included in the metadata
+when presented through the payload. Line continuation characters have
+been removed.
+
+버전 3.10에 추가: The "json" attribute was added.
+
+
+배포 버전
+---------
+
+The "version()" function is the quickest way to get a distribution's
+version number, as a string:
+
+   >>> version('wheel')  
+   '0.32.3'
+
+
+배포 파일
+---------
+
+You can also get the full set of files contained within a
+distribution.  The "files()" function takes a distribution package
+name and returns all of the files installed by this distribution.
+Each file object returned is a "PackagePath", a "pathlib.PurePath"
+derived object with additional "dist", "size", and "hash" properties
+as indicated by the metadata.  For example:
+
+   >>> util = [p for p in files('wheel') if 'util.py' in str(p)][0]  
+   >>> util  
+   PackagePath('wheel/util.py')
+   >>> util.size  
+   859
+   >>> util.dist  
+   <importlib.metadata._hooks.PathDistribution object at 0x101e0cef0>
+   >>> util.hash  
+   <FileHash mode: sha256 value: bYkw5oMccfazVCoYQwKkkemoVyMAFoR34mmKBx8R1NI>
+
+일단 파일을 얻으면, 내용을 읽을 수도 있습니다:
+
+   >>> print(util.read_text())  
+   import base64
+   import sys
+   ...
+   def as_bytes(s):
+       if isinstance(s, text_type):
+           return s.encode('utf-8')
+       return s
+
+You can also use the "locate" method to get a the absolute path to the
+file:
+
+   >>> util.locate()  
+   PosixPath('/home/gustav/example/lib/site-packages/wheel/util.py')
+
+In the case where the metadata file listing files (RECORD or
+SOURCES.txt) is missing, "files()" will return "None". The caller may
+wish to wrap calls to "files()" in always_iterable or otherwise guard
+against this condition if the target distribution is not known to have
+the metadata present.
+
+
+배포 요구 사항
+--------------
+
+To get the full set of requirements for a distribution, use the
+"requires()" function:
+
+   >>> requires('wheel')  
+   ["pytest (>=3.0.0) ; extra == 'test'", "pytest-cov ; extra == 'test'"]
+
+
+Package distributions
+---------------------
+
+A convenience method to resolve the distribution or distributions (in
+the case of a namespace package) for top-level Python packages or
+modules:
+
+   >>> packages_distributions()
+   {'importlib_metadata': ['importlib-metadata'], 'yaml': ['PyYAML'], 'jaraco': ['jaraco.classes', 'jaraco.functools'], ...}
+
+버전 3.10에 추가.
+
+
+배포
+====
+
+While the above API is the most common and convenient usage, you can
+get all of that information from the "Distribution" class.  A
+"Distribution" is an abstract object that represents the metadata for
+a Python package.  You can get the "Distribution" instance:
+
+   >>> from importlib.metadata import distribution  
+   >>> dist = distribution('wheel')  
+
+Thus, an alternative way to get the version number is through the
+"Distribution" instance:
+
+   >>> dist.version  
+   '0.32.3'
+
+There are all kinds of additional metadata available on the
+"Distribution" instance:
+
+   >>> dist.metadata['Requires-Python']  
+   '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*'
+   >>> dist.metadata['License']  
+   'MIT'
+
+The full set of available metadata is not described here.  See **PEP
+566** for additional details.
+
+
+검색 알고리즘 확장하기
+======================
+
+Because package metadata is not available through "sys.path" searches,
+or package loaders directly, the metadata for a package is found
+through import system finders.  To find a distribution package's
+metadata, "importlib.metadata" queries the list of *meta path finders*
+on "sys.meta_path".
+
+The default "PathFinder" for Python includes a hook that calls into
+"importlib.metadata.MetadataPathFinder" for finding distributions
+loaded from typical file-system-based paths.
+
+추상 클래스 "importlib.abc.MetaPathFinder"는 파이썬의 임포트 시스템에
+의해 파인더가 기대하는 인터페이스를 정의합니다. "importlib.metadata"는
+"sys.meta_path"의 파인더에서 선택적인 "find_distributions" 콜러블을 조
+회함으로써 이 프로토콜을 확장하고 이 확장된 인터페이스를 다음과 같은
+추상 메서드를 정의하는 "DistributionFinder" 추상 베이스 클래스로 제공
+합니다:
+
+   @abc.abstractmethod
+   def find_distributions(context=DistributionFinder.Context()):
+       """Return an iterable of all Distribution instances capable of
+       loading the metadata for packages for the indicated ``context``.
+       """
+
+"DistributionFinder.Context" 객체는 검색할 경로와 일치할 이름을 가리키
+는 ".path"와 ".name" 프로퍼티를 제공하고 다른 관련 문맥을 제공할 수 있
+습니다.
+
+이것이 실제로 의미하는 것은, 파일 시스템이 아닌 위치에서 배포 패키지
+메타 데이터를 찾는 것을 지원하려면, "Distribution"을 서브 클래싱하고
+추상 메서드를 구현해야 한다는 것입니다. 그런 다음 사용자 정의 파인더의
+"find_distributions()" 메서드에서, 이 파생된 "Distribution"의 인스턴스
+를 반환하십시오.

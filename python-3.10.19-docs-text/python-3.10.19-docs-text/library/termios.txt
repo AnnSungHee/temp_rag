@@ -1,0 +1,88 @@
+"termios" --- POSIX style tty control
+*************************************
+
+======================================================================
+
+이 모듈은 tty I/O 제어를 위한 POSIX 호출에 대한 인터페이스를 제공합니
+다. 이 호출에 대한 자세한 설명은 *termios(3)* 유닉스 매뉴얼 페이지를
+참조하십시오. 설치 중에 구성된 POSIX *termios* 스타일 tty I/O 제어를
+지원하는 유닉스 버전에서만 사용할 수 있습니다.
+
+이 모듈의 모든 함수는 첫 번째 인자로 파일 기술자 *fd*를 받아들입니다.
+"sys.stdin.fileno()"에 의해 반환된 것과 같은 정수 파일 기술자이거나,
+"sys.stdin" 자체와 같은 *파일 객체* 일 수 있습니다.
+
+이 모듈은 여기에 제공된 함수로 작업하는 데 필요한 모든 상수도 정의합니
+다; 이것들은 C에 있는 것들과 같은 이름을 가집니다. 이 터미널 제어 인터
+페이스의 사용에 대한 자세한 내용은 시스템 설명서를 참조하십시오.
+
+모듈은 다음 함수를 정의합니다:
+
+termios.tcgetattr(fd)
+
+   다음과 같이 파일 기술자 *fd*에 대한 tty 어트리뷰트를 포함하는 리스
+   트를 반환합니다: "[iflag, oflag, cflag, lflag, ispeed, ospeed,
+   cc]". 여기서 *cc*는 tty 특수 문자 리스트입니다 (각기 길이 1인 문자
+   열인데, 인덱스가 "VMIN" 과 "VTIME" 인 항목은 예외인데, 이 필드가 정
+   의될 때 정수입니다). *cc* 배열의 인덱싱뿐만 아니라 플래그와 속도의
+   해석은 "termios" 모듈에 정의된 기호 상수를 사용해서 이루어져야 합니
+   다.
+
+termios.tcsetattr(fd, when, attributes)
+
+   Set the tty attributes for file descriptor *fd* from the
+   *attributes*, which is a list like the one returned by
+   "tcgetattr()".  The *when* argument determines when the attributes
+   are changed: "TCSANOW" to change immediately, "TCSADRAIN" to change
+   after transmitting all queued output, or "TCSAFLUSH" to change
+   after transmitting all queued output and discarding all queued
+   input.
+
+termios.tcsendbreak(fd, duration)
+
+   파일 기술자 *fd*에 브레이크(break)를 보냅니다. 0 *duration*은 0.25
+   --0.5 초 동안 브레이크를 보냅니다; 0이 아닌 *duration*은 시스템 종
+   속적인 의미가 있습니다.
+
+termios.tcdrain(fd)
+
+   파일 기술자 *fd*에 기록된 모든 출력이 전송될 때까지 기다립니다.
+
+termios.tcflush(fd, queue)
+
+   파일 기술자 *fd*에 계류 중인 데이터를 버립니다. *queue* 선택기는 어
+   떤 큐인지를 지정합니다: 입력 큐는 "TCIFLUSH", 출력 큐는 "TCOFLUSH"
+   또는 두 큐 모두는 "TCIOFLUSH".
+
+termios.tcflow(fd, action)
+
+   파일 기술자 *fd*에서 입력 또는 출력을 일시 중단하거나 다시 시작합니
+   다. *action* 인자는 출력을 일시 중단하는 "TCOOFF", 출력을 다시 시작
+   하는 "TCOON", 입력을 일시 중단하는 "TCIOFF" 또는 입력을 다시 시작하
+   는 "TCION"이 될 수 있습니다.
+
+더 보기:
+
+  모듈 "tty"
+     공통 터미널 제어 연산을 위한 편리 함수.
+
+
+예제
+====
+
+이것은 에코가 꺼진 상태에서 암호를 묻는 함수입니다. 별도의
+"tcgetattr()" 호출과 "try" ... "finally" 문을 사용하여 이전 tty 어트리
+뷰트가 어떤 일이 발생하든 정확하게 복원되도록 하는 것에 유의하십시오:
+
+   def getpass(prompt="Password: "):
+       import termios, sys
+       fd = sys.stdin.fileno()
+       old = termios.tcgetattr(fd)
+       new = termios.tcgetattr(fd)
+       new[3] = new[3] & ~termios.ECHO          # lflags
+       try:
+           termios.tcsetattr(fd, termios.TCSADRAIN, new)
+           passwd = input(prompt)
+       finally:
+           termios.tcsetattr(fd, termios.TCSADRAIN, old)
+       return passwd

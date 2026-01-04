@@ -1,0 +1,132 @@
+컨텍스트 변수 객체
+******************
+
+참고:
+
+  버전 3.7.1에서 변경: 파이썬 3.7.1에서 모든 컨텍스트 변수 C API의 서
+  명이 "PyContext", "PyContextVar" 및 "PyContextToken" 대신 "PyObject"
+  포인터를 사용하도록 **변경되었습니다**, 예를 들어:
+
+     // in 3.7.0:
+     PyContext *PyContext_New(void);
+
+     // in 3.7.1+:
+     PyObject *PyContext_New(void);
+
+  자세한 내용은 bpo-34762를 참조하십시오.
+
+버전 3.7에 추가.
+
+이 절에서는 "contextvars" 모듈을 위한 공용 C API에 대해 자세히 설명합
+니다.
+
+type PyContext
+
+   "contextvars.Context" 객체를 나타내는 데 사용되는 C 구조체.
+
+type PyContextVar
+
+   "contextvars.ContextVar" 객체를 나타내는 데 사용되는 C 구조체.
+
+type PyContextToken
+
+   "contextvars.Token" 객체를 나타내는 데 사용되는 C 구조체.
+
+PyTypeObject PyContext_Type
+
+   *context* 형을 나타내는 형 객체.
+
+PyTypeObject PyContextVar_Type
+
+   *컨텍스트 변수* 형을 나타내는 형 객체.
+
+PyTypeObject PyContextToken_Type
+
+   *컨텍스트 변수 토큰* 형을 나타내는 형 객체.
+
+형 검사 매크로:
+
+int PyContext_CheckExact(PyObject *o)
+
+   *o*가 "PyContext_Type" 형이면 참을 돌려줍니다. *o*는 "NULL"이 아니
+   어야 합니다. 이 함수는 항상 성공합니다.
+
+int PyContextVar_CheckExact(PyObject *o)
+
+   *o*가 "PyContextVar_Type" 형이면 참을 돌려줍니다. *o*는 "NULL"이 아
+   니어야 합니다. 이 함수는 항상 성공합니다.
+
+int PyContextToken_CheckExact(PyObject *o)
+
+   *o*가 "PyContextToken_Type" 형이면 참을 돌려줍니다. *o*는 "NULL"이
+   아니어야 합니다. 이 함수는 항상 성공합니다.
+
+컨텍스트 객체 관리 함수:
+
+PyObject *PyContext_New(void)
+    *반환값: 새 참조.*
+
+   새로운 빈 컨텍스트 객체를 만듭니다. 에러가 발생하면 "NULL"를 반환합
+   니다.
+
+PyObject *PyContext_Copy(PyObject *ctx)
+    *반환값: 새 참조.*
+
+   전달된 *ctx* 컨텍스트 객체의 얕은 복사본을 만듭니다. 에러가 발생하
+   면 "NULL"을 반환합니다.
+
+PyObject *PyContext_CopyCurrent(void)
+    *반환값: 새 참조.*
+
+   현재 스레드 컨텍스트의 얕은 복사본을 만듭니다. 에러가 발생하면
+   "NULL"을 반환합니다.
+
+int PyContext_Enter(PyObject *ctx)
+
+   현재 스레드의 현재 컨텍스트로 *ctx*를 설정합니다. 성공 시 "0"을 반
+   환하고, 에러 시 "-1"을 반환합니다.
+
+int PyContext_Exit(PyObject *ctx)
+
+   *ctx* 컨텍스트를 비활성화하고 이전 컨텍스트를 현재 스레드의 현재 컨
+   텍스트로 복원합니다. 성공 시 "0"을 반환하고, 에러 시 "-1"을 반환합
+   니다.
+
+컨텍스트 변수 함수:
+
+PyObject *PyContextVar_New(const char *name, PyObject *def)
+    *반환값: 새 참조.*
+
+   새 "ContextVar" 객체를 만듭니다. *name* 매개 변수는 인트로스펙션과
+   디버그 목적으로 사용됩니다. *def* 매개 변수는 컨텍스트 변수의 기본
+   값을 지정할 수 있습니다. "NULL"은 기본값 없음입니다. 에러가 발생하
+   면, 이 함수는 "NULL"을 반환합니다.
+
+int PyContextVar_Get(PyObject *var, PyObject *default_value, PyObject **value)
+
+   컨텍스트 변수의 값을 가져옵니다. 조회하는 동안 에러가 발생하면 "-1"
+   을 반환하고, 값이 있는지와 상관없이 에러가 발생하지 않으면 "0"을 반
+   환합니다.
+
+   컨텍스트 변수가 발견되면, *value*는 그것을 가리키는 포인터가 됩니다
+   . 컨텍스트 변수가 발견되지 *않으면*, *value*는 다음을 가리 킵니다:
+
+   * *default_value*, "NULL"이 아니면;
+
+   * *var*의 기본값, "NULL"이 아니면;
+
+   * "NULL"
+
+   "NULL"일 때를 제외하고, 이 함수는 새 참조를 반환합니다.
+
+PyObject *PyContextVar_Set(PyObject *var, PyObject *value)
+    *반환값: 새 참조.*
+
+   현재 컨텍스트에서 *var*의 값을 *value*로 설정합니다. 이 변경에 대한
+   새 토큰 객체를 반환하거나, 에러가 발생하면 "NULL"을 반환합니다.
+
+int PyContextVar_Reset(PyObject *var, PyObject *token)
+
+   *var* 컨텍스트 변수의 상태를 *token*을 반환한 "PyContextVar_Set()"
+   호출 전의 상태로 재설정합니다. 이 함수는 성공 시 "0"을 반환하고, 에
+   러 시 "-1"을 반환합니다.

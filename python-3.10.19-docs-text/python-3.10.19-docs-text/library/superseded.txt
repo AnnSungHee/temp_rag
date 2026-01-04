@@ -1,0 +1,225 @@
+대체된 모듈
+***********
+
+The modules described in this chapter are deprecated and only kept for
+backwards compatibility. They have been superseded by other modules.
+
+* "aifc" --- Read and write AIFF and AIFC files
+
+* "asynchat" --- Asynchronous socket command/response handler
+
+  * asynchat Example
+
+* "asyncore" --- Asynchronous socket handler
+
+  * asyncore Example basic HTTP client
+
+  * asyncore Example basic echo server
+
+* "audioop" --- Manipulate raw audio data
+
+* "cgi" --- Common Gateway Interface support
+
+  * Introduction
+
+  * Using the cgi module
+
+  * Higher Level Interface
+
+  * Functions
+
+  * Caring about security
+
+  * Installing your CGI script on a Unix system
+
+  * Testing your CGI script
+
+  * Debugging CGI scripts
+
+  * Common problems and solutions
+
+* "cgitb" --- Traceback manager for CGI scripts
+
+* "chunk" --- Read IFF chunked data
+
+* "crypt" --- Function to check Unix passwords
+
+  * Hashing Methods
+
+  * Module Attributes
+
+  * Module Functions
+
+  * Examples
+
+* "imghdr" --- Determine the type of an image
+
+* "imp" --- Access the *import* internals
+
+  * Examples
+
+* "mailcap" --- Mailcap file handling
+
+* "msilib" --- Read and write Microsoft Installer files
+
+  * Database Objects
+
+  * View Objects
+
+  * Summary Information Objects
+
+  * Record Objects
+
+  * Errors
+
+  * CAB Objects
+
+  * Directory Objects
+
+  * Features
+
+  * GUI classes
+
+  * Precomputed tables
+
+* "nis" --- Interface to Sun's NIS (Yellow Pages)
+
+* "nntplib" --- NNTP protocol client
+
+  * NNTP Objects
+
+    * Attributes
+
+    * Methods
+
+  * Utility functions
+
+* "optparse" --- Parser for command line options
+
+  * 배경
+
+    * 용어
+
+    * 옵션은 무엇을 위한 것입니까?
+
+    * 위치 인자는 무엇을 위한 것입니까?
+
+  * 자습서
+
+    * 옵션 액션의 이해
+
+    * store 액션
+
+    * 불리언 (플래그) 옵션 처리하기
+
+    * 다른 액션들
+
+    * 기본값
+
+    * 도움말 생성하기
+
+      * 옵션 그룹화하기
+
+    * 버전 문자열 인쇄하기
+
+    * "optparse"가 에러를 처리하는 방법
+
+    * 모두 합치기
+
+  * 레퍼런스 지침서
+
+    * 구문 분석기 만들기
+
+    * 구문 분석기 채우기
+
+    * 옵션 정의하기
+
+    * 옵션 어트리뷰트
+
+    * 표준 옵션 액션
+
+    * 표준 옵션 형
+
+    * 인자 구문 분석하기
+
+    * 옵션 구문 분석기를 조회하고 조작하기
+
+    * 옵션 간의 충돌
+
+    * 정리
+
+    * 기타 메서드
+
+  * 옵션 콜백
+
+    * 콜백 옵션 정의하기
+
+    * 콜백이 호출되는 방법
+
+    * 콜백에서 에러 발생시키기
+
+    * 콜백 예제 1: 간단한 콜백
+
+    * 콜백 예제 2: 옵션 순서 확인
+
+    * 콜백 예제 3: 옵션 순서 확인 (일반화)
+
+    * 콜백 예제 4: 임의 조건 확인
+
+    * 콜백 예제 5: 고정 인자
+
+    * 콜백 예제 6: 가변 인자
+
+  * "optparse" 확장하기
+
+    * 새로운 형 추가하기
+
+    * 새로운 액션 추가하기
+
+* "ossaudiodev" --- Access to OSS-compatible audio devices
+
+  * Audio Device Objects
+
+  * Mixer Device Objects
+
+* "pipes" --- Interface to shell pipelines
+
+  * Template Objects
+
+* "smtpd" --- SMTP Server
+
+  * SMTPServer Objects
+
+  * DebuggingServer Objects
+
+  * PureProxy Objects
+
+  * MailmanProxy Objects
+
+  * SMTPChannel Objects
+
+* "sndhdr" --- Determine type of sound file
+
+* "spwd" --- The shadow password database
+
+* "sunau" --- Read and write Sun AU files
+
+  * AU_read Objects
+
+  * AU_write Objects
+
+* "telnetlib" --- Telnet client
+
+  * Telnet Objects
+
+  * Telnet Example
+
+* "uu" --- Encode and decode uuencode files
+
+* "xdrlib" --- Encode and decode XDR data
+
+  * Packer Objects
+
+  * Unpacker Objects
+
+  * Exceptions

@@ -1,0 +1,330 @@
+서브 프로세스
+*************
+
+**소스 코드:** Lib/asyncio/subprocess.py,
+Lib/asyncio/base_subprocess.py
+
+======================================================================
+
+이 절에서는 서브 프로세스를 만들고 관리하기 위한 고수준 async/await
+asyncio API에 관해 설명합니다.
+
+다음은 asyncio가 셸 명령을 실행하고 결과를 얻는 방법의 예입니다:
+
+   import asyncio
+
+   async def run(cmd):
+       proc = await asyncio.create_subprocess_shell(
+           cmd,
+           stdout=asyncio.subprocess.PIPE,
+           stderr=asyncio.subprocess.PIPE)
+
+       stdout, stderr = await proc.communicate()
+
+       print(f'[{cmd!r} exited with {proc.returncode}]')
+       if stdout:
+           print(f'[stdout]\n{stdout.decode()}')
+       if stderr:
+           print(f'[stderr]\n{stderr.decode()}')
+
+   asyncio.run(run('ls /zzz'))
+
+는 다음과 같이 인쇄할 것입니다:
+
+   ['ls /zzz' exited with 1]
+   [stderr]
+   ls: /zzz: No such file or directory
+
+모든 asyncio 서브 프로세스 함수는 비동기이고, asyncio가 이러한 함수로
+작업 할 수 있는 많은 도구를 제공하기 때문에, 여러 서브 프로세스를 병렬
+로 실행하고 감시하기가 쉽습니다. 여러 명령을 동시에 실행하도록 위 예제
+를 수정하는 것은 아주 간단합니다:
+
+   async def main():
+       await asyncio.gather(
+           run('ls /zzz'),
+           run('sleep 1; echo "hello"'))
+
+   asyncio.run(main())
+
+예제 하위 절도 참조하십시오.
+
+
+서브 프로세스 만들기
+====================
+
+coroutine asyncio.create_subprocess_exec(program, *args, stdin=None, stdout=None, stderr=None, limit=None, **kwds)
+
+   서브 프로세스를 만듭니다.
+
+   The *limit* argument sets the buffer limit for "StreamReader"
+   wrappers for "Process.stdout" and "Process.stderr" (if
+   "subprocess.PIPE" is passed to *stdout* and *stderr* arguments).
+
+   "Process" 인스턴스를 반환합니다.
+
+   다른 매개 변수에 관해서는 "loop.subprocess_exec()"의 설명서를 참조
+   하십시오.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+coroutine asyncio.create_subprocess_shell(cmd, stdin=None, stdout=None, stderr=None, limit=None, **kwds)
+
+   *cmd* 셸 명령을 실행합니다.
+
+   The *limit* argument sets the buffer limit for "StreamReader"
+   wrappers for "Process.stdout" and "Process.stderr" (if
+   "subprocess.PIPE" is passed to *stdout* and *stderr* arguments).
+
+   "Process" 인스턴스를 반환합니다.
+
+   다른 매개 변수에 관해서는 "loop.subprocess_shell()"의 설명서를 참조
+   하십시오.
+
+   중요:
+
+     셸 주입 취약점을 피하고자 모든 공백과 특수 문자를 적절하게 따옴표
+     로 감싸는 것은 응용 프로그램의 책임입니다. "shlex.quote()" 함수는
+     셸 명령을 구성하는 데 사용될 문자열의 공백 문자와 특수 셸 문자를
+     올바르게 이스케이프 하는 데 사용할 수 있습니다.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+참고:
+
+  "ProactorEventLoop"를 쓰면 윈도우에서 서브 프로세스를 사용할 수 있습
+  니다. 자세한 내용은 윈도우에서의 서브 프로세스 지원을 참조하십시오.
+
+더 보기:
+
+  또한, asyncio에는 서브 프로세스와 함께 작동하는 다음과 같은 *저수준*
+  API가 있습니다: 서브 프로세스 트랜스포트 와 서브 프로세스 프로토콜
+  뿐만 아니라 "loop.subprocess_exec()", "loop.subprocess_shell()",
+  "loop.connect_read_pipe()", "loop.connect_write_pipe()".
+
+
+상수
+====
+
+asyncio.subprocess.PIPE
+
+   *stdin*, *stdout* 또는 *stderr* 매개 변수로 전달될 수 있습니다.
+
+   If *PIPE* is passed to *stdin* argument, the "Process.stdin"
+   attribute will point to a "StreamWriter" instance.
+
+   If *PIPE* is passed to *stdout* or *stderr* arguments, the
+   "Process.stdout" and "Process.stderr" attributes will point to
+   "StreamReader" instances.
+
+asyncio.subprocess.STDOUT
+
+   *stderr* 인자로 사용할 수 있는 특수 값이며, 표준 에러를 표준 출력으
+   로 리디렉션해야 함을 나타냅니다.
+
+asyncio.subprocess.DEVNULL
+
+   프로세스 생성 함수의 *stdin*, *stdout* 또는 *stderr* 인자로 사용할
+   수 있는 특수 값입니다. 특수 파일 "os.devnull"이 해당 서브 프로세스
+   스트림에 사용됨을 나타냅니다.
+
+
+서브 프로세스와 상호 작용하기
+=============================
+
+"create_subprocess_exec()" 와 "create_subprocess_shell()" 함수는 모두
+*Process* 클래스의 인스턴스를 반환합니다. *Process*는 서브 프로세스와
+통신하고 완료를 관찰할 수 있는 고수준 래퍼입니다.
+
+class asyncio.subprocess.Process
+
+   An object that wraps OS processes created by the
+   "create_subprocess_exec()" and "create_subprocess_shell()"
+   functions.
+
+   이 클래스는 "subprocess.Popen" 클래스와 비슷한 API를 갖도록 설계되
+   었지만, 주목할만한 차이점이 있습니다:
+
+   * Popen과 달리, Process 인스턴스에는 "poll()" 메서드와 동등한 것이
+     없습니다;
+
+   * "communicate()" 와 "wait()" 메서드에는 *timeout* 매개 변수가 없습
+     니다: "wait_for()" 함수를 사용하십시오;
+
+   * "Process.wait()" 메서드는 비동기이지만, "subprocess.Popen.wait()"
+     메서드는 블로킹 비지 루프(blocking busy loop)로 구현됩니다;
+
+   * *universal_newlines* 매개 변수는 지원되지 않습니다.
+
+   이 클래스는 스레드 안전하지 않습니다.
+
+   서브 프로세스와 스레드 절도 참조하십시오.
+
+   coroutine wait()
+
+      자식 프로세스가 종료할 때까지 기다립니다.
+
+      "returncode" 어트리뷰트를 설정하고 반환합니다.
+
+      참고:
+
+        이 메서드는 "stdout=PIPE" 나 "stderr=PIPE"를 사용하고 자식 프
+        로세스가 너무 많은 출력을 만들면 교착 상태가 될 수 있습니다.
+        자식 프로세스는 OS 파이프 버퍼가 더 많은 데이터를 받아들이도록
+        기다리면서 블록 됩니다. 이 조건을 피하고자, 파이프를 사용할 때
+        는 "communicate()" 메서드를 사용하십시오.
+
+   coroutine communicate(input=None)
+
+      프로세스와 상호 작용합니다:
+
+      1. 데이터를 *stdin*으로 보냅니다 (*input*이 "None"이 아니면);
+
+      2. EOF에 도달할 때까지 *stdout* 과 *stderr*에서 데이터를 읽습니
+         다;
+
+      3. 프로세스가 종료할 때까지 기다립니다.
+
+      선택적 *input* 인자는 자식 프로세스로 전송될 데이터("bytes" 객체
+      )입니다.
+
+      튜플 "(stdout_data, stderr_data)"를 반환합니다.
+
+      *input*을 *stdin*에 쓸 때 "BrokenPipeError" 나
+      "ConnectionResetError" 예외가 발생하면, 예외를 무시합니다. 이 조
+      건은 모든 데이터가 *stdin*에 기록되기 전에 프로세스가 종료할 때
+      발생합니다.
+
+      프로세스의 '*stdin*으로 데이터를 보내려면, 프로세스를
+      "stdin=PIPE"로 만들어야 합니다. 마찬가지로, 결과 튜플에서 "None"
+      이외의 것을 얻으려면, "stdout=PIPE" 와/나 "stderr=PIPE" 인자를
+      사용하여 프로세스를 만들어야 합니다.
+
+      데이터가 메모리에 버퍼링 되므로, 데이터 크기가 크거나 무제한이면
+      이 메서드를 사용하지 마십시오.
+
+   send_signal(signal)
+
+      시그널 *signal*를 자식 프로세스로 보냅니다.
+
+      참고:
+
+        On Windows, "SIGTERM" is an alias for "terminate()".
+        "CTRL_C_EVENT" and "CTRL_BREAK_EVENT" can be sent to processes
+        started with a *creationflags* parameter which includes
+        "CREATE_NEW_PROCESS_GROUP".
+
+   terminate()
+
+      자식 프로세스를 중지합니다.
+
+      On POSIX systems this method sends "signal.SIGTERM" to the child
+      process.
+
+      On Windows the Win32 API function "TerminateProcess()" is called
+      to stop the child process.
+
+   kill()
+
+      자식 프로세스를 죽입니다.
+
+      On POSIX systems this method sends "SIGKILL" to the child
+      process.
+
+      윈도우에서 이 메서드는 "terminate()"의 별칭입니다.
+
+   stdin
+
+      Standard input stream ("StreamWriter") or "None" if the process
+      was created with "stdin=None".
+
+   stdout
+
+      Standard output stream ("StreamReader") or "None" if the process
+      was created with "stdout=None".
+
+   stderr
+
+      Standard error stream ("StreamReader") or "None" if the process
+      was created with "stderr=None".
+
+   경고:
+
+     "process.stdin.write()", "await process.stdout.read()" 또는
+     "await process.stderr.read()" 대신 "communicate()" 메서드를 사용
+     하십시오. 이렇게 하면 스트림이 읽기나 쓰기를 일시 중지하고 자식
+     프로세스를 블록하는 것으로 인한 교착 상태가 발생하지 않습니다.
+
+   pid
+
+      프로세스 식별 번호 (PID).
+
+      Note that for processes created by the
+      "create_subprocess_shell()" function, this attribute is the PID
+      of the spawned shell.
+
+   returncode
+
+      프로세스가 종료할 때의 반환 코드.
+
+      "None" 값은 프로세스가 아직 종료하지 않았음을 나타냅니다.
+
+      음수 값 "-N"은 자식이 시그널 "N"으로 종료되었음을 나타냅니다
+      (POSIX만 해당).
+
+
+서브 프로세스와 스레드
+----------------------
+
+표준 asyncio 이벤트 루프는 기본적으로 다른 스레드에서 서브 프로세스를
+실행하는 것을 지원합니다.
+
+윈도우에서 서브 프로세스는 "ProactorEventLoop"(기본값)에서만 제공되며,
+"SelectorEventLoop"에는 서브 프로세스 지원이 없습니다.
+
+유닉스에서 *child watchers*는 서브 프로세스 종료 대기에 사용됩니다. 자
+세한 정보는 프로세스 감시자를 참조하십시오.
+
+버전 3.8에서 변경: 유닉스는 제한 없이 다른 스레드에서 서브 프로세스를
+스폰하기 위해 "ThreadedChildWatcher"를 사용하도록 전환했습니다.*활성화
+되지 않은* 현재 자식 감시자를 사용하여 서브 프로세스를 스폰하면
+"RuntimeError"가 발생합니다.
+
+대체 이벤트 루프 구현에는 나름의 제한 사항이 있을 수 있습니다; 해당 설
+명서를 참조하십시오.
+
+더 보기: asyncio의 동시성과 다중 스레드 절.
+
+
+예제
+----
+
+"Process" 클래스를 사용하여 서브 프로세스를 제어하고 "StreamReader" 클
+래스를 사용하여 표준 출력을 읽는 예제.
+
+서브 프로세스는 "create_subprocess_exec()" 함수로 만듭니다:
+
+   import asyncio
+   import sys
+
+   async def get_date():
+       code = 'import datetime; print(datetime.datetime.now())'
+
+       # Create the subprocess; redirect the standard output
+       # into a pipe.
+       proc = await asyncio.create_subprocess_exec(
+           sys.executable, '-c', code,
+           stdout=asyncio.subprocess.PIPE)
+
+       # Read one line of output.
+       data = await proc.stdout.readline()
+       line = data.decode('ascii').rstrip()
+
+       # Wait for the subprocess exit.
+       await proc.wait()
+       return line
+
+   date = asyncio.run(get_date())
+   print(f"Current date: {date}")
+
+저수준 API를 사용하여 작성된 같은 예제도 참조하십시오.

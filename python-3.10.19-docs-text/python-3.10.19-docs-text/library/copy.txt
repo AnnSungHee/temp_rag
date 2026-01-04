@@ -1,0 +1,81 @@
+"copy" --- Shallow and deep copy operations
+*******************************************
+
+**소스 코드:** Lib/copy.py
+
+======================================================================
+
+파이썬에서 대입문은 객체를 복사하지 않고, 대상과 객체 사이에 바인딩을
+만듭니다.가변(mutable) 컬렉션 또는 가변(mutable) 항목들을 포함한 컬렉
+션의 경우때로 컬렉션을 변경하지 않고 사본을 변경하기 위해 복사가 필요
+합니다.이 모듈은 일반적인 얕은 복사와 깊은 복사 연산을 제공합니다. (아
+래 설명 참고)
+
+인터페이스 요약:
+
+copy.copy(x)
+
+   Return a shallow copy of *x*.
+
+copy.deepcopy(x[, memo])
+
+   Return a deep copy of *x*.
+
+exception copy.Error
+
+   모듈 특정 에러의 경우 발생됩니다.
+
+얕은 복사와 깊은 복사의 차이점은복합 객체(리스트 또는 클래스 인스턴스
+들과 같은 다른 객체를 포함한 객체)에만 유효합니다.
+
+* *얕은 복사*는 새로운 복합 객체를 만들고,(가능한 범위까지) 원본 객체
+  를 가리키는 *참조*를 새로운 복합 객체에 삽입합니다.
+
+* *깊은 복사*는 새로운 복합 객체를 만들고,재귀적으로 원본 객체의 *사본
+  *을 새로 만든 복합 객체에 삽입합니다.
+
+깊은 복사 연산은 얕은 복사 연산에는 없는 두 가지 문제가 있습니다:
+
+* 재귀 객체(직접적 또는 간접적으로 자신에 대한 참조를 포함하는 복합 객
+  체)는 순환 루프의 원인이 될 수 있습니다.
+
+* 깊은 복사는 모든 것을 복사하기 때문에, 지나치게 많이 복사할 수 있습
+  니다. 가령, 복사본 간에 공유할 의도가 있는 것까지도.
+
+"deepcopy()" 함수는 다음과 같은 방법으로 이 문제들을 피합니다:
+
+* 현재 복사 패스 중에 이미 복사된 객체의 "memo" 딕셔너리를 가지고 있습
+  니다; 그리고
+
+* 사용자 정의 클래스가 복사 연산 또는 복사된 구성요소 집합을 재정의하
+  도록 합니다.
+
+이 모듈은 모듈, 메서드, 스택 트레이스, 스택 프레임, 파일, 소켓, 윈도우
+나 그 비슷한 유형들은 복사하지 않습니다. 원래 객체를 변화시키지 않고
+반환함으로써 함수와 클래스를 (얕고 깊게) "복사" 합니다; 이것은
+"pickle" 모듈로 처리되는 방식과 호환됩니다.
+
+딕셔너리의 얕은 복사는 "dict.copy()"를 사용하여 복사할 수 있습니다.그
+리고 리스트의 얕은 복사는 예를 들어 "copied_list = original_list[:]"
+처럼전체 리스트의 슬라이스를 대입하여 리스트를 복사할 수도 있습니다.
+
+클래스는 피클링을 제어하기 위해 사용하는 것과 같은 인터페이스를 사용하
+여 복사를 제어할 수 있습니다.이러한 메서드들의 정보는 "pickle" 모듈 설
+명을 참고하세요.실제로 "copy" 모듈은 "copyreg" 모듈에 등록된 피클 함수
+를 사용합니다.
+
+In order for a class to define its own copy implementation, it can
+define special methods "__copy__()" and "__deepcopy__()".  The former
+is called to implement the shallow copy operation; no additional
+arguments are passed. The latter is called to implement the deep copy
+operation; it is passed one argument, the "memo" dictionary.  If the
+"__deepcopy__()" implementation needs to make a deep copy of a
+component, it should call the "deepcopy()" function with the component
+as first argument and the memo dictionary as second argument. The memo
+dictionary should be treated as an opaque object.
+
+더 보기:
+
+  모듈 "pickle"
+     객체 상태 조회와 복원을 지원하는데 사용되는 특수 메서드에 관한 논
+     의

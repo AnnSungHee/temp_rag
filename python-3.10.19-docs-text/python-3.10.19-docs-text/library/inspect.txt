@@ -1,0 +1,1350 @@
+"inspect" --- Inspect live objects
+**********************************
+
+**소스 코드:** Lib/inspect.py
+
+======================================================================
+
+"inspect" 모듈은 모듈, 클래스, 메서드, 함수, 트레이스백, 프레임 객체
+및 코드 객체와 같은 라이브 객체에 대한 정보를 얻는 데 도움이 되는 몇
+가지 유용한 함수를 제공합니다. 예를 들어, 클래스의 내용을 검사하거나,
+메서드의 소스 코드를 꺼내오거나, 함수의 인자 리스트를 추출하고 포맷하
+거나, 자세한 트레이스백을 표시하는 데 필요한 모든 정보를 얻는 데 도움
+이 될 수 있습니다.
+
+이 모듈은 4가지 종류의 주요 서비스를 제공합니다: 형 검사, 소스 코드 가
+져오기, 클래스와 함수 검사, 인터프리터 스택 검사.
+
+
+형과 멤버
+=========
+
+The "getmembers()" function retrieves the members of an object such as
+a class or module. The functions whose names begin with "is" are
+mainly provided as convenient choices for the second argument to
+"getmembers()". They also help you determine when you can expect to
+find the following special attributes:
+
++-------------+---------------------+-----------------------------+
+| 형          | 어트리뷰트          | 설명                        |
+|=============|=====================|=============================|
+| module      | __doc__             | 도큐멘테이션 문자열         |
++-------------+---------------------+-----------------------------+
+|             | __file__            | filename (missing for       |
+|             |                     | built-in modules)           |
++-------------+---------------------+-----------------------------+
+| 클래스      | __doc__             | 도큐멘테이션 문자열         |
++-------------+---------------------+-----------------------------+
+|             | __name__            | 이 클래스가 정의된 이름     |
++-------------+---------------------+-----------------------------+
+|             | __qualname__        | 정규화된 이름               |
++-------------+---------------------+-----------------------------+
+|             | __module__          | 이 클래스가 정의된 모듈의   |
+|             |                     | 이름                        |
++-------------+---------------------+-----------------------------+
+| 메서드      | __doc__             | 도큐멘테이션 문자열         |
++-------------+---------------------+-----------------------------+
+|             | __name__            | 이 메서드가 정의된 이름     |
++-------------+---------------------+-----------------------------+
+|             | __qualname__        | 정규화된 이름               |
++-------------+---------------------+-----------------------------+
+|             | __func__            | 메서드의 구현을 포함하는 함 |
+|             |                     | 수 객체                     |
++-------------+---------------------+-----------------------------+
+|             | __self__            | 이 메서드가 연결된 인스턴스 |
+|             |                     | , 또는 "None"               |
++-------------+---------------------+-----------------------------+
+|             | __module__          | 이 메서드가 정의된 모듈의   |
+|             |                     | 이름                        |
++-------------+---------------------+-----------------------------+
+| 함수        | __doc__             | 도큐멘테이션 문자열         |
++-------------+---------------------+-----------------------------+
+|             | __name__            | 이 함수가 정의된 이름       |
++-------------+---------------------+-----------------------------+
+|             | __qualname__        | 정규화된 이름               |
++-------------+---------------------+-----------------------------+
+|             | __code__            | 컴파일된 함수 *바이트 코드* |
+|             |                     | 를 포함하는 코드 객체       |
++-------------+---------------------+-----------------------------+
+|             | __defaults__        | 위치나 키워드 매개 변수에   |
+|             |                     | 대한 기본값의 튜플          |
++-------------+---------------------+-----------------------------+
+|             | __kwdefaults__      | 키워드 전용 매개 변수의 기  |
+|             |                     | 본값 매핑                   |
++-------------+---------------------+-----------------------------+
+|             | __globals__         | 이 함수가 정의된 전역 이름  |
+|             |                     | 공간                        |
++-------------+---------------------+-----------------------------+
+|             | __builtins__        | 내장 이름 공간              |
++-------------+---------------------+-----------------------------+
+|             | __annotations__     | 매개 변수 이름에서 어노테이 |
+|             |                     | 션으로의 매핑; ""return""   |
+|             |                     | 키는 반환 값 어노 테이션을  |
+|             |                     | 위해 예약되어 있습니다.     |
++-------------+---------------------+-----------------------------+
+|             | __module__          | 이 함수가 정의된 모듈의 이  |
+|             |                     | 름                          |
++-------------+---------------------+-----------------------------+
+| 트레이스백  | tb_frame            | 이 수준의 프레임 객체       |
++-------------+---------------------+-----------------------------+
+|             | tb_lasti            | 바이트 코드에서 마지막으로  |
+|             |                     | 시도한 명령의 인덱스        |
++-------------+---------------------+-----------------------------+
+|             | tb_lineno           | 파이썬 소스 코드의 현재 줄  |
+|             |                     | 번호                        |
++-------------+---------------------+-----------------------------+
+|             | tb_next             | (이 수준에서 호출된) 다음   |
+|             |                     | 내부(inner) 트레이스백 객체 |
++-------------+---------------------+-----------------------------+
+| 프레임      | f_back              | 다음 외부(outer) 프레임 객  |
+|             |                     | 체 (이 프레임의 호출자)     |
++-------------+---------------------+-----------------------------+
+|             | f_builtins          | 이 프레임이 보는 내장 이름  |
+|             |                     | 공간                        |
++-------------+---------------------+-----------------------------+
+|             | f_code              | 이 프레임에서 실행되는 코드 |
+|             |                     | 객체                        |
++-------------+---------------------+-----------------------------+
+|             | f_globals           | 이 프레임이 보는 전역 이름  |
+|             |                     | 공간                        |
++-------------+---------------------+-----------------------------+
+|             | f_lasti             | 바이트 코드에서 마지막으로  |
+|             |                     | 시도한 명령의 인덱스        |
++-------------+---------------------+-----------------------------+
+|             | f_lineno            | 파이썬 소스 코드의 현재 줄  |
+|             |                     | 번호                        |
++-------------+---------------------+-----------------------------+
+|             | f_locals            | 이 프레임이 보는 지역 이름  |
+|             |                     | 공간                        |
++-------------+---------------------+-----------------------------+
+|             | f_trace             | 이 프레임의 추적 함수       |
+|             |                     | (tracing function), 또는    |
+|             |                     | "None"                      |
++-------------+---------------------+-----------------------------+
+| 코드        | co_argcount         | 인자 개수 (키워드 전용 인자 |
+|             |                     | , * 또는 ** 인자는 포함하지 |
+|             |                     | 않습니다)                   |
++-------------+---------------------+-----------------------------+
+|             | co_code             | 컴파일된 날 바이트 코드의   |
+|             |                     | 문자열                      |
++-------------+---------------------+-----------------------------+
+|             | co_cellvars         | (포함하는 스코프가 참조하는 |
+|             |                     | ) 셀 변수 이름의 튜플       |
++-------------+---------------------+-----------------------------+
+|             | co_consts           | 바이트 코드에서 사용되는 상 |
+|             |                     | 수의 튜플                   |
++-------------+---------------------+-----------------------------+
+|             | co_filename         | 이 코드 객체가 만들어진 파  |
+|             |                     | 일의 이름                   |
++-------------+---------------------+-----------------------------+
+|             | co_firstlineno      | 파이썬 소스 코드의 첫 줄 번 |
+|             |                     | 호                          |
++-------------+---------------------+-----------------------------+
+|             | co_flags            | "CO_*" 플래그의 비트맵, 여  |
+|             |                     | 기를 더 읽어보십시오        |
++-------------+---------------------+-----------------------------+
+|             | co_lnotab           | 줄 번호에서 바이트 코드 인  |
+|             |                     | 덱스로의 인코딩된 매핑      |
++-------------+---------------------+-----------------------------+
+|             | co_freevars         | (함수의 클로저를 통해 참조  |
+|             |                     | 되는) 자유 변수(free        |
+|             |                     | variables) 이름의 튜플      |
++-------------+---------------------+-----------------------------+
+|             | co_posonlyargcount  | 위치 전용 인자의 개수       |
++-------------+---------------------+-----------------------------+
+|             | co_kwonlyargcount   | 키워드 전용 인자의 개수 (** |
+|             |                     | 인자는 제외합니다)          |
++-------------+---------------------+-----------------------------+
+|             | co_name             | 이 코드 객체가 정의된 이름  |
++-------------+---------------------+-----------------------------+
+|             | co_names            | 인자와 함수 지역이 아닌 이  |
+|             |                     | 름의 튜플                   |
++-------------+---------------------+-----------------------------+
+|             | co_nlocals          | 지역 변수의 개수            |
++-------------+---------------------+-----------------------------+
+|             | co_stacksize        | 필요한 가상 기계 스택 공간  |
++-------------+---------------------+-----------------------------+
+|             | co_varnames         | 인자와 지역 변수  이름의 튜 |
+|             |                     | 플                          |
++-------------+---------------------+-----------------------------+
+| 제너레이터  | __name__            | 이름                        |
++-------------+---------------------+-----------------------------+
+|             | __qualname__        | 정규화된 이름               |
++-------------+---------------------+-----------------------------+
+|             | gi_frame            | 프레임                      |
++-------------+---------------------+-----------------------------+
+|             | gi_running          | 제너레이터가 실행 중입니까? |
++-------------+---------------------+-----------------------------+
+|             | gi_code             | 코드                        |
++-------------+---------------------+-----------------------------+
+|             | gi_yieldfrom        | "yield from"에 의해 이터레  |
+|             |                     | 이트 중인 객체, 또는 "None" |
++-------------+---------------------+-----------------------------+
+| 코루틴      | __name__            | 이름                        |
++-------------+---------------------+-----------------------------+
+|             | __qualname__        | 정규화된 이름               |
++-------------+---------------------+-----------------------------+
+|             | cr_await            | 어웨이트 중인 객체, 또는    |
+|             |                     | "None"                      |
++-------------+---------------------+-----------------------------+
+|             | cr_frame            | 프레임                      |
++-------------+---------------------+-----------------------------+
+|             | cr_running          | 코루틴이 실행 중입니까?     |
++-------------+---------------------+-----------------------------+
+|             | cr_code             | 코드                        |
++-------------+---------------------+-----------------------------+
+|             | cr_origin           | 코루틴이 생성된 곳, 또는    |
+|             |                     | "None". "sys.set_coroutine  |
+|             |                     | _origin_tracking_depth()"를 |
+|             |                     | 참조하세요                  |
++-------------+---------------------+-----------------------------+
+| 내장        | __doc__             | 도큐멘테이션 문자열         |
++-------------+---------------------+-----------------------------+
+|             | __name__            | 이 함수나 메서드의 원래 이  |
+|             |                     | 름                          |
++-------------+---------------------+-----------------------------+
+|             | __qualname__        | 정규화된 이름               |
++-------------+---------------------+-----------------------------+
+|             | __self__            | 메서드가 연결된 인스턴스,   |
+|             |                     | 또는 "None"                 |
++-------------+---------------------+-----------------------------+
+
+버전 3.5에서 변경: "__qualname__"과 "gi_yieldfrom" 어트리뷰트를 제너레
+이터에 추가합니다.제너레이터의 "__name__" 어트리뷰트는 이제 코드 이름
+대신 함수 이름에서 설정되며, 이제 수정할 수 있습니다.
+
+버전 3.7에서 변경: 코루틴에 "cr_origin" 어트리뷰트를 추가합니다.
+
+버전 3.10에서 변경: 함수에 "__builtins__" 어트리뷰트를 추가합니다.
+
+inspect.getmembers(object[, predicate])
+
+   이름으로 정렬된 "(name, value)" 쌍의 리스트로 객체(object)의 모든
+   멤버를 반환합니다. 각 멤버의 "value" 객체로 호출될 선택적
+   *predicate* 인자가 제공되면, predicate가 참값을 반환하는 멤버만 포
+   함됩니다.
+
+   참고:
+
+     "getmembers()" will only return class attributes defined in the
+     metaclass when the argument is a class and those attributes have
+     been listed in the metaclass' custom "__dir__()".
+
+inspect.getmodulename(path)
+
+   감싸고 있는 패키지 이름 없이, 파일 경로(*path*)가 가리키는 모듈의
+   이름을 반환합니다. 파일 확장자는
+   "importlib.machinery.all_suffixes()"의 모든 항목에 대해 점검됩니다.
+   일치하면, 확장명이 제거된 최종 경로 구성 요소가 반환됩니다. 그렇지
+   않으면, "None"이 반환됩니다.
+
+   이 함수는 *오직* 실제 파이썬 모듈로 의미 있는 이름만 반환합니다. 잠
+   재적으로 파이썬 패키지를 가리키는 경로는 여전히 "None"을 반환합니다
+   .
+
+   버전 3.3에서 변경: 이 함수는 "importlib"에 직접 기반합니다.
+
+inspect.ismodule(object)
+
+   객체가 모듈이면 "True"를 반환합니다.
+
+inspect.isclass(object)
+
+   객체가 (내장이거나 파이썬 코드로 만든) 클래스이면 "True"를 반환합니
+   다.
+
+inspect.ismethod(object)
+
+   객체가 파이썬으로 작성된 연결된(bound) 메서드면 "True"를 반환합니다
+   .
+
+inspect.isfunction(object)
+
+   객체가 파이썬 함수이면 "True"를 반환합니다. *람다* 표현식으로 만든
+   함수를 포함합니다.
+
+inspect.isgeneratorfunction(object)
+
+   객체가 파이썬 제너레이터 함수이면 "True"를 반환합니다.
+
+   버전 3.8에서 변경: 래핑 된 함수가 파이썬 제너레이터 함수일 때
+   "functools.partial()"로 래핑 된 함수는 이제 "True"를 반환합니다.
+
+inspect.isgenerator(object)
+
+   객체가 제너레이터이면 "True"를 반환합니다.
+
+inspect.iscoroutinefunction(object)
+
+   Return "True" if the object is a *coroutine function* (a function
+   defined with an "async def" syntax).
+
+   버전 3.5에 추가.
+
+   버전 3.8에서 변경: 래핑 된 함수가 *코루틴 함수*일 때
+   "functools.partial()"로 래핑 된 함수는 이제 "True"를 반환합니다.
+
+inspect.iscoroutine(object)
+
+   객체가 "async def" 함수가 만든 *코루틴*이면 "True"를 반환합니다.
+
+   버전 3.5에 추가.
+
+inspect.isawaitable(object)
+
+   "await" 표현식에서 객체를 사용할 수 있으면 "True"를 반환합니다.
+
+   Can also be used to distinguish generator-based coroutines from
+   regular generators:
+
+      def gen():
+          yield
+      @types.coroutine
+      def gen_coro():
+          yield
+
+      assert not isawaitable(gen())
+      assert isawaitable(gen_coro())
+
+   버전 3.5에 추가.
+
+inspect.isasyncgenfunction(object)
+
+   Return "True" if the object is an *asynchronous generator*
+   function, for example:
+
+      >>> async def agen():
+      ...     yield 1
+      ...
+      >>> inspect.isasyncgenfunction(agen)
+      True
+
+   버전 3.6에 추가.
+
+   버전 3.8에서 변경: Functions wrapped in "functools.partial()" now
+   return "True" if the wrapped function is a *asynchronous generator*
+   function.
+
+inspect.isasyncgen(object)
+
+   객체가 *asynchronous generator* 함수가 만든 *비동기 제너레이터 이터
+   레이터*이면 "True"를 반환합니다.
+
+   버전 3.6에 추가.
+
+inspect.istraceback(object)
+
+   객체가 트레이스백이면 "True"를 반환합니다.
+
+inspect.isframe(object)
+
+   객체가 프레임이면 "True"를 반환합니다.
+
+inspect.iscode(object)
+
+   객체가 코드이면 "True"를 반환합니다.
+
+inspect.isbuiltin(object)
+
+   객체가 내장 함수나 연결된(bound) 내장 메서드이면 "True"를 반환합니
+   다.
+
+inspect.isroutine(object)
+
+   객체가 사용자 정의이거나 내장 함수나 메서드이면 "True"를 반환합니다
+   .
+
+inspect.isabstract(object)
+
+   객체가 추상 베이스 클래스이면 "True"를 반환합니다.
+
+inspect.ismethoddescriptor(object)
+
+   객체가 메서드 디스크립터이면 "True"를 반환하지만, "ismethod()",
+   "isclass()", "isfunction()" 또는 "isbuiltin()"이 참일 때는 그렇지
+   않습니다.
+
+   This, for example, is true of "int.__add__".  An object passing
+   this test has a "__get__()" method but not a "__set__()" method,
+   but beyond that the set of attributes varies.  A "__name__"
+   attribute is usually sensible, and "__doc__" often is.
+
+   Methods implemented via descriptors that also pass one of the other
+   tests return "False" from the "ismethoddescriptor()" test, simply
+   because the other tests promise more -- you can, e.g., count on
+   having the "__func__" attribute (etc) when an object passes
+   "ismethod()".
+
+inspect.isdatadescriptor(object)
+
+   객체가 데이터 디스크립터이면 "True"를 반환합니다.
+
+   Data descriptors have a "__set__" or a "__delete__" method.
+   Examples are properties (defined in Python), getsets, and members.
+   The latter two are defined in C and there are more specific tests
+   available for those types, which is robust across Python
+   implementations.  Typically, data descriptors will also have
+   "__name__" and "__doc__" attributes (properties, getsets, and
+   members have both of these attributes), but this is not guaranteed.
+
+inspect.isgetsetdescriptor(object)
+
+   객체가 getset 디스크립터이면 "True"를 반환합니다.
+
+   **CPython 구현 상세:** getset은 "PyGetSetDef" 구조체를 통해 확장 모
+   듈에서 정의된 어트리뷰트입니다. 이러한 형이 없는 파이썬 구현에서,
+   이 메서드는 항상 "False"를 반환합니다.
+
+inspect.ismemberdescriptor(object)
+
+   객체가 멤버 디스크립터이면 "True"를 반환합니다.
+
+   **CPython 구현 상세:** 멤버 디스크립터는 "PyMemberDef" 구조체를 통
+   해 확장 모듈에서 정의된 어트리뷰트입니다. 이러한 형이 없는 파이썬
+   구현에서, 이 메서드는 항상 "False"를 반환합니다.
+
+
+소스 코드 가져오기
+==================
+
+inspect.getdoc(object)
+
+   "cleandoc()"으로 정리된 객체의 독스트링을 가져옵니다. 객체가 독스트
+   링을 제공하지 않고 객체가 클래스, 메서드, 프로퍼티 또는 디스크립터
+   이면, 상속 계층 구조에서 독스트링을 가져옵니다. 독스트링이 유효하지
+   않거나 누락되었으면 "None"을 반환합니다.
+
+   버전 3.5에서 변경: 이제 재정의되지 않으면 독스트링이 상속됩니다.
+
+inspect.getcomments(object)
+
+   객체의 소스 코드 바로 앞(클래스, 함수 또는 메서드일 때)이나 파이썬
+   소스 파일의 최상단 (객체가 모듈일 때) 주석 줄들을 단일 문자열로 반
+   환합니다. 객체의 소스 코드를 사용할 수 없으면, "None"을 반환합니다.
+   객체가 C나 대화식 셸에서 정의될 때 이런 일이 일어날 수 있습니다.
+
+inspect.getfile(object)
+
+   객체가 정의된 (텍스트나 바이너리) 파일의 이름을 반환합니다. 객체가
+   내장 모듈, 클래스 또는 함수이면 "TypeError"로 실패합니다.
+
+inspect.getmodule(object)
+
+   객체가 정의된 모듈을 추측합니다. 모듈이 결정될 수 없으면 "None"을
+   반환합니다.
+
+inspect.getsourcefile(object)
+
+   객체가 정의된 파이썬 소스 파일의 이름을 반환합니다. 또는 소스를 얻
+   을 수 있는 방법이 없으면 "None"을 반환합니다. 객체가 내장 모듈, 클
+   래스 또는 함수이면 "TypeError"로 실패합니다.
+
+inspect.getsourcelines(object)
+
+   객체의 소스 줄의 리스트와 시작 줄 번호를 반환합니다. 인자는 모듈,
+   클래스, 메서드, 함수, 트레이스백, 프레임 또는 코드 객체일 수 있습니
+   다. 소스 코드는 객체에 해당하는 줄 리스트로 반환되며 줄 번호는 원본
+   소스 파일에서 첫 번째 코드 줄이 발견되는 위치를 나타냅니다. 소스 코
+   드를 가져올 수 없으면 "OSError"가 발생합니다. 객체가 내장 모듈, 클
+   래스 또는 함수면 "TypeError"가 발생합니다.
+
+   버전 3.3에서 변경: "IOError" 대신 "OSError"가 발생합니다. 이제
+   IOError는 OSError의 별칭입니다.
+
+inspect.getsource(object)
+
+   객체의 소스 코드 텍스트를 반환합니다. 인자는 모듈, 클래스, 메서드,
+   함수, 트레이스백, 프레임 또는 코드 객체일 수 있습니다. 소스 코드는
+   단일 문자열로 반환됩니다. 소스 코드를 가져올 수 없으면 "OSError"가
+   발생합니다. 객체가 내장 모듈, 클래스 또는 함수면 "TypeError"가 발생
+   합니다.
+
+   버전 3.3에서 변경: "IOError" 대신 "OSError"가 발생합니다. 이제
+   IOError는 OSError의 별칭입니다.
+
+inspect.cleandoc(doc)
+
+   코드 블록과 일치하도록 들여쓰기 된 독스트링에서 들여쓰기를 정리합니
+   다.
+
+   모든 선행 공백이 첫 번째 줄에서 제거됩니다. 두 번째 줄부터 균일하게
+   제거할 수 있는 선행 공백이 제거됩니다. 시작과 끝의 빈 줄은 그다음에
+   제거됩니다. 또한, 모든 탭이 스페이스로 확장됩니다.
+
+
+Signature 객체로 콜러블 검사하기
+================================
+
+버전 3.3에 추가.
+
+The Signature object represents the call signature of a callable
+object and its return annotation.  To retrieve a Signature object, use
+the "signature()" function.
+
+inspect.signature(callable, *, follow_wrapped=True, globals=None, locals=None, eval_str=False)
+
+   Return a "Signature" object for the given "callable":
+
+      >>> from inspect import signature
+      >>> def foo(a, *, b:int, **kwargs):
+      ...     pass
+
+      >>> sig = signature(foo)
+
+      >>> str(sig)
+      '(a, *, b:int, **kwargs)'
+
+      >>> str(sig.parameters['b'])
+      'b:int'
+
+      >>> sig.parameters['b'].annotation
+      <class 'int'>
+
+   일반 함수와 클래스에서 "functools.partial()" 객체에 이르기까지 광범
+   위한 파이썬 콜러블을 받아들입니다.
+
+   For objects defined in modules using stringized annotations ("from
+   __future__ import annotations"), "signature()" will attempt to
+   automatically un-stringize the annotations using
+   "inspect.get_annotations()".  The "global", "locals", and
+   "eval_str" parameters are passed into "inspect.get_annotations()"
+   when resolving the annotations; see the documentation for
+   "inspect.get_annotations()" for instructions on how to use these
+   parameters.
+
+   Raises "ValueError" if no signature can be provided, and
+   "TypeError" if that type of object is not supported.  Also, if the
+   annotations are stringized, and "eval_str" is not false, the
+   "eval()" call(s) to un-stringize the annotations could potentially
+   raise any kind of exception.
+
+   함수 서명에서 슬래시(/)는 그 앞의 매개 변수가 위치 전용임을 나타냅
+   니다. 자세한 내용은 위치 전용 인자에 관한 FAQ 항목을 참조하십시오.
+
+   버전 3.5에 추가: "follow_wrapped" parameter. Pass "False" to get a
+   signature of "callable" specifically ("callable.__wrapped__" will
+   not be used to unwrap decorated callables.)
+
+   버전 3.10에 추가: "globals", "locals", and "eval_str" parameters.
+
+   참고:
+
+     특정 파이썬 구현에서 일부 콜러블은 검사할 수 없습니다. 예를 들어,
+     CPython에서, C로 정의된 일부 내장 함수는 인자에 대한 메타 데이터
+     를 제공하지 않습니다.
+
+class inspect.Signature(parameters=None, *, return_annotation=Signature.empty)
+
+   A Signature object represents the call signature of a function and
+   its return annotation.  For each parameter accepted by the function
+   it stores a "Parameter" object in its "parameters" collection.
+
+   선택적 *parameters* 인자는 "Parameter" 객체의 시퀀스이며, 중복된 이
+   름을 가진 매개 변수가 없는지, 매개 변수가 올바른 순서인지 (즉, 위치
+   전용이 먼저 온 후, 위치-키워드가 그다음에 오는지), 기본값이 있는 매
+   개 변수가 그렇지 않은 매개 변수 뒤에 오는지 검사합니다.
+
+   The optional *return_annotation* argument, can be an arbitrary
+   Python object, is the "return" annotation of the callable.
+
+   Signature objects are *immutable*.  Use "Signature.replace()" to
+   make a modified copy.
+
+   버전 3.5에서 변경: Signature objects are picklable and *hashable*.
+
+   empty
+
+      반환 값 어노테이션이 없음을 지정하는 특수 클래스 수준 마커입니다
+      .
+
+   parameters
+
+      매개 변수 이름에서 해당 "Parameter" 객체로의 순서 있는 매핑. 키
+      워드 전용 매개 변수를 포함하여, 매개 변수는 엄격한 정의 순서대로
+      나타납니다.
+
+      버전 3.7에서 변경: 실제로 파이썬 3에서 항상 유지되었습니다만, 파
+      이썬은 버전 3.7부터 키워드 전용 매개 변수의 선언 순서를 유지한다
+      는 것을 명시적으로 보장합니다.
+
+   return_annotation
+
+      콜러블의 "반환 값" 어노테이션. 콜러블에 "반환 값" 어노테이션이
+      없으면, 이 어트리뷰트는 "Signature.empty"로 설정됩니다.
+
+   bind(*args, **kwargs)
+
+      위치와 키워드 인자에서 매개 변수로의 매핑을 만듭니다. "*args"와
+      "**kwargs"가 서명과 일치하면 "BoundArguments"를 반환하고, 그렇지
+      않으면 "TypeError"를 발생시킵니다.
+
+   bind_partial(*args, **kwargs)
+
+      "Signature.bind()"와 같은 방식으로 작동하지만, 일부 필수 인자를
+      생략 할 수 있습니다 ("functools.partial()" 동작을 흉내 냅니다).
+      "BoundArguments"를 반환하거나, 전달된 인자가 서명과 일치하지 않
+      으면 "TypeError"를 발생시킵니다.
+
+   replace(*[, parameters][, return_annotation])
+
+      Create a new Signature instance based on the instance replace
+      was invoked on.  It is possible to pass different "parameters"
+      and/or "return_annotation" to override the corresponding
+      properties of the base signature.  To remove return_annotation
+      from the copied Signature, pass in "Signature.empty".
+
+         >>> def test(a, b):
+         ...     pass
+         >>> sig = signature(test)
+         >>> new_sig = sig.replace(return_annotation="new return anno")
+         >>> str(new_sig)
+         "(a, b) -> 'new return anno'"
+
+   classmethod from_callable(obj, *, follow_wrapped=True, globalns=None, localns=None)
+
+      Return a "Signature" (or its subclass) object for a given
+      callable "obj".  Pass "follow_wrapped=False" to get a signature
+      of "obj" without unwrapping its "__wrapped__" chain. "globalns"
+      and "localns" will be used as the namespaces when resolving
+      annotations.
+
+      This method simplifies subclassing of "Signature":
+
+         class MySignature(Signature):
+             pass
+         sig = MySignature.from_callable(min)
+         assert isinstance(sig, MySignature)
+
+      버전 3.5에 추가.
+
+      버전 3.10에 추가: "globalns" and "localns" parameters.
+
+class inspect.Parameter(name, kind, *, default=Parameter.empty, annotation=Parameter.empty)
+
+   Parameter objects are *immutable*.  Instead of modifying a
+   Parameter object, you can use "Parameter.replace()" to create a
+   modified copy.
+
+   버전 3.5에서 변경: Parameter objects are picklable and *hashable*.
+
+   empty
+
+      기본값과 어노테이션이 없음을 지정하는 특수 클래스 수준 마커.
+
+   name
+
+      문자열로 표현한 매개 변수의 이름. 이름은 유효한 파이썬 식별자여
+      야 합니다.
+
+      **CPython 구현 상세:** CPython은 컴프리헨션과 제너레이터 표현식
+      을 구현하는 데 사용되는 코드 객체에서 ".0" 형식의 묵시적 매개 변
+      수 이름을 생성합니다.
+
+      버전 3.6에서 변경: These parameter names are exposed by this
+      module as names like "implicit0".
+
+   default
+
+      매개 변수의 기본값. 매개 변수에 기본값이 없으면, 이 어트리뷰트는
+      "Parameter.empty"로 설정됩니다.
+
+   annotation
+
+      매개 변수의 어노테이션. 매개 변수에 어노테이션이 없으면, 이 어트
+      리뷰트는 "Parameter.empty"로 설정됩니다.
+
+   kind
+
+      인자 값이 매개 변수에 연결되는 방법을 설명합니다. 가능한 값은
+      ("Parameter.KEYWORD_ONLY"처럼) "Parameter"를 통해 액세스할 수 있
+      고, 다음과 같은 순서로 비교와 순서를 지원합니다:
+
+      +--------------------------+------------------------------------------------+
+      | 이름                     | 의미                                           |
+      |==========================|================================================|
+      | *POSITIONAL_ONLY*        | 위치 인자로만 값을 제공해야 합니다. 위치 전용  |
+      |                          | 매개 변수는 파이썬 함수 정의에서 "/" 항목 (있  |
+      |                          | 다면) 앞에 나오는 매개 변수입니다.             |
+      +--------------------------+------------------------------------------------+
+      | *POSITIONAL_OR_KEYWORD*  | 값은 키워드나 위치 인자로 제공될 수 있습니다 ( |
+      |                          | 이것이 파이썬으로 구현된 함수의 표준 연결 동작 |
+      |                          | 입니다).                                       |
+      +--------------------------+------------------------------------------------+
+      | *VAR_POSITIONAL*         | 다른 매개 변수에 연결되지 않은 위치 인자의 튜  |
+      |                          | 플. 이것은 파이썬 함수 정의의 "*args" 매개 변  |
+      |                          | 수에 해당합니다.                               |
+      +--------------------------+------------------------------------------------+
+      | *KEYWORD_ONLY*           | 키워드 인자로만 값을 제공해야 합니다. 키워드   |
+      |                          | 전용 매개 변수는 파 이썬 함수 정의에서 "*"나   |
+      |                          | "*args" 항목 다음에 나오는 매개 변수입 니다.   |
+      +--------------------------+------------------------------------------------+
+      | *VAR_KEYWORD*            | 다른 매개 변수에 연결되지 않은 키워드 인자의   |
+      |                          | 딕셔너리. 이것은 파 이썬 함수 정의의           |
+      |                          | "**kwargs" 매개 변수에 해당합니다.             |
+      +--------------------------+------------------------------------------------+
+
+      Example: print all keyword-only arguments without default
+      values:
+
+         >>> def foo(a, b, *, c, d=10):
+         ...     pass
+
+         >>> sig = signature(foo)
+         >>> for param in sig.parameters.values():
+         ...     if (param.kind == param.KEYWORD_ONLY and
+         ...                        param.default is param.empty):
+         ...         print('Parameter:', param)
+         Parameter: c
+
+   kind.description
+
+      Describes a enum value of Parameter.kind.
+
+      버전 3.8에 추가.
+
+      Example: print all descriptions of arguments:
+
+         >>> def foo(a, b, *, c, d=10):
+         ...     pass
+
+         >>> sig = signature(foo)
+         >>> for param in sig.parameters.values():
+         ...     print(param.kind.description)
+         positional or keyword
+         positional or keyword
+         keyword-only
+         keyword-only
+
+   replace(*[, name][, kind][, default][, annotation])
+
+      Create a new Parameter instance based on the instance replaced
+      was invoked on.  To override a "Parameter" attribute, pass the
+      corresponding argument.  To remove a default value or/and an
+      annotation from a Parameter, pass "Parameter.empty".
+
+         >>> from inspect import Parameter
+         >>> param = Parameter('foo', Parameter.KEYWORD_ONLY, default=42)
+         >>> str(param)
+         'foo=42'
+
+         >>> str(param.replace()) # Will create a shallow copy of 'param'
+         'foo=42'
+
+         >>> str(param.replace(default=Parameter.empty, annotation='spam'))
+         "foo:'spam'"
+
+   버전 3.4에서 변경: In Python 3.3 Parameter objects were allowed to
+   have "name" set to "None" if their "kind" was set to
+   "POSITIONAL_ONLY". This is no longer permitted.
+
+class inspect.BoundArguments
+
+   "Signature.bind()"나 "Signature.bind_partial()" 호출의 결과. 인자에
+   서 함수의 매개 변수로의 매핑을 보관합니다.
+
+   arguments
+
+      매개 변수 이름에서 인자 값으로의 가변 매핑. 명시적으로 연결된 인
+      자만 포함합니다. "arguments"의 변경 사항은 "args"와 "kwargs"에
+      반영됩니다.
+
+      인자 처리 목적으로 "Signature.parameters"와 함께 사용해야 합니다
+      .
+
+      참고:
+
+        "Signature.bind()"나 "Signature.bind_partial()"이 기본값에 의
+        존하는 인자는 건너뜁니다. 그러나, 필요하다면
+        "BoundArguments.apply_defaults()"를 사용하여 추가하십시오.
+
+      버전 3.9에서 변경: "arguments"는 이제 "dict" 형입니다. 이전에는,
+      "collections.OrderedDict" 형이었습니다.
+
+   args
+
+      위치 인자 값의 튜플. "arguments" 어트리뷰트에서 동적으로 계산됩
+      니다.
+
+   kwargs
+
+      A dict of keyword arguments values.  Dynamically computed from
+      the "arguments" attribute.
+
+   signature
+
+      부모 "Signature" 객체에 대한 참조.
+
+   apply_defaults()
+
+      누락된 인자에 대한 기본값을 설정합니다.
+
+      가변 위치 인자("*args")의 기본값은 빈 튜플입니다.
+
+      가변 변수 키워드 인자("**kwargs")의 기본값은 빈 딕셔너리입니다.
+
+         >>> def foo(a, b='ham', *args): pass
+         >>> ba = inspect.signature(foo).bind('spam')
+         >>> ba.apply_defaults()
+         >>> ba.arguments
+         {'a': 'spam', 'b': 'ham', 'args': ()}
+
+      버전 3.5에 추가.
+
+   The "args" and "kwargs" properties can be used to invoke functions:
+
+      def test(a, *, b):
+          ...
+
+      sig = signature(test)
+      ba = sig.bind(10, b=20)
+      test(*ba.args, **ba.kwargs)
+
+더 보기:
+
+  **PEP 362** - 함수 Signature 객체.
+     자세한 명세, 구현 세부 사항 및 예
+
+
+클래스와 함수
+=============
+
+inspect.getclasstree(classes, unique=False)
+
+   주어진 클래스 리스트를 중첩된 리스트의 계층 구조로 배치합니다. 중첩
+   된 리스트가 나타나면, 리스트 바로 앞에 나오는 항목의 클래스에서 파
+   생된 클래스를 포함합니다. 각 항목은 클래스와 베이스 클래스의 튜플을
+   포함하는 2-튜플입니다. *unique* 인자가 참이면, 주어진 리스트의 각
+   클래스가 반환된 구조에 정확히 하나의 항목으로 나타납니다. 그렇지 않
+   으면, 다중 상속을 사용하는 클래스와 그 자식들이 여러 번 나타납니다.
+
+inspect.getargspec(func)
+
+   Get the names and default values of a Python function's parameters.
+   A *named tuple* "ArgSpec(args, varargs, keywords, defaults)" is
+   returned. *args* is a list of the parameter names. *varargs* and
+   *keywords* are the names of the "*" and "**" parameters or "None".
+   *defaults* is a tuple of default argument values or "None" if there
+   are no default arguments; if this tuple has *n* elements, they
+   correspond to the last *n* elements listed in *args*.
+
+   버전 3.0부터 폐지: Use "getfullargspec()" for an updated API that
+   is usually a drop-in replacement, but also correctly handles
+   function annotations and keyword-only parameters.Alternatively, use
+   "signature()" and Signature Object, which provide a more structured
+   introspection API for callables.
+
+inspect.getfullargspec(func)
+
+   파이썬 함수 매개 변수의 이름과 기본값을 가져옵니다. *네임드 튜플*이
+   반환됩니다:
+
+   "FullArgSpec(args, varargs, varkw, defaults, kwonlyargs,
+   kwonlydefaults, annotations)"
+
+   *args*는 위치 매개 변수 이름의 리스트입니다. *varargs*는 "*" 매개
+   변수의 이름이거나 임의의 위치 인자가 허용되지 않으면 "None"입니다.
+   *varkw*는 "**" 매개 변수의 이름이거나 임의의 키워드 인자가 허용되지
+   않으면 "None"입니다. *defaults*는 마지막 *n* 개의 위치 매개 변수에
+   해당하는 기본 인자 값의 *n*-튜플이거나, 이러한 기본값이 정의되지 않
+   으면 "None"입니다. *kwonlyargs*는 선언 순서를 따르는 키워드 전용 매
+   개 변수 이름 리스트입니다. *kwonlydefaults*는 *kwonlyargs*의 매개
+   변수 이름에서 인자가 제공되지 않을 때 사용되는 기본값으로의 딕셔너
+   리 매핑입니다. *annotations*는 매개 변수 이름에서 어노테이션으로의
+   딕셔너리 매핑입니다. 특수키 ""return""은 함수 반환 값 어노테이션(있
+   다면)을 보고하는 데 사용됩니다.
+
+   "signature()"와 Signature 객체가 콜러블 내부 검사에 권장되는 API를
+   제공하고, 확장 모듈 API에서 종종 등장하는 추가 동작(위치 전용 인자
+   와 같은)을 지원함에 유의하십시오. 이 함수는 주로 파이썬 2 "inspect"
+   모듈 API와의 호환성을 유지해야 하는 코드에서 사용하기 위해 유지됩니
+   다.
+
+   버전 3.4에서 변경: 이 함수는 이제 "signature()"를 기반으로 하지만,
+   여전히 "__wrapped__" 어트리뷰트를 무시하고 연결된(bound) 메서드의
+   서명 출력에 이미 연결된 첫 번째 매개 변수를 포함합니다.
+
+   버전 3.6에서 변경: 이 메서드는 이전에 파이썬 3.5에서 "signature()"
+   로 대신하면서 폐지된 것으로 문서화되었지만, 레거시 "getargspec()"
+   API에서 마이그레이션 하는 단일 소스 파이썬 2/3 코드를 위한 명확하게
+   지원되는 표준 인터페이스를 복원하기 위해 이 결정을 번복했습니다.
+
+   버전 3.7에서 변경: 실제로 파이썬 3에서 항상 유지되었습니다만, 파이
+   썬은 버전 3.7부터 키워드 전용 매개 변수의 선언 순서를 유지한다는 것
+   을 명시적으로 보장합니다.
+
+inspect.getargvalues(frame)
+
+   특정 프레임으로 전달된 인자에 대한 정보를 얻습니다. *네임드 튜플*
+   "ArgInfo(args, varargs, keywords, locals)"가 반환됩니다. *args*는
+   인자 이름의 리스트입니다. *varargs*와 *keywords*는 "*"와 "**" 인자
+   의 이름이거나 "None"입니다. *locals*는 주어진 프레임의 지역 딕셔너
+   리입니다.
+
+   참고:
+
+     이 함수는 실수로 파이썬 3.5에서 폐지된 것으로 표시되었습니다.
+
+inspect.formatargspec(args[, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations[, formatarg, formatvarargs, formatvarkw, formatvalue, formatreturns, formatannotations]])
+
+   Format a pretty argument spec from the values returned by
+   "getfullargspec()".
+
+   The first seven arguments are ("args", "varargs", "varkw",
+   "defaults", "kwonlyargs", "kwonlydefaults", "annotations").
+
+   The other six arguments are functions that are called to turn
+   argument names, "*" argument name, "**" argument name, default
+   values, return annotation and individual annotations into strings,
+   respectively.
+
+   For example:
+
+   >>> from inspect import formatargspec, getfullargspec
+   >>> def f(a: int, b: float):
+   ...     pass
+   ...
+   >>> formatargspec(*getfullargspec(f))
+   '(a: int, b: float)'
+
+   버전 3.5부터 폐지: Use "signature()" and Signature Object, which
+   provide a better introspecting API for callables.
+
+inspect.formatargvalues(args[, varargs, varkw, locals, formatarg, formatvarargs, formatvarkw, formatvalue])
+
+   "getargvalues()"가 반환한 4개의 값으로 예쁜 인자 명세를 포맷합니다.
+   format* 인자는 해당 이름과 값을 문자열로 변환하기 위해 호출되는 선
+   택적 포매팅 함수입니다.
+
+   참고:
+
+     이 함수는 실수로 파이썬 3.5에서 폐지된 것으로 표시되었습니다.
+
+inspect.getmro(cls)
+
+   클래스 cls의 베이스 클래스의 튜플(cls를 포함합니다)을 메서드 결정
+   순서로 반환합니다. 이 튜플에는 클래스가 두 번 이상 나타나지 않습니
+   다. 메서드 결정 순서는 cls의 형에 따라 다릅니다. 매우 독특한 사용자
+   정의 메타 형을 사용하지 않는 한, cls는 튜플의 첫 번째 요소가 됩니다
+   .
+
+inspect.getcallargs(func, /, *args, **kwds)
+
+   Bind the *args* and *kwds* to the argument names of the Python
+   function or method *func*, as if it was called with them. For bound
+   methods, bind also the first argument (typically named "self") to
+   the associated instance. A dict is returned, mapping the argument
+   names (including the names of the "*" and "**" arguments, if any)
+   to their values from *args* and *kwds*. In case of invoking *func*
+   incorrectly, i.e. whenever "func(*args, **kwds)" would raise an
+   exception because of incompatible signature, an exception of the
+   same type and the same or similar message is raised. For example:
+
+      >>> from inspect import getcallargs
+      >>> def f(a, b=1, *pos, **named):
+      ...     pass
+      >>> getcallargs(f, 1, 2, 3) == {'a': 1, 'named': {}, 'b': 2, 'pos': (3,)}
+      True
+      >>> getcallargs(f, a=2, x=4) == {'a': 2, 'named': {'x': 4}, 'b': 1, 'pos': ()}
+      True
+      >>> getcallargs(f)
+      Traceback (most recent call last):
+      ...
+      TypeError: f() missing 1 required positional argument: 'a'
+
+   버전 3.2에 추가.
+
+   버전 3.5부터 폐지: 대신 "Signature.bind()"와
+   "Signature.bind_partial()"을 사용하십시오.
+
+inspect.getclosurevars(func)
+
+   파이썬 함수나 메서드 *func*에 있는 외부 이름 참조에서 현재 값으로의
+   매핑을 얻습니다. *네임드 튜플* "ClosureVars(nonlocals, globals,
+   builtins, unbound)"가 반환됩니다. *nonlocals*는 참조된 이름을 어휘
+   클로저(closure) 변수로, *globals*는 함수의 모듈 전역으로,
+   *builtins*는 함수 바디에서 볼 수 있는 내장으로 매핑합니다.
+   *unbound*는 현재 모듈 전역과 내장에서 전혀 결정할 수 없는 함수에서
+   참조된 이름 집합입니다.
+
+   *func*가 파이썬 함수나 메서드가 아니면 "TypeError"가 발생합니다.
+
+   버전 3.3에 추가.
+
+inspect.unwrap(func, *, stop=None)
+
+   *func*로 래핑 된 객체를 가져옵니다. 체인의 마지막 객체를 반환하는
+   "__wrapped__" 어트리뷰트의 체인을 따라갑니다.
+
+   *stop*은 래퍼 체인의 객체를 유일한 인자로 받아들이는 선택적 콜백으
+   로, 콜백이 참값을 반환할 때 언 래핑을 조기에 종료 할 수 있도록 합니
+   다. 콜백이 참값을 반환하지 않으면, 체인의 마지막 객체가 평소처럼 반
+   환됩니다. 예를 들어, "signature()"는 이것을 사용하여 체인에 있는 객
+   체에 "__signature__" 어트리뷰트가 정의되면 언 래핑을 중지합니다.
+
+   순환이 발견되면 "ValueError"가 발생합니다.
+
+   버전 3.4에 추가.
+
+inspect.get_annotations(obj, *, globals=None, locals=None, eval_str=False)
+
+   Compute the annotations dict for an object.
+
+   "obj" may be a callable, class, or module. Passing in an object of
+   any other type raises "TypeError".
+
+   Returns a dict.  "get_annotations()" returns a new dict every time
+   it's called; calling it twice on the same object will return two
+   different but equivalent dicts.
+
+   This function handles several details for you:
+
+   * If "eval_str" is true, values of type "str" will be un-stringized
+     using "eval()".  This is intended for use with stringized
+     annotations ("from __future__ import annotations").
+
+   * If "obj" doesn't have an annotations dict, returns an empty dict.
+     (Functions and methods always have an annotations dict; classes,
+     modules, and other types of callables may not.)
+
+   * Ignores inherited annotations on classes.  If a class doesn't
+     have its own annotations dict, returns an empty dict.
+
+   * All accesses to object members and dict values are done using
+     "getattr()" and "dict.get()" for safety.
+
+   * Always, always, always returns a freshly created dict.
+
+   "eval_str" controls whether or not values of type "str" are
+   replaced with the result of calling "eval()" on those values:
+
+   * If eval_str is true, "eval()" is called on values of type "str".
+     (Note that "get_annotations" doesn't catch exceptions; if
+     "eval()" raises an exception, it will unwind the stack past the
+     "get_annotations" call.)
+
+   * If eval_str is false (the default), values of type "str" are
+     unchanged.
+
+   "globals" and "locals" are passed in to "eval()"; see the
+   documentation for "eval()" for more information.  If "globals" or
+   "locals" is "None", this function may replace that value with a
+   context-specific default, contingent on "type(obj)":
+
+   * If "obj" is a module, "globals" defaults to "obj.__dict__".
+
+   * If "obj" is a class, "globals" defaults to
+     "sys.modules[obj.__module__].__dict__" and "locals" defaults to
+     the "obj" class namespace.
+
+   * If "obj" is a callable, "globals" defaults to "obj.__globals__",
+     although if "obj" is a wrapped function (using
+     "functools.update_wrapper()") it is first unwrapped.
+
+   Calling "get_annotations" is best practice for accessing the
+   annotations dict of any object.  See Annotations Best Practices for
+   more information on annotations best practices.
+
+   버전 3.10에 추가.
+
+
+인터프리터 스택
+===============
+
+When the following functions return "frame records," each record is a
+*named tuple* "FrameInfo(frame, filename, lineno, function,
+code_context, index)". The tuple contains the frame object, the
+filename, the line number of the current line, the function name, a
+list of lines of context from the source code, and the index of the
+current line within that list.
+
+버전 3.5에서 변경: Return a named tuple instead of a tuple.
+
+참고:
+
+  이러한 함수가 반환하는 프레임 레코드의 첫 번째 요소에서 발견되는 것
+  처럼, 프레임 객체에 대한 참조를 유지하면 프로그램이 참조 순환을 만들
+  수 있습니다. 일단 참조 순환이 생성되면, 파이썬의 선택적 순환 검출기
+  가 활성화되어 있어도, 순환을 형성하는 객체에서 액세스 할 수 있는 모
+  든 객체의 수명이 훨씬 더 길어질 수 있습니다. 이러한 순환을 만들어야
+  만 하면, 명시적으로 끊어서 객체의 지연된 파괴와 메모리 소비 증가를
+  피하는 것이 중요합니다.순환 감지기가 이를 잡기는 하겠지만, "finally"
+  절에서 순환을 제거하여 프레임(과 지역 변수)의 파괴를 결정적
+  (deterministic)으로 만들 수 있습니다. 파이썬을 컴파일할 때나
+  "gc.disable()"을 사용해서 순환 감지기를 비활성화했을 때도 중요합니다
+  . 예를 들면:
+
+     def handle_stackframe_without_leak():
+         frame = inspect.currentframe()
+         try:
+             # do something with the frame
+         finally:
+             del frame
+
+  프레임을 계속 유지하려면 (예를 들어 나중에 트레이스백을 인쇄하려고)
+  "frame.clear()" 메서드를 사용하여 참조 순환을 끊을 수도 있습니다.
+
+이 함수들 대부분이 지원하는 선택적 *context* 인자는 반환할 문맥
+(context) 줄 수를 지정합니다. 이 줄들은 현재 줄을 중심으로 합니다.
+
+inspect.getframeinfo(frame, context=1)
+
+   Get information about a frame or traceback object.  A *named tuple*
+   "Traceback(filename, lineno, function, code_context, index)" is
+   returned.
+
+inspect.getouterframes(frame, context=1)
+
+   Get a list of frame records for a frame and all outer frames.
+   These frames represent the calls that lead to the creation of
+   *frame*. The first entry in the returned list represents *frame*;
+   the last entry represents the outermost call on *frame*'s stack.
+
+   버전 3.5에서 변경: *네임드 튜플* "FrameInfo(frame, filename,
+   lineno, function, code_context, index)"의 리스트가 반환됩니다.
+
+inspect.getinnerframes(traceback, context=1)
+
+   Get a list of frame records for a traceback's frame and all inner
+   frames.  These frames represent calls made as a consequence of
+   *frame*.  The first entry in the list represents *traceback*; the
+   last entry represents where the exception was raised.
+
+   버전 3.5에서 변경: *네임드 튜플* "FrameInfo(frame, filename,
+   lineno, function, code_context, index)"의 리스트가 반환됩니다.
+
+inspect.currentframe()
+
+   호출자의 스택 프레임에 대한 프레임 객체를 반환합니다.
+
+   **CPython 구현 상세:** 이 함수는 인터프리터의 파이썬 스택 프레임 지
+   원에 의존하며, 모든 파이썬 구현에서 제공된다고 보장되는 것은 아닙니
+   다. 파이썬 스택 프레임 지원이 없는 구현에서 실행하면, 이 함수는
+   "None"을 반환합니다.
+
+inspect.stack(context=1)
+
+   Return a list of frame records for the caller's stack.  The first
+   entry in the returned list represents the caller; the last entry
+   represents the outermost call on the stack.
+
+   버전 3.5에서 변경: *네임드 튜플* "FrameInfo(frame, filename,
+   lineno, function, code_context, index)"의 리스트가 반환됩니다.
+
+inspect.trace(context=1)
+
+   Return a list of frame records for the stack between the current
+   frame and the frame in which an exception currently being handled
+   was raised in.  The first entry in the list represents the caller;
+   the last entry represents where the exception was raised.
+
+   버전 3.5에서 변경: *네임드 튜플* "FrameInfo(frame, filename,
+   lineno, function, code_context, index)"의 리스트가 반환됩니다.
+
+
+정적으로 어트리뷰트 가져오기
+============================
+
+Both "getattr()" and "hasattr()" can trigger code execution when
+fetching or checking for the existence of attributes. Descriptors,
+like properties, will be invoked and "__getattr__()" and
+"__getattribute__()" may be called.
+
+문서화 도구처럼 수동적인(passive) 검사를 원할 때는 불편할 수 있습니다.
+"getattr_static()"은 "getattr()"과 같은 서명을 갖지만 어트리뷰트를 가
+져올 때 코드 실행을 피합니다.
+
+inspect.getattr_static(obj, attr, default=None)
+
+   Retrieve attributes without triggering dynamic lookup via the
+   descriptor protocol, "__getattr__()" or "__getattribute__()".
+
+   참고: 이 함수는 getattr이 가져올 수 있는 모든 어트리뷰트를 조회하지
+   못할 수 있으며 (가령 동적으로 만들어진 어트리뷰트), getattr이 가져
+   올 수 없는 어트리뷰트를 찾을 수 있습니다 (가령 AttributeError를 발
+   생시키는 디스크립터). 또한 인스턴스 멤버 대신 디스크립터 객체를 반
+   환할 수도 있습니다.
+
+   인스턴스 "__dict__"가 다른 멤버(예를 들어 프로퍼티)에 의해 가려지면
+   이 함수는 인스턴스 멤버를 찾을 수 없습니다.
+
+   버전 3.2에 추가.
+
+"getattr_static()"은 디스크립터를 해석하지 않습니다, 예를 들어 C로 구
+현된 객체의 슬롯 디스크립터나 getset 디스크립터. 하부 어트리뷰트 대신
+디스크립터 객체가 반환됩니다.
+
+다음과 같은 코드로 이를 처리할 수 있습니다. 임의의 getset 디스크립터에
+대해 이를 호출하면 코드 실행이 유발될 수 있음에 유의하십시오:
+
+   # example code for resolving the builtin descriptor types
+   class _foo:
+       __slots__ = ['foo']
+
+   slot_descriptor = type(_foo.foo)
+   getset_descriptor = type(type(open(__file__)).name)
+   wrapper_descriptor = type(str.__dict__['__add__'])
+   descriptor_types = (slot_descriptor, getset_descriptor, wrapper_descriptor)
+
+   result = getattr_static(some_object, 'foo')
+   if type(result) in descriptor_types:
+       try:
+           result = result.__get__()
+       except AttributeError:
+           # descriptors can raise AttributeError to
+           # indicate there is no underlying value
+           # in which case the descriptor itself will
+           # have to do
+           pass
+
+
+Current State of Generators and Coroutines
+==========================================
+
+코루틴 스케줄러를 구현할 때와 기타 제너레이터의 고급 사용을 위해, 제너
+레이터가 현재 실행 중인지, 시작, 재개 또는 실행을 대기하는 중인지, 또
+는 이미 종료되었는지를 판별하는 것이 유용합니다. "getgeneratorstate()"
+를 사용하면 제너레이터의 현재 상태를 쉽게 확인할 수 있습니다.
+
+inspect.getgeneratorstate(generator)
+
+   제너레이터-이터레이터의 현재 상태를 가져옵니다.
+
+   가능한 상태는 다음과 같습니다:
+      * GEN_CREATED: 실행 시작을 기다리는 중입니다.
+
+      * GEN_RUNNING: 현재 인터프리터에서 실행 중입니다.
+
+      * GEN_SUSPENDED: 현재 일드(yield) 표현식에서 일시 중지되었습니다
+        .
+
+      * GEN_CLOSED: 실행이 완료되었습니다.
+
+   버전 3.2에 추가.
+
+inspect.getcoroutinestate(coroutine)
+
+   코루틴 객체의 현재 상태를 가져옵니다. 이 함수는 "async def" 함수가
+   만든 코루틴 객체와 함께 사용하기 위한 것이지만, "cr_running"과
+   "cr_frame" 어트리뷰트가 있는 임의의 코루틴류 객체를 허용합니다.
+
+   가능한 상태는 다음과 같습니다:
+      * CORO_CREATED: 실행 시작을 기다리는 중입니다.
+
+      * CORO_RUNNING: 현재 인터프리터에서 실행 중입니다.
+
+      * CORO_SUSPENDED: 현재 어웨이트(await) 표현식에서 일시 중지되었
+        습니다.
+
+      * CORO_CLOSED: 실행이 완료되었습니다.
+
+   버전 3.5에 추가.
+
+제너레이터의 현재 내부 상태도 조회할 수 있습니다. 이는 주로 내부 상태
+가 예상대로 갱신되었는지 확인하는 테스트 목적으로 유용합니다:
+
+inspect.getgeneratorlocals(generator)
+
+   *generator*의 라이브 로컬 변수에서 그것의 현재 값으로의 매핑을 얻습
+   니다. 변수 이름을 값으로 매핑하는 딕셔너리가 반환됩니다. 이것은 제
+   너레이터 바디에서 "locals()"를 호출하는 것과 동등하며, 같은 경고가
+   모두 적용됩니다.
+
+   *generator*가 현재 연결된 프레임이 없는 *제너레이터*이면, 빈 딕셔너
+   리가 반환됩니다. *generator*가 파이썬 제너레이터 객체가 아니면
+   "TypeError"가 발생합니다.
+
+   **CPython 구현 상세:** 이 함수는 내부 검사를 위해 파이썬 스택 프레
+   임을 노출하는 제너레이터에 의존하며, 모든 파이썬 구현에서 보장되는
+   것은 아닙니다. 그럴 경우, 이 함수는 항상 빈 딕셔너리를 반환합니다.
+
+   버전 3.3에 추가.
+
+inspect.getcoroutinelocals(coroutine)
+
+   이 함수는 "getgeneratorlocals()"와 유사하지만, "async def" 함수가
+   만든 코루틴 객체에 작동합니다.
+
+   버전 3.5에 추가.
+
+
+코드 객체 비트 플래그
+=====================
+
+Python code objects have a "co_flags" attribute, which is a bitmap of
+the following flags:
+
+inspect.CO_OPTIMIZED
+
+   코드 객체는 빠른 locals(fast locals)를 사용하여 최적화되었습니다.
+
+inspect.CO_NEWLOCALS
+
+   If set, a new dict will be created for the frame's "f_locals" when
+   the code object is executed.
+
+inspect.CO_VARARGS
+
+   코드 객체에는 ("*args" 같은) 가변 위치 매개 변수가 있습니다.
+
+inspect.CO_VARKEYWORDS
+
+   코드 객체에는 ("**kwargs" 같은) 가변 키워드 매개 변수가 있습니다.
+
+inspect.CO_NESTED
+
+   코드 객체가 중첩 함수일 때 이 플래그가 설정됩니다.
+
+inspect.CO_GENERATOR
+
+   코드 객체가 제너레이터 함수일 때, 즉 코드 객체가 실행될 때 제너레이
+   터 객체를 반환할 때 이 플래그가 설정됩니다.
+
+inspect.CO_NOFREE
+
+   The flag is set if there are no free or cell variables.
+
+inspect.CO_COROUTINE
+
+   코드 객체가 코루틴 함수일 때 이 플래그가 설정됩니다. 코드 객체가 실
+   행될 때 코루틴 객체를 반환합니다. 자세한 내용은 **PEP 492**를 참조
+   하십시오.
+
+   버전 3.5에 추가.
+
+inspect.CO_ITERABLE_COROUTINE
+
+   이 플래그는 제너레이터를 제너레이터 기반 코루틴으로 변환하는 데 사
+   용됩니다. 이 플래그가 있는 제너레이터 객체는 "await" 표현식에 사용
+   될 수 있으며, 코루틴 객체를 "yield from" 할 수 있습니다. 자세한 내
+   용은 **PEP 492**를 참조하십시오.
+
+   버전 3.5에 추가.
+
+inspect.CO_ASYNC_GENERATOR
+
+   코드 객체가 비동기 제너레이터 함수일 때 이 플래그가 설정됩니다. 코
+   드 객체가 실행될 때 비동기 제너레이터 객체가 반환됩니다. 자세한 내
+   용은 **PEP 525**를 참조하십시오.
+
+   버전 3.6에 추가.
+
+참고:
+
+  이 플래그들은 CPython에만 해당하며, 다른 파이썬 구현에서는 정의되지
+  않을 수 있습니다. 또한 플래그는 구현 세부 사항이며, 향후 파이썬 배포
+  에서 제거되거나 폐지될 수 있습니다. 모든 내부 검사에는 "inspect" 모
+  듈의 공개 API를 사용하는 것이 좋습니다.
+
+
+명령 줄 인터페이스
+==================
+
+"inspect" 모듈은 명령 줄에서 기본 내부 검사 기능을 제공하기도 합니다.
+
+기본적으로, 모듈의 이름을 받아들이고 해당 모듈의 소스를 인쇄합니다. 콜
+론과 대상 객체의 정규화된 이름을 덧붙여, 대신 모듈 내의 클래스나 함수
+를 인쇄 할 수 있습니다.
+
+--details
+
+   소스 코드 대신에 지정된 객체에 대한 정보를 인쇄합니다

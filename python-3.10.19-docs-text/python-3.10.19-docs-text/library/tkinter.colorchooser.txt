@@ -1,0 +1,24 @@
+"tkinter.colorchooser" --- Color choosing dialog
+************************************************
+
+**소스 코드:** Lib/tkinter/colorchooser.py
+
+======================================================================
+
+"tkinter.colorchooser" 모듈은 네이티브 색상 선택기 대화 상자의 인터페
+이스로 "Chooser" 클래스를 제공합니다. "Chooser"는 모달(modal) 색상 선
+택 대화 상자 창을 구현합니다. "Chooser" 클래스는 "Dialog" 클래스를 상
+속합니다.
+
+class tkinter.colorchooser.Chooser(master=None, **options)
+
+tkinter.colorchooser.askcolor(color=None, **options)
+
+   색상 선택 대화 상자를 만듭니다. 이 메서드를 호출하면 창이 표시되고,
+   사용자가 선택하기를 기다렸다가, 선택한 색상(또는 "None")을 호출자에
+   게 반환합니다.
+
+더 보기:
+
+  모듈 "tkinter.commondialog"
+     Tkinter 표준 대화 상자 모듈

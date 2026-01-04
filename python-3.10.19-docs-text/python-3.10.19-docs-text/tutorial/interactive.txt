@@ -1,0 +1,40 @@
+14. 대화형 입력 편집 및 히스토리 치환
+*************************************
+
+일부 파이썬 인터프리터 버전은 Korn 셸 및 GNU Bash 셸에 있는 기능과 유
+사하게 현재 입력 줄 편집 및 히스토리 치환을 지원합니다. 이는 다양한 스
+타일의 편집을 지원하는 GNU Readline 라이브러리를 사용하여 구현됩니다.
+이 라이브러리에는 자체 설명서가 있고, 여기에서 반복하지는 않습니다.
+
+
+14.1. 탭 완성 및 히스토리 편집
+==============================
+
+Completion of variable and module names is automatically enabled at
+interpreter startup so that the "Tab" key invokes the completion
+function; it looks at Python statement names, the current local
+variables, and the available module names.  For dotted expressions
+such as "string.a", it will evaluate the expression up to the final
+"'.'" and then suggest completions from the attributes of the
+resulting object.  Note that this may execute application-defined code
+if an object with a "__getattr__()" method is part of the expression.
+The default configuration also saves your history into a file named
+".python_history" in your user directory. The history will be
+available again during the next interactive interpreter session.
+
+
+14.2. 대화형 인터프리터 대안
+============================
+
+This facility is an enormous step forward compared to earlier versions
+of the interpreter; however, some wishes are left: It would be nice if
+the proper indentation were suggested on continuation lines (the
+parser knows if an indent token is required next).  The completion
+mechanism might use the interpreter's symbol table.  A command to
+check (or even suggest) matching parentheses, quotes, etc., would also
+be useful.
+
+꽤 오랫동안 사용됐던 개선된 대화형 인터프리터는 IPython 인데, 탭 완성,
+객체 탐색 및 고급 히스토리 관리 기능을 갖추고 있습니다. 또한, 철저하게
+커스터마이즈해서 다른 응용 프로그램에 내장할 수 있습니다. 비슷한 또 다
+른 개선된 대화형 환경은 bpython 입니다.

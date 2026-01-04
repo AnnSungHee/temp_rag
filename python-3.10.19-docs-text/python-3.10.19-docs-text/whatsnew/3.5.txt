@@ -1,0 +1,2289 @@
+파이썬 3.5의 새로운 기능
+************************
+
+편집자:
+   Elvis Pranskevichus <elvis@magic.io>, Yury Selivanov
+   <yury@magic.io>
+
+이 기사에서는 3.4과 비교하여 파이썬 3.5의 새로운 기능에 관해 설명합니
+다. 파이썬 3.5는 2015년 9월 13일에 출시되었습니다. 전체 변경 사항 목록
+은 changelog를 참조하십시오.
+
+더 보기: **PEP 478** - 파이썬 3.5 출시 일정
+
+
+요약 -- 배포 주요 사항
+======================
+
+새로운 문법 기능:
+
+* PEP 492, async와 await 구문을 사용하는 코루틴.
+
+* PEP 465, 새로운 행렬 곱셈 연산자: "a @ b".
+
+* PEP 448, 추가적인 언 패킹 일반화.
+
+새로운 라이브러리 모듈:
+
+* "typing": PEP 484 -- 형 힌트.
+
+* "zipapp": PEP 441 파이썬 ZIP 응용 프로그램 지원 개선.
+
+새로운 내장 기능:
+
+* "bytes % args", "bytearray % args" : PEP 461 -- bytes와 bytearray에
+  "%" 포매팅 추가.
+
+* 새로운 "bytes.hex()", "bytearray.hex()" 및 "memoryview.hex()" 메서드
+  . (Contributed by Arnon Yaari in bpo-9951.)
+
+* "memoryview"는 이제 튜플 인덱싱(다차원 포함)을 지원합니다.
+  (Contributed by Antoine Pitrou in bpo-23632.)
+
+* 제너레이터에는 "yield from" 표현식에 의해 이터레이션 중인 객체를 반
+  환하는 새로운 "gi_yieldfrom" 어트리뷰트가 있습니다. (Contributed by
+  Benno Leslie and Yury Selivanov in bpo-24450.)
+
+* 이제 최대 재귀 깊이에 도달하면 새로운 "RecursionError" 예외가 발생합
+  니다. (Contributed by Georg Brandl in bpo-19235.)
+
+CPython 구현 개선:
+
+* "LC_TYPE" 로케일이 POSIX 로케일("C" 로케일)일 때, "sys.stdin"과
+  "sys.stdout"은 이제 "strict" 에러 처리기 대신 "surrogateescape" 에러
+  처리기를 사용합니다. (Contributed by Victor Stinner in bpo-19977.)
+
+* ".pyo" 파일은 더는 사용되지 않으며 ".pyc" 이름에 명시적으로 최적화
+  수준을 포함하는 더 유연한 체계로 대체되었습니다. (PEP 488 개요를 참
+  조하십시오.)
+
+* 내장과 확장 모듈은 이제 파이썬 모듈이 로드되는 방식과 유사한 다단계
+  절차로 초기화됩니다. (PEP 489 개요를 참조하십시오.)
+
+표준 라이브러리의 현저한 개선:
+
+* "collections.OrderedDict"는 이제 C로 구현되어서 4 에서 100배 더 빠릅
+  니다.
+
+* "ssl" 모듈은 네트워크 IO에서 SSL 프로토콜 처리를 분리하는 메모리 BIO
+  지원을 얻었습니다.
+
+* 새로운 "os.scandir()" 함수는 디렉터리 순회의 더 좋고 훨씬 더 빠른 방
+  법을 제공합니다.
+
+* "functools.lru_cache()"는 대부분 C로 재구현되어서 훨씬 더 나은 성능
+  을 제공합니다.
+
+* 새로운 "subprocess.run()" 함수는 서브 프로세스를 실행하는 간소화된
+  방법을 제공합니다.
+
+* "traceback" 모듈은 향상된 성능과 개발자 편의를 위해 크게 개선되었습
+  니다.
+
+보안 향상:
+
+* SSLv3은 이제 표준 라이브러리 전체에서 비활성화됩니다.
+  "ssl.SSLContext"를 수동으로 인스턴스 화하여 여전히 활성화 할 수 있습
+  니다. (자세한 내용은 bpo-22638을 참조하십시오; 이 변경 사항은
+  CPython 3.4와 2.7로 역 이식되었습니다.)
+
+* HTTP 쿠키 구문 분석은 이제 잠재적인 주입 공격으로부터 보호하기 위해
+  더 엄격해졌습니다. (Contributed by Antoine Pitrou in bpo-22796.)
+
+윈도우 개선:
+
+* 윈도우 용 새 설치 프로그램이 이전 MSI를 대체했습니다. 자세한 정보는
+  윈도우에서 파이썬 사용하기를 참조하십시오.
+
+* 윈도우 빌드는 이제 Microsoft Visual C++ 14.0을 사용하고, 확장 모듈은
+  같은 것을 사용해야 합니다.
+
+다른 많은 소규모 개선 사항, CPython 최적화, 폐지 및 잠재적 이식 문제를
+포함하여, 사용자가 직면하는 변경 사항의 포괄적인 목록을 읽으십시오.
+
+
+새로운 기능
+===========
+
+
+PEP 492 - async와 await 구문을 사용하는 코루틴
+----------------------------------------------
+
+**PEP 492**는 *어웨이터블 객체*, *코루틴 함수*, *비동기 이터레이션* 및
+*비동기 컨텍스트 관리자*를 추가하여 파이썬에서 비동기 프로그래밍에 대
+한 지원을 크게 향상합니다.
+
+코루틴 함수는 새로운 "async def" 구문을 사용하여 선언됩니다:
+
+   >>> async def coro():
+   ...     return 'spam'
+
+코루틴 함수 내에서 새로운 "await" 표현식을 사용하여 결과를 사용할 수
+있을 때까지 코루틴 실행을 중단 할 수 있습니다. "__await__()" 메서드를
+정의하여 *어웨이터블* 프로토콜을 구현하는 한 모든 객체는 *await* 될 수
+있습니다.
+
+PEP 492는 또한 비동기 이터러블에 대한 편리한 이터레이션을 위해 "async
+for" 문을 추가합니다.
+
+새로운 구문을 사용하여 작성된 기본 HTTP 클라이언트의 예:
+
+   import asyncio
+
+   async def http_get(domain):
+       reader, writer = await asyncio.open_connection(domain, 80)
+
+       writer.write(b'\r\n'.join([
+           b'GET / HTTP/1.1',
+           b'Host: %b' % domain.encode('latin-1'),
+           b'Connection: close',
+           b'', b''
+       ]))
+
+       async for line in reader:
+           print('>>>', line)
+
+       writer.close()
+
+   loop = asyncio.get_event_loop()
+   try:
+       loop.run_until_complete(http_get('example.com'))
+   finally:
+       loop.close()
+
+비동기 이터레이션과 마찬가지로, 비동기 컨텍스트 관리자를 위한 새로운
+구문이 있습니다. 다음 스크립트:
+
+   import asyncio
+
+   async def coro(name, lock):
+       print('coro {}: waiting for lock'.format(name))
+       async with lock:
+           print('coro {}: holding the lock'.format(name))
+           await asyncio.sleep(1)
+           print('coro {}: releasing the lock'.format(name))
+
+   loop = asyncio.get_event_loop()
+   lock = asyncio.Lock()
+   coros = asyncio.gather(coro(1, lock), coro(2, lock))
+   try:
+       loop.run_until_complete(coros)
+   finally:
+       loop.close()
+
+는 다음을 출력합니다:
+
+   coro 2: waiting for lock
+   coro 2: holding the lock
+   coro 1: waiting for lock
+   coro 2: releasing the lock
+   coro 1: holding the lock
+   coro 1: releasing the lock
+
+"async for"와 "async with"는 모두 "async def"로 선언된 코루틴 함수 내
+에서만 사용할 수 있음에 유의하십시오.
+
+코루틴 함수는 asyncio loop와 같은 호환 가능한 이벤트 루프 내에서 실행
+되도록 설계되었습니다.
+
+참고:
+
+  버전 3.5.2에서 변경: CPython 3.5.2부터 "__aiter__"는 *비동기 이터레
+  이터*를 직접 반환 할 수 있습니다. *어웨이터블* 객체를 반환하면
+  "PendingDeprecationWarning" 이 발생합니다.비동기 이터레이터
+  (Asynchronous Iterators) 설명서 섹션에서 자세한 내용을 참조하십시오.
+
+더 보기:
+
+  **PEP 492** -- async와 await 구문을 사용하는 코루틴
+     Yury Selivanov가 작성하고 구현한 PEP.
+
+
+PEP 465 - 행렬 곱셈을 위한 전용 중위(infix) 연산자
+--------------------------------------------------
+
+**PEP 465**는 행렬 곱셈을 위한 "@" 중위(infix) 연산자를 추가합니다. 현
+재, 내장 파이썬 형은 어느 것도 새 연산자를 구현하지 않지만, 일반, 뒤집
+힌 및 증분 행렬 곱셈에 대해 "__matmul__()", "__rmatmul__()" 및
+"__imatmul__()"를 정의하여 구현할 수 있습니다. 이러한 메서드의 의미는
+다른 중위 산술 연산자를 정의하는 메서드의 의미와 유사합니다.
+
+행렬 곱셈은 수학, 과학, 공학의 많은 분야에서 매우 일반적인 연산이며,
+"@"를 추가하면 더 깨끗한 코드를 작성할 수 있습니다:
+
+   S = (H @ beta - r).T @ inv(H @ V @ H.T) @ (H @ beta - r)
+
+이렇게 작성하는 대신에:
+
+   S = dot((dot(H, beta) - r).T,
+           dot(inv(dot(dot(H, V), H.T)), dot(H, beta) - r))
+
+NumPy 1.10은 새 연산자를 지원합니다:
+
+   >>> import numpy
+
+   >>> x = numpy.ones(3)
+   >>> x
+   array([ 1., 1., 1.])
+
+   >>> m = numpy.eye(3)
+   >>> m
+   array([[ 1., 0., 0.],
+          [ 0., 1., 0.],
+          [ 0., 0., 1.]])
+
+   >>> x @ m
+   array([ 1., 1., 1.])
+
+더 보기:
+
+  **PEP 465** -- 행렬 곱셈을 위한 전용 중위(infix) 연산자
+     Nathaniel J. Smith가 작성한 PEP; Benjamin Peterson이 구현했습니다
+     .
+
+
+PEP 448 - 추가적인 언 패킹 일반화
+---------------------------------
+
+**PEP 448**은 "*" 이터러블 언 패킹 연산자와 "**" 딕셔너리 언 패킹 연산
+자의 허용된 사용을 확장합니다. 이제 함수 호출에서 임의의 수의 언 패킹
+을 사용할 수 있습니다:
+
+   >>> print(*[1], *[2], 3, *[4, 5])
+   1 2 3 4 5
+
+   >>> def fn(a, b, c, d):
+   ...     print(a, b, c, d)
+   ...
+
+   >>> fn(**{'a': 1, 'c': 3}, **{'b': 2, 'd': 4})
+   1 2 3 4
+
+마찬가지로, 튜플, 리스트, 집합 및 딕셔너리 디스플레이는 여러 번의 언
+패킹을 허용합니다 (표현식 목록(Expression lists)과 딕셔너리 디스플레이
+를 참조하십시오):
+
+   >>> *range(4), 4
+   (0, 1, 2, 3, 4)
+
+   >>> [*range(4), 4]
+   [0, 1, 2, 3, 4]
+
+   >>> {*range(4), 4, *(5, 6, 7)}
+   {0, 1, 2, 3, 4, 5, 6, 7}
+
+   >>> {'x': 1, **{'y': 2}}
+   {'x': 1, 'y': 2}
+
+더 보기:
+
+  **PEP 448** -- 추가적인 언 패킹 일반화
+     Joshua Landau가 작성한 PEP; Neil Girdhar, Thomas Wouters 및
+     Joshua Landau가 구현했습니다.
+
+
+PEP 461 - bytes와 bytearray를 위한 퍼센트 포매팅 지원
+-----------------------------------------------------
+
+**PEP 461**은 "bytes"와 "bytearray"에 "%" 보간 연산자에 대한 지원을 추
+가합니다.
+
+보간은 일반적으로 문자열 연산으로 간주하지만, "bytes"나 "bytearrays"에
+대한 보간이 적절한 경우가 있고, 이 누락 된 기능을 보완하는 데 필요한
+작업이 코드의 전반적인 가독성을 떨어뜨립니다. 이 문제는 종종 바이너리
+와 ASCII 호환 텍스트가 혼합된 전송 형식(wire format) 프로토콜을 다룰
+때 특히 중요합니다.
+
+예:
+
+   >>> b'Hello %b!' % b'World'
+   b'Hello World!'
+
+   >>> b'x=%i y=%f' % (1, 2.5)
+   b'x=1 y=2.500000'
+
+유니코드는 "%b"에 허용되지 않지만, "%a"에서 허용됩니다
+("repr(obj).encode('ascii', 'backslashreplace')"와 동등합니다):
+
+   >>> b'Hello %b!' % 'World'
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: %b requires bytes, or an object that implements __bytes__, not 'str'
+
+   >>> b'price: %a' % '10€'
+   b"price: '10\\u20ac'"
+
+"%s"와 "%r" 변환 유형은, 지원되기는 하지만, 파이썬 2와의 호환성이 필요
+한 코드 베이스에서만 사용해야 함에 유의하십시오.
+
+더 보기:
+
+  **PEP 461** -- bytes와 bytearray에 % 포매팅 추가
+     Ethan Furman이 작성한 PEP; Neil Schemenauer와 Ethan Furman이 구현
+     했습니다.
+
+
+PEP 484 - 형 힌트
+-----------------
+
+함수 어노테이션 구문은 버전 3.0(**PEP 3107**)부터 파이썬 기능이었지만,
+어노테이션의 의미는 정의되지 않은 상태로 남아 있었습니다.
+
+경험에 따르면 대부분 함수 어노테이션은 함수 매개 변수와 반환 값에 형
+힌트를 제공하는 데 사용되었습니다. 표준 라이브러리에 형 어노테이션을
+위한 기본 정의와 도구가 포함되어 있다면 파이썬 사용자에게 도움이 될 것
+이 분명해졌습니다.
+
+**PEP 484**는 어노테이션을 사용할 수 없는 상황에 대한 몇 가지 규칙과
+함께 이러한 표준 정의와 도구를 제공하는 *잠정적 모듈*을 도입합니다.
+
+예를 들어, 다음은 어노테이션에 인자와 반환형이 선언된 간단한 함수입니
+다:
+
+   def greeting(name: str) -> str:
+       return 'Hello ' + name
+
+While these annotations are available at runtime through the usual
+"__annotations__" attribute, *no automatic type checking happens at
+runtime*.  Instead, it is assumed that a separate off-line type
+checker (e.g. mypy) will be used for on-demand source code analysis.
+
+형 시스템은 공용체(unions), 제네릭 형 및 모든 형과 일치하는 (즉, 대입
+가능한) "Any"라는 특수형을 지원합니다.
+
+더 보기:
+
+  * "typing" 모듈 설명서
+
+  * **PEP 484** -- 형 힌트
+       Guido van Rossum, Jukka Lehtosalo 및 Łukasz Langa가 작성한 PEP;
+       Guido van Rossum이 구현했습니다.
+
+  * **PEP 483** -- 형 힌트 이론
+       Guido van Rossum이 작성한 PEP
+
+
+PEP 471 - os.scandir() 함수 -- 더 빠르고 더 나은 디렉터리 이터레이터
+--------------------------------------------------------------------
+
+**PEP 471**은 표준 라이브러리에 새 디렉터리 이터레이션 함수
+"os.scandir()"을 추가합니다. 또한, "os.walk()"는 이제 "scandir"을 사용
+하여 구현되어, POSIX 시스템에서는 3 에서 5배, 윈도우 시스템에서는 7 에
+서 20배 더 빠릅니다. 이것은 주로 디렉터리 트리를 탐색하는 데 필요한
+"os.stat()" 호출 수를 크게 줄임으로써 달성됩니다.
+
+또한, "scandir"은 파일 이름 리스트 대신에 이터레이터를 반환하므로, 매
+우 큰 디렉터리를 이터레이션 할 때 메모리 효율성이 향상됩니다.
+
+다음 예제는 "'.'"로 시작하지 않는 지정된 *path*의 모든 파일(디렉터리
+제외)을 표시하기 위해 "os.scandir()"을 사용하는 간단한 방법을 보여줍니
+다. "entry.is_file()" 호출은 일반적으로 추가 시스템 호출을 수행하지 않
+습니다:
+
+   for entry in os.scandir(path):
+       if not entry.name.startswith('.') and entry.is_file():
+           print(entry.name)
+
+더 보기:
+
+  **PEP 471** -- os.scandir() 함수 -- 더 빠르고 더 나은 디렉터리 이터
+  레이터
+     Victor Stinner의 도움으로 Ben Hoyt가 작성하고 구현한 PEP.
+
+
+PEP 475: EINTR로 실패한 시스템 호출 재시도
+------------------------------------------
+
+An "errno.EINTR" error code is returned whenever a system call, that
+is waiting for I/O, is interrupted by a signal.  Previously, Python
+would raise "InterruptedError" in such cases.  This meant that, when
+writing a Python application, the developer had two choices:
+
+1. "InterruptedError"를 무시합니다.
+
+2. "InterruptedError"를 처리하고 모든 호출 지점에서 중단된 시스템 호출
+   을 다시 시작합니다.
+
+첫 번째 옵션은 응용 프로그램이 간헐적으로 실패하도록 합니다. 두 번째
+옵션은 코드를 거의 읽을 수 없게 만드는 많은 양의 상용구를 추가합니다.
+다음을 비교해 보십시오:
+
+   print("Hello World")
+
+와:
+
+   while True:
+       try:
+           print("Hello World")
+           break
+       except InterruptedError:
+           continue
+
+**PEP 475**는 "EINTR"에서 시스템 호출의 자동 재시도를 구현합니다. 이것
+은 대부분의 상황에서 사용자 코드에서 "EINTR"이나 "InterruptedError"를
+다루는 부담을 제거하고 표준 라이브러리를 포함한 파이썬 프로그램을 더욱
+강인하게 만듭니다. 시스템 호출은 시그널 처리기가 예외를 발생시키지 않
+는 경우에만 재시도됨에 유의하십시오.
+
+다음은 시그널에 의해 중단될 때 재시도되는 함수 목록입니다:
+
+* "open()"과 "io.open()";
+
+* "faulthandler" 모듈의 함수들;
+
+* "os" 함수: "fchdir()", "fchmod()", "fchown()", "fdatasync()",
+  "fstat()", "fstatvfs()", "fsync()", "ftruncate()", "mkfifo()",
+  "mknod()", "open()", "posix_fadvise()", "posix_fallocate()",
+  "pread()", "pwrite()", "read()", "readv()", "sendfile()", "wait3()",
+  "wait4()", "wait()", "waitid()", "waitpid()", "write()", "writev()";
+
+* special cases: "os.close()" and "os.dup2()" now ignore "EINTR"
+  errors; the syscall is not retried (see the PEP for the rationale);
+
+* "select" 함수: "devpoll.poll()", "epoll.poll()", "kqueue.control()",
+  "poll.poll()", "select()";
+
+* "socket" 클래스의 메서드: "accept()", "connect()" (비 블로킹 소켓 제
+  외), "recv()", "recvfrom()", "recvmsg()", "send()", "sendall()",
+  "sendmsg()", "sendto()";
+
+* "signal.sigtimedwait()"와 "signal.sigwaitinfo()";
+
+* "time.sleep()".
+
+더 보기:
+
+  **PEP 475** -- EINTR로 실패한 시스템 호출 재시도
+     Charles-François Natali와 Victor Stinner가 Antoine Pitrou의 도움
+     을 받아 PEP와 구현을 작성했습니다 (프렌치 커넥션).
+
+
+PEP 479: 제너레이터 내부에서의 StopIteration 처리 변경
+------------------------------------------------------
+
+파이썬 3.4와 이전 버전에서 제너레이터와 "StopIteration"의 상호 작용은
+때때로 놀랍고, 모호한 버그를 감출 수 있습니다. 이전에는, 제너레이터 함
+수 내에서 실수로 발생한 "StopIteration"이 제너레이터를 구동하는 루프
+구성에 의해 이터레이션의 끝으로 해석되었습니다.
+
+**PEP 479**는 제너레이터의 동작을 변경합니다: 제너레이터 내부에서
+"StopIteration" 예외가 발생하면, 제너레이터 프레임을 종료하기 전에
+"RuntimeError"로 대체됩니다. 이 변경의 주요 목표는 보호되지 않는
+"next()" 호출이 "StopIteration"을 발생시키고 이 때문에 제너레이터가 제
+어하는 이터레이션이 조용히 종료되도록 하는 상황에서 디버깅을 용이하게
+하는 것입니다. 이것은 "yield from" 구조와 결합할 때 특히 유해합니다.
+
+이는 이전 버전과 호환되지 않는 변경이므로, 새 동작을 사용하려면
+*__future__* 임포트가 필요합니다:
+
+   >>> from __future__ import generator_stop
+
+   >>> def gen():
+   ...     next(iter([]))
+   ...     yield
+   ...
+   >>> next(gen())
+   Traceback (most recent call last):
+     File "<stdin>", line 2, in gen
+   StopIteration
+
+   The above exception was the direct cause of the following exception:
+
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   RuntimeError: generator raised StopIteration
+
+"__future__" 임포트가 없으면, 제너레이터 내에서 "StopIteration" 예외가
+발생할 때마다 "PendingDeprecationWarning" 이 발생합니다.
+
+더 보기:
+
+  **PEP 479** -- 제너레이터 내부에서의 StopIteration 처리 변경
+     Chris Angelico와 Guido van Rossum이 작성한 PEP. Chris Angelico,
+     Yury Selivanov 및 Nick Coghlan이 구현했습니다.
+
+
+PEP 485: 대략적인 동등성을 테스트하는 함수
+------------------------------------------
+
+**PEP 485**는 두 값이 대략 같거나 서로 "가까운"지를 알려주는
+"math.isclose()"와 "cmath.isclose()" 함수를 추가합니다. 두 값이 가까운
+것으로 간주하는지는 주어진 절대와 상대 허용 오차에 따라 결정됩니다. 상
+대적 허용 오차는 더 큰 절댓값에 상대적으로 "isclose" 인자간에 허용되는
+최대 차이입니다:
+
+   >>> import math
+   >>> a = 5.0
+   >>> b = 4.99998
+   >>> math.isclose(a, b, rel_tol=1e-5)
+   True
+   >>> math.isclose(a, b, rel_tol=1e-6)
+   False
+
+절대 허용 오차를 사용하여 두 값을 비교할 수도 있습니다. 이 값은 음수가
+아니어야 합니다:
+
+   >>> import math
+   >>> a = 5.0
+   >>> b = 4.99998
+   >>> math.isclose(a, b, abs_tol=0.00003)
+   True
+   >>> math.isclose(a, b, abs_tol=0.00001)
+   False
+
+더 보기:
+
+  **PEP 485** -- 대략적인 동등성을 테스트하는 함수
+     Christopher Barker가 작성한 PEP; Chris Barker와 Tal Einat이 구현
+     했습니다.
+
+
+PEP 486: 파이썬 런처가 가상 환경을 인식하도록 만들기
+----------------------------------------------------
+
+**PEP 486**은 윈도우 런처(**PEP 397**을 참조하십시오)가 활성 가상 환경
+을 인식하도록 합니다. 기본 인터프리터를 사용하고 "VIRTUAL_ENV" 환경 변
+수를 설정하면, 가상 환경의 인터프리터가 사용됩니다.
+
+더 보기:
+
+  **PEP 486** -- 파이썬 런처가 가상 환경을 인식하도록 만들기
+     Paul Moore가 작성하고 구현한 PEP.
+
+
+PEP 488: PYO 파일 제거
+----------------------
+
+**PEP 488**은 ".pyo" 파일의 개념을 제거합니다. 이는 ".pyc" 파일이 최적
+화되지 않은 바이트 코드와 최적화된 바이트 코드를 모두 나타냄을 의미합
+니다. 바이트 코드 파일을 지속해서 재생성할 필요가 없도록, ".pyc" 파일
+은 이제 바이트 코드가 최적화될 때 이름에 선택적 "opt-" 태그를 갖습니다
+. 이것은 "-O"나 "-OO"에서 실행할 때 더는 바이트 코드 파일 이름 충돌이
+발생하지 않는 부작용이 있습니다. 따라서, "-O"와 "-OO"에서 생성된 바이
+트 코드 파일이 이제 동시에 존재할 수 있습니다.
+"importlib.util.cache_from_source()"는 이러한 변경을 돕기 위해 갱신된
+API를 갖습니다.
+
+더 보기:
+
+  **PEP 488** -- PYO 파일 제거
+     Brett Cannon이 작성하고 구현한 PEP.
+
+
+PEP 489: 다단계 확장 모듈 초기화
+--------------------------------
+
+**PEP 489**는 파이썬 3.4에서 **PEP 451**이 도입한 2단계 모듈 로딩 메커
+니즘을 활용하기 위해 확장 모듈 초기화를 갱신합니다.
+
+이 변경으로 인해 ASCII로 제한되지 않고 유효한 식별자를 모듈 이름으로
+사용할 수 있는 기능을 포함하여, 확장 모듈의 임포트 의미 체계가 파이썬
+소스와 바이트 코드 모듈의 것과 훨씬 더 가까운 새로운 메커니즘을 사용하
+도록 옵트 인합니다.
+
+더 보기:
+
+  **PEP 489** -- 다단계 확장 모듈 초기화
+     Petr Viktorin, Stefan Behnel 및 Nick Coghlan이 작성한 PEP; Petr
+     Viktorin이 구현했습니다.
+
+
+기타 언어 변경
+==============
+
+핵심 파이썬 언어에 대한 몇 가지 작은 변경 사항은 다음과 같습니다:
+
+* ""namereplace"" 에러 처리기를 추가했습니다. 이제
+  ""backslashreplace"" 에러 처리기가 디코딩과 변환에서 작동합니다.
+  (Contributed by Serhiy Storchaka in bpo-19676 and bpo-22286.)
+
+* "-b" 옵션은 이제 "bytes"와 "int"의 비교에 영향을 줍니다.
+  (Contributed by Serhiy Storchaka in bpo-23681.)
+
+* 새로운 카자흐어 "kz1048"과 타지크어 "koi8_t" 코덱. (Contributed by
+  Serhiy Storchaka in bpo-22682 and bpo-22681.)
+
+* 프로퍼티 독스트링은 이제 쓰기 가능합니다. 이것은
+  "collections.namedtuple()" 독스트링에 특히 유용합니다. (Contributed
+  by Berker Peksag in bpo-24064.)
+
+* 이제 상대 임포트를 포함하는 순환 임포트가 지원됩니다. (Contributed
+  by Brett Cannon and Antoine Pitrou in bpo-17636.)
+
+
+새로운 모듈
+===========
+
+
+typing
+------
+
+새로운 "typing" *잠정적* 모듈은 함수 형 어노테이션에 대한 표준 정의와
+도구를 제공합니다. 자세한 내용은 형 힌트를 참조하십시오.
+
+
+zipapp
+------
+
+새로운 (**PEP 441**에서 지정된) "zipapp" 모듈은 실행 가능한 파이썬 Zip
+응용 프로그램을 만들기 위한 API와 명령 줄 도구를 제공합니다. 실행 가능
+한 파이썬 Zip 응용 프로그램은 bpo-1739468에서 파이썬 2.6에 도입되었지
+만, 그때나 그 이후로 잘 공개되지 않았습니다.
+
+새로운 모듈을 사용하면, "__main__.py" 파일을 포함한 모든 파일을
+"myapp" 디렉터리에 넣고 다음을 실행하는 것만큼 간단하게 응용 프로그램
+을 번들링 할 수 있습니다:
+
+   $ python -m zipapp myapp
+   $ python myapp.pyz
+
+모듈 구현은 bpo-23491에서 Paul Moore에 의해 기고되었습니다.
+
+더 보기: **PEP 441** -- 파이썬 ZIP 응용 프로그램 지원 개선
+
+
+개선된 모듈
+===========
+
+
+argparse
+--------
+
+"ArgumentParser" 클래스는 이제 allow_abbrev를 "False"로 설정하여 긴 옵
+션의 약어 사용을 비활성화 할 수 있습니다. (Contributed by Jonathan
+Paugh, Steven Bethard, paul j3 and Daniel Eriksson in bpo-14910.)
+
+
+asyncio
+-------
+
+"asyncio" 모듈은 *잠정적*이므로, 파이썬 3.5에 도입된 모든 변경 사항은
+파이썬 3.4.x로 역 이식되었습니다.
+
+파이썬 3.4.0 이후 "asyncio" 모듈의 주목할만한 변경 사항:
+
+* 새로운 디버깅 API: "loop.set_debug()"와 "loop.get_debug()" 메서드.
+  (Contributed by Victor Stinner.)
+
+* 프로액터(proactor) 이벤트 루프는 이제 SSL을 지원합니다. (Contributed
+  by Antoine Pitrou and Victor Stinner in bpo-22560.)
+
+* 이벤트 루프가 닫혔는지 확인하는 새로운 "loop.is_closed()" 메서드.
+  (Contributed by Victor Stinner in bpo-21326.)
+
+* 코루틴을 위한 새로운 "Task"를 편리하게 만들고 예약하는 새로운
+  "loop.create_task()". "create_task" 메서드는 코루틴을 태스크로 감싸
+  는 모든 asyncio 함수(가령 "asyncio.wait()", "asyncio.gather()" 등)에
+  서도 사용됩니다. (Contributed by Victor Stinner.)
+
+* 흐름 제어의 *high-*와 *low-* 수위 한계를 조회하는 새로운
+  "transport.get_write_buffer_limits()" 메서드. (Contributed by Victor
+  Stinner.)
+
+* "async()" 함수는 폐지되었고 "ensure_future()"로 대체합니다.
+  (Contributed by Yury Selivanov.)
+
+* "loop.create_task()" 메서드가 사용하는 태스크 팩토리를 사용자 정의하
+  는 새로운 "loop.set_task_factory()"와 "loop.get_task_factory()" 메서
+  드. (Contributed by Yury Selivanov.)
+
+* 새로운 "Queue.join()"과 "Queue.task_done()" 큐 메서드. (Contributed
+  by Victor Stinner.)
+
+* "JoinableQueue" 클래스가 제거되고, "asyncio.Queue" 클래스로 대체되었
+  습니다. (Contributed by Victor Stinner.)
+
+3.5.1의 업데이트:
+
+* "ensure_future()" 함수와 이를 사용하는 모든 함수(가령
+  "loop.run_until_complete()")는 이제 모든 종류의 *어웨이터블 객체*를
+  받아들입니다. (Contributed by Yury Selivanov.)
+
+* 다른 스레드의 이벤트 루프에 코루틴을 제출하는 새로운
+  "run_coroutine_threadsafe()" 함수. (Contributed by Vincent Michel.)
+
+* 트랜스포트가 닫히고 있거나 닫혀 있는지 확인하는 새로운
+  "Transport.is_closing()" 메서드. (Contributed by Yury Selivanov.)
+
+* "loop.create_server()" 메서드는 이제 호스트 리스트를 받아들일 수 있
+  습니다. (Contributed by Yann Sionneau.)
+
+3.5.2의 업데이트 :
+
+* Future 객체를 만드는 새로운 "loop.create_future()" 메서드. 이를 통해
+  uvloop와 같은 대체 이벤트 루프 구현이 더 빠른 "asyncio.Future" 구현
+  을 제공 할 수 있습니다. (Contributed by Yury Selivanov.)
+
+* 현재 예외 처리기를 가져오는 새로운 "loop.get_exception_handler()" 메
+  서드. (Contributed by Yury Selivanov.)
+
+* 구분자 바이트 시퀀스가 나타날 때까지 스트림에서 데이터를 읽는 새로운
+  "StreamReader.readuntil()" 메서드. (Contributed by Mark Korenberg.)
+
+* "loop.create_connection()"과 "loop.create_server()" 메서드는 주소가
+  이미 결정된 경우 시스템 "getaddrinfo" 함수를 호출하지 않도록 최적화
+  되었습니다. (Contributed by A. Jesse Jiryu Davis.)
+
+* "loop.sock_connect(sock, address)"는 더는 호출 전에 *address*를 결정
+  할 필요가 없습니다. (Contributed by A. Jesse Jiryu Davis.)
+
+
+bz2
+---
+
+이제 "BZ2Decompressor.decompress" 메서드는 압축 해제된 데이터의 최대
+크기를 제한하기 위해 선택적 *max_length* 인자를 받아들입니다.
+(Contributed by Nikolaus Rath in bpo-15955.)
+
+
+cgi
+---
+
+The "FieldStorage" class now supports the *context manager* protocol.
+(Contributed by Berker Peksag in bpo-20289.)
+
+
+cmath
+-----
+
+새로운 함수 "isclose()"는 대략적인 동등성을 테스트하는 방법을 제공합니
+다. (Contributed by Chris Barker and Tal Einat in bpo-24270.)
+
+
+code
+----
+
+"InteractiveInterpreter.showtraceback()" 메서드는 이제 대화 형 인터프
+리터처럼 전체 연결된(chained) 트레이스백을 인쇄합니다. (Contributed by
+Claudiu Popa in bpo-17442.)
+
+
+collections
+-----------
+
+"OrderedDict" 클래스는 이제 C로 구현되어 4 에서 100배 더 빨라졌습니다.
+(Contributed by Eric Snow in bpo-16991.)
+
+"OrderedDict.items()", "OrderedDict.keys()", "OrderedDict.values()" 뷰
+는 이제 "reversed()" 이터레이션을 지원합니다. (Contributed by Serhiy
+Storchaka in bpo-19505.)
+
+"deque" 클래스는 이제 "index()", "insert()" 및 "copy()"를 정의하고,
+"+"와 "*" 연산자를 지원합니다. 이를 통해 데크가 "MutableSequence"로 인
+식되고 리스트에 대한 대체 가능성이 향상됩니다. (Contributed by Raymond
+Hettinger in bpo-23704.)
+
+이제 "namedtuple()"이 생성한 독스트링을 갱신할 수 있습니다:
+
+   Point = namedtuple('Point', ['x', 'y'])
+   Point.__doc__ += ': Cartesian coodinate'
+   Point.x.__doc__ = 'abscissa'
+   Point.y.__doc__ = 'ordinate'
+
+(Contributed by Berker Peksag in bpo-24064.)
+
+"UserString" 클래스는 이제 "str"의 해당 메서드와 일치하도록
+"__getnewargs__()", "__rmod__()", "casefold()", "format_map()",
+"isprintable()" 및 "maketrans()" 메서드를 구현합니다. (Contributed by
+Joe Jevnik in bpo-22189.)
+
+
+collections.abc
+---------------
+
+"Sequence.index()" 메서드는 이제 "tuple", "list" 등의 해당 메서드와 일
+치하도록 *start*와 *stop* 인자를 받아들입니다 (Contributed by Devin
+Jeanpierre in bpo-23086.)
+
+새로운 "Generator" 추상 베이스 클래스. (Contributed by Stefan Behnel
+in bpo-24018.)
+
+새로운 "Awaitable", "Coroutine", "AsyncIterator" 및 "AsyncIterable" 추
+상 베이스 클래스. (Contributed by Yury Selivanov in bpo-24184.)
+
+For earlier Python versions, a backport of the new ABCs is available
+in an external PyPI package.
+
+
+compileall
+----------
+
+새로운 "compileall" 옵션인 "-j *N*" 을 사용하면 *N* 작업자를 동시에 실
+행하여 병렬 바이트 코드 컴파일을 수행할 수 있습니다. "compile_dir()"
+함수에는 대응하는 "workers" 매개 변수가 있습니다. (Contributed by
+Claudiu Popa in bpo-16104.)
+
+또 다른 새로운 옵션인 "-r"은 하위 디렉터리에 대한 최대 재귀 수준을 제
+어할 수 있습니다. (Contributed by Claudiu Popa in bpo-19628.)
+
+이제 "-q" 명령 줄 옵션을 두 번 이상 지정할 수 있으며, 이 경우 에러를
+포함한 모든 출력이 억제됩니다. "compile_dir()", "compile_file()" 및
+"compile_path()"의 해당 "quiet" 매개 변수는 이제 출력 억제 수준을 나타
+내는 정숫값을 받아들일 수 있습니다. (Contributed by Thomas Kluyver in
+bpo-21338.)
+
+
+concurrent.futures
+------------------
+
+"Executor.map()" 메서드는 이제 *chunksize* 인자를 받아,
+"ProcessPoolExecutor()"가 사용될 때 작업을 일괄 처리하여 성능을 향상할
+수 있습니다. (Contributed by Dan O'Reilly in bpo-11271.)
+
+"ThreadPoolExecutor" 생성자의 작업자 수는 이제 선택 사항입니다. 기본값
+은 CPU 수의 5배입니다. (Contributed by Claudiu Popa in bpo-21527.)
+
+
+configparser
+------------
+
+"configparser"는 이제 "ConfigParser" 생성자에서 변환기 딕셔너리를 지정
+하거나 "ConfigParser" 서브 클래스에서 메서드로 정의하여 값 변환을 사용
+자 정의하는 방법을 제공합니다. 구문 분석기 인스턴스에 정의된 변환기는
+섹션 프락시에 의해 상속됩니다.
+
+예:
+
+   >>> import configparser
+   >>> conv = {}
+   >>> conv['list'] = lambda v: [e.strip() for e in v.split() if e.strip()]
+   >>> cfg = configparser.ConfigParser(converters=conv)
+   >>> cfg.read_string("""
+   ... [s]
+   ... list = a b c d e f g
+   ... """)
+   >>> cfg.get('s', 'list')
+   'a b c d e f g'
+   >>> cfg.getlist('s', 'list')
+   ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+   >>> section = cfg['s']
+   >>> section.getlist('list')
+   ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+
+(Contributed by Łukasz Langa in bpo-18159.)
+
+
+contextlib
+----------
+
+새로운 "redirect_stderr()" *컨텍스트 관리자*("redirect_stdout()"과 유
+사)를 사용하면 유틸리티 스크립트가 출력을 "sys.stderr"에 기록하고 리디
+렉션 옵션을 제공하지 않는 유연하지 않은 API를 더 쉽게 처리할 수 있습니
+다:
+
+   >>> import contextlib, io, logging
+   >>> f = io.StringIO()
+   >>> with contextlib.redirect_stderr(f):
+   ...     logging.warning('warning')
+   ...
+   >>> f.getvalue()
+   'WARNING:root:warning\n'
+
+(Contributed by Berker Peksag in bpo-22389.)
+
+
+csv
+---
+
+"writerow()" 메서드는 이제 시퀀스뿐만 아니라 임의의 이터러블을 지원합
+니다. (Contributed by Serhiy Storchaka in bpo-23171.)
+
+
+curses
+------
+
+The new "update_lines_cols()" function updates the "LINES" and "COLS"
+environment variables.  This is useful for detecting manual screen
+resizing.  (Contributed by Arnon Yaari in bpo-4254.)
+
+
+dbm
+---
+
+"dumb.open"은 플래그 값이 ""n""일 때 항상 새 데이터베이스를 만듭니다.
+(Contributed by Claudiu Popa in bpo-18039.)
+
+
+difflib
+-------
+
+"HtmlDiff.make_file()"에 의해 생성된 HTML 문서의 문자 집합은 이제 새로
+운 *charset* 키워드 전용 인자를 사용하여 사용자 정의 할 수 있습니다.
+HTML 문서의 기본 문자 집합이 ""ISO-8859-1""에서 ""utf-8""로 변경되었습
+니다. (Contributed by Berker Peksag in bpo-2052.)
+
+"diff_bytes()" 함수는 이제 바이트 문자열 리스트를 비교할 수 있습니다.
+이것은 파이썬 2의 회귀를 수리합니다. (Contributed by Terry J. Reedy
+and Greg Ward in bpo-17445.)
+
+
+distutils
+---------
+
+"build"와 "build_ext" 명령은 이제 "-j" 옵션을 받아들여 확장 모듈의 병
+렬 빌드를 활성화합니다. (Contributed by Antoine Pitrou in bpo-5309.)
+
+The "distutils" module now supports "xz" compression, and can be
+enabled by passing "xztar" as an argument to "bdist --format".
+(Contributed by Serhiy Storchaka in bpo-16314.)
+
+
+doctest
+-------
+
+"DocTestSuite()" 함수는 *module*에 독스트링이 없으면 "ValueError"를 발
+생시키는 대신 빈 "unittest.TestSuite"를 반환합니다. (Contributed by
+Glenn Jones in bpo-15916.)
+
+
+email
+-----
+
+새로운 정책 옵션 "Policy.mangle_from_"은 생성자가 이메일 본문에서
+""From ""으로 시작하는 줄에 "">"" 문자를 접두사로 추가할지를 제어합니
+다. 기본값은 "compat32"의 경우 "True"이고 다른 모든 정책의 경우
+"False"입니다. (Contributed by Milan Oberkirch in bpo-20098.)
+
+새로운 "Message.get_content_disposition()" 메서드를 사용하면 *Content-
+Disposition* 헤더의 규범적 값에 쉽게 액세스 할 수 있습니다.
+(Contributed by Abhilash Raj in bpo-21083.)
+
+새로운 정책 옵션 "EmailPolicy.utf8"을 "True"로 설정하여 인코딩된 단어
+를 사용하는 대신 UTF-8 문자 집합을 사용하여 이메일 헤더를 인코딩 할 수
+있습니다. 이를 통해 "Messages"를 **RFC 6532**에 따라 포매팅하고 **RFC
+6531** "SMTPUTF8" 확장을 지원하는 SMTP 서버와 함께 사용할 수 있습니다.
+(Contributed by R. David Murray in bpo-24211.)
+
+"mime.text.MIMEText" 생성자는 이제 "charset.Charset" 인스턴스를 받아들
+입니다. (Contributed by Claude Paroz and Berker Peksag in bpo-16324.)
+
+
+enum
+----
+
+"Enum" 콜러블에는 *names*만 제공되는 경우 열거형 값의 초기 수를 지정하
+는 새 매개 변수 *start*가 있습니다:
+
+   >>> Animal = enum.Enum('Animal', 'cat dog', start=10)
+   >>> Animal.cat
+   <Animal.cat: 10>
+   >>> Animal.dog
+   <Animal.dog: 11>
+
+(Contributed by Ethan Furman in bpo-21706.)
+
+
+faulthandler
+------------
+
+"enable()", "register()", "dump_traceback()" 및
+"dump_traceback_later()" 함수는 이제 파일류 객체 외에도 파일 기술자를
+받아들입니다. (Contributed by Wei Wu in bpo-23566.)
+
+
+functools
+---------
+
+대부분의 "lru_cache()" 장치는 이제 C로 구현되어 훨씬 빨라졌습니다.
+(Contributed by Matt Joiner, Alexey Kachayev, and Serhiy Storchaka in
+bpo-14373.)
+
+
+glob
+----
+
+"iglob()"과 "glob()" 함수는 이제 ""**"" 패턴을 사용하여 하위 디렉터리
+에서 재귀 검색을 지원합니다. (Contributed by Serhiy Storchaka in
+bpo-13968.)
+
+
+gzip
+----
+
+"GzipFile" 생성자의 *mode* 인자는 이제 배타적 생성을 요청하는 ""x""를
+받아들입니다. (Contributed by Tim Heaney in bpo-19222.)
+
+
+heapq
+-----
+
+"merge()"의 요소 비교는 이제 새로운 선택적 *key* 키워드 인자에 *키 함
+수*를 전달하여 사용자 정의 할 수 있으며, 새로운 선택적 *reverse* 키워
+드 인자를 사용하여 요소 비교를 반전할 수 있습니다:
+
+   >>> import heapq
+   >>> a = ['9', '777', '55555']
+   >>> b = ['88', '6666']
+   >>> list(heapq.merge(a, b, key=len))
+   ['9', '88', '777', '6666', '55555']
+   >>> list(heapq.merge(reversed(a), reversed(b), key=len, reverse=True))
+   ['55555', '6666', '777', '88', '9']
+
+(Contributed by Raymond Hettinger in bpo-13742.)
+
+
+http
+----
+
+HTTP 상태 코드, 이유 구문 및 영어로 작성된 자세한 설명의 집합을 정의하
+는 새로운 "HTTPStatus" 열거형. (Contributed by Demian Brecht in
+bpo-21793.)
+
+
+http.client
+-----------
+
+"HTTPConnection.getresponse()"는 이제 원격 서버 연결이 예기치 않게 닫
+힐 때 "RemoteDisconnected" 예외를 발생시킵니다. 또한
+"ConnectionError"("RemoteDisconnected"는 이것의 서브 클래스입니다)가
+발생하면, 클라이언트 소켓이 이제 자동으로 닫히고 다음 요청에 다시 연결
+됩니다:
+
+   import http.client
+   conn = http.client.HTTPConnection('www.python.org')
+   for retries in range(3):
+       try:
+           conn.request('GET', '/')
+           resp = conn.getresponse()
+       except http.client.RemoteDisconnected:
+           pass
+
+(Contributed by Martin Panter in bpo-3566.)
+
+
+idlelib 및 IDLE
+---------------
+
+idlelib는 IDLE 셸과 편집기를 구현하고 다른 프로그램에서 임포트 하려는
+것이 아니기 때문에, 모든 릴리스에서 개선됩니다. 3.4.0 이후의 누적 변경
+사항과 향후 3.5.x 릴리스에서 변경된 사항은 "Lib/idlelib/NEWS.txt"를 참
+조하십시오. 이 파일은 IDLE Help ‣ About IDLE 대화 상자에서도 제공됩니
+다.
+
+
+imaplib
+-------
+
+"IMAP4" 클래스는 이제 *컨텍스트 관리자* 프로토콜을 지원합니다. "with"
+문에서 사용하면 IMAP4 "LOGOUT" 명령이 블록 끝에서 자동으로 호출됩니다.
+(Contributed by Tarek Ziadé and Serhiy Storchaka in bpo-4972.)
+
+"imaplib" 모듈은 이제 "IMAP4.enable()" 메서드를 통해 **RFC
+5161**(ENABLE 확장) 및 **RFC 6855**(UTF-8 지원)를 지원합니다. 새로운
+"IMAP4.utf8_enabled" 어트리뷰트는 **RFC 6855** 지원이 활성화되었는지를
+추적합니다. (Contributed by Milan Oberkirch, R. David Murray, and
+Maciej Szulik in bpo-21800.)
+
+이제 "imaplib" 모듈은 이제 RFC에서 권장하는 대로 UTF-8을 사용하여
+ASCII가 아닌 문자열 사용자 이름과 암호를 자동으로 인코딩합니다.
+(Contributed by Milan Oberkirch in bpo-21800.)
+
+
+imghdr
+------
+
+The "what()" function now recognizes the OpenEXR format (contributed
+by Martin Vignali and Claudiu Popa in bpo-20295), and the WebP format
+(contributed by Fabrice Aneche and Claudiu Popa in bpo-20197.)
+
+
+importlib
+---------
+
+"util.LazyLoader" 클래스는 시작 소요 시간이 중요한 응용 프로그램에서
+모듈의 지연 로드를 허용합니다. (Contributed by Brett Cannon in
+bpo-17621.)
+
+"abc.InspectLoader.source_to_code()" 메서드는 이제 정적 메서드입니다.
+이렇게 하면 "exec(code, module.__dict__)"를 실행하여 문자열에서 컴파일
+된 코드로 모듈 객체를 더 쉽게 초기화 할 수 있습니다. (Contributed by
+Brett Cannon in bpo-21156.)
+
+새 "util.module_from_spec()" 함수는 이제 새 모듈을 만드는 데 선호되는
+방법입니다. "types.ModuleType" 인스턴스를 직접 만드는 것과는 반대로,
+이 새로운 함수는 전달된 명세 객체를 기반으로 다양한 임포트 제어 어트리
+뷰트를 설정합니다. (Contributed by Brett Cannon in bpo-20383.)
+
+
+inspect
+-------
+
+"Signature"와 "Parameter" 클래스 모두 이제 피클 가능하고 해시 가능합니
+다. (Contributed by Yury Selivanov in bpo-20726 and bpo-20334.)
+
+새로운 "BoundArguments.apply_defaults()" 메서드는 누락 된 인자에 대한
+기본값을 설정하는 방법을 제공합니다:
+
+   >>> def foo(a, b='ham', *args): pass
+   >>> ba = inspect.signature(foo).bind('spam')
+   >>> ba.apply_defaults()
+   >>> ba.arguments
+   OrderedDict([('a', 'spam'), ('b', 'ham'), ('args', ())])
+
+(Contributed by Yury Selivanov in bpo-24190.)
+
+새로운 클래스 메서드 "Signature.from_callable()"은 "Signature"의 서브
+클래싱을 더 쉽게 만듭니다. (Contributed by Yury Selivanov and Eric
+Snow in bpo-17373.)
+
+"signature()" 함수는 이제 *follow_wrapped* 선택적 키워드 인자를 받아들
+이며, "False"로 설정되면 "__wrapped__" 링크의 자동 추적을 비활성화합니
+다. (Contributed by Yury Selivanov in bpo-20691.)
+
+*코루틴 함수*와 *코루틴 객체*를 검사하는 새로운 함수 집합 :
+"iscoroutine()", "iscoroutinefunction()", "isawaitable()",
+"getcoroutinelocals()" 및 "getcoroutinestate()" 가 추가되었습니다.
+(Contributed by Yury Selivanov in bpo-24017 and bpo-24400.)
+
+"stack()", "trace()", "getouterframes()" 및 "getinnerframes()" 함수는
+이제 네임드 튜플 리스트를 반환합니다. (Contributed by Daniel Shahaf in
+bpo-16808.)
+
+
+io
+--
+
+하부 원시 스트림의 "RawIOBase.read()"나 "RawIOBase.readinto()" 메서드
+에 대한 호출을 최대 한 번 사용하는 새로운 "BufferedIOBase.readinto1()"
+메서드. (Contributed by Nikolaus Rath in bpo-20578.)
+
+
+ipaddress
+---------
+
+"IPv4Network"와 "IPv6Network" 클래스는 이제 기존 주소에서 네트워크 객
+체를 쉽게 구성할 수 있도록 "(address, netmask)" 튜플 인자를 받아들입니
+다:
+
+   >>> import ipaddress
+   >>> ipaddress.IPv4Network(('127.0.0.0', 8))
+   IPv4Network('127.0.0.0/8')
+   >>> ipaddress.IPv4Network(('127.0.0.0', '255.0.0.0'))
+   IPv4Network('127.0.0.0/8')
+
+(Contributed by Peter Moody and Antoine Pitrou in bpo-16531.)
+
+"IPv4Network"와 "IPv6Network" 클래스의 새로운 "reverse_pointer" 어트리
+뷰트는 역 DNS PTR 레코드의 이름을 반환합니다:
+
+   >>> import ipaddress
+   >>> addr = ipaddress.IPv4Address('127.0.0.1')
+   >>> addr.reverse_pointer
+   '1.0.0.127.in-addr.arpa'
+   >>> addr6 = ipaddress.IPv6Address('::1')
+   >>> addr6.reverse_pointer
+   '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa'
+
+(Contributed by Leon Weber in bpo-20480.)
+
+
+json
+----
+
+"json.tool" 명령 줄 인터페이스는 이제 입력으로 전달된 JSON 객체의 키
+순서를 유지합니다. 새로운 "--sort-keys" 옵션을 사용하여 키를 알파벳순
+으로 정렬 할 수 있습니다. (Contributed by Berker Peksag in bpo-21650.)
+
+이제 JSON 디코더는 에러에 대한 더 나은 문맥 정보를 제공하기 위해
+"ValueError" 대신 "JSONDecodeError"를 발생시킵니다. (Contributed by
+Serhiy Storchaka in bpo-19361.)
+
+
+linecache
+---------
+
+새로운 "lazycache()" 함수를 사용하여 파일 기반이 아닌 모듈에 대한 정보
+를 캡처하여 나중에 "getline()"을 통해 해당 라인을 가져올 수 있습니다.
+이렇게 하면 모듈 전역을 무기한으로 유지할 필요 없이, 실제로 줄이 필요
+할 때까지 I/O를 수행하지 않습니다. (Contributed by Robert Collins in
+bpo-17911.)
+
+
+locale
+------
+
+새로운 "delocalize()" 함수를 사용하여 "LC_NUMERIC" 설정을 고려하여 문
+자열을 정규화된 숫자 문자열로 변환 할 수 있습니다:
+
+   >>> import locale
+   >>> locale.setlocale(locale.LC_NUMERIC, 'de_DE.UTF-8')
+   'de_DE.UTF-8'
+   >>> locale.delocalize('1.234,56')
+   '1234.56'
+   >>> locale.setlocale(locale.LC_NUMERIC, 'en_US.UTF-8')
+   'en_US.UTF-8'
+   >>> locale.delocalize('1,234.56')
+   '1234.56'
+
+(Contributed by Cédric Krier in bpo-13918.)
+
+
+logging
+-------
+
+모든 로깅 메서드("Logger" "log()", "exception()", "critical()",
+"debug()" 등)는 이제 불리언 값과 예외 튜플 외에도 예외 인스턴스를
+*exc_info* 인자로 받아들입니다:
+
+   >>> import logging
+   >>> try:
+   ...     1/0
+   ... except ZeroDivisionError as ex:
+   ...     logging.error('exception', exc_info=ex)
+   ERROR:root:exception
+
+(Contributed by Yury Selivanov in bpo-20537.)
+
+이제 "handlers.HTTPHandler" 클래스는 HTTP 연결에 사용되는 SSL 설정을
+구성하기 위해 선택적 "ssl.SSLContext" 인스턴스를 받아들입니다.
+(Contributed by Alex Gaynor in bpo-22788.)
+
+"handlers.QueueListener" 클래스는 이제 *respect_handler_level* 키워드
+인자를 취합니다. 이 인자는 "True"로 설정되면 처리기 수준을 고려하여 처
+리기에 메시지를 전달합니다. (Contributed by Vinay Sajip.)
+
+
+lzma
+----
+
+이제 "LZMADecompressor.decompress()" 메서드는 압축 해제된 데이터의 최
+대 크기를 제한하기 위해 선택적 *max_length* 인자를 받아들입니다.
+(Contributed by Martin Panter in bpo-15955.)
+
+
+math
+----
+
+"math" 모듈에 "inf"와 "nan"의 두 가지 새로운 상수가 추가되었습니다.
+(Contributed by Mark Dickinson in bpo-23185.)
+
+새로운 함수 "isclose()"는 대략적인 동등성을 테스트하는 방법을 제공합니
+다. (Contributed by Chris Barker and Tal Einat in bpo-24270.)
+
+새로운 "gcd()" 함수가 추가되었습니다. "fractions.gcd()" 함수는 이제 폐
+지되었습니다. (Contributed by Mark Dickinson and Serhiy Storchaka in
+bpo-22486.)
+
+
+multiprocessing
+---------------
+
+"sharedctypes.synchronized()" 객체는 이제 *컨텍스트 관리자* 프로토콜을
+지원합니다. (Contributed by Charles-François Natali in bpo-21565.)
+
+
+operator
+--------
+
+"attrgetter()", "itemgetter()" 및 "methodcaller()" 객체는 이제 피클링
+을 지원합니다. (Contributed by Josh Rosenberg and Serhiy Storchaka in
+bpo-22955.)
+
+행렬 곱셈을 수행하는 새로운 "matmul()"과 "imatmul()" 함수.
+(Contributed by Benjamin Peterson in bpo-21176.)
+
+
+os
+--
+
+"DirEntry" 객체의 이터레이터를 반환하는 새로운 "scandir()" 함수가 추가
+되었습니다. 가능하면, "scandir()"은 디렉터리를 스캔하는 동안 파일 어트
+리뷰트를 추출하여, 파일 유형이나 어트리뷰트를 파악하기 위해 후속 시스
+템 호출을 수행할 필요가 없어서, 성능이 크게 향상될 수 있습니다.
+(Contributed by Ben Hoyt with the help of Victor Stinner in
+bpo-22524.)
+
+윈도우에서, 이제 새로운 "stat_result.st_file_attributes" 어트리뷰트를
+사용할 수 있습니다. "GetFileInformationByHandle()" 이 반환한
+"BY_HANDLE_FILE_INFORMATION" 구조체의 "dwFileAttributes" 멤버에 해당합
+니다. (Contributed by Ben Hoyt in bpo-21719.)
+
+"urandom()" 함수는 이제 리눅스 3.17 이상에서 "getrandom()" 시스템 호출
+을 사용하고, OpenBSD 5.6 이상에서 "getentropy()"를 사용하여,
+"/dev/urandom"을 사용할 필요가 없고 잠재적인 파일 기술자 고갈로 인한
+실패를 방지합니다. (Contributed by Victor Stinner in bpo-22181.)
+
+New "get_blocking()" and "set_blocking()" functions allow getting and
+setting a file descriptor's blocking mode ("O_NONBLOCK".) (Contributed
+by Victor Stinner in bpo-22054.)
+
+이제 "truncate()"와 "ftruncate()" 함수가 이제 윈도우에서 지원됩니다.
+(Contributed by Steve Dower in bpo-23668.)
+
+전달된 각 경로명의 가장 긴 공통 하위 경로를 반환하는 새로운
+"os.path.commonpath()" 함수가 있습니다. "os.path.commonprefix()" 함수
+와 달리, 항상 유효한 경로를 반환합니다:
+
+   >>> os.path.commonprefix(['/usr/lib', '/usr/local/lib'])
+   '/usr/l'
+
+   >>> os.path.commonpath(['/usr/lib', '/usr/local/lib'])
+   '/usr'
+
+(Contributed by Rafik Draoui and Serhiy Storchaka in bpo-10395.)
+
+
+pathlib
+-------
+
+새로운 "Path.samefile()" 메서드를 사용하여 다른 "Path" 객체나 문자열일
+수 있는 다른 경로와 같은 파일을 가리키는지를 확인할 수 있습니다:
+
+   >>> import pathlib
+   >>> p1 = pathlib.Path('/etc/hosts')
+   >>> p2 = pathlib.Path('/etc/../etc/hosts')
+   >>> p1.samefile(p2)
+   True
+
+(Contributed by Vajrasky Kok and Antoine Pitrou in bpo-19775.)
+
+"Path.mkdir()" 메서드는 이제 "mkdir -p"와 "os.makedirs()" 기능과 일치
+하는 새로운 선택적 *exist_ok* 인자를 받아들입니다. (Contributed by
+Berker Peksag in bpo-21539.)
+
+"~"와 "~user" 접두사를 확장하는 새로운 "Path.expanduser()" 메서드가 있
+습니다. (Contributed by Serhiy Storchaka and Claudiu Popa in
+bpo-19776.)
+
+새로운 "Path.home()" 클래스 메서드를 사용하여 사용자의 홈 디렉터리를
+나타내는 "Path" 인스턴스를 가져올 수 있습니다. (Contributed by Victor
+Salgado and Mayank Tripathi in bpo-19777.)
+
+파일에 대한 읽기/쓰기 연산을 단순화하는 새로운 "Path.write_text()",
+"Path.read_text()", "Path.write_bytes()", "Path.read_bytes()" 메서드.
+
+다음 코드 조각은 "~/spam42"를 만들거나 기존 파일을 다시 작성합니다:
+
+   >>> import pathlib
+   >>> p = pathlib.Path('~/spam42')
+   >>> p.expanduser().write_text('ham')
+   3
+
+(Contributed by Christopher Welborn in bpo-20218.)
+
+
+pickle
+------
+
+연결되지 않은 메서드나 중첩된 클래스와 같은 중첩 된 객체는 이제 프로토
+콜 버전 4보다 오래된 피클 프로토콜을 사용하여 피클 할 수 있습니다. 프
+로토콜 버전 4는 이미 이러한 경우를 지원합니다. (Contributed by Serhiy
+Storchaka in bpo-23611.)
+
+
+poplib
+------
+
+새로운 "POP3.utf8()" 명령은 POP 서버가 지원하면 **RFC 6856** (국제화된
+이메일) 지원을 활성화합니다. (Contributed by Milan OberKirch in
+bpo-21804.)
+
+
+re
+--
+
+고정 길이를 가진 그룹에 대한 참조와 조건부 참조는 이제 되돌아보기 어서
+션(lookbehind assertions)에서 허용됩니다:
+
+   >>> import re
+   >>> pat = re.compile(r'(a|b).(?<=\1)c')
+   >>> pat.match('aac')
+   <_sre.SRE_Match object; span=(0, 3), match='aac'>
+   >>> pat.match('bbc')
+   <_sre.SRE_Match object; span=(0, 3), match='bbc'>
+
+(Contributed by Serhiy Storchaka in bpo-9179.)
+
+정규식의 캡처 그룹 수는 더는 100개로 제한되지 않습니다. (Contributed
+by Serhiy Storchaka in bpo-22437.)
+
+"sub()"와 "subn()" 함수는 이제 예외를 발생시키는 대신 일치하지 않는 그
+룹을 빈 문자열로 대체합니다. (Contributed by Serhiy Storchaka in
+bpo-1519638.)
+
+"re.error" 예외에는 에러에 대한 더 나은 문맥 정보를 제공하는 새 어트리
+뷰트인 "msg", "pattern", "pos", "lineno" 및 "colno"가 있습니다:
+
+   >>> re.compile("""
+   ...     (?x)
+   ...     .++
+   ... """)
+   Traceback (most recent call last):
+      ...
+   sre_constants.error: multiple repeat at position 16 (line 3, column 7)
+
+(Contributed by Serhiy Storchaka in bpo-22578.)
+
+
+readline
+--------
+
+새로운 "append_history_file()" 함수를 사용하여 지정된 파일에 히스토리
+에 지정된 수의 후행 요소를 추가 할 수 있습니다. (Contributed by Bruno
+Cauet in bpo-22940.)
+
+
+selectors
+---------
+
+새로운 "DevpollSelector"는 Solaris에서 효율적인 "/dev/poll" 폴링을 지
+원합니다. (Contributed by Giampaolo Rodola' in bpo-18931.)
+
+
+Shutil
+------
+
+"move()" 함수는 이제 *copy_function* 인자를 받아들여, 예를 들어, 이동
+할 때 파일 메타 데이터를 무시해야 하면 기본 "copy2()" 대신 "copy()" 함
+수를 사용할 수 있습니다. (Contributed by Claudiu Popa in bpo-19840.)
+
+"make_archive()" 함수는 이제 *xztar* 형식을 지원합니다. (Contributed
+by Serhiy Storchaka in bpo-5411.)
+
+
+signal
+------
+
+윈도우에서, "set_wakeup_fd()" 함수는 이제 소켓 핸들도 지원합니다.
+(Contributed by Victor Stinner in bpo-22018.)
+
+"signal" 모듈의 다양한 "SIG*" 상수가 "열거형"으로 변환되었습니다. 이를
+통해 디버깅 중에 정수 "매직 넘버" 대신 의미 있는 이름을 인쇄할 수 있습
+니다. (Contributed by Giampaolo Rodola' in bpo-21076.)
+
+
+smtpd
+-----
+
+Both the "SMTPServer" and "SMTPChannel" classes now accept a
+*decode_data* keyword argument to determine if the "DATA" portion of
+the SMTP transaction is decoded using the ""utf-8"" codec or is
+instead provided to the "SMTPServer.process_message()" method as a
+byte string.  The default is "True" for backward compatibility
+reasons, but will change to "False" in Python 3.6.  If *decode_data*
+is set to "False", the "process_message" method must be prepared to
+accept keyword arguments. (Contributed by Maciej Szulik in bpo-19662.)
+
+The "SMTPServer" class now advertises the "8BITMIME" extension (**RFC
+6152**) if *decode_data* has been set "True".  If the client specifies
+"BODY=8BITMIME" on the "MAIL" command, it is passed to
+"SMTPServer.process_message()" via the *mail_options* keyword.
+(Contributed by Milan Oberkirch and R.  David Murray in bpo-21795.)
+
+The "SMTPServer" class now also supports the "SMTPUTF8" extension
+(**RFC 6531**: Internationalized Email).  If the client specified
+"SMTPUTF8 BODY=8BITMIME" on the "MAIL" command, they are passed to
+"SMTPServer.process_message()" via the *mail_options* keyword.  It is
+the responsibility of the "process_message" method to correctly handle
+the "SMTPUTF8" data. (Contributed by Milan Oberkirch in bpo-21725.)
+
+It is now possible to provide, directly or via name resolution, IPv6
+addresses in the "SMTPServer" constructor, and have it successfully
+connect.  (Contributed by Milan Oberkirch in bpo-14758.)
+
+
+smtplib
+-------
+
+새로운 "SMTP.auth()" 메서드는 사용자 정의 인증 메커니즘을 구현하는 편
+리한 방법을 제공합니다. (Contributed by Milan Oberkirch in bpo-15014.)
+
+"SMTP.set_debuglevel()" 메서드는 이제 디버그 메시지에서 타임 스탬프를
+활성화하는 추가 디버그 수준(2)을 받아들입니다. (Contributed by Gavin
+Chappell and Maciej Szulik in bpo-16914.)
+
+"SMTP.sendmail()"과 "SMTP.send_message()" 메서드 모두 이제 **RFC
+6531**(SMTPUTF8)을 지원합니다. (Contributed by Milan Oberkirch and R.
+David Murray in bpo-22027.)
+
+
+sndhdr
+------
+
+The "what()" and "whathdr()" functions  now return a "namedtuple()".
+(Contributed by Claudiu Popa in bpo-18615.)
+
+
+socket
+------
+
+제한 시간이 있는 함수는 이제 시스템 시계 대신 단조증가(monotonic) 시계
+를 사용합니다. (Contributed by Victor Stinner in bpo-22043.)
+
+새로운 "socket.sendfile()" 메서드를 사용하면 유닉스에서 고성능
+"os.sendfile()" 함수를 사용하여 소켓을 통해 파일을 전송할 수 있어서,
+일반 "socket.send()"를 사용할 때 보다 업로드 속도가 2 에서 3배 빨라집
+니다. (Contributed by Giampaolo Rodola' in bpo-17552.)
+
+"socket.sendall()" 메서드는 더는 바이트를 받거나 보낼 때마다 소켓 시간
+제한을 재설정하지 않습니다. 소켓 시간제한은 이제 모든 데이터를 보내는
+최대 총 기간입니다. (Contributed by Victor Stinner in bpo-23853.)
+
+"socket.listen()" 메서드의 *backlog* 인자는 이제 선택 사항입니다. 기본
+적으로 "SOMAXCONN"나 "128"중 작은 값으로 설정됩니다. (Contributed by
+Charles-François Natali in bpo-21455.)
+
+
+ssl
+---
+
+
+메모리 BIO 지원
+~~~~~~~~~~~~~~~
+
+(Contributed by Geert Jansen in bpo-21965.)
+
+새로운 "SSLObject" 클래스가 추가되어 "SSLSocket"의 네트워크 I/O 기능이
+필요하지 않거나 최적이 아닐 때 SSL 프로토콜 지원을 제공합니다.
+"SSLObject"는 SSL 프로토콜 인스턴스를 나타내지만, 네트워크 I/O 메서드
+를 구현하지 않고 대신 메모리 버퍼 인터페이스를 제공합니다. 새로운
+"MemoryBIO" 클래스는 파이썬과 SSL 프로토콜 인스턴스 간에 데이터를 전달
+하는 데 사용할 수 있습니다.
+
+메모리 BIO SSL 지원은 주로 "SSLSocket"의 준비(readiness) 모델
+("select/poll")이 비효율적인 비동기 I/O를 구현하는 프레임워크에서 사용
+하기 위한 것입니다.
+
+새 "SSLContext.wrap_bio()" 메서드를 사용하여 새 "SSLObject" 인스턴스를
+만들 수 있습니다.
+
+
+응용 프로그램 계층 프로토콜 협상 지원
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(Contributed by Benjamin Peterson in bpo-20188.)
+
+OpenSSL 지원이 있는 경우, "ssl" 모듈은 이제 **RFC 7301**에 설명된 대로
+*응용 프로그램 계층 프로토콜 협상(Application-Layer Protocol
+Negotiation)* TLS 확장을 구현합니다.
+
+새로운 "SSLContext.set_alpn_protocols()"는 소켓이 TLS 핸드 셰이크 중에
+어떤 프로토콜을 알려야 하는지 지정하는 데 사용할 수 있습니다.
+
+The new "SSLSocket.selected_alpn_protocol()" returns the protocol that
+was selected during the TLS handshake. The "HAS_ALPN" flag indicates
+whether ALPN support is present.
+
+
+기타 변경 사항
+~~~~~~~~~~~~~~
+
+사용 중인 실제 프로토콜 버전을 조회하는 새로운 "SSLSocket.version()"
+메서드가 있습니다. (Contributed by Antoine Pitrou in bpo-20421.)
+
+"SSLSocket" 클래스는 이제 "SSLSocket.sendfile()" 메서드를 구현합니다.
+(Contributed by Giampaolo Rodola' in bpo-17552.)
+
+"SSLSocket.send()" 메서드는 이제 연산이 블록 되려고 하면 비 블로킹 소
+켓에서 "ssl.SSLWantReadError" 나 "ssl.SSLWantWriteError" 예외를 발생시
+킵니다. 이전에는 "0"을 반환했습니다. (Contributed by Nikolaus Rath in
+bpo-20951.)
+
+"cert_time_to_seconds()" 함수는 이제 입력 시간을 **RFC 5280**에 따라
+현지 시간이 아닌 UTC로 해석합니다. 또한, 반환 값은 항상 "int"입니다.
+(Contributed by Akira Li in bpo-19940.)
+
+새로운 "SSLObject.shared_ciphers()"와 "SSLSocket.shared_ciphers()" 메
+서드는 핸드 셰이크 중에 클라이언트가 보낸 사이퍼 리스트를 반환합니다.
+(Contributed by Benjamin Peterson in bpo-23186.)
+
+"SSLSocket" 클래스의 "SSLSocket.do_handshake()", "SSLSocket.read()",
+"SSLSocket.shutdown()" 및 "SSLSocket.write()" 메서드는 더는 바이트를
+받거나 보낼 때마다 소켓 시간제한을 재설정하지 않습니다. 소켓 시간제한
+은 이제 메서드의 최대 총 지속 시간입니다. (Contributed by Victor
+Stinner in bpo-23853.)
+
+"match_hostname()" 함수는 이제 IP 주소 일치를 지원합니다. (Contributed
+by Antoine Pitrou in bpo-23239.)
+
+
+sqlite3
+-------
+
+"Row" 클래스는 이제 시퀀스 프로토콜, 특히 "reversed()" 이터레이션과 슬
+라이스 인덱싱을 완전히 지원합니다. (Contributed by Claudiu Popa in
+bpo-10203; by Lucas Sinclair, Jessica McKellar, and  Serhiy Storchaka
+in bpo-13583.)
+
+
+subprocess
+----------
+
+새로운 "run()" 함수가 추가되었습니다. 지정된 명령을 실행하고 완료된 프
+로세스를 설명하는 "CompletedProcess" 객체를 반환합니다. 새 API는 더 일
+관적이며 이전 파이썬 버전과의 호환성을 유지할 필요가 없는 파이썬 코드
+에서 서브 프로세스를 호출하는 데 권장되는 접근 방식입니다.
+(Contributed by Thomas Kluyver in bpo-23342.)
+
+예:
+
+   >>> subprocess.run(["ls", "-l"])  # doesn't capture output
+   CompletedProcess(args=['ls', '-l'], returncode=0)
+
+   >>> subprocess.run("exit 1", shell=True, check=True)
+   Traceback (most recent call last):
+     ...
+   subprocess.CalledProcessError: Command 'exit 1' returned non-zero exit status 1
+
+   >>> subprocess.run(["ls", "-l", "/dev/null"], stdout=subprocess.PIPE)
+   CompletedProcess(args=['ls', '-l', '/dev/null'], returncode=0,
+   stdout=b'crw-rw-rw- 1 root root 1, 3 Jan 23 16:23 /dev/null\n')
+
+
+sys
+---
+
+새로운 "set_coroutine_wrapper()" 함수를 사용하면 "async def" 함수에 의
+해 *코루틴 객체*가 만들어질 때마다 호출되는 전역 훅을 설정할 수 있습니
+다. 해당 "get_coroutine_wrapper()"를 사용하여 현재 설정된 래퍼를 얻을
+수 있습니다. 두 함수 모두 *잠정적*이며 디버깅 목적으로만 사용됩니다.
+(Contributed by Yury Selivanov in bpo-24017.)
+
+새로운 "is_finalizing()" 함수를 사용하여 파이썬 인터프리터가 *종료 중*
+인지 확인할 수 있습니다. (Contributed by Antoine Pitrou in bpo-22696.)
+
+
+sysconfig
+---------
+
+이제 윈도우의 사용자 스크립트 디렉터리 이름에 파이썬 버전의 처음 두 구
+성 요소가 포함됩니다. (Contributed by Paul Moore in bpo-23437.)
+
+
+tarfile
+-------
+
+"open()" 함수의 *mode* 인자는 이제 배타적 생성을 요청하는 ""x""를 받아
+들입니다. (Contributed by Berker Peksag in bpo-21717.)
+
+"TarFile.extractall()"과 "TarFile.extract()" 메서드는 이제 키워드 인자
+*numeric_owner*를 취합니다. "True"로 설정하면, 압축을 푼 파일과 디렉터
+리는 tar 파일의 숫자 "uid"와 "gid"가 소유합니다. "False"(기본값, 또한
+3.5 이전 버전의 동작)로 설정하면, tar 파일의 명명된 사용자와 그룹이 소
+유합니다. (Contributed by Michael Vogt and Eric Smith in bpo-23193.)
+
+"TarFile.list()"는 이제 "TarFile.getmembers()"가 반환하는 리스트의 부
+분 집합으로 설정할 수 있는 선택적 *members* 키워드 인자를 받아들입니다
+. (Contributed by Serhiy Storchaka in bpo-21549.)
+
+
+threading
+---------
+
+이제 "Lock.acquire()"와 "RLock.acquire()" 메서드 모두 시간제한 관리에
+단조증가(monotonic) 시계를 사용합니다. (Contributed by Victor Stinner
+in bpo-22043.)
+
+
+time
+----
+
+"monotonic()" 함수는 이제 항상 사용할 수 있습니다. (Contributed by
+Victor Stinner in bpo-22043.)
+
+
+timeit
+------
+
+새로운 명령 줄 옵션 "-u"나 "--unit=*U*" 를 사용하여 타이머 출력의 시간
+단위를 지정할 수 있습니다. 지원되는 옵션은 "usec", "msec" 또는 "sec"입
+니다. (Contributed by Julian Gindi in bpo-18983.)
+
+"timeit()" 함수에는 코드가 실행될 이름 공간을 지정하기 위한 새로운
+*globals* 매개 변수가 있습니다. (Contributed by Ben Roberts in
+bpo-2527.)
+
+
+tkinter
+-------
+
+The "tkinter._fix" module used for setting up the Tcl/Tk environment
+on Windows has been replaced by a private function in the "_tkinter"
+module which makes no permanent changes to environment variables.
+(Contributed by Zachary Ware in bpo-20035.)
+
+
+traceback
+---------
+
+New "walk_stack()" and "walk_tb()" functions to conveniently traverse
+frame and traceback objects. (Contributed by Robert Collins in
+bpo-17911.)
+
+새로운 경량 클래스: "TracebackException", "StackSummary" 및
+"FrameSummary". (Contributed by Robert Collins in bpo-17911.)
+
+"print_tb()"와 "print_stack()" 함수는 모두 이제 *limit* 인자에 대해 음
+수 값을 지원합니다. (Contributed by Dmitry Kazakov in bpo-22619.)
+
+
+types
+-----
+
+*제너레이터*와 "제너레이터류" 객체를 *어웨이터블*로 변환하는 새로운
+"coroutine()" 함수. (Contributed by Yury Selivanov in bpo-24017.)
+
+"async def" 함수로 만든 *코루틴* 객체에 사용되는 "CoroutineType"라는
+새로운 형. (Contributed by Yury Selivanov in bpo-24400.)
+
+
+unicodedata
+-----------
+
+"unicodedata" 모듈은 이제 유니코드 8.0.0의 데이터를 사용합니다.
+
+
+unittest
+--------
+
+"TestLoader.loadTestsFromModule()" 메서드는 이제 "load_tests"에 세 번
+째 인자로 전달되는 키워드 전용 인자 *pattern*을 받아들입니다. 패키지
+이름이 기본 패턴과 일치할 수 없어서, 이제 발견된 패키지의 경로가
+*pattern*과 일치하는지와 관계없이 "load_tests"를 확인합니다.
+(Contributed by Robert Collins and Barry A. Warsaw in bpo-16662.)
+
+이제 unittest 디스커버리 에러가 "TestLoader" 인스턴스의
+"TestLoader.errors" 어트리뷰트에 표시됩니다. (Contributed by Robert
+Collins in bpo-19746.)
+
+트레이스백에 지역 변수를 표시하는 새로운 명령 줄 옵션 "--locals".
+(Contributed by Robert Collins in bpo-22936.)
+
+
+unittest.mock
+-------------
+
+"Mock" 클래스는 다음과 같이 개선되었습니다:
+
+* 클래스 생성자에는 ""assert""로 시작하는 어트리뷰트 이름에 대해 모의
+  객체가 "AttributeError"를 발생시키는 새로운 *unsafe* 매개 변수가 있
+  습니다. (Contributed by Kushal Das in bpo-21238.)
+
+* 모의 객체가 호출되었는지 확인하는 새로운 "Mock.assert_not_called()"
+  메서드. (Contributed by Kushal Das in bpo-21262.)
+
+"MagicMock" 클래스는 이제 "__truediv__()", "__divmod__()" 및
+"__matmul__()" 연산자를 지원합니다. (Contributed by Johannes Baiter in
+bpo-20968, and Håkan Lövdahl in bpo-23581 and bpo-23568.)
+
+내장 이름을 패치 할 때 더는 "create=True"를 "patch()" 함수에 명시적으
+로 전달할 필요가 없습니다. (Contributed by Kushal Das in bpo-17660.)
+
+
+urllib
+------
+
+새로운 "request.HTTPPasswordMgrWithPriorAuth" 클래스는 HTTP 기본 인증
+자격 증명을 관리하도록 허용하여, 불필요한 "401" 응답 처리를 제거하거나
+, "Authorization" 헤더가 전송되지 않았으면 "401" 대신 "404" 응답을 반
+환하는 서버와 통신하기 위해 첫 번째 요청에서 자격 증명을 무조건 전송하
+도록 합니다. (Contributed by Matej Cepl in bpo-19494 and Akshit
+Khurana in bpo-7159.)
+
+"parse.urlencode()" 함수에 대한 새로운 *quote_via* 인자는 필요하면 쿼
+리 부분의 인코딩을 제어하는 방법을 제공합니다. (Contributed by Samwyse
+and Arnon Yaari in bpo-13866.)
+
+"request.urlopen()" 함수는 HTTPS 연결에 사용될 *context* 인자로
+"ssl.SSLContext" 객체를 받아들입니다. (Contributed by Alex Gaynor in
+bpo-22366.)
+
+"parse.urljoin()"은 상대 URL 확인을 위해 **RFC 1808**과 **RFC 2396**
+대신에 **RFC 3986** 의미 체계를 사용하도록 갱신되었습니다.
+(Contributed by Demian Brecht and Senthil Kumaran in bpo-22118.)
+
+
+wsgiref
+-------
+
+"headers.Headers" 클래스 생성자의 *headers* 인자는 이제 선택 사항입니
+다. (Contributed by Pablo Torres Navarrete and SilentGhost in
+bpo-5800.)
+
+
+xmlrpc
+------
+
+"client.ServerProxy" 클래스는 이제 *컨텍스트 관리자* 프로토콜을 지원합
+니다. (Contributed by Claudiu Popa in bpo-20627.)
+
+"client.ServerProxy" 생성자는 이제 선택적 "ssl.SSLContext" 인스턴스를
+받아들입니다. (Contributed by Alex Gaynor in bpo-22960.)
+
+
+xml.sax
+-------
+
+SAX 구문 분석기는 이제 "xmlreader.InputSource" 객체의 문자 스트림을 지
+원합니다. (Contributed by Serhiy Storchaka in bpo-2175.)
+
+"parseString()"은 이제 "str" 인스턴스를 받아들입니다. (Contributed by
+Serhiy Storchaka in bpo-10590.)
+
+
+zipfile
+-------
+
+이제 ZIP 출력을 위치 변경할 수 없는(unseekable) 스트림에 쓸 수 있습니
+다. (Contributed by Serhiy Storchaka in bpo-23252.)
+
+"ZipFile.open()" 메서드의 *mode* 인자는 이제 배타적 생성을 요청하는
+""x""를 받아들입니다. (Contributed by Serhiy Storchaka in bpo-21717.)
+
+
+기타 모듈 수준 변경
+===================
+
+Many functions in the "mmap", "ossaudiodev", "socket", "ssl", and
+"codecs" modules now accept writable *bytes-like objects*.
+(Contributed by Serhiy Storchaka in bpo-23001.)
+
+
+최적화
+======
+
+"os.walk()" 함수는 POSIX 시스템에서 3 에서 5배, 윈도우에서 7 에서 20배
+빨라졌습니다. 이는 하부 "readdir"이나 "FindFirstFile"/"FindNextFile"
+시스템 호출에서 파일 정보를 노출하는 새로운 "os.scandir()" 함수를 사용
+하여 수행되었습니다. (Contributed by Ben Hoyt with help from Victor
+Stinner in bpo-23605.)
+
+(0 바이트로 채워진) "bytes(int)"의 구성이 더 빠르고 큰 객체에 대해 더
+적은 메모리를 사용합니다. "malloc()" 대신 "calloc()"을 사용하여 이러한
+객체에 대한 메모리를 할당합니다. (Contributed by Victor Stinner in
+bpo-21233.)
+
+"ipaddress" "IPv4Network"와 "IPv6Network"에 대한 일부 연산(가령
+"subnets()", "supernet()", "summarize_address_range()",
+"collapse_addresses()")이 크게 빨라졌습니다. 속도 향상 범위는 3 에서
+15배입니다. (Contributed by Antoine Pitrou, Michel Albert, and Markus
+in bpo-21486, bpo-21487, bpo-20826, bpo-23266.)
+
+"ipaddress" 객체의 피클링은 훨씬 더 작은 출력을 생성하도록 최적화되었
+습니다. (Contributed by Serhiy Storchaka in bpo-23133.)
+
+"io.BytesIO"에 대한 많은 연산이 이제 50%에서 100% 더 빨라졌습니다.
+(Contributed by Serhiy Storchaka in bpo-15381 and David Wilson in
+bpo-22003.)
+
+이제 "marshal.dumps()" 함수가 더 빨라졌습니다: 일반 데이터에서는 버전
+3과 4에서 65--85%, 버전 0부터 2에서 20--25%, 최상의 경우 최대 5배입니
+다. (Contributed by Serhiy Storchaka in bpo-20416 and bpo-23344.)
+
+UTF-32 인코더는 이제 3 에서 7배 더 빨라졌습니다. (Contributed by
+Serhiy Storchaka in bpo-15027.)
+
+이제 정규식이 최대 10% 더 빠르게 구문 분석됩니다. (Contributed by
+Serhiy Storchaka in bpo-19380.)
+
+"json.dumps()" 함수는 "ensure_ascii=False"로 실행될 때
+"ensure_ascii=True"와 같이 빠르게 실행되도록 최적화되었습니다.
+(Contributed by Naoki Inada in bpo-23206.)
+
+"PyObject_IsInstance()"와 "PyObject_IsSubclass()" 함수는 두 번째 인자
+가 메타 클래스로 "type"을 갖는 일반적인 경우에 가속화되었습니다.
+(Contributed Georg Brandl by in bpo-22540.)
+
+메서드 캐싱이 약간 개선되어, 일부 벤치마크에서 최대 5%의 성능 향상을
+가져왔습니다. (Contributed by Antoine Pitrou in bpo-22847.)
+
+"random" 모듈의 객체는 이제 64비트 빌드에서 50% 적은 메모리를 사용합니
+다. (Contributed by Serhiy Storchaka in bpo-23488.)
+
+"property()" 게터 호출은 최대 25% 더 빠릅니다. (Contributed by Joe
+Jevnik in bpo-23910.)
+
+"fractions.Fraction"의 인스턴스 화가 이제 최대 30% 빨라졌습니다.
+(Contributed by Stefan Behnel in bpo-22464.)
+
+문자열 메서드 "find()", "rfind()", "split()", "partition()" 및 "in" 문
+자열 연산자는 이제 1-문자 하위 문자열을 검색할 때 훨씬 더 빠릅니다.
+(Contributed by Serhiy Storchaka in bpo-23573.)
+
+
+빌드와 C API 변경
+=================
+
+새로운 "calloc" 함수가 추가되었습니다:
+
+* "PyMem_RawCalloc()",
+
+* "PyMem_Calloc()",
+
+* "PyObject_Calloc()".
+
+(Contributed by Victor Stinner in bpo-21233.)
+
+새로운 인코딩/디코딩 도우미 함수:
+
+* "Py_DecodeLocale()" ("_Py_char2wchar()"을 대체),
+
+* "Py_EncodeLocale()" ("_Py_wchar2char()"을 대체).
+
+(Contributed by Victor Stinner in bpo-18395.)
+
+유니코드 인코딩 에러를 "\N{...}" 이스케이프로 대체하는 새로운
+"PyCodec_NameReplaceErrors()" 함수. (Contributed by Serhiy Storchaka
+in bpo-19676.)
+
+A new "PyErr_FormatV()" function similar to "PyErr_Format()", but
+accepts a "va_list" argument. (Contributed by Antoine Pitrou in
+bpo-18711.)
+
+새로운 "PyExc_RecursionError" 예외. (Contributed by Georg Brandl in
+bpo-19235.)
+
+**PEP 489** -- 다단계 확장 모듈 초기화에 의해 도입된 새로운
+"PyModule_FromDefAndSpec()", "PyModule_FromDefAndSpec2()" 및
+"PyModule_ExecDef()" 함수. (Contributed by Petr Viktorin in
+bpo-24268.)
+
+행렬 곱셈을 수행하는 새로운 "PyNumber_MatrixMultiply()"와
+"PyNumber_InPlaceMatrixMultiply()" 함수. (Contributed by Benjamin
+Peterson in bpo-21176. 자세한 내용은 **PEP 465**를 참조하십시오.)
+
+"PyTypeObject.tp_finalize" 슬롯은 이제 안정적인 ABI의 일부입니다.
+
+Windows builds now require Microsoft Visual C++ 14.0, which is
+available as part of Visual Studio 2015.
+
+확장 모듈은 이제 일부 플랫폼에서 파일명에 플랫폼 정보 태그를 포함합니
+다 (태그는 선택 사항이며, CPython은 태그가 없더라도 확장을 임포트 하지
+만, 태그가 존재하고 일치하지 않으면 확장이 로드되지 않습니다):
+
+* 리눅스에서, 확장 모듈 파일명은
+  ".cpython-<major><minor>m-<architecture>-<os>.pyd"로 끝납니다:
+
+  * "<major>"는 파이썬 버전의 주 번호입니다; 파이썬 3.5의 경우 "3"입니
+    다.
+
+  * "<minor>"는 파이썬 버전의 부 번호입니다; 파이썬 3.5의 경우 "5"입니
+    다.
+
+  * "<architecture>"는 확장 모듈이 실행되도록 빌드된 하드웨어 아키텍처
+    입니다. 가장 흔하게 32비트 Intel 플랫폼의 경우 "i386" 또는 64비트
+    Intel (및 AMD) 플랫폼의 경우 "x86_64"입니다.
+
+  * "<os>"는 64비트 플랫폼에서 32비트 ABI와 통신하도록 빌드된 확장을
+    제외하고 항상 "linux-gnu"입니다. 이 경우 "linux-gnu32"(그리고
+    "<architecture>"는 "x86_64"가 됩니다)입니다.
+
+* 윈도우에서, 확장 모듈 파일명은
+  "<debug>.cp<major><minor>-<platform>.pyd"로 끝납니다:
+
+  * "<major>"는 파이썬 버전의 주 번호입니다; 파이썬 3.5의 경우 "3"입니
+    다.
+
+  * "<minor>"는 파이썬 버전의 부 번호입니다; 파이썬 3.5의 경우 "5"입니
+    다.
+
+  * "<platform>"은 확장 모듈이 빌드된 플랫폼으로, Win32 용 "win32",
+    Win64 용 "win_amd64", 윈도우 Itanium 64 용 "win_ia64" 및 ARM 기반
+    윈도우 용 "win_arm"입니다.
+
+  * 디버그 모드로 빌드되면, "<debug>"는 "_d"가 되고 그렇지 않으면 공백
+    이 됩니다.
+
+* OS X 플랫폼에서, 확장 모듈 파일명은 이제 "-darwin.so"로 끝납니다.
+
+* 다른 모든 플랫폼에서, 확장 모듈 파일명은 파이썬 3.4에서와 같습니다.
+
+
+폐지
+====
+
+
+새 키워드
+---------
+
+"async"와 "await"는 변수, 클래스, 함수 또는 모듈 이름으로 사용하지 않
+는 것이 좋습니다. 파이썬 3.5에서 **PEP 492**에 의해 도입되었으며, 파이
+썬 3.7에서 정식 키워드가 될 것입니다.
+
+
+폐지된 파이썬 동작
+------------------
+
+제너레이터 내에서 "StopIteration" 예외를 발생시키면 이제 조용한
+"PendingDeprecationWarning" 을 생성하며, 이는 파이썬 3.6에서 조용하지
+않은 폐지 경고가 되고 파이썬 3.7에서 "RuntimeError"를 트리거할 것입니
+다. 자세한 내용은 PEP 479: 제너레이터 내부에서의 StopIteration 처리 변
+경을 참조하십시오.
+
+
+지원되지 않는 운영 체제
+-----------------------
+
+윈도우 XP는 더는 Microsoft에서 지원하지 않아서, **PEP 11**에 따라
+CPython 3.5는 이 OS에서 더는 공식적으로 지원되지 않습니다.
+
+
+폐지된 파이썬 모듈, 함수 및 메서드
+----------------------------------
+
+"formatter" 모듈은 이제 완전히 폐지되었으며 파이썬 3.6에서 제거될 예정
+입니다.
+
+"asyncio.async()" 함수는 폐지되었고 "ensure_future()"로 대체합니다.
+
+The "smtpd" module has in the past always decoded the DATA portion of
+email messages using the "utf-8" codec.  This can now be controlled by
+the new *decode_data* keyword to "SMTPServer".  The default value is
+"True", but this default is deprecated.  Specify the *decode_data*
+keyword with an appropriate value to avoid the deprecation warning.
+
+"http.cookies.Morsel" 객체의 "key", "value" 및 "coded_value"에 값을 직
+접 대입하는 것은 폐지되었습니다. 대신 "set()" 메서드를 사용하십시오.
+또한, "set()"의 문서화되지 않은 *LegalChars* 매개 변수는 폐지되었으며
+이제 무시됩니다.
+
+포맷 문자열을 키워드 인자 *format_string*으로 "string.Formatter" 클래
+스의 "format()" 메서드에 전달하는 것은 폐지되었습니다. (Contributed by
+Serhiy Storchaka in bpo-23671.)
+
+"platform.dist()"와 "platform.linux_distribution()" 함수는 이제 폐지되
+었습니다. 리눅스 배포판은 자신을 설명하는 데 너무 많은 다른 방법을 사
+용하므로, 기능은 패키지에 남겨집니다. (Contributed by Vajrasky Kok and
+Berker Peksag in bpo-1322.)
+
+이전에 문서화되지 않은 "inspect.Signature"의 "from_function"과
+"from_builtin" 메서드는 폐지되었습니다. 대신 새로운
+"Signature.from_callable()" 메서드를 사용하십시오. (Contributed by
+Yury Selivanov in bpo-24248.)
+
+"inspect.getargspec()" 함수는 폐지되었으며 파이썬 3.6에서 제거될 예정
+입니다. (자세한 내용은 bpo-20438을 참조하십시오.)
+
+"inspect" "getfullargspec()", "getcallargs()" 및 "formatargspec()" 함
+수는 폐지되었고 "inspect.signature()" API로 대체합니다. (Contributed
+by Yury Selivanov in bpo-20438.)
+
+"getargvalues()"와 "formatargvalues()" 함수는 파이썬 3.5.0 릴리스에서
+실수로 폐지된 것으로 표시되었습니다.
+
+str 패턴이나 "re.ASCII"와 함께 "re.LOCALE" 플래그를 사용하는 것은 이제
+폐지되었습니다. (Contributed by Serhiy Storchaka in bpo-22407.)
+
+정규식 패턴과 치환 패턴에서 "'\'"와 ASCII 문자로 구성된 인식할 수 없는
+특수 시퀀스를 사용하면 이제 폐지 경고가 발생하며 파이썬 3.6에서는 금지
+됩니다. (Contributed by Serhiy Storchaka in bpo-23622.)
+
+"unittest.TestLoader.loadTestsFromModule()" 메서드의 문서화되지 않고
+비공식적인 *use_load_tests* 기본 인자는 이제 폐지되었으며 무시됩니다.
+(Contributed by Robert Collins and Barry A. Warsaw in bpo-16662.)
+
+
+제거
+====
+
+
+API 및 기능 제거
+----------------
+
+다음과 같은 더는 사용되지 않고 이전에 폐지된 API와 기능이 제거되었습니
+다:
+
+* "__version__" 어트리뷰트가 이메일 패키지에서 삭제되었습니다. 이메일
+  코드는 오랫동안 표준 라이브러리와 별도로 배포되지 않았으며
+  "__version__" 문자열은 지난 몇 번의 릴리스에서 갱신되지 않았습니다.
+
+* "ftplib" 모듈의 내부 "Netrc" 클래스는 3.4에서 폐지되었으며, 이제 제
+  거되었습니다. (Contributed by Matt Chaput in bpo-6623.)
+
+* ".pyo" 파일의 개념이 제거되었습니다.
+
+* 잠정적 "asyncio" 모듈의 JoinableQueue 클래스는 3.4.4에서 폐지되었으
+  며 이제 제거되었습니다. (Contributed by A. Jesse Jiryu Davis in
+  bpo-23464.)
+
+
+파이썬 3.5로 이식하기
+=====================
+
+이 섹션은 코드 변경이 필요할 수 있는 이전에 설명한 변경 사항과 기타 버
+그 수정을 나열합니다.
+
+
+파이썬 동작의 변경
+------------------
+
+* 부주의로 인해, 이전 파이썬 버전은 다음 문법을 잘못 수락했습니다:
+
+     f(1 for x in [1], *args)
+     f(1 for x in [1], **kwargs)
+
+  함수에 대한 유일한 인자가 아닌 경우 제너레이터 표현식을 괄호로 묶어
+  야 하므로, 파이썬 3.5는 이제 "SyntaxError"를 올바르게 발생시킵니다.
+
+
+파이썬 API의 변경
+-----------------
+
+* **PEP 475**: 시스템 호출은 시그널에 의해 중단될 때 파이썬 시그널 처
+  리기가 예외를 발생시키지 않으면 이제 "InterruptedError"를 발생시키는
+  대신 재시도됩니다.
+
+* 파이썬 3.5 이전에는, "datetime.time" 객체가 UTC로 자정을 나타내면 거
+  짓으로 간주했습니다. 이 동작은 모호하고 에러가 발생하기 쉬운 것으로
+  간주하여 파이썬 3.5에서 제거되었습니다. 자세한 내용은 bpo-13936을 참
+  조하십시오.
+
+* The "ssl.SSLSocket.send()" method now raises either
+  "ssl.SSLWantReadError" or "ssl.SSLWantWriteError" on a non-blocking
+  socket if the operation would block.  Previously, it would return
+  "0".  (Contributed by Nikolaus Rath in bpo-20951.)
+
+* 제너레이터의 "__name__" 어트리뷰트는 이제 코드 이름에서 설정되는 대
+  신 함수 이름에서 설정됩니다. 코드 이름을 꺼내려면
+  "gen.gi_code.co_name"을 사용하십시오. 제너레이터에는 이제 제너레이터
+  의 표현("repr(gen)")에 사용되는 정규화된 이름인 새로운
+  "__qualname__" 어트리뷰트도 있습니다. (Contributed by Victor Stinner
+  in bpo-21205.)
+
+* The deprecated "strict" mode and argument of "HTMLParser",
+  "HTMLParser.error()", and the "HTMLParserError" exception have been
+  removed.  (Contributed by Ezio Melotti in bpo-15114.) The
+  *convert_charrefs* argument of "HTMLParser" is now "True" by
+  default.  (Contributed by Berker Peksag in bpo-21047.)
+
+* 공식적으로 API의 일부는 아니지만, 이전에 "'sometype' does not
+  support the buffer protocol" 형식이었던 에러 메시지는 이제 "a
+  *bytes-like object* is required, not 'sometype'" 형식임을 이식의 목
+  적(즉: 테스트 수선)을 위해 유의할 필요가 있습니다. (Contributed by
+  Ezio Melotti in bpo-16518.)
+
+* 현재 디렉터리가 더는 존재하지 않는 디렉터리로 설정되면
+  "FileNotFoundError" 가 더는 발생하지 않고 대신 "find_spec()"이
+  "sys.path_importer_cache"에서 "None"을 캐싱하지 **않고** "None"을 반
+  환합니다. 이는 일반적일 때와 다릅니다 (bpo-22834).
+
+* "http.client"와 "http.server"의 HTTP 상태 코드와 메시지는 공통
+  "HTTPStatus" 열거형으로 리팩토링 되었습니다. "http.client"와
+  "http.server"의 값은 이전 버전과의 호환성을 위해 계속 사용할 수 있습
+  니다. (Contributed by Demian Brecht in bpo-21793.)
+
+* 임포트 로더가 "importlib.machinery.Loader.exec_module()"을 정의할 때
+  이제 "create_module()"도 정의해야 합니다 (지금은
+  "DeprecationWarning"를 발생시키고, 파이썬 3.6에서는 에러가 될 것입니
+  다). 로더가 "importlib.abc.Loader"에서 상속하면 할 일이 없습니다. 그
+  렇지 않으면 단순히 "None"을 반환하는 "create_module()"을 정의합니다.
+  (Contributed by Brett Cannon in bpo-23014.)
+
+* "re.split()" 함수는 항상 빈 패턴 일치를 무시해서, ""x*"" 패턴은
+  ""x+""와 같게 작동하고, ""\b"" 패턴은 절대 작동하지 않습니다. 이제
+  "re.split()"은 패턴이 빈 문자열과 일치 할 수 있으면 경고를 발생시킵
+  니다. 호환성을 위해, 절대 빈 문자열과 일치하지 않는 패턴을 사용하십
+  시오 (예를 들어 ""x*"" 대신 ""x+""). 빈 문자열과만 일치 할 수 있는
+  패턴(가령 ""\b"")은 이제 에러를 발생시킵니다. (Contributed by Serhiy
+  Storchaka in bpo-22818.)
+
+* "http.cookies.Morsel" 딕셔너리류 인터페이스가 자체 일관성이 있도록
+  만들었습니다: 이제 Morsel 비교는 "key"와 "value"를 고려하고,
+  "copy()"는 이제 "dict"가 아닌 "Morsel" 인스턴스를 생성하며,
+  "update()"는 이제 업데이트 딕셔너리의 키 중 하나라도 잘못되면 예외를
+  발생시킵니다. 또한, "set()"의 문서화되지 않은 *LegalChars* 매개 변수
+  는 폐지되었으며 이제 무시됩니다. (Contributed by Demian Brecht in
+  bpo-2211.)
+
+* **PEP 488**은 파이썬에서 ".pyo" 파일을 제거하고 ".pyc" 파일 이름에
+  선택적 "opt-" 태그를 도입했습니다.
+  "importlib.util.cache_from_source()"는 "opt-" 태그를 제어하는 데 도
+  움이 되는 *optimization* 매개 변수를 얻었습니다. 이로 인해, 함수의
+  *debug_override* 매개 변수는 이제 폐지되었습니다. 또한 ".pyo" 파일은
+  더는 파이썬 인터프리터에 대한 파일 인자로 지원되지 않아서 자체적으로
+  배포될 때 (즉, 소스 없는 코드 배포) 용도가 없습니다. 파이썬 3.5에서
+  바이트 코드의 매직 넘버가 변경되었기 때문에, 이전 버전의 파이썬에서
+  가져온 모든 이전 ".pyo" 파일은 이 PEP에 관계없이 유효하지 않습니다.
+
+* The "socket" module now exports the "CAN_RAW_FD_FRAMES" constant on
+  linux 3.6 and greater.
+
+* "ssl.cert_time_to_seconds()" 함수는 이제 입력 시간을 **RFC 5280**에
+  따라 현지 시간이 아닌 UTC로 해석합니다. 또한, 반환 값은 항상 "int"입
+  니다. (Contributed by Akira Li in bpo-19940.)
+
+* "pygettext.py" 도구는 이제 POT-Creation-Date 헤더의 시간대에 표준
+  +NNNN 형식을 사용합니다.
+
+* "smtplib" 모듈은 이제 디버그 출력을 위해 이전 모듈 수준 "stderr" 변
+  수 대신 "sys.stderr"을 사용합니다. (테스트) 프로그램이 디버그 출력을
+  캡처하기 위해 모듈 수준 변수를 패치 하는 데 의존하면, 대신
+  sys.stderr을 캡처하도록 갱신해야 합니다.
+
+* "str.startswith()"와 "str.endswith()" 메서드는 빈 문자열을 찾고 인덱
+  스가 완전히 범위를 벗어났을 때 더는 "True"를 반환하지 않습니다.
+  (Contributed by Serhiy Storchaka in bpo-24284.)
+
+* "inspect.getdoc()" 함수는 이제 베이스 클래스에서 상속된 설명서 문자
+  열을 반환합니다. 상속된 설명서가 적절하면 설명서 문자열을 더는 복제
+  할 필요가 없습니다. 상속된 문자열을 억제하려면, 빈 문자열을 지정해야
+  합니다 (또는 설명서를 채울 수 있습니다). 이 변경 사항은 "pydoc" 모듈
+  과 "help()" 함수의 출력에 영향을 줍니다. (Contributed by Serhiy
+  Storchaka in bpo-15582.)
+
+* 중첩된 "functools.partial()" 호출은 이제 평활화됩니다. 이전 동작에
+  의존한다면, 이제 "functools.partial()" 객체에 어트리뷰트를 추가하거
+  나 "functools.partial()"의 서브 클래스를 만들 수 있습니다.
+  (Contributed by Alexander Belopolsky in bpo-7830.)
+
+
+C API의 변경
+------------
+
+* The undocumented "format" member of the (non-public)
+  "PyMemoryViewObject" structure has been removed. All extensions
+  relying on the relevant parts in "memoryobject.h" must be rebuilt.
+
+* "PyMemAllocator" 구조체는 "PyMemAllocatorEx" 로 이름이 바뀌었고 새로
+  운 "calloc" 필드가 추가되었습니다.
+
+* Removed non-documented macro "PyObject_REPR" which leaked
+  references. Use format character "%R" in
+  "PyUnicode_FromFormat()"-like functions to format the "repr()" of
+  the object. (Contributed by Serhiy Storchaka in bpo-22453.)
+
+* Because the lack of the "__module__" attribute breaks pickling and
+  introspection, a deprecation warning is now raised for builtin types
+  without the "__module__" attribute.  This would be an AttributeError
+  in the future. (Contributed by Serhiy Storchaka in bpo-20204.)
+
+* As part of the **PEP 492** implementation, the "tp_reserved" slot of
+  "PyTypeObject" was replaced with a "tp_as_async" slot.  Refer to 코
+  루틴 객체 for new types, structures and functions.
+
+
+파이썬 3.5.4의 주목할만한 변경 사항
+===================================
+
+
+새로운 "make regen-all" 빌드 대상
+---------------------------------
+
+교차 컴파일을 단순화하고, 기존 버전의 파이썬이 이미 사용할 수 있어야
+한다는 요구 사항 없이 CPython을 안정적으로 컴파일 할 수 있도록,
+autotools 기반 빌드 시스템은 더는 파일 수정 시간을 기반으로 생성된 파
+일을 묵시적으로 재컴파일하려고 시도하지 않습니다.
+
+대신, 원할 때 이러한 파일을 강제로 재생성하기 위해 새로운 "make regen-
+all" 명령이 추가되었습니다 (예를 들어 사전 생성된 버전을 기반으로 파이
+썬의 초기 버전이 이미 빌드된 후).
+
+보다 선택적 재생성 대상도 정의됩니다 - 자세한 내용은 Makefile.pre.in을
+참조하십시오.
+
+(Contributed by Victor Stinner in bpo-23404.)
+
+버전 3.5.4에 추가.
+
+
+"make touch" 빌드 대상 제거
+---------------------------
+
+수정 시간을 갱신하여 생성된 파일의 묵시적 재생성을 요청하는 데 이전에
+사용된 "make touch" 빌드 대상이 제거되었습니다.
+
+새로운 "make regen-all" 대상으로 대체되었습니다.
+
+(Contributed by Victor Stinner in bpo-23404.)
+
+버전 3.5.4에서 변경.

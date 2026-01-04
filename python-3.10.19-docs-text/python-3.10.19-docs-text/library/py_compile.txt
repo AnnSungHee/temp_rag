@@ -1,0 +1,138 @@
+"py_compile" --- Compile Python source files
+********************************************
+
+**소스 코드:** Lib/py_compile.py
+
+======================================================================
+
+"py_compile" 모듈은 소스 파일에서 바이트 코드 파일을 생성하는 함수와
+모듈 소스 파일이 스크립트로 호출될 때 사용되는 또 다른 함수를 제공합니
+다.
+
+자주 사용되지는 않지만, 특히 일부 사용자가 소스 코드가 들어있는 디렉터
+리에 바이트 코드 캐시 파일을 쓸 수 있는 권한이 없을 때, 이 함수는 공유
+사용을 위해 모듈을 설치할 때 유용할 수 있습니다.
+
+exception py_compile.PyCompileError
+
+   파일을 컴파일하는 도중 에러가 일어날 때 발생하는 예외.
+
+py_compile.compile(file, cfile=None, dfile=None, doraise=False, optimize=- 1, invalidation_mode=PycInvalidationMode.TIMESTAMP, quiet=0)
+
+   바이트 코드로 소스 파일을 컴파일하고 바이트 코드 캐시 파일을 기록합
+   니다. 소스 코드는 *file*이 지정하는 이름의 파일에서 로드됩니다. 바
+   이트 코드는 *cfile*에 기록되며, 기본값은 ".pyc"로 끝나는 **PEP
+   3147**/**PEP 488** 경로입니다. 예를 들어, *file*이
+   "/foo/bar/baz.py"이면 *cfile*은 파이썬 3.2의 경우
+   "/foo/bar/__pycache__/baz.cpython-32.pyc"로 기본 설정됩니다.
+   *dfile*이 지정되면, 예외 트레이스백에 표시하기 위해 소스 줄을 얻은
+   소스 파일 이름으로 *file* 대신 사용됩니다. *doraise*가 참이면,
+   *file*을 컴파일하는 동안 에러를 만나면 "PyCompileError"가 발생합니
+   다. *doraise*가 거짓(기본값)이면, "sys.stderr"에 에러 문자열이 기록
+   되지만, 예외는 발생하지 않습니다. 이 함수는 바이트 컴파일된 파일의
+   경로, 즉 사용된 *cfile* 값을 반환합니다.
+
+   *doraise*와 *quiet* 인자는 파일을 컴파일하는 동안 에러를 처리하는
+   방법을 결정합니다. *quiet*가 0이나 1이고, *doraise*가 거짓이면, 기
+   본 동작이 활성화됩니다: 에러 문자열이 "sys.stderr"에 기록되고, 함수
+   는 경로 대신 "None"을 반환합니다. *doraise*가 참이면, 대신
+   "PyCompileError"가 발생합니다. 그러나 *quiet*가 2이면, 아무런 메시
+   지도 기록되지 않고, *doraise*는 효과가 없습니다.
+
+   *cfile*이 되는 경로(명시적으로 지정되거나 계산된 경로)가 심볼릭 링
+   크나 비정규 파일이면, "FileExistsError"가 발생합니다. 이것은 바이트
+   컴파일된 파일을 해당 경로에 쓸 수 있을 때 임포트가 해당 경로를 일반
+   파일로 바꾼다는 경고로 작용합니다. 이는 동시 파일 기록 문제를 방지
+   하기 위해 최종 바이트 컴파일된 파일을 위치시키는데 파일 이름 바꾸기
+   를 사용하는 임포트의 부작용입니다.
+
+   *optimize*는 최적화 수준을 제어하고 내장 "compile()" 함수로 전달됩
+   니다. 기본값 "-1"은 현재 인터프리터의 최적화 수준을 선택합니다.
+
+   *invalidation_mode*는 "PycInvalidationMode" enum의 멤버여야 하며 실
+   행 시간에 생성된 바이트 코드 캐시를 무효로 하는 방법을 제어합니다.
+   "SOURCE_DATE_EPOCH" 환경 변수가 설정되면 기본값은
+   "PycInvalidationMode.CHECKED_HASH"이고, 그렇지 않으면 기본값은
+   "PycInvalidationMode.TIMESTAMP"입니다.
+
+   버전 3.2에서 변경: *cfile*의 기본값을 **PEP 3147**과 호환되도록 변
+   경했습니다. 이전 기본값은 *file* + "'c'"(최적화가 활성화되었으면
+   "'o'")입니다. 또한 *optimize* 매개 변수가 추가되었습니다.
+
+   버전 3.4에서 변경: 바이트 코드 캐시 파일 쓰기에 "importlib"를 사용
+   하도록 코드를 변경했습니다. 이것은 파일 생성/기록 의미가 이제
+   "importlib"가 하는 것과 일치한다는 것을 의미합니다, 예를 들어 권한,
+   쓰기-와-이동 의미 등. 또한, *cfile*이 심볼릭 링크나 비정규 파일이면
+   "FileExistsError"가 발생시키는 경고를 추가했습니다.
+
+   버전 3.7에서 변경: *invalidation_mode* 매개 변수가 **PEP 552**에 지
+   정된 대로 추가되었습니다. "SOURCE_DATE_EPOCH" 환경 변수가 설정되면,
+   *invalidation_mode*는 "PycInvalidationMode.CHECKED_HASH"로 강제 설
+   정됩니다.
+
+   버전 3.7.2에서 변경: "SOURCE_DATE_EPOCH" 환경 변수는 더는
+   *invalidation_mode* 인자의 값을 재정의하지 않으며, 대신 기본값을 결
+   정합니다.
+
+   버전 3.8에서 변경: *quiet* 매개 변수가 추가되었습니다.
+
+class py_compile.PycInvalidationMode
+
+   A enumeration of possible methods the interpreter can use to
+   determine whether a bytecode file is up to date with a source file.
+   The ".pyc" file indicates the desired invalidation mode in its
+   header. See 캐시된 바이트 코드 무효화 for more information on how
+   Python invalidates ".pyc" files at runtime.
+
+   버전 3.7에 추가.
+
+   TIMESTAMP
+
+      ".pyc" 파일은 파이썬이 실행 시간에 소스 파일의 메타 데이터와 비
+      교하여 ".pyc" 파일을 재생성해야 하는지를 결정할 소스 파일의 타임
+      스탬프와 크기를 포함합니다.
+
+   CHECKED_HASH
+
+      ".pyc" 파일은 파이썬이 실행 시간에 소스와 비교하여 ".pyc" 파일을
+      다시 생성해야 하는지를 결정할 소스 파일 내용의 해시를 포함합니다
+      .
+
+   UNCHECKED_HASH
+
+      "CHECKED_HASH"와 마찬가지로, ".pyc" 파일에는 소스 파일 내용의 해
+      시가 포함됩니다. 하지만, 파이썬은 실행 시간에 ".pyc" 파일이 최신
+      버전이라고 가정하고, 소스 파일에 대해 ".pyc"를 전혀 검증하지 않
+      습니다.
+
+      이 옵션은 ".pycs"가 빌드 시스템처럼 파이썬 외부 시스템에 의해 최
+      신 상태로 유지될 때 유용합니다.
+
+
+명령줄 인터페이스
+=================
+
+이 모듈은 스크립트로 호출하여 여러 소스 파일을 컴파일할 수 있습니다.
+*filenames*로 이름이 지정된 파일이 컴파일되고 결과 바이트 코드가 일반
+적인 방식으로 캐시 됩니다. 이 프로그램은 소스 파일을 찾기 위해 디렉터
+리 구조를 검색하지 않습니다; 명시적으로 이름이 지정된 파일 만 컴파일합
+니다. 컴파일할 수 없는 파일이 있으면 종료 상태가 0이 아닙니다.
+
+<file> ... <fileN>
+-
+
+   위치 인자는 컴파일할 파일입니다. "-"가 유일한 매개 변수면, 파일 목
+   록을 표준 입력에서 가져옵니다.
+
+-q, --quiet
+
+   에러 출력을 억제합니다.
+
+버전 3.2에서 변경: "-"에 대한 지원이 추가되었습니다.
+
+버전 3.10에서 변경: "-q"에 대한 지원이 추가되었습니다.
+
+더 보기:
+
+  모듈 "compileall"
+     디렉터리 트리에 있는 모든 파이썬 소스 파일을 컴파일하는 유틸리티.

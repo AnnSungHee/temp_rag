@@ -1,0 +1,201 @@
+"email.mime": Creating email and MIME objects from scratch
+**********************************************************
+
+**소스 코드:** Lib/email/mime/
+
+======================================================================
+
+이 모듈은 레거시 ("Compat32") 이메일 API의 일부입니다. 새로운 API에서
+는 기능이 "contentmanager"로 부분적으로 대체되지만, 특정 응용 프로그램
+에서는 이 클래스들이 레거시 코드가 아닌 곳에서도 여전히 유용할 수 있습
+니다.
+
+일반적으로, 파일이나 일부 텍스트를, 텍스트를 구문 분석하고 루트 메시지
+객체를 반환하는 구문 분석기에 전달하여 메시지 객체 구조를 얻습니다. 그
+러나 처음부터 완전한 메시지 구조를 만들거나, 개별 "Message" 객체를 직
+접 만들 수도 있습니다. 실제로, 기존 구조를 가져와서 새로운 "Message"
+객체를 추가하거나 이동시킬 수도 있습니다. 이렇게 하면 MIME 메시지를 잘
+게 자르고 재배치하는 매우 편리한 인터페이스가 만들어집니다.
+
+"Message" 인스턴스를 만들고 첨부 파일과 모든 적절한 헤더를 수동으로 추
+가하여 새 객체 구조를 만들 수 있습니다. 그러나 MIME 메시지의 경우,
+"email" 패키지는 작업을 쉽게 하기 위해 편리한 서브 클래스를 제공합니다
+.
+
+클래스는 다음과 같습니다:
+
+class email.mime.base.MIMEBase(_maintype, _subtype, *, policy=compat32, **_params)
+
+   모듈: "email.mime.base"
+
+   이것은 "Message"의 모든 MIME 특정 서브 클래스의 베이스 클래스입니다
+   . 일반적으로, 할 수는 있지만, "MIMEBase"의 인스턴스를 만들지는 않습
+   니다. "MIMEBase"는 주로 더 구체적인 MIME 인식 서브 클래스를 위한 편
+   리한 베이스 클래스로 제공됩니다.
+
+   *_maintype*은 *Content-Type* 주 유형(예를 들어 *text*나 *image*)이
+   고, *_subtype*은 *Content-Type* 부 유형(예를 들어 *plain*이나
+   *gif*)입니다. *_params*는 매개 변수 키/값 딕셔너리이며
+   "Message.add_header"로 직접 전달됩니다.
+
+   *policy*가 지정되면 (기본값은 "compat32" 정책입니다), "Message"로
+   전달됩니다.
+
+   "MIMEBase" 클래스는 항상 (*_maintype*, *_subtype* 및 *_params*에 기
+   반하는) *Content-Type* 헤더와 (항상 "1.0"으로 설정되는) *MIME-
+   Version* 헤더를 추가합니다.
+
+   버전 3.6에서 변경: *policy* 키워드 전용 매개 변수를 추가했습니다.
+
+class email.mime.nonmultipart.MIMENonMultipart
+
+   모듈: "email.mime.nonmultipart"
+
+   "MIMEBase"의 서브 클래스, *multipart* 가 아닌 MIME 메시지의 중간 베
+   이스 클래스입니다. 이 클래스의 기본 목적은 *multipart* 메시지에만
+   적합한 "attach()" 메서드 사용을 방지하는 것입니다. "attach()"가 호
+   출되면 "MultipartConversionError" 예외가 발생합니다.
+
+class email.mime.multipart.MIMEMultipart(_subtype='mixed', boundary=None, _subparts=None, *, policy=compat32, **_params)
+
+   모듈: "email.mime.multipart"
+
+   "MIMEBase"의 서브 클래스, *multipart* 인 MIME 메시지의 중간 베이스
+   클래스입니다. 선택적 *_subtype*의 기본값은 *mixed*이지만, 메시지의
+   부 유형을 지정하는 데 사용할 수 있습니다. *multipart/_subtype*의
+   *Content-Type* 헤더가 메시지 객체에 추가됩니다. *MIME-Version* 헤더
+   도 추가됩니다.
+
+   선택적 *boundary*는 멀티 파트 경계 문자열입니다. "None"(기본값)이면
+   , 경계는 필요할 때 (예를 들어 메시지가 직렬화될 때) 계산됩니다.
+
+   *_subparts*는 페이 로드의 초기 서브 파트 시퀀스입니다. 이 시퀀스를
+   리스트로 변환할 수 있어야 합니다. "Message.attach" 메서드를 사용하
+   여 항상 메시지에 새 서브 파트를 첨부할 수 있습니다.
+
+   선택적 *policy* 인자의 기본값은 "compat32"입니다.
+
+   *Content-Type* 헤더에 대한 추가 매개 변수는 키워드 인자에서 취하거
+   나, 키워드 딕셔너리인 *_params* 인자로 전달됩니다.
+
+   버전 3.6에서 변경: *policy* 키워드 전용 매개 변수를 추가했습니다.
+
+class email.mime.application.MIMEApplication(_data, _subtype='octet-stream', _encoder=email.encoders.encode_base64, *, policy=compat32, **_params)
+
+   모듈: "email.mime.application"
+
+   "MIMENonMultipart" 의 서브 클래스, "MIMEApplication" 클래스는 주 유
+   형 *application*의 MIME 메시지 객체를 나타내는 데 사용됩니다.
+   *_data*는 원시 애플리케이션 데이터의 바이트 열을 포함합니다. 선택적
+   *_subtype*은 MIME 부 유형을 지정하고 기본값은 *octet-stream*입니다.
+
+   선택적 *_encoder*는 전송을 위해 데이터의 실제 인코딩을 수행할 콜러
+   블(즉, 함수)입니다. 이 콜러블은 "MIMEApplication" 인스턴스인 하나의
+   인자를 취합니다. 페이 로드를 인코딩된 형식으로 변경하려면
+   "get_payload()"와 "set_payload()"를 사용해야 합니다. 또한, 필요에
+   따라 *Content-Transfer-Encoding*이나 기타 헤더를 메시지 객체에 추가
+   해야 합니다. 기본 인코딩은 base64입니다. 내장 인코더의 목록은
+   "email.encoders" 모듈을 참조하십시오.
+
+   선택적 *policy* 인자의 기본값은 "compat32"입니다.
+
+   *_params*는 베이스 클래스 생성자로 바로 전달됩니다.
+
+   버전 3.6에서 변경: *policy* 키워드 전용 매개 변수를 추가했습니다.
+
+class email.mime.audio.MIMEAudio(_audiodata, _subtype=None, _encoder=email.encoders.encode_base64, *, policy=compat32, **_params)
+
+   모듈: "email.mime.audio"
+
+   A subclass of "MIMENonMultipart", the "MIMEAudio" class is used to
+   create MIME message objects of major type *audio*. *_audiodata*
+   contains the bytes for the raw audio data.  If this data can be
+   decoded by the standard Python module "sndhdr", then the subtype
+   will be automatically included in the *Content-Type* header.
+   Otherwise you can explicitly specify the audio subtype via the
+   *_subtype* argument.  If the minor type could not be guessed and
+   *_subtype* was not given, then "TypeError" is raised.
+
+   선택적 *_encoder*는 전송을 위해 오디오 데이터의 실제 인코딩을 수행
+   할 콜러블(즉, 함수)입니다. 이 콜러블은 "MIMEAudio" 인스턴스인 하나
+   의 인자를 취합니다. 페이 로드를 인코딩된 형식으로 변경하려면
+   "get_payload()"와 "set_payload()"를 사용해야 합니다. 또한 필요에 따
+   라 *Content-Transfer-Encoding*이나 기타 헤더를 메시지 객체에 추가해
+   야 합니다. 기본 인코딩은 base64입니다. 내장 인코더의 목록은
+   "email.encoders" 모듈을 참조하십시오.
+
+   선택적 *policy* 인자의 기본값은 "compat32"입니다.
+
+   *_params*는 베이스 클래스 생성자로 바로 전달됩니다.
+
+   버전 3.6에서 변경: *policy* 키워드 전용 매개 변수를 추가했습니다.
+
+class email.mime.image.MIMEImage(_imagedata, _subtype=None, _encoder=email.encoders.encode_base64, *, policy=compat32, **_params)
+
+   모듈: "email.mime.image"
+
+   A subclass of "MIMENonMultipart", the "MIMEImage" class is used to
+   create MIME message objects of major type *image*. *_imagedata*
+   contains the bytes for the raw image data.  If this data can be
+   decoded by the standard Python module "imghdr", then the subtype
+   will be automatically included in the *Content-Type* header.
+   Otherwise you can explicitly specify the image subtype via the
+   *_subtype* argument.  If the minor type could not be guessed and
+   *_subtype* was not given, then "TypeError" is raised.
+
+   선택적 *_encoder*는 전송을 위해 이미지 데이터의 실제 인코딩을 수행
+   할 콜러블(즉, 함수)입니다. 이 콜러블은 "MIMEImage" 인스턴스인 하나
+   의 인자를 취합니다. 페이 로드를 인코딩된 형식으로 변경하려면
+   "get_payload()"와 "set_payload()"를 사용해야 합니다. 또한 필요에 따
+   라 *Content-Transfer-Encoding*이나 기타 헤더를 메시지 객체에 추가해
+   야 합니다. 기본 인코딩은 base64입니다. 내장 인코더의 목록은
+   "email.encoders" 모듈을 참조하십시오.
+
+   선택적 *policy* 인자의 기본값은 "compat32"입니다.
+
+   *_params*는 "MIMEBase" 생성자로 바로 전달됩니다.
+
+   버전 3.6에서 변경: *policy* 키워드 전용 매개 변수를 추가했습니다.
+
+class email.mime.message.MIMEMessage(_msg, _subtype='rfc822', *, policy=compat32)
+
+   모듈: "email.mime.message"
+
+   "MIMENonMultipart" 의 서브 클래스, "MIMEMessage" 클래스는 주 유형
+   *message*의 MIME 객체를 만드는 데 사용됩니다. *_msg*는 페이 로드로
+   사용되며, "Message" 클래스(또는 그 서브 클래스)의 인스턴스여야 합니
+   다, 그렇지 않으면 "TypeError"가 발생합니다.
+
+   선택적 *_subtype*은 메시지의 부 유형을 설정합니다; 기본값은
+   *rfc822*입니다.
+
+   선택적 *policy* 인자의 기본값은 "compat32"입니다.
+
+   버전 3.6에서 변경: *policy* 키워드 전용 매개 변수를 추가했습니다.
+
+class email.mime.text.MIMEText(_text, _subtype='plain', _charset=None, *, policy=compat32)
+
+   모듈: "email.mime.text"
+
+   "MIMENonMultipart" 의 서브 클래스, "MIMEText" 클래스는 주 유형
+   *text*의 MIME 객체를 만드는 데 사용됩니다. *_text*는 페이 로드의 문
+   자열입니다. *_subtype*은 부 유형이며 기본값은 *plain*입니다.
+   *_charset*은 텍스트의 문자 집합이며 "MIMENonMultipart" 생성자에 인
+   자로 전달됩니다; 기본값은 문자열에 "ascii" 코드 포인트만 포함되어
+   있으면 "us-ascii"이고, 그렇지 않으면 "utf-8"입니다. *_charset* 매개
+   변수는 문자열이나 "Charset" 인스턴스를 받아들입니다.
+
+   *_charset* 인자가 명시적으로 "None"으로 설정되어 있지 않은 한, 만들
+   어진 MIMEText 객체에는 "charset" 매개 변수가 있는 *Content-Type* 헤
+   더와 *Content-Transfer-Encoding* 헤더가 모두 있습니다. 이는 charset
+   이 "set_payload" 명령으로 전달되더라도, 후속 "set_payload" 호출이
+   인코딩된 페이 로드를 만들지 않음을 의미합니다. "Content-Transfer-
+   Encoding" 헤더를 삭제하여 이 동작을 "재설정"할 수 있으며, 그 후에
+   "set_payload" 호출은 자동으로 새 페이 로드를 인코딩합니다 (그리고
+   새 *Content-Transfer-Encoding* 헤더를 추가합니다).
+
+   선택적 *policy* 인자의 기본값은 "compat32"입니다.
+
+   버전 3.5에서 변경: *_charset*은 "Charset" 인스턴스도 받아들입니다.
+
+   버전 3.6에서 변경: *policy* 키워드 전용 매개 변수를 추가했습니다.

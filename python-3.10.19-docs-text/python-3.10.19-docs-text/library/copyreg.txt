@@ -1,0 +1,52 @@
+"copyreg" --- Register "pickle" support functions
+*************************************************
+
+**소스 코드:** Lib/copyreg.py
+
+======================================================================
+
+"copyreg" 모듈은 특정 객체를 피클 하는 동안 사용되는 함수를 정의하는
+방법을 제공합니다. "pickle"과 "copy" 모듈은 해당 객체를 피클/복사할 때
+이 함수를 사용합니다. 이 모듈은 클래스가 아닌 객체 생성자에 대한 구성
+정보를 제공합니다. 이러한 생성자는 팩토리 함수나 클래스 인스턴스일 수
+있습니다.
+
+copyreg.constructor(object)
+
+   *object*를 유효한 생성자로 선언합니다. *object*가 콜러블이 아니면 (
+   따라서 생성자로 유효하지 않으면), "TypeError"가 발생합니다.
+
+copyreg.pickle(type, function, constructor_ob=None)
+
+   Declares that *function* should be used as a "reduction" function
+   for objects of type *type*.  *function* should return either a
+   string or a tuple containing two or three elements. See the
+   "dispatch_table" for more details on the interface of *function*.
+
+   The *constructor_ob* parameter is a legacy feature and is now
+   ignored, but if passed it must be a callable.
+
+   피클러 객체나 "pickle.Pickler"의 서브 클래스의 "dispatch_table" 어
+   트리뷰트도 환원 함수를 선언하는 데 사용될 수 있습니다.
+
+
+예제
+====
+
+아래 예제는 피클 함수를 등록하는 방법과 사용법을 보여줍니다.:
+
+>>> import copyreg, copy, pickle
+>>> class C:
+...     def __init__(self, a):
+...         self.a = a
+...
+>>> def pickle_c(c):
+...     print("pickling a C instance...")
+...     return C, (c.a,)
+...
+>>> copyreg.pickle(C, pickle_c)
+>>> c = C(1)
+>>> d = copy.copy(c)  
+pickling a C instance...
+>>> p = pickle.dumps(c)  
+pickling a C instance...

@@ -1,0 +1,27 @@
+코루틴 객체
+***********
+
+버전 3.5에 추가.
+
+코루틴 객체는 "async" 키워드로 선언된 함수가 반환하는 것입니다.
+
+type PyCoroObject
+
+   코루틴 객체에 사용되는 C 구조체.
+
+PyTypeObject PyCoro_Type
+
+   코루틴 객체에 해당하는 형 객체.
+
+int PyCoro_CheckExact(PyObject *ob)
+
+   *ob*의 형이 "PyCoro_Type"이면 참을 반환합니다. *ob*는 "NULL"일 수
+   없습니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyCoro_New(PyFrameObject *frame, PyObject *name, PyObject *qualname)
+    *반환값: 새 참조.*
+
+   *frame* 객체를 기반으로 새 코루틴 객체를 만들어서 반환합니다.
+   "__name__" 과 "__qualname__"은 *name* 과 *qualname*로 설정합니다.
+   이 함수는 *frame*에 대한 참조를 훔칩니다. *frame* 인자는 "NULL"일
+   수 없습니다.

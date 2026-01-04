@@ -1,0 +1,96 @@
+파이썬 언어 서비스
+******************
+
+파이썬은 파이썬 언어로 작업하는 데 도움이 되는 여러 모듈을 제공합니다.
+이 모듈들은 토큰화, 구문 분석, 문법 분석, 바이트 코드 역 어셈블리 및
+기타 다양한 기능을 지원합니다.
+
+이 모듈들은 다음과 같습니다:
+
+* "ast" --- Abstract Syntax Trees
+
+  * 추상 문법
+
+  * 노드 클래스
+
+    * 리터럴
+
+    * 변수
+
+    * 표현식
+
+      * 서브스크립팅
+
+      * 컴프리헨션
+
+    * 문장
+
+      * 임포트
+
+    * 제어 흐름
+
+    * Pattern matching
+
+    * 함수와 클래스 정의
+
+    * Async와 await
+
+  * "ast" 도우미
+
+  * 컴파일러 플래그
+
+  * 명령 줄 사용법
+
+* "symtable" --- Access to the compiler's symbol tables
+
+  * 심볼 테이블 생성하기
+
+  * 심볼 테이블 검사하기
+
+* "token" --- Constants used with Python parse trees
+
+* "keyword" --- Testing for Python keywords
+
+* "tokenize" --- Tokenizer for Python source
+
+  * 입력 토큰화하기
+
+  * 명령 줄 사용법
+
+  * 예제
+
+* "tabnanny" --- Detection of ambiguous indentation
+
+* "pyclbr" --- Python module browser support
+
+  * Function 객체
+
+  * Class 객체
+
+* "py_compile" --- Compile Python source files
+
+  * 명령줄 인터페이스
+
+* "compileall" --- Byte-compile Python libraries
+
+  * 명령 줄 사용
+
+  * 공용 함수
+
+* "dis" --- Disassembler for Python bytecode
+
+  * 바이트 코드 분석
+
+  * 분석 함수
+
+  * 파이썬 바이트 코드 명령어
+
+  * 옵코드 모음
+
+* "pickletools" --- Tools for pickle developers
+
+  * 명령 줄 사용법
+
+    * 명령 줄 옵션
+
+  * 프로그래밍 인터페이스

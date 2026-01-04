@@ -1,0 +1,181 @@
+12. 가상 환경 및 패키지
+***********************
+
+
+12.1. 소개
+==========
+
+파이썬 응용 프로그램은 종종 표준 라이브러리의 일부로 제공되지 않는 패
+키지와 모듈을 사용합니다. 응용 프로그램에 특정 버전의 라이브러리가 필
+요할 수 있는데, 응용 프로그램에 특정 버그가 수정된 버전이 필요하거나,
+라이브러리 인터페이스의 구식 버전을 사용하여 응용 프로그램을 작성할 수
+도 있기 때문입니다.
+
+즉, 하나의 파이썬 설치가 모든 응용 프로그램의 요구 사항을 충족시키는
+것이 불가능할 수도 있습니다. 응용 프로그램 A에 특정 모듈의 버전 1.0이
+필요하지만, 응용 프로그램 B에 버전 2.0이 필요한 경우, 요구 사항이 충돌
+하고, 버전 1.0 또는 2.0을 설치하면 어느 한 응용 프로그램은 실행할 수
+없게 됩니다.
+
+이 문제에 대한 해결책은 *가상 환경* 을 만드는 것입니다. 이 가상 환경은
+특정 버전 파이썬 설치와 여러 추가 패키지를 포함하는 완비된 디렉터리 트
+리입니다.
+
+서로 다른 응용 프로그램은 서로 다른 가상 환경을 사용할 수 있습니다. 앞
+서 본 상충하는 요구 사항의 예를 해결하기 위해, 응용 프로그램 A에는 버
+전 1.0이 설치된 자체 가상 환경이 있고, 응용 프로그램 B에는 버전 2.0이
+있는 다른 가상 환경이 있을 수 있습니다. 응용 프로그램 B에서 라이브러리
+를 버전 3.0으로 업그레이드해야 하는 경우, 응용 프로그램 A의 환경에 영
+향을 미치지 않습니다.
+
+
+12.2. 가상 환경 만들기
+======================
+
+The module used to create and manage virtual environments is called
+"venv".  "venv" will usually install the most recent version of Python
+that you have available. If you have multiple versions of Python on
+your system, you can select a specific Python version by running
+"python3" or whichever version you want.
+
+가상 환경을 만들려면, 원하는 디렉터리를 결정하고, "venv" 모듈을 스크립
+트로 실행하는데 디렉터리 경로를 명령행 인자로 전달합니다:
+
+   python -m venv tutorial-env
+
+존재하지 않는다면 "tutorial-env" 디렉터리를 만들고, 그 안에 파이썬 인
+터프리터의 사본과 다양한 지원 파일이 들어있는 디렉터리들을 만듭니다.
+
+가상 환경의 일반적인 디렉터리 위치는 ".venv"입니다. 이 이름은 디렉터리
+가 보통 셸에서 숨겨져 있도록 하므로, 디렉터리가 존재하는 이유를 설명하
+는 이름을 제공하면서도 방해받지 않습니다. 또한 일부 툴링(tooling)이 지
+원하는 ".env" 환경 변수 정의 파일과의 충돌을 방지합니다.
+
+가상 환경을 만들었으면, 가상 환경을 활성화할 수 있습니다.
+
+윈도우에서 이렇게 실행합니다:
+
+   tutorial-env\Scripts\activate.bat
+
+Unix 또는 MacOS에서 이렇게 실행합니다:
+
+   source tutorial-env/bin/activate
+
+(이 스크립트는 bash 셸을 위해 작성된 것으로, **csh** 또는 **fish** 셸
+을 사용하는 경우에는, 대신 "activate.csh" 와 "activate.fish" 스크립트
+를 사용해야 합니다.)
+
+가상 환경을 활성화하면, 셸의 프롬프트가 변경되어 사용 중인 가상 환경을
+보여주고, 환경을 수정하여 "python" 을 실행하면 특정 버전의 파이썬이 실
+행되도록 합니다. 예를 들어:
+
+   $ source ~/envs/tutorial-env/bin/activate
+   (tutorial-env) $ python
+   Python 3.5.1 (default, May  6 2016, 10:59:36)
+     ...
+   >>> import sys
+   >>> sys.path
+   ['', '/usr/local/lib/python35.zip', ...,
+   '~/envs/tutorial-env/lib/python3.5/site-packages']
+   >>>
+
+
+12.3. pip로 패키지 관리하기
+===========================
+
+**pip** 라는 프로그램을 사용하여 패키지를 설치, 업그레이드 및 제거할
+수 있습니다. 기본적으로 "pip" 는 파이썬 패키지 색인에서 패키지를 설치
+합니다. 웹 브라우저에서 파이썬 패키지 색인을 살펴볼 수 있습니다.
+
+"pip" 는 "install", "uninstall", "freeze" 등 많은 부속 명령을 갖고 있
+습니다. ("pip" 에 대한 완전한 문서는 파이썬 모듈 설치하기 지침을 보면
+됩니다.)
+
+패키지 이름을 지정하여 최신 버전의 패키지를 설치할 수 있습니다:
+
+   (tutorial-env) $ python -m pip install novas
+   Collecting novas
+     Downloading novas-3.1.1.3.tar.gz (136kB)
+   Installing collected packages: novas
+     Running setup.py install for novas
+   Successfully installed novas-3.1.1.3
+
+패키지 이름 뒤에 "==" 과 버전 번호를 붙여 특정 버전의 패키지를 설치할
+수도 있습니다:
+
+   (tutorial-env) $ python -m pip install requests==2.6.0
+   Collecting requests==2.6.0
+     Using cached requests-2.6.0-py2.py3-none-any.whl
+   Installing collected packages: requests
+   Successfully installed requests-2.6.0
+
+If you re-run this command, "pip" will notice that the requested
+version is already installed and do nothing.  You can supply a
+different version number to get that version, or you can run "pip
+install --upgrade" to upgrade the package to the latest version:
+
+   (tutorial-env) $ python -m pip install --upgrade requests
+   Collecting requests
+   Installing collected packages: requests
+     Found existing installation: requests 2.6.0
+       Uninstalling requests-2.6.0:
+         Successfully uninstalled requests-2.6.0
+   Successfully installed requests-2.7.0
+
+"pip uninstall" followed by one or more package names will remove the
+packages from the virtual environment.
+
+"pip show" will display information about a particular package:
+
+   (tutorial-env) $ pip show requests
+   ---
+   Metadata-Version: 2.0
+   Name: requests
+   Version: 2.7.0
+   Summary: Python HTTP for Humans.
+   Home-page: http://python-requests.org
+   Author: Kenneth Reitz
+   Author-email: me@kennethreitz.com
+   License: Apache 2.0
+   Location: /Users/akuchling/envs/tutorial-env/lib/python3.4/site-packages
+   Requires:
+
+"pip list" will display all of the packages installed in the virtual
+environment:
+
+   (tutorial-env) $ pip list
+   novas (3.1.1.3)
+   numpy (1.9.2)
+   pip (7.0.3)
+   requests (2.7.0)
+   setuptools (16.0)
+
+"pip freeze" will produce a similar list of the installed packages,
+but the output uses the format that "pip install" expects. A common
+convention is to put this list in a "requirements.txt" file:
+
+   (tutorial-env) $ pip freeze > requirements.txt
+   (tutorial-env) $ cat requirements.txt
+   novas==3.1.1.3
+   numpy==1.9.2
+   requests==2.7.0
+
+"requirements.txt" 는 버전 제어에 커밋되어 응용 프로그램 일부로 제공될
+수 있습니다. 사용자는 "install -r" 로 모든 필요한 패키지를 설치할 수
+있습니다:
+
+   (tutorial-env) $ python -m pip install -r requirements.txt
+   Collecting novas==3.1.1.3 (from -r requirements.txt (line 1))
+     ...
+   Collecting numpy==1.9.2 (from -r requirements.txt (line 2))
+     ...
+   Collecting requests==2.7.0 (from -r requirements.txt (line 3))
+     ...
+   Installing collected packages: novas, numpy, requests
+     Running setup.py install for novas
+   Successfully installed novas-3.1.1.3 numpy-1.9.2 requests-2.7.0
+
+"pip" has many more options.  Consult the 파이썬 모듈 설치하기 guide
+for complete documentation for "pip".  When you've written a package
+and want to make it available on the Python Package Index, consult the
+파이썬 모듈 배포하기 guide.

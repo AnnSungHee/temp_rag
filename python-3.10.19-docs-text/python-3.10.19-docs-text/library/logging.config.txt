@@ -1,0 +1,794 @@
+"logging.config" --- Logging configuration
+******************************************
+
+**소스 코드:** Lib/logging/config.py
+
+
+Important
+^^^^^^^^^
+
+이 페이지에는 레퍼런스 정보만 있습니다. 자습서는 다음을 참조하십시오
+
+* 기초 자습서
+
+* 고급 자습서
+
+* 로깅 요리책
+
+======================================================================
+
+이 절에서는 logging 모듈을 구성하기 위한 API에 관해 설명합니다.
+
+
+구성 함수
+=========
+
+다음 함수는 logging 모듈을 구성합니다. "logging.config" 모듈에 있습니
+다. 사용은 선택 사항입니다 --- 이 함수들을 사용하거나 ("logging" 자체
+에서 정의된) 주 API를 호출하고 "logging"이나 "logging.handlers"에서 선
+언된 처리기를 정의해서 logging 모듈을 구성할 수 있습니다.
+
+logging.config.dictConfig(config)
+
+   딕셔너리로 로깅 구성을 받습니다. 이 딕셔너리의 내용은 아래의 구성
+   딕셔너리 스키마에 설명되어 있습니다.
+
+   구성 중에 에러를 만나면, 이 함수는 적절하게 설명하는 메시지와 함께
+   "ValueError", "TypeError", "AttributeError" 또는 "ImportError"를 발
+   생시킵니다. 다음은 에러를 발생시킬 수 있는 (불완전한) 조건 목록입니
+   다:
+
+   * 문자열이 아니거나 실제 로깅 수준과 일치하지 않는 문자열인
+     "level".
+
+   * 불리언이 아닌 "propagate" 값.
+
+   * 해당 대상이 없는 id.
+
+   * 증분(incremental) 호출 중에 발견된 존재하지 않는 처리기 id.
+
+   * 잘못된 로거 이름.
+
+   * 결정할 수 없는 내부나 외부 객체.
+
+   구문 분석은 "DictConfigurator" 클래스에 의해 수행되며, 생성자로는
+   구성에 사용되는 딕셔너리가 전달되고, 객체는 "configure()" 메서드를
+   가집니다. "logging.config" 모듈에는 초기에 "DictConfigurator"로 설
+   정된 콜러블 어트리뷰트 "dictConfigClass"가 있습니다. 여러분 자신의
+   적절한 구현으로 "dictConfigClass"의 값을 바꿀 수 있습니다.
+
+   "dictConfig()"는 "dictConfigClass"를 호출해서 지정된 딕셔너리를 전
+   달한 다음, 반환된 객체의 "configure()" 메서드를 호출하여 구성을 적
+   용합니다:
+
+      def dictConfig(config):
+          dictConfigClass(config).configure()
+
+   For example, a subclass of "DictConfigurator" could call
+   "DictConfigurator.__init__()" in its own "__init__()", then set up
+   custom prefixes which would be usable in the subsequent
+   "configure()" call. "dictConfigClass" would be bound to this new
+   subclass, and then "dictConfig()" could be called exactly as in the
+   default, uncustomized state.
+
+   버전 3.2에 추가.
+
+logging.config.fileConfig(fname, defaults=None, disable_existing_loggers=True, encoding=None)
+
+   "configparser"-형식 파일에서 로깅 구성을 읽습니다. 파일 형식은 구성
+   파일 형식에 설명된 것과 같아야 합니다. 이 함수는 응용 프로그램에서
+   여러 번 호출 할 수 있어서, 최종 사용자가 여러 가지 미리 준비된 구성
+   중에서 선택할 수 있도록 합니다 (개발자가 선택 사항을 표시하고 선택
+   한 구성을 로드하는 메커니즘을 제공한다면).
+
+   매개변수:
+      * **fname** -- A filename, or a file-like object, or an instance
+        derived from "RawConfigParser". If a "RawConfigParser"-derived
+        instance is passed, it is used as is. Otherwise, a
+        "Configparser" is instantiated, and the configuration read by
+        it from the object passed in "fname". If that has a
+        "readline()" method, it is assumed to be a file-like object
+        and read using "read_file()"; otherwise, it is assumed to be a
+        filename and passed to "read()".
+
+      * **defaults** -- Defaults to be passed to the ConfigParser can
+        be specified in this argument.
+
+      * **disable_existing_loggers** --
+
+        If specified as "False", loggers which
+           exist when this call is made are left enabled. The default
+           is "True" because this enables old behaviour in a backward-
+           compatible way. This behaviour is to disable any existing
+           non-root loggers unless they or their ancestors are
+           explicitly named in the logging configuration.
+
+        param encoding:
+           The encoding used to open file when *fname* is filename.
+
+   버전 3.4에서 변경: "RawConfigParser"의 서브 클래스의 인스턴스가 이
+   제 "fname"에 대한 값으로 허용됩니다. 이것은 다음을 쉽게 합니다:
+
+      * 로깅 구성이 전체 응용 프로그램 구성의 일부인 구성 파일의 사용.
+
+      * 파일에서 읽어 들인 다음 "fileConfig"로 전달되기 전에 사용하는
+        응용 프로그램이 (예를 들어, 명령 줄 매개 변수나 실행 시간 환경
+        의 다른 측면에 기반하여) 수정하는 구성의 사용.
+
+   버전 3.10에 추가: The *encoding* parameter is added.
+
+logging.config.listen(port=DEFAULT_LOGGING_CONFIG_PORT, verify=None)
+
+   지정된 포트에서 소켓 서버를 시작하고, 새 구성을 수신 대기합니다. 포
+   트를 지정하지 않으면, 모듈의 기본 "DEFAULT_LOGGING_CONFIG_PORT"가
+   사용됩니다. 로깅 구성은 "dictConfig()"나 "fileConfig()"로 처리하기
+   에 적합한 파일로 전송됩니다. 서버를 시작하기 위해 "start()"를 호출
+   할 수 있는 "Thread" 인스턴스를 반환하고, 적절할 때 "join()"할 수 있
+   습니다. 서버를 중지하려면, "stopListening()"을 호출하십시오.
+
+   "verify" 인자가 지정되면, 소켓을 통해 수신된 바이트열이 유효하고 처
+   리되어야 하는지를 확인하는 콜러블이어야 합니다. 소켓을 통해 전송되
+   는 것을 암호화 및/또는 서명하고, "verify" 콜러블이 서명 확인 및/또
+   는 암호 해독을 수행할 수 있습니다. "verify" 콜러블은 단일 인자(소켓
+   을 통해 수신된 바이트열)로 호출되며, 처리할 바이트열이나 바이트열을
+   버려야 함을 나타내기 위해 "None"을 반환합니다. 반환된 바이트열은 전
+   달된 바이트열과 같을 수 있고 (예를 들어, 확인만 수행될 때), 또는 완
+   전히 다를 수 있습니다 (아마도 암호 해독이 수행될 때).
+
+   소켓으로 구성을 보내려면, 구성 파일을 읽어서 소켓에
+   "struct.pack('>L', n)"를 사용하여 바이너리로 만든 4바이트의 길이를
+   앞에 붙인 바이트 시퀀스를 보냅니다.
+
+   참고:
+
+     구성 일부가 "eval()"로 전달되므로, 이 함수를 사용하면 사용자를 보
+     안 위험에 노출할 수 있습니다. 이 함수는 소켓을 "localhost"에만 바
+     인드하고, 원격 기계의 연결은 허용하지 않지만, 신뢰할 수 없는 코드
+     가 "listen()"을 호출하는 프로세스의 계정으로 실행될 수 있는 시나
+     리오가 있습니다. 특히, "listen()"을 호출하는 프로세스가 사용자가
+     서로를 신뢰할 수 없는 다중 사용자 시스템에서 실행되는 경우, 악의
+     적인 사용자는 피해자의 "listen()" 소켓에 연결하여 공격자가 피해자
+     의 프로세스에서 실행하고자 하는 코드를 실행하는 구성을 보내는 것
+     만으로도, 피해 사용자의 프로세스에서 사실상 임의의 코드를 실행할
+     수 있습니다. 이것은 기본 포트를 사용하는 경우 특히 쉽게 수행할 수
+     있지만, 다른 포트가 사용되는 경우에도 어렵지는 않습니다. 이러한
+     일이 발생할 위험을 피하려면, "listen()"에 "verify" 인자를 사용하
+     여 인식되지 않은 구성이 적용되지 않도록 하십시오.
+
+   버전 3.4에서 변경: "verify" 인자가 추가되었습니다.
+
+   참고:
+
+     리스너에 기존 로거를 비활성화하지 않는 구성을 보내려면,
+     "dictConfig()"를 사용하도록 구성에 JSON 형식을 사용해야 합니다.
+     이 방법은 보내는 구성에서 "disable_existing_loggers"를 "False"로
+     지정할 수 있도록 합니다.
+
+logging.config.stopListening()
+
+   "listen()"에 대한 호출로 만들어진 리스닝 서버를 중지합니다. 이것은
+   일반적으로 "listen()"의 반환 값에 대해 "join()"을 호출하기 전에 호
+   출됩니다.
+
+
+보안 고려 사항
+==============
+
+The logging configuration functionality tries to offer convenience,
+and in part this is done by offering the ability to convert text in
+configuration files into Python objects used in logging configuration
+- for example, as described in 사용자 정의 객체. However, these same
+mechanisms (importing callables from user-defined modules and calling
+them with parameters from the configuration) could be used to invoke
+any code you like, and for this reason you should treat configuration
+files from untrusted sources with *extreme caution* and satisfy
+yourself that nothing bad can happen if you load them, before actually
+loading them.
+
+
+구성 딕셔너리 스키마
+====================
+
+로깅 구성을 기술하려면 만들려는 다양한 객체와 그들 간의 연결을 나열해
+야 합니다; 예를 들어, 'console'이라는 처리기를 만든 다음 'startup'이라
+는 로거가 'console' 처리기에 메시지를 보낼 것이라고 말할 수 있습니다.
+사용자 자신의 포매터나 처리기 클래스를 작성할 수 있으므로, 이러한 객체
+가 "logging" 모듈에서 제공하는 객체로만 제한되지는 않습니다. 이러한 클
+래스의 매개 변수는 "sys.stderr"과 같은 외부 객체를 포함할 수도 있습니
+다. 이러한 객체와 연결을 기술하는 문법은 아래의 객체 연결에 정의되어
+있습니다.
+
+
+딕셔너리 스키마 세부사항
+------------------------
+
+"dictConfig()"에 전달되는 딕셔너리에는 반드시 다음 키가 있어야 합니다:
+
+* *version* - 스키마 버전을 나타내는 정숫값으로 설정됩니다. 현재 유효
+  한 유일한 값은 1이지만, 이 키를 사용하면 과거 호환성을 유지하면서 스
+  키마를 발전시킬 수 있습니다.
+
+다른 모든 키는 선택 사항이지만, 있으면 아래에 설명된 대로 해석됩니다.
+아래에서 '구성 딕셔너리(configuring dict)'가 언급되는 모든 경우에, 특
+수한 "'()'" 키를 검사해서 사용자 정의 인스턴스화가 필요한지를 확인합니
+다. 있다면, 아래의 사용자 정의 객체에 설명된 메커니즘을 사용하여 인스
+턴스를 만듭니다; 그렇지 않다면, 어떤 인스턴스를 만들지를 결정하는데 문
+맥이 사용됩니다.
+
+* *formatters* - 해당 값은 딕셔너리인데, 각 키는 포매터 id이고, 각 값
+  은 해당 "Formatter" 인스턴스를 구성하는 방법을 설명하는 딕셔너리입니
+  다.
+
+  "Formatter" 객체를 만들 때 전달된 인자에 대응되는, 다음과 같은 선택
+  적 키를 구성 딕셔너리에서 검색합니다:
+
+     * "format"
+
+     * "datefmt"
+
+     * "style"
+
+     * "validate" (버전 >=3.8 부터)
+
+  선택적 "class" 키는 포매터 클래스의 이름을 나타냅니다 (점으로 구분된
+  모듈과 클래스 이름). 인스턴스화 인자는 "Formatter"와 같아서, 이 키는
+  사용자 정의 "Formatter" 서브 클래스를 인스턴스화하는 데 가장 유용합
+  니다. 예를 들어, 대체 클래스는 확장되거나 축약한 형식으로 예외 트레
+  이스백을 표시할 수 있습니다. 포매터가 다른 또는 추가 구성 키를 요구
+  하면, 사용자 정의 객체를 사용해야 합니다.
+
+* *filters* - 해당 값은 딕셔너리인데, 각 키가 필터 id이고 각 값은 해당
+  Filter 인스턴스를 구성하는 방법을 설명하는 딕셔너리입니다.
+
+  구성 딕셔너리는 키 "name"(기본값은 빈 문자열)으로 검색되며, 이는
+  "logging.Filter" 인스턴스를 만드는 데 사용됩니다.
+
+* *handlers* - 해당 값은 딕셔너리인데, 각 키가 처리기 id이고 각 값은
+  해당 Handler 인스턴스를 구성하는 방법을 설명하는 딕셔너리입니다.
+
+  구성 딕셔너리는 다음 키에서 검색합니다:
+
+  * "class" (필수). 이것은 처리기 클래스의 완전히 정규화된 이름입니다.
+
+  * "level" (선택). 처리기의 수준.
+
+  * "formatter" (선택). 이 처리기의 포매터의 id.
+
+  * "filters" (선택). 이 처리기의 필터의 id의 리스트.
+
+  모든 *다른* 키는, 처리기의 생성자에 키워드 인자로 전달됩니다. 예를
+  들어, 다음과 같이 주어진 조각에서:
+
+     handlers:
+       console:
+         class : logging.StreamHandler
+         formatter: brief
+         level   : INFO
+         filters: [allow_foo]
+         stream  : ext://sys.stdout
+       file:
+         class : logging.handlers.RotatingFileHandler
+         formatter: precise
+         filename: logconfig.log
+         maxBytes: 1024
+         backupCount: 3
+
+  id가 "console" 인 처리기는 "sys.stdout"를 하부 스트림으로 사용하는
+  "logging.StreamHandler"로 인스턴스가 만들어집니다. id가 "file" 인 처
+  리기는 키워드 인자 "filename='logconfig.log', maxBytes=1024,
+  backupCount=3"를 사용하여 "logging.handlers.RotatingFileHandler"로
+  인스턴스가 만들어집니다.
+
+* *loggers* - 해당 값은 딕셔너리인데, 각 키가 로거 이름이고 각 값은 해
+  당 Logger 인스턴스를 구성하는 방법을 설명하는 딕셔너리입니다.
+
+  구성 딕셔너리는 다음 키에서 검색합니다:
+
+  * "level" (선택). 로거의 수준.
+
+  * "propagate" (선택). 로거의 전파(propagation) 설정.
+
+  * "filters" (선택). 이 로거의 필터의 id의 리스트
+
+  * "handlers" (선택). 이 로거의 처리기의 id의 리스트.
+
+  지정된 로거는 지정된 수준, 전파, 필터와 처리기에 따라 구성됩니다.
+
+* *root* - 루트 로거에 대한 구성입니다. "propagate" 설정을 적용할 수
+  없다는 점을 제외하고 구성 처리는 모든 로거와 같습니다.
+
+* *incremental* - 구성을 기존 구성의 증분으로 해석할지 여부. 이 값의
+  기본값은 "False"이며, 이는 지정된 구성이 기존 구성을 기존
+  "fileConfig()" API에서 사용된 것과 같은 의미로 대체 함을 뜻합니다.
+
+  지정된 값이 "True"이면, 증분 구성 절에서 설명하는 대로 구성이 처리됩
+  니다.
+
+* *disable_existing_loggers* - 기존의 루트가 아닌 로거를 비활성화할지
+  여부. 이 설정은 "fileConfig()"의 같은 이름의 매개 변수를 반영합니다.
+  없으면, 이 매개 변수의 기본값은 "True"입니다. *incremental*이 "True"
+  이면 이 값은 무시됩니다.
+
+
+증분 구성
+---------
+
+증분 구성에 완벽한 유연성을 제공하기는 어렵습니다. 예를 들어, 필터와
+포매터와 같은 객체는 익명이므로, 일단 구성이 설정되면, 이러한 익명 객
+체를 참조하여 구성을 보강할 수 없습니다.
+
+또한, 일단 구성이 설정되면, 실행 시간에 로거, 처리기, 필터, 포매터의
+객체 그래프를 임의로 변경해야 할 강력한 사례는 없습니다; 로거와 처리기
+의 상세도는 단지 수준(과, loggers에서는 전파 플래그)을 설정하여 제어할
+수 있습니다. 객체 그래프를 임의로 안전하게 변경하는 것은 다중 스레드
+환경에서 문제가 됩니다; 불가능하지는 않지만, 구현에 추가되는 복잡성을
+상쇄할만한 가치가 없습니다.
+
+따라서, 구성 딕셔너리의 "incremental" 키가 있고 "True"이면, 시스템은
+"formatters"와 "filters" 항목을 완전히 무시하고 "handlers" 항목의
+"level" 설정과 "loggers"와 "root" 항목의 "level"과 "propagate" 설정만
+처리합니다.
+
+구성 딕셔너리의 값을 사용하면 구성을 피클 된 딕셔너리의 형태로 네트워
+크를 통해 소켓 리스너로 전송할 수 있습니다. 따라서, 장기 실행 응용 프
+로그램의 로깅 상세도는 응용 프로그램을 중지하고 다시 시작할 필요 없이
+도중에 변경될 수 있습니다.
+
+
+객체 연결
+---------
+
+스키마는 객체 그래프에서 서로 연결된 로깅 객체 집합(로거, 처리기, 포매
+터, 필터)을 기술합니다. 따라서, 스키마는 객체 간의 연결을 표현할 필요
+가 있습니다. 예를 들어, 일단 구성되면, 특정 로거가 특정 처리기에 연결
+된다고 합시다. 이 토론의 목적을 위해, 둘 간의 연결에서 로거는 소스를,
+처리기는 대상(destination)을 나타낸다고 할 수 있습니다. 물론 구성된 객
+체에서 이것은 처리기에 대한 참조를 갖는 로거로 표현됩니다. 구성 딕셔너
+리에서, 각 대상 객체에 명확하게 식별하는 id를 부여한 다음, 소스 객체의
+구성에서 그 id를 사용하여, 소스와 그 id를 갖는 대상 객체 사이에 연결이
+있음을 나타냅니다.
+
+그래서, 예를 들어, 다음 YAML 조각을 고려해보십시오:
+
+   formatters:
+     brief:
+       # configuration for formatter with id 'brief' goes here
+     precise:
+       # configuration for formatter with id 'precise' goes here
+   handlers:
+     h1: #This is an id
+      # configuration of handler with id 'h1' goes here
+      formatter: brief
+     h2: #This is another id
+      # configuration of handler with id 'h2' goes here
+      formatter: precise
+   loggers:
+     foo.bar.baz:
+       # other configuration for logger 'foo.bar.baz'
+       handlers: [h1, h2]
+
+(참고: 딕셔너리에 해당하는 파이썬 소스 형식보다 약간 더 읽기 쉬우므로
+여기에서 YAML을 사용했습니다.)
+
+로거의 id는 로거로의 참조를 얻기 위해서 프로그램적으로 사용되는 로거
+이름입니다, 예를 들어 "foo.bar.baz". 포매터와 필터의 id는 임의의 문자
+열 값(가령 위의 "brief", "precise")이 될 수 있으며, 일시적이므로 구성
+딕셔너리 처리에만 의미가 있고 객체 간의 연결을 결정하는 데 사용되며,
+구성 호출이 완료된 후에는 어디에도 남아있지 않습니다.
+
+위의 조각은 "foo.bar.baz"라는 로거에 두 개의 처리기가 연결되어 있어야
+하며, 이 처리기들은 처리기 id "h1"과 "h2"에 의해 기술됩니다. "h1"의 포
+매터는 id "brief"로 기술되는 것이고, "h2"의 포매터는 id "precise"로 기
+술되는 것입니다.
+
+
+사용자 정의 객체
+----------------
+
+스키마는 처리기, 필터 및 포매터에 대한 사용자 정의 객체를 지원합니다.
+(로거에는 인스턴스마다 다른 형이 필요하지 않으므로, 이 구성 스키마에는
+사용자 정의 로거 클래스에 대한 지원이 없습니다.)
+
+구성할 객체는 구성을 자세히 설명하는 딕셔너리로 시술됩니다. 어떤 곳에
+서는, 로깅 시스템이 객체를 어떻게 인스턴스화할지 문맥으로부터 추측할
+수 있지만, 사용자 정의 객체를 인스턴스화 해야 할 때, 시스템은 이를 수
+행하는 방법을 알 수 없습니다. 사용자 정의 객체 인스턴스화를 위한 완벽
+한 유연성을 제공하기 위해, 사용자는 '팩토리'를 제공해야 하는데, 구성
+딕셔너리로 호출되고 인스턴스화 된 객체를 반환하는 콜러블입니다. 이것은
+특수키 "'()'"로 제공되는 팩토리로의 절대적 임포트 경로로 표시됩니다.
+다음은 구체적인 예입니다:
+
+   formatters:
+     brief:
+       format: '%(message)s'
+     default:
+       format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
+       datefmt: '%Y-%m-%d %H:%M:%S'
+     custom:
+         (): my.package.customFormatterFactory
+         bar: baz
+         spam: 99.9
+         answer: 42
+
+위의 YAML 조각은 세 가지 포매터를 정의합니다. 첫 번째(id "brief")는 지
+정된 포맷 문자열을 갖는 표준 "logging.Formatter" 인스턴스입니다. 두 번
+째(id "default")는 더 긴 포맷을 가지며 명시적으로 시간 포맷을 정의하기
+도 하고, 이 두 포맷 문자열로 초기화된 "logging.Formatter"가 됩니다. 파
+이썬 소스 형식으로 표시하면, "brief"와 "default" 포매터는 각각 다음과
+같은 구성 서브 딕셔너리를 갖습니다:
+
+   {
+     'format' : '%(message)s'
+   }
+
+그리고:
+
+   {
+     'format' : '%(asctime)s %(levelname)-8s %(name)-15s %(message)s',
+     'datefmt' : '%Y-%m-%d %H:%M:%S'
+   }
+
+그리고, 이 딕셔너리에는 특수키 "'()'"가 포함되어 있지 않으므로, 문맥에
+서 인스턴스가 추론됩니다: 결과적으로, 표준 "logging.Formatter" 인스턴
+스가 만들어집니다. 세 번째 포매터(id "custom")에 대한 구성 서브 딕셔너
+리는 다음과 같습니다:
+
+   {
+     '()' : 'my.package.customFormatterFactory',
+     'bar' : 'baz',
+     'spam' : 99.9,
+     'answer' : 42
+   }
+
+여기에는 특수키 "'()'"가 포함되어 있는데, 사용자 정의 인스턴스가 필요
+하다는 뜻입니다. 이때, 지정된 팩토리 콜러블이 사용됩니다. 그것이 실제
+콜러블이면 직접 사용됩니다 - 그렇지 않고, (예에서와같이) 문자열을 지정
+하면 일반적인 임포트 메커니즘을 사용하여 실제 콜러블을 얻습니다. 콜러
+블은 구성 서브 딕셔너리의 **나머지** 항목을 키워드 인자로 호출됩니다.
+위의 예제에서, id가 "custom"인 포매터는 다음과 같은 호출이 반환한다고
+가정합니다:
+
+   my.package.customFormatterFactory(bar='baz', spam=99.9, answer=42)
+
+경고:
+
+  The values for keys such as "bar", "spam" and "answer" in the above
+  example should not be configuration dictionaries or references such
+  as "cfg://foo" or "ext://bar", because they will not be processed by
+  the configuration machinery, but passed to the callable as-is.
+
+"'()'" 키가 유효한 키워드 매개 변수 이름이 아니라서 특수키로 사용되었
+습니다. 그러므로 호출에 사용되는 키워드 인자의 이름과 충돌하지 않습니
+다. "'()'"는 해당 값이 콜러블이라는 표시로도 기능합니다.
+
+You can also specify a special key "'.'" whose value is a dictionary
+is a mapping of attribute names to values. If found, the specified
+attributes will be set on the user-defined object before it is
+returned. Thus, with the following configuration:
+
+   {
+     '()' : 'my.package.customFormatterFactory',
+     'bar' : 'baz',
+     'spam' : 99.9,
+     'answer' : 42,
+     '.' {
+       'foo': 'bar',
+       'baz': 'bozz'
+     }
+   }
+
+the returned formatter will have attribute "foo" set to "'bar'" and
+attribute "baz" set to "'bozz'".
+
+경고:
+
+  The values for attributes such as "foo" and "baz" in the above
+  example should not be configuration dictionaries or references such
+  as "cfg://foo" or "ext://bar", because they will not be processed by
+  the configuration machinery, but set as attribute values as-is.
+
+
+처리기 구성 순서
+----------------
+
+Handlers are configured in alphabetical order of their keys, and a
+configured handler replaces the configuration dictionary in (a working
+copy of) the "handlers" dictionary in the schema. If you use a
+construct such as "cfg://handlers.foo", then initially
+"handlers['foo']" points to the configuration dictionary for the
+handler named "foo", and later (once that handler has been configured)
+it points to the configured handler instance. Thus,
+"cfg://handlers.foo" could resolve to either a dictionary or a handler
+instance. In general, it is wise to name handlers in a way such that
+dependent handlers are configured _after_ any handlers they depend on;
+that allows something like "cfg://handlers.foo" to be used in
+configuring a handler that depends on handler "foo". If that dependent
+handler were named "bar", problems would result, because the
+configuration of "bar" would be attempted before that of "foo", and
+"foo" would not yet have been configured. However, if the dependent
+handler were named "foobar", it would be configured after "foo", with
+the result that "cfg://handlers.foo" would resolve to configured
+handler "foo", and not its configuration dictionary.
+
+
+외부 객체에 대한 액세스
+-----------------------
+
+구성에서 구성 외부의 객체를 참조해야 하는 경우가 있습니다, 예를 들어
+"sys.stderr". 구성 딕셔너리가 파이썬 코드를 사용하여 만들어질 때는 간
+단하지만, 구성이 텍스트 파일(예를 들어, JSON, YAML)을 통해 제공될 때
+문제가 발생합니다. 텍스트 파일에서는, "sys.stderr"를 리터럴 문자열
+"'sys.stderr'"과 구별하는 표준 방법이 없습니다. 이 구별을 쉽게 하기 위
+해, 구성 시스템은 문자열 값에서 특정 접두사를 찾아 특수하게 처리합니다
+. 예를 들어, 리터럴 문자열 "'ext://sys.stderr'"이 구성에서 값으로 제공
+되면, "ext://"는 제거되고 값의 나머지 부분을 일반 임포트 메커니즘을 사
+용하여 처리합니다.
+
+이러한 접두사의 처리는 프로토콜 처리와 유사한 방식으로 수행됩니다: 정
+규식 "^(?P<prefix>[a-z]+)://(?P<suffix>.*)$"와 일치하는 접두사를 찾는
+일반 메커니즘이 있습니다. "prefix"가 인식되면 "suffix"는 접두사 종속적
+방식으로 처리되고 처리 결과가 문자열 값을 대체합니다. 접두사가 인식되
+지 않으면, 문자열 값은 그대로 남습니다.
+
+
+내부 객체에 대한 액세스
+-----------------------
+
+외부 객체뿐만 아니라, 때로 구성에 있는 객체를 참조할 필요도 있습니다.
+이것은 구성 시스템이 알고 있는 것들에 대해 묵시적으로 수행됩니다. 예를
+들어, 로거나 처리기의 "level"에 대한 문자열 값 "'DEBUG'"은 자동으로 값
+"logging.DEBUG"으로 변환되고, "handlers", "filters" 및 "formatter" 항
+목은 객체 id를 받아서 적절한 대상 객체로 결정합니다.
+
+하지만, "logging" 모듈에 알려지지 않은 사용자 정의 객체에는 더욱 일반
+적인 메커니즘이 필요합니다. 예를 들어, 위임할 다른 처리기인 "target"
+인자를 취하는 "logging.handlers.MemoryHandler"를 고려해봅시다. 시스템
+이 이미 이 클래스에 대해 알고 있으므로, 구성에서, 주어진 "target"은 단
+지 관련 target 처리기의 객체 id이기만 하면 되며, 시스템은 id로부터 처
+리기를 결정합니다. 그러나 사용자가 "alternate" 처리기를 갖는
+"my.package.MyHandler"를 정의하면, 구성 시스템은 "alternate"가 처리기
+를 참조한다는 것을 알 수 없습니다. 이 문제를 해결하기 위해, 일반 결정
+시스템은 사용자가 다음과 같이 지정할 수 있게 합니다:
+
+   handlers:
+     file:
+       # configuration of file handler goes here
+
+     custom:
+       (): my.package.MyHandler
+       alternate: cfg://handlers.file
+
+리터럴 문자열 "'cfg://handlers.file'"은 "ext://" 접두사가 있는 문자열
+과 비슷하게 결정되지만, 임포트 이름 공간이 아닌 구성 자체를 조회합니다
+. 이 메커니즘은 "str.format"에서 제공하는 것과 유사한 방식으로 점이나
+인덱스로 액세스하는 것을 허락합니다. 따라서, 구성에서 다음과 같은 조각
+이 주어질 때:
+
+   handlers:
+     email:
+       class: logging.handlers.SMTPHandler
+       mailhost: localhost
+       fromaddr: my_app@domain.tld
+       toaddrs:
+         - support_team@domain.tld
+         - dev_team@domain.tld
+       subject: Houston, we have a problem.
+
+in the configuration, the string "'cfg://handlers'" would resolve to
+the dict with key "handlers", the string "'cfg://handlers.email" would
+resolve to the dict with key "email" in the "handlers" dict, and so
+on.  The string "'cfg://handlers.email.toaddrs[1]" would resolve to
+"'dev_team@domain.tld'" and the string
+"'cfg://handlers.email.toaddrs[0]'" would resolve to the value
+"'support_team@domain.tld'". The "subject" value could be accessed
+using either "'cfg://handlers.email.subject'" or, equivalently,
+"'cfg://handlers.email[subject]'".  The latter form only needs to be
+used if the key contains spaces or non-alphanumeric characters.  If an
+index value consists only of decimal digits, access will be attempted
+using the corresponding integer value, falling back to the string
+value if needed.
+
+문자열 "cfg://handlers.myhandler.mykey.123"이 주어지면,
+"config_dict['handlers']['myhandler']['mykey']['123']"으로 변환됩니다.
+문자열이 "cfg://handlers.myhandler.mykey[123]"로 지정되면, 시스템은
+"config_dict['handlers']['myhandler']['mykey'][123]"에서 값을 가져오려
+고 시도하고, 실패하면
+"config_dict['handlers']['myhandler']['mykey']['123']"으로 폴백합니다.
+
+
+임포트 결정과 사용자 정의 임포터
+--------------------------------
+
+임포트 결정은, 기본적으로, 임포트 하는데 내장 "__import__()" 함수를 사
+용합니다. 이것을 자신의 임포트 메커니즘으로 바꾸고 싶을 수 있습니다:
+그렇다면, "DictConfigurator"나 그것의 슈퍼 클래스("BaseConfigurator"
+클래스)의 "importer" 어트리뷰트를 바꿀 수 있습니다. 그러나, 함수가 클
+래스에서 디스크립터를 통해 액세스 되는 방식 때문에 주의해야 합니다. 파
+이썬 콜러블을 사용하여 임포트를 수행하려고 하고, 인스턴스 수준이 아닌
+클래스 수준에서 정의하려고 한다면, "staticmethod()"로 감쌀 필요가 있습
+니다. 예를 들면:
+
+   from importlib import import_module
+   from logging.config import BaseConfigurator
+
+   BaseConfigurator.importer = staticmethod(import_module)
+
+구성자 *instance*에서 임포트 콜러블을 설정한다면, "staticmethod()"로
+감쌀 필요가 없습니다.
+
+
+구성 파일 형식
+==============
+
+"fileConfig()"이 이해하는 구성 파일 형식은 "configparser" 기능을 기반
+으로 합니다. 파일에는 "[loggers]", "[handlers]" 및 "[formatters]"라는
+섹션이 있어야 하며, 이 섹션에서는 파일에 정의된 각 유형의 엔티티를 이
+름으로 식별합니다. 이러한 엔티티마다 해당 엔티티 구성 방법을 식별하는
+별도의 섹션이 있습니다. 따라서, "[loggers]" 섹션에서 "log01"이라고 이
+름 붙은 로거에 대해, 관련 구성 세부 사항은 "[logger_log01]" 섹션에 담
+깁니다. 마찬가지로, "[handlers]" 섹션에서 "hand01"이라고 부르는 처리기
+는 "[handler_hand01]"이라는 섹션에 구성이 담기고, "[formatters]" 섹션
+에서 "form01"이라고 부르는 포매터는 "[formatter_form01]"이라는 섹션에
+서 구성이 지정됩니다. 루트 로거 구성은 "[logger_root]"라는 섹션에서 지
+정해야 합니다.
+
+참고:
+
+  "fileConfig()" API는 "dictConfig()" API보다 오래되었으며 로깅의 특정
+  측면을 다루는 기능을 제공하지 않습니다. 예를 들어, "fileConfig()"를
+  사용해서는 간단한 정수 수준을 넘어서는 메시지 필터링을 제공하는
+  "Filter" 객체를 구성할 수 없습니다. 로깅 구성에 "Filter" 인스턴스가
+  필요하면, "dictConfig()"를 사용해야 합니다. 향후 구성 기능의 개선은
+  "dictConfig()"에 추가될 것임에 유의하십시오. 따라서, 편리할 때 이 새
+  로운 API로 전환하는 것을 고려해 볼 가치가 있습니다.
+
+파일에 있는 이 절의 예는 아래에 나와 있습니다.
+
+   [loggers]
+   keys=root,log02,log03,log04,log05,log06,log07
+
+   [handlers]
+   keys=hand01,hand02,hand03,hand04,hand05,hand06,hand07,hand08,hand09
+
+   [formatters]
+   keys=form01,form02,form03,form04,form05,form06,form07,form08,form09
+
+루트 로거는 수준과 처리기 목록을 지정해야 합니다. 루트 로거 섹션의 예
+가 아래에 나와 있습니다.
+
+   [logger_root]
+   level=NOTSET
+   handlers=hand01
+
+The "level" entry can be one of "DEBUG, INFO, WARNING, ERROR,
+CRITICAL" or "NOTSET". For the root logger only, "NOTSET" means that
+all messages will be logged. Level values are "eval()"uated in the
+context of the "logging" package's namespace.
+
+"handlers" 항목은 "[handlers]" 섹션에 나타나야 하는 처리기 이름의 쉼표
+로 구분된 목록입니다. 이 이름들은 "[handlers]" 섹션에 나타나야 하며,
+구성 파일에 해당 섹션이 있어야 합니다.
+
+루트 로거가 아닌 로거의 경우, 몇 가지 추가 정보가 필요합니다. 이것은
+다음 예제가 보여줍니다.
+
+   [logger_parser]
+   level=DEBUG
+   handlers=hand01
+   propagate=1
+   qualname=compiler.parser
+
+"level"과 "handlers" 항목은 루트 로거에서처럼 해석됩니다. 단, 루트가
+아닌 로거의 수준이 "NOTSET"로 지정되면, 시스템은 로거의 유효 수준을 판
+별하기 위해 상위 계층 로거를 참조합니다. "propagate" 항목은 메시지가
+이 로거로부터 더 높은 로거 계층의 처리기로 전파되어야 함을 나타내려면
+1로 설정되고, 메시지가 계층 위의 처리기로 전달되지 **않음**을 나타내려
+면 0으로 설정됩니다. "qualname" 항목은 로거의 계층적 채널 이름, 즉 응
+용 프로그램에서 로거를 가져오는 데 사용되는 이름입니다.
+
+처리기 구성을 지정하는 섹션은 다음과 같이 예시됩니다.
+
+   [handler_hand01]
+   class=StreamHandler
+   level=NOTSET
+   formatter=form01
+   args=(sys.stdout,)
+
+"class" 항목은 ("logging" 패키지의 이름 공간에서 "eval()"로 결정되는)
+처리기의 클래스를 나타냅니다. "level"은 로거에서처럼 해석되며,
+"NOTSET"은 '모든 것을 로깅'을 의미합니다.
+
+"formatter" 항목은 이 처리기의 포매터의 키 이름을 나타냅니다. 비어 있
+으면, 기본 포매터("logging._defaultFormatter")가 사용됩니다. 이름이 지
+정되면, "[formatters]" 섹션에 나타나야 하며 구성 파일에 해당 섹션이 있
+어야 합니다.
+
+The "args" entry, when "eval()"uated in the context of the "logging"
+package's namespace, is the list of arguments to the constructor for
+the handler class. Refer to the constructors for the relevant
+handlers, or to the examples below, to see how typical entries are
+constructed. If not provided, it defaults to "()".
+
+The optional "kwargs" entry, when "eval()"uated in the context of the
+"logging" package's namespace, is the keyword argument dict to the
+constructor for the handler class. If not provided, it defaults to
+"{}".
+
+   [handler_hand02]
+   class=FileHandler
+   level=DEBUG
+   formatter=form02
+   args=('python.log', 'w')
+
+   [handler_hand03]
+   class=handlers.SocketHandler
+   level=INFO
+   formatter=form03
+   args=('localhost', handlers.DEFAULT_TCP_LOGGING_PORT)
+
+   [handler_hand04]
+   class=handlers.DatagramHandler
+   level=WARN
+   formatter=form04
+   args=('localhost', handlers.DEFAULT_UDP_LOGGING_PORT)
+
+   [handler_hand05]
+   class=handlers.SysLogHandler
+   level=ERROR
+   formatter=form05
+   args=(('localhost', handlers.SYSLOG_UDP_PORT), handlers.SysLogHandler.LOG_USER)
+
+   [handler_hand06]
+   class=handlers.NTEventLogHandler
+   level=CRITICAL
+   formatter=form06
+   args=('Python Application', '', 'Application')
+
+   [handler_hand07]
+   class=handlers.SMTPHandler
+   level=WARN
+   formatter=form07
+   args=('localhost', 'from@abc', ['user1@abc', 'user2@xyz'], 'Logger Subject')
+   kwargs={'timeout': 10.0}
+
+   [handler_hand08]
+   class=handlers.MemoryHandler
+   level=NOTSET
+   formatter=form08
+   target=
+   args=(10, ERROR)
+
+   [handler_hand09]
+   class=handlers.HTTPHandler
+   level=NOTSET
+   formatter=form09
+   args=('localhost:9022', '/log', 'GET')
+   kwargs={'secure': True}
+
+포매터 구성을 지정하는 섹션은 다음과 같이 예시됩니다.
+
+   [formatter_form01]
+   format=F1 %(asctime)s %(levelname)s %(message)s
+   datefmt=
+   style=%
+   validate=True
+   class=logging.Formatter
+
+The arguments for the formatter configuration are the same as the keys
+in the dictionary schema formatters section.
+
+참고:
+
+  위에서 설명한 대로 "eval()"를 사용하기 때문에, "listen()"을 사용하여
+  소켓을 통해 구성을 보내고 받을 때 발생할 수 있는 잠재적인 보안 위험
+  이 있습니다. 위험은 상호 신뢰가 없는 여러 사용자가 같은 기계에서 코
+  드를 실행할 때로 제한됩니다; 자세한 내용은 "listen()" 설명서를 참조
+  하십시오.
+
+더 보기:
+
+  모듈 "logging"
+     logging 모듈에 관한 API 레퍼런스.
+
+  모듈 "logging.handlers"
+     logging 모듈에 포함된 유용한 처리기.

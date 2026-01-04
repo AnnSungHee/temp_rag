@@ -1,0 +1,30 @@
+MS 윈도우 특정 서비스
+*********************
+
+이 장에서는 MS 윈도우 플랫폼에서만 사용 가능한 모듈에 관해 설명합니다.
+
+* "msvcrt" --- Useful routines from the MS VC++ runtime
+
+  * 파일 연산
+
+  * 콘솔 I/O
+
+  * 기타 함수
+
+* "winreg" --- Windows registry access
+
+  * 함수
+
+  * 상수
+
+    * HKEY_* 상수
+
+    * 액세스 권한
+
+      * 64비트 특정
+
+    * 값 형
+
+  * 레지스트리 핸들 객체
+
+* "winsound" --- Sound-playing interface for Windows

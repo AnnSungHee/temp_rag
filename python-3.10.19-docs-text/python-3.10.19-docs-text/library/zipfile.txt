@@ -1,0 +1,778 @@
+"zipfile" --- Work with ZIP archives
+************************************
+
+**Source code:** Lib/zipfile.py
+
+======================================================================
+
+ZIP 파일 형식은 흔히 쓰이는 아카이브와 압축 표준입니다. 이 모듈은 ZIP
+파일을 만들고, 읽고, 쓰고, 추가하고, 나열하는 도구를 제공합니다. 이 모
+듈의 고급 사용을 위해서는 PKZIP Application Note에 정의된 형식의 이해
+가 필요합니다.
+
+이 모듈은 현재 다중 디스크 ZIP 파일을 처리하지 않습니다. ZIP64 확장을
+사용하는 ZIP 파일(즉, 크기가 4GiB 이상인 ZIP 파일)을 처리할 수 있습니
+다. ZIP 아카이브에 있는 암호화된 파일의 암호 해독을 지원하지만, 현재
+암호화된 파일을 만들 수는 없습니다. C가 아닌 네이티브 파이썬으로 구현
+되므로 해독 속도가 매우 느립니다.
+
+이 모듈은 다음 항목을 정의합니다:
+
+exception zipfile.BadZipFile
+
+   잘못된 ZIP 파일로 인해 발생하는 에러.
+
+   버전 3.2에 추가.
+
+exception zipfile.BadZipfile
+
+   이전 파이썬 버전과의 호환성을 위한, "BadZipFile"의 별칭.
+
+   버전 3.2부터 폐지.
+
+exception zipfile.LargeZipFile
+
+   ZIP 파일에 ZIP64 기능이 필요하지만 활성화되지 않았을 때 발생하는 에
+   러.
+
+class zipfile.ZipFile
+
+   ZIP 파일을 읽고 쓰는 클래스. 생성자 세부 사항은 ZipFile 객체 섹션을
+   참조하십시오.
+
+class zipfile.Path
+
+   Class that implements a subset of the interface provided by
+   "pathlib.Path", including the full
+   "importlib.resources.abc.Traversable" interface.
+
+   버전 3.8에 추가.
+
+class zipfile.PyZipFile
+
+   파이썬 라이브러리를 포함하는 ZIP 아카이브를 만들기 위한 클래스.
+
+class zipfile.ZipInfo(filename='NoName', date_time=(1980, 1, 1, 0, 0, 0))
+
+   아카이브 멤버에 관한 정보를 나타내는 데 사용되는 클래스. 이 클래스
+   의 인스턴스는 "ZipFile" 객체의 "getinfo()"와 "infolist()" 메서드에
+   의해 반환됩니다. "zipfile" 모듈의 대부분 사용자는 이것들을 만들 필
+   요는 없고, 이 모듈에서 만든 것들을 사용하기만 합니다. *filename*은
+   아카이브 멤버의 전체 이름이어야 하고, *date_time*은 파일을 마지막으
+   로 수정한 시간을 기술하는 6개의 필드를 포함하는 튜플이어야 합니다;
+   필드는 ZipInfo 객체 섹션에 설명되어 있습니다.
+
+zipfile.is_zipfile(filename)
+
+   *filename*이 매직 번호에 기반하여 유효한 ZIP 파일이면 "True"를, 그
+   렇지 않으면 "False"를 반환합니다. *filename*은 파일이거나 파일류 객
+   체일 수도 있습니다.
+
+   버전 3.1에서 변경: 파일과 파일류 객체를 지원합니다.
+
+zipfile.ZIP_STORED
+
+   압축되지 않은 아카이브 멤버를 위한 숫자 상수.
+
+zipfile.ZIP_DEFLATED
+
+   일반적인 ZIP 압축 방법을 위한 숫자 상수. "zlib" 모듈이 필요합니다.
+
+zipfile.ZIP_BZIP2
+
+   BZIP2 압축 방법을 위한 숫자 상수. "bz2" 모듈이 필요합니다.
+
+   버전 3.3에 추가.
+
+zipfile.ZIP_LZMA
+
+   LZMA 압축 방법을 위한 숫자 상수. "lzma" 모듈이 필요합니다.
+
+   버전 3.3에 추가.
+
+   참고:
+
+     ZIP 파일 형식 명세에는 2001년 이후 bzip2 압축, 2006년 이후 LZMA
+     압축 지원이 포함되어 있습니다. 그러나, 일부 도구(이전 파이썬 릴리
+     스도 포함합니다)는 이러한 압축 방법을 지원하지 않으며, ZIP 파일
+     처리를 완전히 거부하거나, 개별 파일을 추출하는 데 실패합니다.
+
+더 보기:
+
+  PKZIP Application Note
+     사용된 형식과 알고리즘의 저자인 Phil Katz의 ZIP 파일 형식에 대한
+     설명서.
+
+  Info-ZIP Home Page
+     Info-ZIP 프로젝트의 ZIP 아카이브 프로그램과 개발 라이브러리에 관
+     한 정보.
+
+
+ZipFile 객체
+============
+
+class zipfile.ZipFile(file, mode='r', compression=ZIP_STORED, allowZip64=True, compresslevel=None, *, strict_timestamps=True)
+
+   ZIP 파일을 엽니다, 여기서 *file*은 파일에 대한 경로 (문자열), 파일
+   류 객체 또는 *경로류 객체*일 수 있습니다.
+
+   *mode* 매개 변수는 기존 파일을 읽으려면 "'r'", 새 파일을 자르고 쓰
+   려면 "'w'", 기존 파일에 추가하려면 "'a'", 새 파일을 독점적으로 작성
+   하고 쓰려면 "'x'" 이어야 합니다. *mode*가 "'x'"이고 *file*이 기존
+   파일을 참조하면, "FileExistsError" 가 발생합니다. *mode*가 "'a'"이
+   고 *file*이 기존 ZIP 파일을 참조하면, 추가 파일이 이곳으로 추가됩니
+   다. *file*이 ZIP 파일을 참조하지 않으면, 새 ZIP 아카이브를 파일에
+   덧붙입니다(append). 이는 ZIP 아카이브를 다른 파일(가령
+   "python.exe")에 추가하기 위한 것입니다. *mode*가 "'a'"이고 파일이
+   아예 존재하지 않으면, 파일이 만들어집니다. *mode*가 "'r'"이나 "'a'"
+   이면, 파일은 탐색 가능(seekable)해야 합니다.
+
+   *compression*은 아카이브를 기록할 때 사용할 ZIP 압축 방법이며,
+   "ZIP_STORED", "ZIP_DEFLATED", "ZIP_BZIP2" 또는 "ZIP_LZMA" 이어야 합
+   니다; 인식할 수 없는 값은 "NotImplementedError" 를 발생시킵니다.
+   "ZIP_DEFLATED", "ZIP_BZIP2" 또는 "ZIP_LZMA"가 지정되었지만, 해당 모
+   듈("zlib", "bz2" 또는 "lzma")을 사용할 수 없으면 "RuntimeError"가
+   발생합니다. 기본값은 "ZIP_STORED"입니다.
+
+   *allowZip64*가 "True"(기본값)이면 zipfile은 ZIP 파일이 4GiB보다 클
+   때 ZIP64 확장을 사용하는 ZIP 파일을 만듭니다. "false"이면 ZIP 파일
+   에 ZIP64 확장자가 필요할 때 "zipfile"은 예외를 발생시킵니다.
+
+   *compresslevel* 매개 변수는 파일을 아카이브에 기록할 때 사용할 압축
+   수준을 제어합니다. "ZIP_STORED"나 "ZIP_LZMA"를 사용할 때는 효과가
+   없습니다. "ZIP_DEFLATED"를 사용할 때는 "0"에서 "9"까지의 정수가 허
+   용됩니다 (자세한 내용은 "zlib"를 참조하십시오). "ZIP_BZIP2"를 사용
+   할 때는 "1"부터 "9"까지의 정수가 허용됩니다 (자세한 내용은 "bz2"를
+   참조하십시오).
+
+   *strict_timestamps* 인자를 "False"로 설정하면, 1980-01-01 이전의
+   zip 파일을 허용하는 대신 타임 스탬프를 1980-01-01로 설정합니다.
+   2107-12-31 이후의 파일에 대해서도 비슷한 동작이 발생하며, 타임 스탬
+   프는 역시 한곗값으로 설정됩니다.
+
+   파일이 "'w'", "'x'" 또는 "'a'" 모드로 만들어졌고 아카이브에 아무런
+   파일도 추가하지 않고 "닫히면", 비어있는 아카이브에 적합한 ZIP 구조
+   가 파일에 기록됩니다.
+
+   ZipFile은 또한 컨텍스트 관리자이므로 "with" 문을 지원합니다. 이 예
+   에서, *myzip*은 "with" 문 스위트가 완료된 후에 닫힙니다 -- 예외가
+   발생할 때조차 그렇습니다:
+
+      with ZipFile('spam.zip', 'w') as myzip:
+          myzip.write('eggs.txt')
+
+   버전 3.2에 추가: "ZipFile"을 컨텍스트 관리자로 사용하는 기능이 추가
+   되었습니다.
+
+   버전 3.3에서 변경: "bzip2"와 "lzma" 압축에 대한 지원이 추가되었습니
+   다.
+
+   버전 3.4에서 변경: ZIP64 확장은 기본적으로 활성화됩니다.
+
+   버전 3.5에서 변경: 탐색할 수 없는(unseekable) 스트림으로의 쓰기 지
+   원을 추가했습니다. "'x'" 모드에 대한 지원이 추가되었습니다.
+
+   버전 3.6에서 변경: 이전에는, 인식할 수 없는 compression 값에 대해
+   평범한 "RuntimeError"가 발생했습니다.
+
+   버전 3.6.2에서 변경: *file* 매개 변수는 *경로류 객체*를 받아들입니
+   다.
+
+   버전 3.7에서 변경: *compresslevel* 매개 변수를 추가했습니다.
+
+   버전 3.8에 추가: The *strict_timestamps* keyword-only argument
+
+ZipFile.close()
+
+   아카이브 파일을 닫습니다. 프로그램을 종료하기 전에 "close()"를 호출
+   해야 합니다. 그렇지 않으면 필수 레코드가 기록되지 않습니다.
+
+ZipFile.getinfo(name)
+
+   아카이브 멤버 *name*에 관한 정보가 있는 "ZipInfo" 객체를 반환합니다
+   . 현재 아카이브에 포함되지 않은 이름에 대해 "getinfo()"를 호출하면
+   "KeyError"가 발생합니다.
+
+ZipFile.infolist()
+
+   아카이브의 각 멤버에 대한 "ZipInfo" 객체를 포함하는 리스트를 반환합
+   니다. 기존 아카이브가 열린 경우 객체는 디스크의 실제 ZIP 파일에 있
+   는 항목과 순서가 같습니다.
+
+ZipFile.namelist()
+
+   아카이브 멤버의 리스트를 이름으로 반환합니다.
+
+ZipFile.open(name, mode='r', pwd=None, *, force_zip64=False)
+
+   아카이브 멤버를 바이너리 파일류 객체로 액세스합니다. *name*은 아카
+   이브 내의 파일 이름이거나 "ZipInfo" 객체일 수 있습니다. 포함될 때
+   *mode* 매개 변수는 "'r'"(기본값)이거나 "'w'" 이어야 합니다. *pwd*는
+   암호화된 ZIP 파일을 해독하는 데 사용되는 "bytes" 객체인 비밀번호입
+   니다.
+
+   "open()"은 컨텍스트 관리자이기도 하므로 "with" 문을 지원합니다:
+
+      with ZipFile('spam.zip') as myzip:
+          with myzip.open('eggs.txt') as myfile:
+              print(myfile.read())
+
+   *mode* "'r'"에서 파일류 객체("ZipExtFile")는 읽기 전용이며 다음 메
+   서드를 제공합니다: "read()", "readline()", "readlines()", "seek()",
+   "tell()", "__iter__()", "__next__()". 이러한 객체는 ZipFile과 독립
+   적으로 작동할 수 있습니다.
+
+   "mode='w'"에서, "write()" 메서드를 지원하는 쓰기 가능한 파일 핸들이
+   반환됩니다. 쓰기 가능한 파일 핸들이 열려있는 동안, ZIP 파일에서 다
+   른 파일을 읽거나 쓰려고 시도하면 "ValueError"가 발생합니다.
+
+   파일을 기록할 때, 파일 크기를 미리 알 수 없지만 2GiB를 초과할 수 있
+   으면, 헤더 형식이 큰 파일을 지원할 수 있도록 "force_zip64=True"를
+   전달하십시오. 파일 크기가 미리 알려졌으면, "file_size"가 설정된
+   "ZipInfo" 객체를 구성하고, 이를 *name* 매개 변수로 사용하십시오.
+
+   참고:
+
+     "open()", "read()" 및 "extract()" 메서드는 파일명이나 "ZipInfo"
+     객체를 취할 수 있습니다. 중복 이름을 가진 멤버가 포함된 ZIP 파일
+     을 읽으려고 할 때 이 점에 감사할 것입니다.
+
+   버전 3.6에서 변경: "mode='U'" 지원이 제거되었습니다. *유니버설 줄
+   넘김* 모드로 압축된 텍스트 파일을 읽으려면 "io.TextIOWrapper"를 사
+   용하십시오.
+
+   버전 3.6에서 변경: 이제 "ZipFile.open()"은 이제 "mode='w'" 옵션으로
+   파일을 아카이브에 기록하는 데 사용될 수 있습니다.
+
+   버전 3.6에서 변경: 닫힌 ZipFile에 "open()"을 호출하면 "ValueError"
+   가 발생합니다. 이전에는, "RuntimeError"가 발생했습니다.
+
+ZipFile.extract(member, path=None, pwd=None)
+
+   아카이브에서 현재 작업 디렉터리로 멤버를 추출합니다. *member*는 전
+   체 이름이거나 "ZipInfo" 객체여야 합니다. 파일 정보는 최대한 정확하
+   게 추출됩니다. *path*는 추출할 다른 디렉터리를 지정합니다. *member*
+   는 파일 이름이나 "ZipInfo" 객체일 수 있습니다. *pwd*는 암호화된 파
+   일에 사용되는 "bytes" 객체인 비밀번호입니다.
+
+   만들어진 정규화된 경로(디렉터리나 새 파일)를 반환합니다.
+
+   참고:
+
+     멤버 파일명이 절대 경로이면, 드라이브/UNC 공유 지점(sharepoint)과
+     선행 (역) 슬래시가 제거됩니다, 예를 들어: "///foo/bar"는 유닉스에
+     서 "foo/bar"가 되고, 윈도우에서 "C:\foo\bar"는 "foo\bar"가 됩니다
+     . 그리고 멤버 파일명의 모든 "".."" 구성 요소가 제거됩니다, 예를
+     들어: "../../foo../../ba..r"은 "foo../ba..r"이 됩니다. 윈도우에서
+     잘못된 문자(":", "<", ">", "|", """, "?" 및 "*")는 밑줄("_")로 대
+     체됩니다.
+
+   버전 3.6에서 변경: 닫힌 ZipFile에서 "extract()"를 호출하면
+   "ValueError"가 발생합니다. 이전에는 "RuntimeError"가 발생했습니다.
+
+   버전 3.6.2에서 변경: *path* 매개 변수는 *경로류 객체*를 받아들입니
+   다.
+
+ZipFile.extractall(path=None, members=None, pwd=None)
+
+   아카이브에서 현재 작업 디렉터리로 모든 멤버를 추출합니다. *path*는
+   추출할 다른 디렉터리를 지정합니다. *members*는 선택적이며
+   "namelist()"가 반환한 리스트의 부분 집합이어야 합니다. *pwd*는 암호
+   화된 파일에 사용되는 "bytes" 객체인 비밀번호입니다.
+
+   경고:
+
+     사전 검사 없이 신뢰할 수 없는 출처의 아카이브를 추출하지 마십시오
+     . 파일이 *path* 밖에 만들어질 수 있습니다, 예를 들어 ""/""로 시작
+     하는 절대 파일명을 가진 멤버나 두 점 ""..""을 포함하는 파일명. 이
+     모듈은 이를 방지하려고 시도합니다. "extract()" 참고를 참조하십시
+     오.
+
+   버전 3.6에서 변경: 닫힌 ZipFile에서 "extractall()"을 호출하면
+   "ValueError"가 발생합니다. 이전에는 "RuntimeError"가 발생했습니다.
+
+   버전 3.6.2에서 변경: *path* 매개 변수는 *경로류 객체*를 받아들입니
+   다.
+
+ZipFile.printdir()
+
+   아카이브의 목차를 "sys.stdout"으로 인쇄합니다.
+
+ZipFile.setpassword(pwd)
+
+   암호화된 파일을 추출하기 위해 *pwd*("bytes" 객체)를 기본 비밀번호로
+   설정합니다.
+
+ZipFile.read(name, pwd=None)
+
+   아카이브에서 파일 *name*의 바이트열을 반환합니다. *name*은 아카이브
+   의 파일 이름이나 "ZipInfo" 객체입니다. 아카이브는 읽기(read)나 추가
+   (append)로 열려 있어야 합니다. *pwd*는 암호화된 파일에 사용되는
+   "bytes" 객체인 비밀번호이며, 지정되면 "setpassword()"로 설정된 기본
+   비밀번호를 대체합니다. "ZIP_STORED", "ZIP_DEFLATED", "ZIP_BZIP2" 또
+   는 "ZIP_LZMA" 이외의 압축 방법을 사용하는 ZipFile에서 "read()"를 호
+   출하면 "NotImplementedError" 가 발생합니다. 해당 압축 모듈을 사용할
+   수 없는 경우에도 에러가 발생합니다.
+
+   버전 3.6에서 변경: 닫힌 ZipFile에서 "read()"를 호출하면
+   "ValueError"가 발생합니다. 이전에는 "RuntimeError"가 발생했습니다.
+
+ZipFile.testzip()
+
+   아카이브의 모든 파일을 읽고 CRC와 파일 헤더를 확인합니다. 첫 번째
+   불량 파일의 이름을 반환하거나, "None"을 반환합니다.
+
+   버전 3.6에서 변경: 닫힌 ZipFile에서 "testzip()"을 호출하면
+   "ValueError"가 발생합니다. 이전에는 "RuntimeError"가 발생했습니다.
+
+ZipFile.write(filename, arcname=None, compress_type=None, compresslevel=None)
+
+   *filename*이라는 파일을 아카이브에 기록하고, 아카이브 이름으로
+   *arcname*을 지정합니다 (기본적으로, *filename*과 같지만, 드라이브
+   문자가 없고 선행 경로 구분 기호가 제거됩니다). 주어지면,
+   *compress_type*은 새 항목에 대해 생성자의 *compression* 매개 변수에
+   제공된 값을 대체합니다. 마찬가지로, *compresslevel*은 주어지면 생성
+   자를 대체합니다. 아카이브는 "'w'", "'x'" 또는 "'a'" 모드로 열려 있
+   어야 합니다.
+
+   참고:
+
+     아카이브 이름은 아카이브 루트에 상대적이어야 합니다. 즉, 경로 구
+     분 기호로 시작해서는 안 됩니다.
+
+   참고:
+
+     "arcname"(또는 "arcname"이 제공되지 않으면 "filename")에 널 바이
+     트가 포함되어 있으면, 아카이브의 파일 이름이 널 바이트에서 잘립니
+     다.
+
+   참고:
+
+     A leading slash in the filename may lead to the archive being
+     impossible to open in some zip programs on Windows systems.
+
+   버전 3.6에서 변경: "'r'" 모드로 만들어진 ZipFile이나 닫힌 ZipFile에
+   서 "write()"를 호출하면 "ValueError"가 발생합니다. 이전에는
+   "RuntimeError"가 발생했습니다.
+
+ZipFile.writestr(zinfo_or_arcname, data, compress_type=None, compresslevel=None)
+
+   파일을 아카이브에 기록합니다. 내용은 *data*이며, "str"이나 "bytes"
+   인스턴스일 수 있습니다; "str"이면 먼저 UTF-8로 인코딩됩니다.
+   *zinfo_or_arcname*은 아카이브에 제공될 파일 이름이거나 "ZipInfo" 인
+   스턴스입니다. 인스턴스이면 최소한 파일명, 날짜 및 시간을 지정해야
+   합니다. 이름이면, 날짜와 시간이 현재 날짜와 시간으로 설정됩니다. 아
+   카이브는 "'w'", "'x'" 또는 "'a'" 모드로 열려 있어야 합니다.
+
+   주어지면, *compress_type*은 새 항목에 대해 생성자의 *compression*
+   매개 변수에 제공되거나 *zinfo_or_arcname*("ZipInfo" 인스턴스인 경우
+   )의 값을 대체합니다. 마찬가지로, *compresslevel*은 주어지면 생성자
+   를 대체합니다.
+
+   참고:
+
+     "ZipInfo" 인스턴스를 *zinfo_or_arcname* 매개 변수로 전달할 때, 사
+     용되는 압축 방법은 주어진 "ZipInfo" 인스턴스의 *compress_type* 멤
+     버에 지정된 압축 방법입니다. 기본적으로, "ZipInfo" 생성자는 이 멤
+     버를 "ZIP_STORED"로 설정합니다.
+
+   버전 3.2에서 변경: *compress_type* 인자.
+
+   버전 3.6에서 변경: "'r'" 모드로 만들어진 ZipFile이나 닫힌 ZipFile에
+   서 "writestr()"을 호출하면, "ValueError"가 발생합니다. 이전에는
+   "RuntimeError"가 발생했습니다.
+
+다음과 같은 데이터 어트리뷰트도 사용할 수 있습니다:
+
+ZipFile.filename
+
+   ZIP 파일의 이름.
+
+ZipFile.debug
+
+   사용할 디버그 출력 수준. 이것은 "0"(기본값, 출력 없음)에서 "3"(가장
+   많은 출력)으로 설정될 수 있습니다. 디버깅 정보는 "sys.stdout"에 기
+   록됩니다.
+
+ZipFile.comment
+
+   ZIP 파일에 연관되는 주석은 "bytes" 객체입니다. "'w'", "'x'" 또는
+   "'a'" 모드로 만들어진 "ZipFile" 인스턴스에 주석을 대입하면, 65535바
+   이트를 넘지 않아야 합니다. 이보다 긴 주석은 잘립니다.
+
+
+Path 객체
+=========
+
+class zipfile.Path(root, at='')
+
+   "root" zip 파일("ZipFile" 생성자에 전달하기에 적합한 "ZipFile" 인스
+   턴스나 "file"일 수 있습니다)에서 Path 객체를 생성합니다.
+
+   "at"은 zip 파일 내에서 이 Path의 위치를 지정합니다, 예를 들어
+   'dir/file.txt', 'dir/' 또는 ''. 기본값은 빈 문자열이며, 루트를 나타
+   냅니다.
+
+Path 객체는 "pathlib.Path" 객체의 다음 기능을 노출합니다:
+
+"/" 연산자나 "joinpath"를 사용하여 Path 객체를 순회할 수 있습니다.
+
+Path.name
+
+   최종 경로 구성 요소.
+
+Path.open(mode='r', *, pwd, **)
+
+   현재 경로에서 "ZipFile.open()"을 호출합니다. 지원되는 모드를 통해
+   읽기 또는 쓰기, 텍스트 또는 바이너리로 여는 것을 허락합니다: 'r',
+   'w', 'rb', 'wb'. 위치와 키워드 인자는 텍스트로 열 때
+   "io.TextIOWrapper"로 전달되고 그렇지 않으면 무시됩니다. "pwd"는
+   "ZipFile.open()"에 대한 "pwd" 매개 변수입니다.
+
+   버전 3.9에서 변경: open에 텍스트와 바이너리 모드에 대한 지원이 추가
+   되었습니다. 기본 모드는 이제 텍스트입니다.
+
+   버전 3.10.10에서 변경: The "encoding" parameter can be supplied as
+   a positional argument without causing a "TypeError". As it could in
+   3.9. Code needing to be compatible with unpatched 3.10 and 3.11
+   versions must pass all "io.TextIOWrapper" arguments, "encoding"
+   included, as keywords.
+
+Path.iterdir()
+
+   현재 디렉터리의 자식을 열거합니다.
+
+Path.is_dir()
+
+   현재 컨텍스트가 디렉터리를 참조하면 "True"를 반환합니다.
+
+Path.is_file()
+
+   현재 컨텍스트가 파일을 참조하면 "True"를 반환합니다.
+
+Path.exists()
+
+   현재 컨텍스트가 zip 파일에 있는 파일이나 디렉터리를 참조하면 "True"
+   를 반환합니다.
+
+Path.read_text(*, **)
+
+   현재 파일을 유니코드 텍스트로 읽습니다. 위치와 키워드 인자는
+   "io.TextIOWrapper"로 전달됩니다 (컨텍스트에 의해 암시되는 "buffer"
+   제외).
+
+   버전 3.10.10에서 변경: The "encoding" parameter can be supplied as
+   a positional argument without causing a "TypeError". As it could in
+   3.9. Code needing to be compatible with unpatched 3.10 and 3.11
+   versions must pass all "io.TextIOWrapper" arguments, "encoding"
+   included, as keywords.
+
+Path.read_bytes()
+
+   현재 파일을 바이트열로 읽습니다.
+
+Path.joinpath(*other)
+
+   Return a new Path object with each of the *other* arguments joined.
+   The following are equivalent:
+
+      >>> Path(...).joinpath('child').joinpath('grandchild')
+      >>> Path(...).joinpath('child', 'grandchild')
+      >>> Path(...) / 'child' / 'grandchild'
+
+   버전 3.10에서 변경: Prior to 3.10, "joinpath" was undocumented and
+   accepted exactly one parameter.
+
+
+PyZipFile 객체
+==============
+
+"PyZipFile" 생성자는 "ZipFile" 생성자와 같은 매개 변수와 하나의 추가
+매개 변수 *optimize*를 취합니다.
+
+class zipfile.PyZipFile(file, mode='r', compression=ZIP_STORED, allowZip64=True, optimize=- 1)
+
+   버전 3.2에 추가: The *optimize* parameter.
+
+   버전 3.4에서 변경: ZIP64 확장은 기본적으로 활성화됩니다.
+
+   인스턴스에는 "ZipFile" 객체의 메서드들 외에 한 가지 추가 메서드가
+   있습니다:
+
+   writepy(pathname, basename='', filterfunc=None)
+
+      파일 "*.py"를 검색하고 해당 파일을 아카이브에 추가합니다.
+
+      "PyZipFile"에 대한 *optimize* 매개 변수가 제공되지 않았거나 "-1"
+      이면, 해당 파일은 "*.pyc" 파일이며, 필요하면 컴파일합니다.
+
+      "PyZipFile"에 대한 *optimize* 매개 변수가 "0", "1" 또는 "2"이면,
+      해당 최적화 수준("compile()"을 참조하십시오)의  파일 만 아카이브
+      에 추가되며, 필요하면 컴파일합니다.
+
+      *pathname*이 파일이면, 파일 이름은 ".py"로 끝나야하며, 단지 그 (
+      해당 "*.pyc") 파일 만 최상위 수준에 추가됩니다 (경로 정보 없음).
+      *pathname*이 ".py"로 끝나지 않는 파일이면, "RuntimeError"가 발생
+      합니다. 디렉터리이고, 디렉터리가 패키지 디렉터리가 아니면, 모든
+      파일 "*.pyc"가 최상위 수준에 추가됩니다. 디렉터리가 패키지 디렉
+      터리이면, 모든 "*.pyc"가 패키지 이름의 파일 경로 아래에 추가되고
+      , 서브 디렉터리가 패키지 디렉터리이면, 이들 모두도 재귀적으로 정
+      렬된 순서로 추가됩니다.
+
+      *basename*은 내부 전용입니다.
+
+      *filterfunc*가 주어지면, 단일 문자열 인자를 취하는 함수여야 합니
+      다. 아카이브에 추가되기 전에 각 경로(개별 전체 파일 경로를 포함
+      합니다)를 전달합니다. *filterfunc*가 거짓 값을 반환하면, 경로가
+      추가되지 않으며, 디렉터리이면 내용이 무시됩니다. 예를 들어, 테스
+      트 파일이 모두 "test" 디렉터리에 있거나 문자열 "test_"로 시작하
+      면, *filterfunc*를 사용하여 해당 파일들을 제외할 수 있습니다:
+
+         >>> zf = PyZipFile('myprog.zip')
+         >>> def notests(s):
+         ...     fn = os.path.basename(s)
+         ...     return (not (fn == 'test' or fn.startswith('test_')))
+         >>> zf.writepy('myprog', filterfunc=notests)
+
+      "writepy()" 메서드는 다음과 같은 파일 이름으로 아카이브를 만듭니
+      다:
+
+         string.pyc                   # Top level name
+         test/__init__.pyc            # Package directory
+         test/testall.pyc             # Module test.testall
+         test/bogus/__init__.pyc      # Subpackage directory
+         test/bogus/myfile.pyc        # Submodule test.bogus.myfile
+
+      버전 3.4에 추가: The *filterfunc* parameter.
+
+      버전 3.6.2에서 변경: *pathname* 매개 변수는 *경로류 객체*를 받아
+      들입니다.
+
+      버전 3.7에서 변경: 재귀는 디렉터리 항목을 정렬합니다.
+
+
+ZipInfo 객체
+============
+
+"ZipInfo" 클래스의 인스턴스는 "ZipFile" 객체의 "getinfo()"와
+"infolist()" 메서드가 반환합니다. 각 객체는 ZIP 아카이브의 단일 멤버에
+대한 정보를 저장합니다.
+
+파일 시스템 파일의 "ZipInfo" 인스턴스를 만드는 클래스 메서드가 하나 있
+습니다:
+
+classmethod ZipInfo.from_file(filename, arcname=None, *, strict_timestamps=True)
+
+   zip 파일에 파일을 추가할 수 있도록, 파일 시스템의 파일에 대한
+   "ZipInfo" 인스턴스를 생성합니다.
+
+   *filename*은 파일 시스템에서 파일이나 디렉터리의 경로여야 합니다.
+
+   *arcname*이 지정되면, 아카이브 내에서의 이름으로 사용됩니다.
+   *arcname*을 지정하지 않으면, 이름은 *filename*과 같지만, 드라이브
+   문자와 선행 경로 구분 기호가 제거됩니다.
+
+   *strict_timestamps* 인자를 "False"로 설정하면, 1980-01-01 이전의
+   zip 파일을 허용하는 대신 타임 스탬프를 1980-01-01로 설정합니다.
+   2107-12-31 이후의 파일에 대해서도 비슷한 동작이 발생하며, 타임 스탬
+   프는 역시 한곗값으로 설정됩니다.
+
+   버전 3.6에 추가.
+
+   버전 3.6.2에서 변경: *filename* 매개 변수는 *경로류 객체*를 받아들
+   입니다.
+
+   버전 3.8에 추가: The *strict_timestamps* keyword-only argument
+
+인스턴스에는 다음과 같은 메서드와 어트리뷰트가 있습니다:
+
+ZipInfo.is_dir()
+
+   이 아카이브 멤버가 디렉터리이면 "True"를 반환합니다.
+
+   이것은 항목 이름을 사용합니다: 디렉터리는 항상 "/"로 끝나야 합니다.
+
+   버전 3.6에 추가.
+
+ZipInfo.filename
+
+   아카이브에서의 파일의 이름.
+
+ZipInfo.date_time
+
+   아카이브 멤버를 마지막으로 수정한 시간과 날짜. 이것은 6개의 값으로
+   구성된 튜플입니다:
+
+   +---------+----------------------------+
+   | 인덱스  | 값                         |
+   |=========|============================|
+   | "0"     | 연도 (>= 1980)             |
+   +---------+----------------------------+
+   | "1"     | 월 (1에서 시작)            |
+   +---------+----------------------------+
+   | "2"     | 월 중 일 (1에서 시작)      |
+   +---------+----------------------------+
+   | "3"     | 시간 (0에서 시작)          |
+   +---------+----------------------------+
+   | "4"     | 분 (0에서 시작)            |
+   +---------+----------------------------+
+   | "5"     | 초 (0에서 시작)            |
+   +---------+----------------------------+
+
+   참고:
+
+     ZIP 파일 형식은 1980년 이전의 타임 스탬프를 지원하지 않습니다.
+
+ZipInfo.compress_type
+
+   아카이브 멤버의 압축 유형.
+
+ZipInfo.comment
+
+   "bytes" 객체로 제공되는 개별 아카이브 멤버에 대한 주석.
+
+ZipInfo.extra
+
+   확장 필드 데이터. PKZIP Application Note는 이 "bytes" 객체에 포함된
+   데이터의 내부 구조에 대한 주석을 포함합니다.
+
+ZipInfo.create_system
+
+   ZIP 아카이브를 만든 시스템.
+
+ZipInfo.create_version
+
+   ZIP 아카이브를 만든 PKZIP 버전.
+
+ZipInfo.extract_version
+
+   아카이브를 추출하기 위해 필요한 PKZIP 버전.
+
+ZipInfo.reserved
+
+   반드시 0이어야 합니다.
+
+ZipInfo.flag_bits
+
+   ZIP 플래그 비트.
+
+ZipInfo.volume
+
+   파일 헤더의 볼륨 번호.
+
+ZipInfo.internal_attr
+
+   내부 어트리뷰트.
+
+ZipInfo.external_attr
+
+   외부 파일 어트리뷰트.
+
+ZipInfo.header_offset
+
+   파일 헤더의 바이트 오프셋.
+
+ZipInfo.CRC
+
+   압축되지 않은 파일의 CRC-32.
+
+ZipInfo.compress_size
+
+   압축된 데이터의 크기.
+
+ZipInfo.file_size
+
+   압축되지 않은 파일의 크기.
+
+
+명령 줄 인터페이스
+==================
+
+"zipfile" 모듈은 ZIP 아카이브와 상호 작용하기 위한 간단한 명령 줄 인터
+페이스를 제공합니다.
+
+새 ZIP 아카이브를 만들려면 "-c" 옵션 뒤에 이름을 지정한 다음 포함해야
+할 파일 이름을 나열하십시오:
+
+   $ python -m zipfile -c monty.zip spam.txt eggs.txt
+
+디렉터리 전달도 허용됩니다:
+
+   $ python -m zipfile -c monty.zip life-of-brian_1979/
+
+ZIP 아카이브를 지정된 디렉터리로 추출하려면, "-e" 옵션을 사용하십시오:
+
+   $ python -m zipfile -e monty.zip target-dir/
+
+ZIP 아카이브에 있는 파일 목록을 보려면, "-l" 옵션을 사용하십시오:
+
+   $ python -m zipfile -l monty.zip
+
+
+명령 줄 옵션
+------------
+
+-l <zipfile>
+--list <zipfile>
+
+   zip 파일에 있는 파일을 나열합니다.
+
+-c <zipfile> <source1> ... <sourceN>
+--create <zipfile> <source1> ... <sourceN>
+
+   소스 파일로 zip 파일을 만듭니다.
+
+-e <zipfile> <output_dir>
+--extract <zipfile> <output_dir>
+
+   zip 파일을 대상 디렉터리로 추출합니다.
+
+-t <zipfile>
+--test <zipfile>
+
+   zip 파일이 유효한지 테스트합니다.
+
+
+압축 해제 함정
+==============
+
+아래 나열된 일부 함정으로 인해 zipfile 모듈에서의 추출이 실패할 수 있
+습니다.
+
+
+파일 자체에서
+-------------
+
+잘못된 암호 / CRC 체크섬 / ZIP 형식 또는 지원되지 않는 압축 방법 / 암
+호 해독으로 인해 압축 해제에 실패할 수 있습니다.
+
+
+파일 시스템 제한
+----------------
+
+다른 파일 시스템의 제한을 초과하면 압축 해제에 실패할 수 있습니다. 가
+령 디렉터리 항목에 허용되는 문자, 파일 이름 길이, 경로명 길이, 단일 파
+일 크기 및 파일 수 등.
+
+
+자원 제한
+---------
+
+메모리나 디스크 볼륨이 부족하면 압축 해제에 실패합니다. 예를 들어, 압
+축 해제 폭탄(일명 ZIP bomb)을 zipfile 라이브러리에 적용하면 디스크 볼
+륨이 소진될 수 있습니다.
+
+
+중단
+----
+
+Ctrl-C 누르기나 압축 해제 프로세스를 죽이는 것과 같은 압축 해제 중 중
+단으로 인해 아카이브 압축 해제가 불완전할 수 있습니다.
+
+
+추출의 기본 동작
+----------------
+
+기본 추출 동작을 모르면 예기치 않은 압축 해제 결과가 발생할 수 있습니
+다. 예를 들어, 같은 아카이브를 두 번 추출하면, 묻지 않고 파일을 덮어씁
+니다.

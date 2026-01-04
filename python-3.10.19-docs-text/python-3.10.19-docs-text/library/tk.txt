@@ -1,0 +1,257 @@
+Tk를 사용한 그래픽 사용자 인터페이스
+************************************
+
+Tk/Tcl has long been an integral part of Python.  It provides a robust
+and platform independent windowing toolkit, that is available to
+Python programmers using the "tkinter" package, and its extension, the
+"tkinter.tix" and the "tkinter.ttk" modules.
+
+"tkinter" 패키지는 Tcl/Tk 위에 올라가는 얇은 객체 지향 계층입니다.
+"tkinter"를 사용하기 위해 Tcl 코드를 작성할 필요는 없지만, Tk 문서와
+때때로 Tcl 문서를 참고해야 합니다. "tkinter"는 Tk 위젯을 파이썬 클래스
+로 구현하는 래퍼 집합입니다.
+
+"tkinter"의 가장 큰 장점은 빠르고, 일반적으로 파이썬과 함께 제공된다는
+것입니다. 표준 설명서가 약하긴 하지만 레퍼런스, 자습서, 서적 및 기타
+자료와 같은 훌륭한 자료를 구할 수 있습니다. "tkinter"는 낡은 모양과 느
+낌으로도 유명합니다만, Tk 8.5에서 크게 개선되었습니다. 그렇지만, 여러
+분이 관심을 기울일 만한 다른 GUI 라이브러리가 많이 있습니다. 파이썬 위
+키는 몇 가지 대체 GUI 프레임워크 및 도구를 나열합니다.
+
+* "tkinter" --- Python interface to Tcl/Tk
+
+  * Architecture
+
+  * Tkinter 모듈
+
+  * Tkinter 구명조끼
+
+    * Hello World 프로그램
+
+    * Important Tk Concepts
+
+    * Understanding How Tkinter Wraps Tcl/Tk
+
+    * How do I...? What option does...?
+
+    * Navigating the Tcl/Tk Reference Manual
+
+  * Threading model
+
+  * 간편한 레퍼런스
+
+    * 옵션 설정
+
+    * 패커
+
+    * 패커 옵션
+
+    * 위젯 변수 결합하기
+
+    * 창 관리자
+
+    * Tk 옵션 데이터형
+
+    * 바인딩과 이벤트
+
+    * index 매개 변수
+
+    * 이미지
+
+  * 파일 처리기
+
+* "tkinter.colorchooser" --- Color choosing dialog
+
+* "tkinter.font" --- Tkinter font wrapper
+
+* Tkinter 대화 상자
+
+  * "tkinter.simpledialog" --- 표준 Tkinter 입력 대화 상자
+
+  * "tkinter.filedialog" --- 파일 선택 대화 상자
+
+    * 네이티브 로드/저장 대화 상자
+
+  * "tkinter.commondialog" --- 대화창 템플릿
+
+* "tkinter.messagebox" --- Tkinter message prompts
+
+* "tkinter.scrolledtext" --- Scrolled Text Widget
+
+* "tkinter.dnd" --- Drag and drop support
+
+* "tkinter.ttk" --- Tk themed widgets
+
+  * Ttk 사용하기
+
+  * Ttk 위젯
+
+  * Widget
+
+    * 표준 옵션
+
+    * 스크롤 가능한 위젯 옵션
+
+    * 레이블 옵션
+
+    * 호환성 옵션
+
+    * 위젯 상태
+
+    * ttk.Widget
+
+  * Combobox
+
+    * 옵션
+
+    * 가상 이벤트
+
+    * ttk.Combobox
+
+  * Spinbox
+
+    * 옵션
+
+    * 가상 이벤트
+
+    * ttk.Spinbox
+
+  * Notebook
+
+    * 옵션
+
+    * 탭 옵션
+
+    * 탭 식별자
+
+    * 가상 이벤트
+
+    * ttk.Notebook
+
+  * Progressbar
+
+    * 옵션
+
+    * ttk.Progressbar
+
+  * Separator
+
+    * 옵션
+
+  * Sizegrip
+
+    * 플랫폼별 노트
+
+    * 버그
+
+  * Treeview
+
+    * 옵션
+
+    * 항목 옵션
+
+    * 태그 옵션
+
+    * 열 식별자
+
+    * 가상 이벤트
+
+    * ttk.Treeview
+
+  * Ttk 스타일링
+
+    * 레이아웃
+
+* "tkinter.tix" --- Extension widgets for Tk
+
+  * Using Tix
+
+  * Tix Widgets
+
+    * Basic Widgets
+
+    * File Selectors
+
+    * Hierarchical ListBox
+
+    * Tabular ListBox
+
+    * Manager Widgets
+
+    * Image Types
+
+    * Miscellaneous Widgets
+
+    * Form Geometry Manager
+
+  * Tix Commands
+
+* IDLE
+
+  * 메뉴
+
+    * File 메뉴 (셸과 편집기)
+
+    * Edit 메뉴 (셸과 편집기)
+
+    * Format 메뉴 (편집기 창 전용)
+
+    * Run 메뉴 (편집기 창 전용)
+
+    * Shell 메뉴 (셸 창 전용)
+
+    * Debug 메뉴 (셸 창 전용)
+
+    * Options 메뉴 (셸과 편집기)
+
+    * Window 메뉴 (셸과 편집기)
+
+    * Help 메뉴 (셸과 편집기)
+
+    * Context 메뉴
+
+  * 편집과 탐색
+
+    * 편집기 창
+
+    * 키 바인딩
+
+    * 자동 들여쓰기
+
+    * 검색과 치환
+
+    * 완성
+
+    * 콜팁
+
+    * 코드 컨텍스트
+
+    * 셸 창
+
+    * 텍스트 색상
+
+  * 시작과 코드 실행
+
+    * 명령 줄 사용법
+
+    * 시작 실패
+
+    * 사용자 코드 실행하기
+
+    * 셸의 사용자 출력
+
+    * tkinter 응용 프로그램 개발하기
+
+    * 서브 프로세스 없이 실행하기
+
+  * 도움말과 환경 설정
+
+    * 도움말 소스
+
+    * 환경 설정
+
+    * macOS의 IDLE
+
+    * 확장
+
+  * idlelib

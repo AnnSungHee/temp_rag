@@ -1,0 +1,265 @@
+"platform" ---  Access to underlying platform's identifying data
+****************************************************************
+
+**소스 코드:** Lib/platform.py
+
+======================================================================
+
+참고:
+
+  각 플랫폼은 알파벳순으로 나열되고, 리눅스는 유닉스 절에 포함됩니다.
+
+
+크로스 플랫폼
+=============
+
+platform.architecture(executable=sys.executable, bits='', linkage='')
+
+   다양한 아키텍처 정보에 대해 주어진 실행 파일(기본값은 파이썬 인터프
+   리터 바이너리)을 조회합니다.
+
+   실행 파일에 사용된 비트 아키텍처와 링크 형식에 대한 정보가 들어있는
+   튜플 "(bits, linkage)"를 반환합니다. 두 값은 모두 문자열로 반환됩니
+   다.
+
+   결정할 수 없는 값은 매개 변수 사전 설정에 따라 반환됩니다. bits가
+   "''"로 주어지면, "sizeof(pointer)"(또는 파이썬 버전 < 1.5.2 에서는
+   "sizeof(long)")가 지원되는 포인터 크기를 나타내는 데 사용됩니다.
+
+   함수는 시스템의 "file" 명령을 사용하여 실제 작업을 수행합니다. 이것
+   은 대부분(전부가 아니라면)의 유닉스 플랫폼과 일부 유닉스가 아닌 플
+   랫폼에서 가능하며 실행 파일이 파이썬 인터프리터를 가리키는 경우에만
+   가능합니다. 위의 요구가 충족되지 않으면 합리적인 기본값이 사용됩니
+   다.
+
+   참고:
+
+     맥 OS(그리고 아마도 다른 플랫폼에서도)에서, 실행 파일은 다중 아키
+     텍처를 포함하는 유니버설 파일일 수 있습니다.To get at the
+     "64-bitness" of the current interpreter, it is more reliable to
+     query the "sys.maxsize" attribute:
+
+        is_64bits = sys.maxsize > 2**32
+
+platform.machine()
+
+   기계 유형을 반환합니다, 예를 들어 "'AMD64'". 값을 판별할 수 없으면
+   빈 문자열이 반환됩니다.
+
+platform.node()
+
+   컴퓨터의 네트워크 이름을 반환합니다 (완전히 정규화되지 않았을 수 있
+   습니다!). 값을 판별할 수 없으면 빈 문자열이 반환됩니다.
+
+platform.platform(aliased=0, terse=0)
+
+   하부 플랫폼을 식별하는 가능한 한 많은 유용한 정보를 포함하는 단일
+   문자열을 반환합니다.
+
+   출력은 기계가 구문 분석하기보다는 *사람이 읽을 수* 있도록 합니다.
+   다른 플랫폼에서는 다르게 보일 수 있는데, 이는 의도 된 것입니다.
+
+   *aliased*가 참이면, 함수는 일반 이름과 다른 시스템 이름을 보고하는
+   다양한 플랫폼에 대해 별칭을 사용합니다, 예를 들어 SunOS는 Solaris로
+   보고됩니다. 이를 구현하는 데 "system_alias()" 함수가 사용됩니다.
+
+   *terse*를 참으로 설정하면 함수가 플랫폼을 식별하는 데 필요한 절대적
+   으로 최소한의 정보만 반환합니다.
+
+   버전 3.8에서 변경: macOS에서, 이 함수는 이제 darwin 버전 대신 macOS
+   버전을 얻기 위해 "mac_ver()" 를 사용합니다 (비어 있지 않은 릴리스
+   문자열을 반환한다면).
+
+platform.processor()
+
+   (실제) 프로세서 이름을 반환합니다, 예를 들어 "'amdk6'".
+
+   값을 판별할 수 없으면 빈 문자열이 반환됩니다. 많은 플랫폼이 이 정보
+   를 제공하지 않거나 단순히 "machine()"과 같은 값을 반환함에 유의하십
+   시오. NetBSD가 그렇습니다.
+
+platform.python_build()
+
+   파이썬 빌드 번호와 날짜를 문자열로 나타내는 튜플 "(buildno,
+   builddate)"를 반환합니다.
+
+platform.python_compiler()
+
+   파이썬 컴파일에 사용된 컴파일러를 식별하는 문자열을 반환합니다.
+
+platform.python_branch()
+
+   파이썬 구현 SCM 브랜치를 식별하는 문자열을 반환합니다.
+
+platform.python_implementation()
+
+   파이썬 구현을 식별하는 문자열을 반환합니다. 가능한 반환 값은 이렇습
+   니다: 'CPython', 'IronPython', 'Jython', 'PyPy'.
+
+platform.python_revision()
+
+   파이썬 구현 SCM 리비전을 식별하는 문자열을 반환합니다.
+
+platform.python_version()
+
+   파이썬 버전을 문자열 "'major.minor.patchlevel'"로 반환합니다.
+
+   파이썬 "sys.version"과 달리, 반환 값은 항상 patchlevel을 포함함에
+   유의하십시오 (기본값은 0입니다).
+
+platform.python_version_tuple()
+
+   파이썬 버전을 문자열의 튜플 "(major, minor, patchlevel)"로 반환합니
+   다.
+
+   파이썬 "sys.version"과 달리, 반환 값은 항상 patchlevel을 포함함에
+   유의하십시오 (기본값은 "'0'"입니다).
+
+platform.release()
+
+   시스템의 릴리스를 반환합니다, 예를 들어 "'2.2.0'"이나 "'NT'". 값을
+   판별할 수 없으면 빈 문자열이 반환됩니다.
+
+platform.system()
+
+   시스템/OS 이름을 반환합니다, 가령 "'Linux'", "'Darwin'", "'Java'",
+   "'Windows'". 값을 판별할 수 없으면 빈 문자열이 반환됩니다.
+
+platform.system_alias(system, release, version)
+
+   일부 시스템에서 사용되는 상용 마케팅 이름으로 별칭 된 "(system,
+   release, version)"을 반환합니다. 혼동을 일으킬 수 있는 일부 경우에
+   정보의 순서를 변경하기도 합니다.
+
+platform.version()
+
+   시스템의 릴리스 버전을 반환합니다, 예를 들어 "'#3 on degas'". 값을
+   판별할 수 없으면 빈 문자열이 반환됩니다.
+
+platform.uname()
+
+   꽤 이식성 있는 uname 인터페이스. "system", "node", "release",
+   "version", "machine", "processor"의 6개의 어트리뷰트를 포함한
+   "namedtuple()"를 반환합니다.
+
+   Note that this adds a sixth attribute ("processor") not present in
+   the "os.uname()" result.  Also, the attribute names are different
+   for the first two attributes; "os.uname()" names them "sysname" and
+   "nodename".
+
+   결정할 수 없는 항목은 "''"로 설정됩니다.
+
+   버전 3.3에서 변경: 결과가 튜플에서 "namedtuple()"로 변경되었습니다.
+
+
+자바 플랫폼
+===========
+
+platform.java_ver(release='', vendor='', vminfo=('', '', ''), osinfo=('', '', ''))
+
+   Jython의 버전 인터페이스.
+
+   튜플 "(release, vendor, vminfo, osinfo)"를 반환하는데, *vminfo*는
+   튜플 "(vm_name, vm_release, vm_vendor)"이고, *osinfo*는 튜플
+   "(os_name, os_version, os_arch)"입니다. 결정할 수 없는 값은 매개 변
+   수로 지정된 기본값으로 설정됩니다 (기본값은 모두 "''"입니다).
+
+
+윈도우 플랫폼
+=============
+
+platform.win32_ver(release='', version='', csd='', ptype='')
+
+   윈도우 레지스트리에서 추가 버전 정보를 얻고 OS 릴리스, 버전 번호,
+   CSD 수준 (서비스 팩) 및 OS 유형(다중/단일 프로세서)을 가리키는 튜플
+   "(release, version, csd, ptype)"를 반환합니다. 파악할 수 없는 값은
+   매개 변수로 주어지는 기본값(모두 빈 문자열이 기본값입니다)으로 설정
+   됩니다.
+
+   As a hint: *ptype* is "'Uniprocessor Free'" on single processor NT
+   machines and "'Multiprocessor Free'" on multi processor machines.
+   The *'Free'* refers to the OS version being free of debugging code.
+   It could also state *'Checked'* which means the OS version uses
+   debugging code, i.e. code that checks arguments, ranges, etc.
+
+platform.win32_edition()
+
+   현재 윈도우 에디션을 나타내는 문자열을 반환합니다. 값을 파악할 수
+   없으면 "None"을 반환합니다. 가능한 값은 "'Enterprise'", "'IoTUAP'",
+   "'ServerStandard'" 및 "'nanoserver'"를 포함하지만 이에 국한되지는
+   않습니다.
+
+   버전 3.8에 추가.
+
+platform.win32_is_iot()
+
+   "win32_edition()"에 의해 반환된 윈도우 에디션이 IoT 에디션으로 인식
+   되면 "True"를 반환합니다.
+
+   버전 3.8에 추가.
+
+
+맥 OS 플랫폼
+============
+
+platform.mac_ver(release='', versioninfo=('', '', ''), machine='')
+
+   맥 OS 버전 정보를 얻고 튜플 "(release, versioninfo, machine)"으로
+   반환하는데, *versioninfo*는 튜플 "(version, dev_stage,
+   non_release_version)"입니다.
+
+   결정할 수 없는 항목은 "''"로 설정됩니다. 모든 튜플 항목은 문자열입
+   니다.
+
+
+유닉스 플랫폼
+=============
+
+platform.libc_ver(executable=sys.executable, lib='', version='', chunksize=16384)
+
+   파일 executable(기본값은 파이썬 인터프리터입니다)이 링크된 libc 버
+   전을 확인하려고 시도합니다. 문자열의 튜플 "(lib, version)"을 반환하
+   는데, 조회가 실패하면 지정된 매개 변수를 기본값으로 사용합니다.
+
+   다른 libc 버전이 실행 파일에 심볼을 추가하는 방법에 대해 이 함수가
+   가진 지식은 아마도 **gcc**로 컴파일된 실행 파일에서만 사용 가능하다
+   는 것에 유의하십시오.
+
+   파일은 *chunksize* 바이트의 청크 단위로 읽고 스캔됩니다.
+
+
+리눅스 플랫폼
+=============
+
+platform.freedesktop_os_release()
+
+   Get operating system identification from "os-release" file and
+   return it as a dict. The "os-release" file is a freedesktop.org
+   standard and is available in most Linux distributions. A noticeable
+   exception is Android and Android-based distributions.
+
+   Raises "OSError" or subclass when neither "/etc/os-release" nor
+   "/usr/lib/os-release" can be read.
+
+   On success, the function returns a dictionary where keys and values
+   are strings. Values have their special characters like """ and "$"
+   unquoted. The fields "NAME", "ID", and "PRETTY_NAME" are always
+   defined according to the standard. All other fields are optional.
+   Vendors may include additional fields.
+
+   Note that fields like "NAME", "VERSION", and "VARIANT" are strings
+   suitable for presentation to users. Programs should use fields like
+   "ID", "ID_LIKE", "VERSION_ID", or "VARIANT_ID" to identify Linux
+   distributions.
+
+   예제:
+
+      def get_like_distro():
+          info = platform.freedesktop_os_release()
+          ids = [info["ID"]]
+          if "ID_LIKE" in info:
+              # ids are space separated and ordered by precedence
+              ids.extend(info["ID_LIKE"].split())
+          return ids
+
+   버전 3.10에 추가.

@@ -1,0 +1,231 @@
+"site" --- Site-specific configuration hook
+*******************************************
+
+**소스 코드:** Lib/site.py
+
+======================================================================
+
+**이 모듈은 초기화 중에 자동으로 임포트 됩니다.** 인터프리터의 "-S" 옵
+션을 사용하여 자동 임포트를 억제할 수 있습니다.
+
+Importing this module will append site-specific paths to the module
+search path and add a few builtins, unless "-S" was used.  In that
+case, this module can be safely imported with no automatic
+modifications to the module search path or additions to the builtins.
+To explicitly trigger the usual site-specific additions, call the
+"site.main()" function.
+
+버전 3.3에서 변경: "-S"를 사용하는 경우에도 모듈을 임포트 하면 경로 조
+작을 트리거 했습니다.
+
+It starts by constructing up to four directories from a head and a
+tail part. For the head part, it uses "sys.prefix" and
+"sys.exec_prefix"; empty heads are skipped.  For the tail part, it
+uses the empty string and then "lib/site-packages" (on Windows) or
+"lib/python*X.Y*/site-packages" (on Unix and macOS).  For each of the
+distinct head-tail combinations, it sees if it refers to an existing
+directory, and if so, adds it to "sys.path" and also inspects the
+newly added path for configuration files.
+
+버전 3.5에서 변경: "site-python" 디렉터리에 대한 지원이 제거되었습니다
+.
+
+"pyvenv.cfg"라는 파일이 sys.executable의 한 디렉터리 위에 있으면,
+sys.prefix와 sys.exec_prefix가 그 디렉터리로 설정되고, site-packages도
+검사됩니다 (sys.base_prefix와 sys.base_exec_prefix는 항상 파이썬 설치
+의 "실제" 접두사가 됩니다). "pyvenv.cfg"(부트스트랩 구성 파일)에
+"true"(대소 문자 구분하지 않습니다) 이외의 다른 값으로 설정된
+"include-system-site-packages" 키가 있으면, 시스템 수준 접두사에서는
+site-packages를 검색하지 않습니다; 그렇지 않으면 검사합니다.
+
+경로 구성 파일은 이름이 "*name*.pth" 인 파일이며, 위에서 언급한 4개의
+디렉터리 중 하나에 존재합니다; 내용은 "sys.path"에 추가될 추가 항목(한
+줄에 하나씩)입니다. 존재하지 않는 항목은 "sys.path"에 추가되지 않으며,
+항목이 파일이 아닌 디렉터리를 참조하는지 확인하지 않습니다. 어떤 항목
+도 "sys.path"에 두 번 추가되지 않습니다. 빈 줄과 "#"으로 시작하는 줄은
+건너뜁니다. "import"로 시작하는 (공백이나 탭이 뒤따르는) 줄은 실행됩니
+다.
+
+참고:
+
+  ".pth" 파일의 실행 줄은 특정 모듈이 실제 사용될지에 관계없이 모든 파
+  이썬 시작 시에 실행됩니다. 따라서 영향을 최소화해야 합니다. 실행 줄
+  의 주요 목적은 해당 모듈을 임포트 가능하게 만드는 것입니다 (제삼자
+  임포트 훅 로드, "PATH" 조정 등). 다른 초기화는 모듈의 실제 임포트에
+  서 수행된다고 간주합니다, (임포트 한다면 그리고 임포트 할 때). 코드
+  청크를 한 줄로 제한하는 것은 여기에 더 복잡한 것을 넣지 않도록 하려
+  는 의도입니다.
+
+예를 들어, "sys.prefix"와 "sys.exec_prefix"가 "/usr/local"로 설정되었
+다고 가정하십시오. 그러면 파이썬 X.Y 라이브러리는
+"/usr/local/lib/python*X.Y*"에 설치되어 있습니다. 여기에 "foo", "bar"
+및 "spam"이라는 세 개의 서브 디렉터리와, "foo.pth"와 "bar.pth"라는 두
+개의 경로 구성 파일이 있는 서브 디렉터리 "/usr/local/lib/python*X.Y
+*/site-packages"가 있다고 가정하십시오. "foo.pth"에 다음이 포함되어 있
+고:
+
+   # foo package configuration
+
+   foo
+   bar
+   bletch
+
+"bar.pth"는 다음을 포함한다고 가정하십시오:
+
+   # bar package configuration
+
+   bar
+
+그러면 다음과 같은 버전 별 디렉터리가 이 순서대로 "sys.path"에 추가됩
+니다:
+
+   /usr/local/lib/pythonX.Y/site-packages/bar
+   /usr/local/lib/pythonX.Y/site-packages/foo
+
+"bletch"가 존재하지 않기 때문에 생략되었음에 유의하십시오; "bar.pth"가
+알파벳순으로 "foo.pth" 앞에 오기 때문에 "bar" 디렉터리가 "foo" 디렉터
+리보다 앞에 옵니다; "spam"은 경로 구성 파일에 언급되어 있지 않기 때문
+에 생략되었습니다.
+
+After these path manipulations, an attempt is made to import a module
+named "sitecustomize", which can perform arbitrary site-specific
+customizations. It is typically created by a system administrator in
+the site-packages directory.  If this import fails with an
+"ImportError" or its subclass exception, and the exception's "name"
+attribute equals to "'sitecustomize'", it is silently ignored.  If
+Python is started without output streams available, as with
+"pythonw.exe" on Windows (which is used by default to start IDLE),
+attempted output from "sitecustomize" is ignored.  Any other exception
+causes a silent and perhaps mysterious failure of the process.
+
+After this, an attempt is made to import a module named
+"usercustomize", which can perform arbitrary user-specific
+customizations, if "ENABLE_USER_SITE" is true.  This file is intended
+to be created in the user site-packages directory (see below), which
+is part of "sys.path" unless disabled by "-s".  If this import fails
+with an "ImportError" or its subclass exception, and the exception's
+"name" attribute equals to "'usercustomize'", it is silently ignored.
+
+유닉스가 아닌 일부 시스템에서는, "sys.prefix"와 "sys.exec_prefix"가 비
+어 있고, 경로 조작을 건너뜀에 유의하십시오; 하지만 "sitecustomize"와
+"usercustomize" 임포트는 여전히 시도됩니다.
+
+
+Readline 구성
+=============
+
+"readline"을 지원하는 시스템에서, 파이썬이 대화형 모드로 "-S" 옵션 없
+이 시작되면, 이 모듈은 "rlcompleter" 모듈을 임포트하고 구성합니다. 기
+본 동작은 탭 완성을 활성화하고 "~/.python_history"를 히스토리 저장 파
+일로 사용하는 것입니다. 이를 비활성화하려면, "sitecustomize"나
+"usercustomize" 모듈 또는 "PYTHONSTARTUP" 파일에서
+"sys.__interactivehook__" 어트리뷰트를 삭제(또는 재정의)하십시오.
+
+버전 3.4에서 변경: rlcompleter와 히스토리 활성화가 자동으로 이루어졌습
+니다.
+
+
+모듈 내용
+=========
+
+site.PREFIXES
+
+   site-packages 디렉터리의 접두사 리스트.
+
+site.ENABLE_USER_SITE
+
+   사용자 site-packages 디렉터리의 상태를 나타내는 플래그. "True"는 활
+   성화되어 "sys.path"에 추가되었음을 의미합니다. "False"는 사용자 요
+   청("-s"나 "PYTHONNOUSERSITE"로)에 의해 비활성화되었음을 의미합니다.
+   "None"은 보안상의 이유(사용자나 그룹 id와 유효(effective) id가 일치
+   하지 않음)로 또는 관리자에 의해 비활성화되었음을 의미합니다.
+
+site.USER_SITE
+
+   Path to the user site-packages for the running Python.  Can be
+   "None" if "getusersitepackages()" hasn't been called yet.  Default
+   value is "~/.local/lib/python*X.Y*/site-packages" for UNIX and non-
+   framework macOS builds, "~/Library/Python/*X.Y*/lib/python/site-
+   packages" for macOS framework builds, and
+   "*%APPDATA%*\Python\Python*XY*\site-packages" on Windows.  This
+   directory is a site directory, which means that ".pth" files in it
+   will be processed.
+
+site.USER_BASE
+
+   Path to the base directory for the user site-packages.  Can be
+   "None" if "getuserbase()" hasn't been called yet.  Default value is
+   "~/.local" for UNIX and macOS non-framework builds,
+   "~/Library/Python/*X.Y*" for macOS framework builds, and
+   "*%APPDATA%*\Python" for Windows.  This value is used by Distutils
+   to compute the installation directories for scripts, data files,
+   Python modules, etc. for the user installation scheme. See also
+   "PYTHONUSERBASE".
+
+site.main()
+
+   모든 표준 사이트별 디렉터리를 모듈 검색 경로에 추가합니다. 파이썬
+   인터프리터가 "-S" 플래그로 시작되지 않았으면, 이 모듈이 임포트 될
+   때 이 함수가 자동으로 호출됩니다.
+
+   버전 3.3에서 변경: 이 함수는 무조건 호출되었습니다.
+
+site.addsitedir(sitedir, known_paths=None)
+
+   sys.path에 디렉터리를 추가하고 ".pth" 파일을 처리합니다. 일반적으로
+   "sitecustomize"나 "usercustomize"에서 사용됩니다 (위를 참조하십시오
+   ).
+
+site.getsitepackages()
+
+   모든 전역 site-packages 디렉터리를 포함하는 리스트를 반환합니다.
+
+   버전 3.2에 추가.
+
+site.getuserbase()
+
+   사용자 베이스 디렉터리 "USER_BASE"의 경로를 반환합니다. 아직 초기화
+   되지 않았으면, 이 함수는 "PYTHONUSERBASE"를 따라 설정합니다.
+
+   버전 3.2에 추가.
+
+site.getusersitepackages()
+
+   사용자별 site-packages 디렉터리 "USER_SITE"의 경로를 반환합니다. 아
+   직 초기화되지 않았으면, 이 함수는 "USER_BASE"를 따라 설정합니다. 사
+   용자별 site-packages가 "sys.path"에 추가되었는지 확인하려면
+   "ENABLE_USER_SITE"를 사용해야 합니다.
+
+   버전 3.2에 추가.
+
+
+명령 줄 인터페이스
+==================
+
+"site" 모듈은 명령 줄에서 사용자 디렉터리를 얻는 방법도 제공합니다:
+
+   $ python3 -m site --user-site
+   /home/user/.local/lib/python3.3/site-packages
+
+인자 없이 호출되면, 표준 출력에 "sys.path"의 내용을 인쇄한 다음,
+"USER_BASE"의 값과 디렉터리가 존재하는지를 인쇄하고, "USER_SITE"에 대
+해 같은 것을 인쇄하고, 마지막으로 "ENABLE_USER_SITE"의 값을 인쇄합니다
+.
+
+--user-base
+
+   사용자 베이스 디렉터리의 경로를 인쇄합니다.
+
+--user-site
+
+   사용자 site-packages 디렉터리의 경로를 인쇄합니다.
+
+두 옵션이 모두 제공되면, "os.pathsep"으로 구분하여, 사용자 베이스와 사
+용자 사이트를 (항상 이 순서대로) 인쇄합니다.
+
+어떤 옵션이건 제공되면, 스크립트는 다음 값 중 하나로 종료됩니다: 사용
+자 site-packages 디렉터리가 활성화되었으면 "0", 사용자에 의해 비활성화
+되었으면 "1", 보안상의 이유나 관리자에 의해 비활성화되었으면 "2", 그리
+고 에러가 있으면 2보다 큰 값.
+
+더 보기: **PEP 370** -- 사용자별 site-packages 디렉터리

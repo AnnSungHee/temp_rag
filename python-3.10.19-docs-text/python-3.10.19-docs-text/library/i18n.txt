@@ -1,0 +1,42 @@
+국제화
+******
+
+이 장에서 설명하는 모듈은 프로그램 메시지에 사용할 언어를 선택하거나
+현지 규칙에 맞게 출력을 조정할 수 있는 메커니즘을 제공하여 언어 및 로
+케일에 종속되지 않는 소프트웨어를 작성하는 데 도움이 됩니다.
+
+이 장에서 설명하는 모듈 목록은 다음과 같습니다:
+
+* "gettext" --- Multilingual internationalization services
+
+  * GNU **gettext** API
+
+  * 클래스 기반 API
+
+    * "NullTranslations" 클래스
+
+    * "GNUTranslations" 클래스
+
+    * Solaris 메시지 카탈로그 지원
+
+    * Catalog 생성자
+
+  * 프로그램과 모듈의 국제화
+
+    * 모듈 현지화
+
+    * 응용 프로그램 현지화
+
+    * 실행 중 언어 변경
+
+    * 지연된 번역
+
+  * 감사의 말
+
+* "locale" --- Internationalization services
+
+  * 배경, 세부 사항, 힌트, 팁 및 경고
+
+  * 확장 작성자와 파이썬을 내장하는 프로그램의 경우
+
+  * 메시지 카탈로그에 액세스

@@ -1,0 +1,49 @@
+파일 형식
+*********
+
+이 장에서 설명하는 모듈들은 마크업 언어가 아니고 전자 메일과 무관한 다
+양한 파일 형식을 구문 분석합니다.
+
+* "csv" --- CSV File Reading and Writing
+
+  * 모듈 내용
+
+  * 방언과 포매팅 파라미터
+
+  * 판독기 객체
+
+  * 기록기 객체
+
+  * 예제
+
+* "configparser" --- Configuration file parser
+
+  * 빠른 시작
+
+  * 지원되는 데이터형
+
+  * 대체 값
+
+  * 지원되는 INI 파일 구조
+
+  * 값의 보간
+
+  * 매핑 프로토콜 액세스
+
+  * 구문 분석기 동작 사용자 정의
+
+  * 레거시 API 예제
+
+  * ConfigParser 객체
+
+  * RawConfigParser 객체
+
+  * 예외
+
+* "netrc" --- netrc file processing
+
+  * netrc 객체
+
+* "plistlib" --- Generate and parse Apple ".plist" files
+
+  * 예제

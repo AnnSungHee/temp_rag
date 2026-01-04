@@ -1,0 +1,95 @@
+"tkinter.font" --- Tkinter font wrapper
+***************************************
+
+**소스 코드:** Lib/tkinter/font.py
+
+======================================================================
+
+"tkinter.font" 모듈은 명명된 글꼴을 만들고 사용하기 위한 "Font" 클래스
+를 제공합니다.
+
+구별되는 글꼴 무게와 기울기는 다음과 같습니다:
+
+tkinter.font.NORMAL
+tkinter.font.BOLD
+tkinter.font.ITALIC
+tkinter.font.ROMAN
+
+class tkinter.font.Font(root=None, font=None, name=None, exists=False, **options)
+
+   "Font" 클래스는 명명된 글꼴을 나타냅니다. *Font* 인스턴스에는 고유
+   한 이름이 지정되며 패밀리, 크기 및 스타일 구성으로 지정할 수 있습니
+   다. 명명된 글꼴은 나타날 때마다 어트리뷰트로 글꼴을 지정하지 않고,
+   글꼴을 단일 객체로 만들고 식별하는 Tk의 방법입니다.
+
+      인자:
+
+            *font* - 글꼴 지정자 튜플 (패밀리, 크기, 옵션)
+            *name* - 고유한 글꼴 이름
+            *exists* - 참이면 self가 기존의 명명된 글꼴을 가리킵니다
+
+      추가 키워드 옵션 (*font*가 지정되면 무시됩니다):
+
+            *family* - 글꼴 패밀리, 즉 Courier, Times
+            *size* - 글꼴 크기
+               *size*가 양수이면 포인트 단위의 크기로 해석됩니다.
+               *size*가 음수이면 절댓값을
+               픽셀 단위의 크기로 처리합니다.
+            *weight* - 글꼴 강조 (NORMAL, BOLD)
+            *slant* - ROMAN, ITALIC
+            *underline* - 글꼴 밑줄 (0 - 없음, 1 - 밑줄)
+            *overstrike* - 글꼴 취소선 (0 - 없음, 1 - 취소선)
+
+   actual(option=None, displayof=None)
+
+      글꼴의 어트리뷰트를 반환합니다.
+
+   cget(option)
+
+      글꼴의 어트리뷰트를 가져옵니다.
+
+   config(**options)
+
+      글꼴의 어트리뷰트를 수정합니다.
+
+   copy()
+
+      현재 글꼴의 새 인스턴스를 반환합니다.
+
+   measure(text, displayof=None)
+
+      현재 글꼴로 포맷할 때 지정된 디스플레이에서 텍스트가 차지할 공간
+      의 크기를 반환합니다. 디스플레이가 지정되지 않으면 메인 응용 프
+      로그램 창을 가정합니다.
+
+   metrics(*options, **kw)
+
+      글꼴별 데이터를 반환합니다. 옵션은 다음과 같습니다:
+
+      *ascent* - 기준선(baseline)과 글꼴의 문자가 차지할 수 있는 가장
+      높은 점 사이의 거리
+         .
+
+      *descent* - 기준선과 글꼴의 문자가 차지할 수 있는 가장 낮은 점
+      사이의 거리
+         .
+
+      *linespace* - 줄 사이에 수직 겹침이 없음을 보장하는, 글꼴의 임의
+      의 두 문자 간에 필요한 최소 수직 분리
+         .
+
+      *fixed* - 글꼴이 고정 너비이면 1, 그렇지 않으면 0
+
+tkinter.font.families(root=None, displayof=None)
+
+   구별되는 글꼴 패밀리를 반환합니다.
+
+tkinter.font.names(root=None)
+
+   정의된 글꼴의 이름을 반환합니다.
+
+tkinter.font.nametofont(name, root=None)
+
+   tk 명명된 글꼴의 "Font" 표현을 반환합니다.
+
+   버전 3.10에서 변경: The *root* parameter was added.

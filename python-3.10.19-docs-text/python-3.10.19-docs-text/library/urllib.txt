@@ -1,0 +1,16 @@
+"urllib" --- URL handling modules
+*********************************
+
+**소스 코드:** Lib/urllib/
+
+======================================================================
+
+"urllib"는 URL 작업을 위한 여러 모듈을 모은 패키지입니다.:
+
+* URL을 열고 읽기 위한 "urllib.request"
+
+* "urllib.request"에 의해 발생하는 예외를 포함하는 "urllib.error"
+
+* URL 구문 분석을 위한 "urllib.parse"
+
+* "robots.txt" 파일을 구문 분석하기 위한 "urllib.robotparser"

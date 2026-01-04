@@ -1,0 +1,584 @@
+"socketserver" --- A framework for network servers
+**************************************************
+
+**소스 코드:** Lib/socketserver.py
+
+======================================================================
+
+"socketserver" 모듈은 네트워크 서버 작성 작업을 단순화합니다.
+
+다음과 같은 네 가지 기본 구상 서버 클래스가 있습니다:
+
+class socketserver.TCPServer(server_address, RequestHandlerClass, bind_and_activate=True)
+
+   클라이언트와 서버 간에 연속적인 데이터 스트림을 제공하는 인터넷 TCP
+   프로토콜을 사용합니다. *bind_and_activate*가 참이면, 생성자는 자동
+   으로 "server_bind()"와 "server_activate()"를 호출하려고 시도합니다.
+   다른 매개 변수는 "BaseServer" 베이스 클래스로 전달됩니다.
+
+class socketserver.UDPServer(server_address, RequestHandlerClass, bind_and_activate=True)
+
+   순서가 잘못되거나 전송 중 손실될 수 있는 이산적 정보 패킷인 데이터
+   그램을 사용합니다. 매개 변수는 "TCPServer"와 같습니다.
+
+class socketserver.UnixStreamServer(server_address, RequestHandlerClass, bind_and_activate=True)
+class socketserver.UnixDatagramServer(server_address, RequestHandlerClass, bind_and_activate=True)
+
+   TCP와 UDP 클래스와 비슷하지만, 유닉스 도메인 소켓을 사용하는 자주
+   사용되지 않는 클래스입니다; 유닉스 이외의 플랫폼에서는 사용할 수 없
+   습니다. 매개 변수는 "TCPServer"와 같습니다.
+
+이 네 가지 클래스는 *동기적으로 (synchronously)* 요청을 처리합니다; 다
+음 요청을 시작하기 전에 각 요청을 완료해야 합니다. 계산이 많이 필요하
+거나 클라이언트가 처리하는 속도가 느리도록 데이터를 많이 반환하기 때문
+에 각 요청을 완료하는 데 시간이 오래 걸리면 적합하지 않습니다. 해결책
+은 각 요청을 처리하기 위해 별도의 프로세스나 스레드를 만드는 것입니다;
+"ForkingMixIn"과 "ThreadingMixIn" 믹스인 클래스를 사용하여 비동기 동작
+을 지원할 수 있습니다.
+
+서버를 만들려면 몇 가지 단계가 필요합니다. 먼저, "BaseRequestHandler"
+클래스를 서브 클래싱하고 "handle()" 메서드를 재정의하여 요청 처리기 클
+래스를 만들어야 합니다; 이 메서드는 들어오는 요청을 처리합니다. 둘째,
+서버 주소와 요청 처리기 클래스를 전달하여 서버 클래스 중 하나를 인스턴
+스 화해야 합니다. "with" 문에서 서버를 사용하는 것이 좋습니다. 그런 다
+음 서버 객체의 "handle_request()"나 "serve_forever()" 메서드를 호출하
+여 하나 이상의 요청을 처리합니다. 마지막으로, ("with" 문을 사용하지 않
+았다면) "server_close()"를 호출하여 소켓을 닫습니다.
+
+스레드 연결 동작을 위해 "ThreadingMixIn"에서 상속할 때, 갑작스러운 종
+료 시 스레드 작동 방식을 명시적으로 선언해야 합니다. "ThreadingMixIn"
+클래스는 서버가 스레드 종료를 기다려야 하는지를 가리키는
+*daemon_threads* 어트리뷰트를 정의합니다. 스레드가 자율적으로 동작하게
+하려면 플래그를 명시적으로 설정해야 합니다; 기본값은 "False"인데,
+"ThreadingMixIn"으로 만들어진 모든 스레드가 종료될 때까지 파이썬이 종
+료되지 않음을 뜻합니다.
+
+서버 클래스는 사용하는 네트워크 프로토콜과 관계없이 같은 외부 메서드와
+어트리뷰트를 갖습니다.
+
+
+서버 생성 노트
+==============
+
+상속 다이어그램에는 5개의 클래스가 있으며, 그중 4개는 4가지 유형의 동
+기 서버를 나타냅니다:
+
+   +------------+
+   | BaseServer |
+   +------------+
+         |
+         v
+   +-----------+        +------------------+
+   | TCPServer |------->| UnixStreamServer |
+   +-----------+        +------------------+
+         |
+         v
+   +-----------+        +--------------------+
+   | UDPServer |------->| UnixDatagramServer |
+   +-----------+        +--------------------+
+
+"UnixDatagramServer"는 "UnixStreamServer"가 아니라 "UDPServer"에서 파
+생됨에 유의하십시오 --- IP와 유닉스 서버의 유일한 차이점은 주소 패밀리
+입니다.
+
+class socketserver.ForkingMixIn
+class socketserver.ThreadingMixIn
+
+   이러한 믹스인 클래스를 사용하여 각 서버 유형의 포킹(forking)과 스레
+   딩(threading) 버전을 만들 수 있습니다. 예를 들어,
+   "ThreadingUDPServer"는 다음과 같이 만듭니다:
+
+      class ThreadingUDPServer(ThreadingMixIn, UDPServer):
+          pass
+
+   "UDPServer"에 정의된 메서드를 재정의하므로, 믹스인 클래스가 먼저 옵
+   니다. 다양한 어트리뷰트를 설정하면 하부 서버 메커니즘의 동작도 변경
+   됩니다.
+
+   아래 언급된 "ForkingMixIn"과 Forking 클래스들은 "fork()"를 지원하는
+   POSIX 플랫폼에서만 사용할 수 있습니다.
+
+   "socketserver.ForkingMixIn.server_close()" waits until all child
+   processes complete, except if
+   "socketserver.ForkingMixIn.block_on_close" attribute is false.
+
+   "socketserver.ThreadingMixIn.server_close()" waits until all non-
+   daemon threads complete, except if
+   "socketserver.ThreadingMixIn.block_on_close" attribute is false.
+   Use daemonic threads by setting "ThreadingMixIn.daemon_threads" to
+   "True" to not wait until threads complete.
+
+   버전 3.7에서 변경: "socketserver.ForkingMixIn.server_close()" and
+   "socketserver.ThreadingMixIn.server_close()" now waits until all
+   child processes and non-daemonic threads complete. Add a new
+   "socketserver.ForkingMixIn.block_on_close" class attribute to opt-
+   in for the pre-3.7 behaviour.
+
+class socketserver.ForkingTCPServer
+class socketserver.ForkingUDPServer
+class socketserver.ThreadingTCPServer
+class socketserver.ThreadingUDPServer
+
+   이 클래스들이 믹스인 클래스를 사용하여 미리 정의됩니다.
+
+서비스를 구현하려면, "BaseRequestHandler"에서 클래스를 파생시키고
+"handle()" 메서드를 재정의해야 합니다. 그런 다음 서버 클래스 중 하나와
+여러분의 요청 처리기 클래스를 결합하여 다양한 버전의 서비스를 실행할
+수 있습니다. 요청 처리기 클래스는 데이터 그램과 스트림 서비스에서 달라
+야 합니다. 처리기 서브 클래스 "StreamRequestHandler" 나
+"DatagramRequestHandler"를 사용하여 이 차이를 숨길 수 있습니다.
+
+물론, 여전히 머리를 사용해야 합니다! 예를 들어, 서비스가 다른 요청으로
+수정될 수 있는 메모리상의 상태를 포함할 때 포킹 서버를 사용하는 것은
+의미가 없습니다. 자식 프로세스에의 수정은 부모 프로세스에 유지된 초기
+상태에 도달하여 각 자식에 전달되지 못하기 때문입니다. 이 경우, 스레딩
+서버를 사용할 수 있지만, 아마도 공유 데이터의 무결성을 보호하기 위해
+록을 사용해야 합니다.
+
+반면, 모든 데이터가 외부(예를 들어, 파일 시스템)에 저장되는 HTTP 서버
+를 구축한다면, 동기 클래스는 하나의 요청이 처리되는 동안 실질적으로 서
+비스가 "듣지 못하게" 만듭니다 -- 클라이언트가 요청한 모든 데이터를 받
+는 속도가 느리다면 매우 오랜 시간이 걸릴 수 있습니다. 이럴 때는 스레딩
+이나 포킹 서버가 적합합니다.
+
+때에 따라, 요청의 일부를 동기적으로 처리하는 것이 좋지만, 요청 데이터
+에 따라 포크 된 자식에서 처리를 완료하는 것이 적절할 수 있습니다. 이는
+동기 서버를 사용하고 요청 처리기 클래스 "handle()" 메서드에서 명시적
+포크를 수행하여 구현할 수 있습니다.
+
+Another approach to handling multiple simultaneous requests in an
+environment that supports neither threads nor "fork()" (or where these
+are too expensive or inappropriate for the service) is to maintain an
+explicit table of partially finished requests and to use "selectors"
+to decide which request to work on next (or whether to handle a new
+incoming request).  This is particularly important for stream services
+where each client can potentially be connected for a long time (if
+threads or subprocesses cannot be used).  See "asyncore" for another
+way to manage this.
+
+
+서버 객체
+=========
+
+class socketserver.BaseServer(server_address, RequestHandlerClass)
+
+   이것은 모듈에 있는 모든 서버 객체의 슈퍼 클래스입니다. 아래에 주어
+   진 인터페이스를 정의하지만, 대부분의 메서드를 구현하지 않고, 서브
+   클래스에서 구현됩니다. 두 개의 매개 변수는 각각 "server_address"와
+   "RequestHandlerClass" 어트리뷰트에 저장됩니다.
+
+   fileno()
+
+      서버가 리스닝 중인 소켓의 정수 파일 디스크립터를 반환합니다. 이
+      함수는 가장 일반적으로 같은 프로세스에서 여러 서버를 모니터링할
+      수 있도록 "selectors"에 전달됩니다.
+
+   handle_request()
+
+      단일 요청을 처리합니다. 이 함수는 다음 메서드들을 차례로 호출합
+      니다: "get_request()", "verify_request()" 및
+      "process_request()". 처리기 클래스의 사용자 제공 "handle()" 메서
+      드에서 예외가 발생하면, 서버의 "handle_error()" 메서드가 호출됩
+      니다. "timeout" 초 내에 요청이 수신되지 않으면,
+      "handle_timeout()"이 호출되고 "handle_request()"는 반환합니다.
+
+   serve_forever(poll_interval=0.5)
+
+      명시적인 "shutdown()" 요청이 있을 때까지 요청을 처리합니다.
+      *poll_interval* 초마다 shutdown을 확인합니다. "timeout" 어트리뷰
+      트를 무시합니다. 또한 "service_actions()"를 호출하는데, 서브 클
+      래스나 믹스인이 주어진 서비스에 특정한 동작을 제공하기 위해 사용
+      할 수 있습니다. 예를 들어, "ForkingMixIn" 클래스는
+      "service_actions()"를 사용하여 좀비 자식 프로세스를 정리합니다.
+
+      버전 3.3에서 변경: "serve_forever" 메서드에 "service_actions" 호
+      출을 추가했습니다.
+
+   service_actions()
+
+      "serve_forever()" 루프에서 호출됩니다. 이 메서드는 서브 클래스나
+      믹스인 클래스에서 재정의되어 정리 조치와 같은 지정된 서비스에 특
+      정한 조치를 수행할 수 있습니다.
+
+      버전 3.3에 추가.
+
+   shutdown()
+
+      "serve_forever()" 루프가 정지하도록 하고 정지할 때까지 기다립니
+      다. "serve_forever()"가 다른 스레드에서 실행되는 동안
+      "shutdown()"을 호출해야 합니다. 그렇지 않으면 교착 상태가 됩니다
+      .
+
+   server_close()
+
+      서버를 정리합니다. 재정의될 수 있습니다.
+
+   address_family
+
+      The family of protocols to which the server's socket belongs.
+      Common examples are "socket.AF_INET" and "socket.AF_UNIX".
+
+   RequestHandlerClass
+
+      사용자 제공 요청 처리기 클래스; 요청마다 이 클래스의 인스턴스가
+      만들어집니다.
+
+   server_address
+
+      서버가 리스닝 중인 주소. 주소 형식은 프로토콜 패밀리에 따라 다릅
+      니다; 자세한 내용은 "socket" 모듈 설명서를 참조하십시오. 인터넷
+      프로토콜의 경우, 주소를 제공하는 문자열과 정수 포트 번호를 포함
+      하는 튜플입니다: "('127.0.0.1', 80)", 예를 들어.
+
+   socket
+
+      서버가 들어오는 요청을 리스닝 할 소켓 객체.
+
+   서버 클래스는 다음 클래스 변수를 지원합니다:
+
+   allow_reuse_address
+
+      서버가 주소를 재사용하도록 허락하는지 여부. 기본값은 "False"이며
+      , 정책을 변경하기 위해 서브 클래스에서 설정할 수 있습니다.
+
+   request_queue_size
+
+      요청 큐의 크기. 단일 요청을 처리하는 데 시간이 오래 걸리면, 서버
+      가 바쁠 때 도착한 요청은 최대 "request_queue_size" 요청까지 큐에
+      배치됩니다. 큐가 가득 차면, 클라이언트의 추가 요청은 "연결 거부
+      (Connection denied)" 에러를 받게 됩니다. 기본값은 일반적으로 5이
+      지만, 서브 클래스가 재정의할 수 있습니다.
+
+   socket_type
+
+      서버가 사용하는 소켓의 유형. "socket.SOCK_STREAM"과
+      "socket.SOCK_DGRAM"은 두 가지 흔한 값입니다.
+
+   timeout
+
+      초 단위의 시간제한 기간, 또는 시간제한이 필요하지 않으면 "None".
+      "handle_request()"가 timeout 기간 내에 들어오는 요청을 받지 못하
+      면, "handle_timeout()" 메서드가 호출됩니다.
+
+   "TCPServer"와 같은 베이스 서버 클래스의 서브 클래스가 재정의할 수
+   있는 다양한 서버 메서드가 있습니다; 이러한 메서드는 서버 객체의 외
+   부 사용자에게는 유용하지 않습니다.
+
+   finish_request(request, client_address)
+
+      "RequestHandlerClass"를 인스턴스화하고 "handle()" 메서드를 호출
+      하여 실제로 요청을 처리합니다.
+
+   get_request()
+
+      소켓으로부터의 요청을 받아들이고, 클라이언트와 통신하는 데 사용
+      될 *새* 소켓 객체와 클라이언트 주소를 포함하는 2-튜플을 반환해야
+      합니다.
+
+   handle_error(request, client_address)
+
+      "RequestHandlerClass" 인스턴스의 "handle()" 메서드에서 예외가 발
+      생하면 이 함수가 호출됩니다. 기본 액션은 표준 에러로 트레이스백
+      을 인쇄하고 추가 요청을 계속 처리하는 것입니다.
+
+      버전 3.6에서 변경: 이제 "Exception" 클래스에서 파생된 예외에 대
+      해서만 호출됩니다.
+
+   handle_timeout()
+
+      이 함수는 "timeout" 어트리뷰트가 "None" 이외의 값으로 설정되고
+      요청이 수신되지 않은 채로 시간제한 기간이 지나면 호출됩니다. 포
+      킹 서버에서의 기본 액션은 종료한 모든 자식 프로세스의 상태를 수
+      집하는 것이고, 반면에 스레딩 서버에서는 이 메서드가 아무 작업도
+      수행하지 않습니다.
+
+   process_request(request, client_address)
+
+      "finish_request()"를 호출하여 "RequestHandlerClass" 의 인스턴스
+      를 만듭니다. 원한다면, 이 함수는 요청을 처리하기 위해 새 프로세
+      스나 스레드를 만들 수 있습니다; "ForkingMixIn"과
+      "ThreadingMixIn" 클래스가 그렇게 합니다.
+
+   server_activate()
+
+      서버를 활성화하기 위해 서버의 생성자가 호출합니다. TCP 서버의 기
+      본 동작은 단지 서버의 소켓에 대해 "listen()"을 호출합니다. 재정
+      의될 수 있습니다.
+
+   server_bind()
+
+      소켓을 원하는 주소에 바인딩하기 위해 서버의 생성자가 호출합니다.
+      재정의될 수 있습니다.
+
+   verify_request(request, client_address)
+
+      불리언 값을 반환해야 합니다; 값이 "True"이면, 요청이 처리되고,
+      "False"이면, 요청이 거부됩니다. 서버에 대한 액세스 제어를 구현하
+      기 위해 이 함수를 재정의할 수 있습니다. 기본 구현은 항상 "True"
+      를 반환합니다.
+
+   버전 3.6에서 변경: *컨텍스트 관리자* 프로토콜에 대한 지원이 추가되
+   었습니다. 컨텍스트 관리자를 벗어나는 것은 "server_close()"를 호출하
+   는 것과 동등합니다.
+
+
+요청 처리기 객체
+================
+
+class socketserver.BaseRequestHandler
+
+   이것은 모든 요청 처리기 객체의 슈퍼 클래스입니다. 아래에 주어진 인
+   터페이스를 정의합니다. 구상 요청 처리기 서브 클래스는 새 "handle()"
+   메서드를 정의해야 하며, 다른 메서드를 재정의할 수 있습니다. 각 요청
+   에 대해 서브 클래스의 새 인스턴스가 만들어집니다.
+
+   setup()
+
+      필요한 초기화 액션을 수행하기 위해 "handle()" 메서드 전에 호출됩
+      니다. 기본 구현은 아무것도 수행하지 않습니다.
+
+   handle()
+
+      This function must do all the work required to service a
+      request.  The default implementation does nothing.  Several
+      instance attributes are available to it; the request is
+      available as "self.request"; the client address as
+      "self.client_address"; and the server instance as "self.server",
+      in case it needs access to per-server information.
+
+      The type of "self.request" is different for datagram or stream
+      services.  For stream services, "self.request" is a socket
+      object; for datagram services, "self.request" is a pair of
+      string and socket.
+
+   finish()
+
+      필요한 정리 액션을 수행하기 위해 "handle()" 메서드 이후에 호출됩
+      니다. 기본 구현은 아무것도 수행하지 않습니다. "setup()"에서 예외
+      가 발생하면, 이 함수가 호출되지 않습니다.
+
+class socketserver.StreamRequestHandler
+class socketserver.DatagramRequestHandler
+
+   These "BaseRequestHandler" subclasses override the "setup()" and
+   "finish()" methods, and provide "self.rfile" and "self.wfile"
+   attributes. The "self.rfile" and "self.wfile" attributes can be
+   read or written, respectively, to get the request data or return
+   data to the client. The "rfile" attributes support the
+   "io.BufferedIOBase" readable interface, and "wfile" attributes
+   support the "io.BufferedIOBase" writable interface.
+
+   버전 3.6에서 변경: "StreamRequestHandler.wfile" also supports the
+   "io.BufferedIOBase" writable interface.
+
+
+예
+==
+
+
+"socketserver.TCPServer" 예
+---------------------------
+
+이것은 서버 쪽입니다:
+
+   import socketserver
+
+   class MyTCPHandler(socketserver.BaseRequestHandler):
+       """
+       The request handler class for our server.
+
+       It is instantiated once per connection to the server, and must
+       override the handle() method to implement communication to the
+       client.
+       """
+
+       def handle(self):
+           # self.request is the TCP socket connected to the client
+           self.data = self.request.recv(1024).strip()
+           print("{} wrote:".format(self.client_address[0]))
+           print(self.data)
+           # just send back the same data, but upper-cased
+           self.request.sendall(self.data.upper())
+
+   if __name__ == "__main__":
+       HOST, PORT = "localhost", 9999
+
+       # Create the server, binding to localhost on port 9999
+       with socketserver.TCPServer((HOST, PORT), MyTCPHandler) as server:
+           # Activate the server; this will keep running until you
+           # interrupt the program with Ctrl-C
+           server.serve_forever()
+
+스트림(표준 파일 인터페이스를 제공하여 통신을 단순화하는 파일류 객체)
+을 사용하는 대체 요청 처리기 클래스:
+
+   class MyTCPHandler(socketserver.StreamRequestHandler):
+
+       def handle(self):
+           # self.rfile is a file-like object created by the handler;
+           # we can now use e.g. readline() instead of raw recv() calls
+           self.data = self.rfile.readline().strip()
+           print("{} wrote:".format(self.client_address[0]))
+           print(self.data)
+           # Likewise, self.wfile is a file-like object used to write back
+           # to the client
+           self.wfile.write(self.data.upper())
+
+The difference is that the "readline()" call in the second handler
+will call "recv()" multiple times until it encounters a newline
+character, while the single "recv()" call in the first handler will
+just return what has been sent from the client in one "sendall()"
+call.
+
+이것은 클라이언트 쪽입니다:
+
+   import socket
+   import sys
+
+   HOST, PORT = "localhost", 9999
+   data = " ".join(sys.argv[1:])
+
+   # Create a socket (SOCK_STREAM means a TCP socket)
+   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+       # Connect to server and send data
+       sock.connect((HOST, PORT))
+       sock.sendall(bytes(data + "\n", "utf-8"))
+
+       # Receive data from the server and shut down
+       received = str(sock.recv(1024), "utf-8")
+
+   print("Sent:     {}".format(data))
+   print("Received: {}".format(received))
+
+예제의 결과는 다음과 같아야 합니다:
+
+서버:
+
+   $ python TCPServer.py
+   127.0.0.1 wrote:
+   b'hello world with TCP'
+   127.0.0.1 wrote:
+   b'python is nice'
+
+클라이언트:
+
+   $ python TCPClient.py hello world with TCP
+   Sent:     hello world with TCP
+   Received: HELLO WORLD WITH TCP
+   $ python TCPClient.py python is nice
+   Sent:     python is nice
+   Received: PYTHON IS NICE
+
+
+"socketserver.UDPServer" 예
+---------------------------
+
+이것은 서버 쪽입니다:
+
+   import socketserver
+
+   class MyUDPHandler(socketserver.BaseRequestHandler):
+       """
+       This class works similar to the TCP handler class, except that
+       self.request consists of a pair of data and client socket, and since
+       there is no connection the client address must be given explicitly
+       when sending data back via sendto().
+       """
+
+       def handle(self):
+           data = self.request[0].strip()
+           socket = self.request[1]
+           print("{} wrote:".format(self.client_address[0]))
+           print(data)
+           socket.sendto(data.upper(), self.client_address)
+
+   if __name__ == "__main__":
+       HOST, PORT = "localhost", 9999
+       with socketserver.UDPServer((HOST, PORT), MyUDPHandler) as server:
+           server.serve_forever()
+
+이것은 클라이언트 쪽입니다:
+
+   import socket
+   import sys
+
+   HOST, PORT = "localhost", 9999
+   data = " ".join(sys.argv[1:])
+
+   # SOCK_DGRAM is the socket type to use for UDP sockets
+   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+   # As you can see, there is no connect() call; UDP has no connections.
+   # Instead, data is directly sent to the recipient via sendto().
+   sock.sendto(bytes(data + "\n", "utf-8"), (HOST, PORT))
+   received = str(sock.recv(1024), "utf-8")
+
+   print("Sent:     {}".format(data))
+   print("Received: {}".format(received))
+
+예제의 출력은 TCP 서버 예제와 정확히 같아야 합니다.
+
+
+비동기 믹스인
+-------------
+
+비동기 처리기를 구축하려면, "ThreadingMixIn" 과 "ForkingMixIn" 클래스
+를 사용하십시오.
+
+"ThreadingMixIn" 클래스의 예:
+
+   import socket
+   import threading
+   import socketserver
+
+   class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
+
+       def handle(self):
+           data = str(self.request.recv(1024), 'ascii')
+           cur_thread = threading.current_thread()
+           response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
+           self.request.sendall(response)
+
+   class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+       pass
+
+   def client(ip, port, message):
+       with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+           sock.connect((ip, port))
+           sock.sendall(bytes(message, 'ascii'))
+           response = str(sock.recv(1024), 'ascii')
+           print("Received: {}".format(response))
+
+   if __name__ == "__main__":
+       # Port 0 means to select an arbitrary unused port
+       HOST, PORT = "localhost", 0
+
+       server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
+       with server:
+           ip, port = server.server_address
+
+           # Start a thread with the server -- that thread will then start one
+           # more thread for each request
+           server_thread = threading.Thread(target=server.serve_forever)
+           # Exit the server thread when the main thread terminates
+           server_thread.daemon = True
+           server_thread.start()
+           print("Server loop running in thread:", server_thread.name)
+
+           client(ip, port, "Hello World 1")
+           client(ip, port, "Hello World 2")
+           client(ip, port, "Hello World 3")
+
+           server.shutdown()
+
+예제의 결과는 다음과 같아야 합니다:
+
+   $ python ThreadedTCPServer.py
+   Server loop running in thread: Thread-1
+   Received: Thread-2: Hello World 1
+   Received: Thread-3: Hello World 2
+   Received: Thread-4: Hello World 3
+
+"ForkingMixIn" 클래스는 서버가 요청마다 새 프로세스를 생성한다는 점을
+제외하고 같은 방식으로 사용됩니다. "fork()"를 지원하는 POSIX 플랫폼에
+서만 사용 가능합니다.

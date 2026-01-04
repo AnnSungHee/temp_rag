@@ -1,0 +1,62 @@
+"email.iterators": Iterators
+****************************
+
+**소스 코드:** Lib/email/iterators.py
+
+======================================================================
+
+메시지 객체 트리를 이터레이트 하는 것은 "Message.walk" 메서드를 사용하
+면 매우 쉽습니다. "email.iterators" 모듈은 메시지 객체 트리에 대한 유
+용한 고수준 이터레이션을 제공합니다.
+
+email.iterators.body_line_iterator(msg, decode=False)
+
+   *msg*의 모든 서브 파트에 있는 모든 페이 로드를 이터레이트 하여, 문
+   자열 페이 로드를 한 줄씩 반환합니다. 모든 서브 파트 헤더를 건너뛰고
+   , 파이썬 문자열이 아닌 페이 로드가 있는 서브 파트를 건너뜁니다. 이
+   는 "readline()"을 사용하여 파일에서 메시지의 평평한(flat) 텍스트 표
+   현을 읽는 것과 다소 유사하며, 모든 중간 헤더를 건너뜁니다.
+
+   선택적 *decode*는 "Message.get_payload"로 전달됩니다.
+
+email.iterators.typed_subpart_iterator(msg, maintype='text', subtype=None)
+
+   *msg*의 모든 서브 파트를 이터레이트 하여, *maintype*과 *subtype*으
+   로 지정된 MIME 유형과 일치하는 서브 파트만 반환합니다.
+
+   *subtype*은 선택적임에 유의하십시오; 생략하면, 서브 파트 MIME 형식
+   일치는 메인 형식으로만 수행됩니다. *maintype*도 선택적입니다; 기본
+   값은 *text*입니다.
+
+   따라서, 기본적으로 "typed_subpart_iterator()"는 MIME 유형이
+   *text/** 인 각 서브 파트를 반환합니다.
+
+유용한 디버깅 도구로 다음 함수가 추가되었습니다. 이것은 패키지에서 지
+원되는 공용 인터페이스의 일부로 간주하지 *않아야* 합니다.
+
+email.iterators._structure(msg, fp=None, level=0, include_default=False)
+
+   메시지 객체 구조의 콘텐츠 유형을 들여쓰기하여 인쇄합니다. 예를 들면
+   :
+
+      >>> msg = email.message_from_file(somefile)
+      >>> _structure(msg)
+      multipart/mixed
+          text/plain
+          text/plain
+          multipart/digest
+              message/rfc822
+                  text/plain
+              message/rfc822
+                  text/plain
+              message/rfc822
+                  text/plain
+              message/rfc822
+                  text/plain
+              message/rfc822
+                  text/plain
+          text/plain
+
+   선택적 *fp*는 출력을 인쇄할 파일류 객체입니다. 파이썬의 "print()"
+   함수에 적합해야 합니다. *level*은 내부적으로 사용됩니다.
+   *include_default*가 참이면, 기본 유형도 인쇄합니다.

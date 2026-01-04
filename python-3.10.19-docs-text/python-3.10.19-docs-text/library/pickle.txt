@@ -1,0 +1,1180 @@
+"pickle" --- Python object serialization
+****************************************
+
+**소스 코드:** Lib/pickle.py
+
+======================================================================
+
+"pickle" 모듈은 파이썬 객체 구조의 직렬화와 역 직렬화를 위한 바이너리
+프로토콜을 구현합니다. *"피클링(pickling)"*은 파이썬 객체 계층 구조가
+바이트 스트림으로 변환되는 절차이며, *"역 피클링(unpickling)"*은 반대
+연산으로, (*바이너리 파일* 이나 *바이트열류 객체*로 부터의) 바이트 스
+트림을 객체 계층 구조로 복원합니다. 피클링(그리고 역 피클링)은 "직렬화
+(serialization)", "마샬링(marshalling)" [1] 또는 "평탄화(flattening)"
+라고도 합니다; 그러나, 혼란을 피하고자, 여기에서 사용된 용어는 "피클링
+" 과 "역 피클링" 입니다.
+
+경고:
+
+  "pickle" 모듈은 **안전하지 않습니다**. 신뢰할 수 있는 데이터만 언 피
+  클 하십시오.**언 피클 시 임의의 코드를 실행하는** 악의적인 피클 데이
+  터를 구성할 수 있습니다. 신뢰할 수 없는 출처에서 왔거나 변조되었을
+  수 있는 데이터를 절대로 언 피클 하지 마십시오.변조되지 않았음을 보장
+  하려면 "hmac"으로 데이터에 서명하는 것을 고려하십시오.신뢰할 수 없는
+  데이터를 처리한다면, "json"과 같은 안전한 직렬화 형식이 더 적합 할
+  수 있습니다. json 과의 비교를 참조하십시오.
+
+
+다른 파이썬 모듈과의 관계
+=========================
+
+
+"marshal" 과의 비교
+-------------------
+
+파이썬이 "marshal" 이라 불리는 좀 더 원시적인 직렬화 모듈을 가지고 있
+지만, 일반적으로 "pickle" 은 항상 파이썬 객체를 직렬화하기 위해 선호되
+는 방법이어야 합니다. "marshal" 은 주로 파이썬의 ".pyc" 파일을 지원하
+기 위해 존재합니다.
+
+"pickle" 모듈은 "marshal"과 몇 가지 중요한 점에서 다릅니다:
+
+* "pickle" 모듈은 이미 직렬화된 객체를 추적하므로 나중에 같은 객체에
+  대한 참조가 다시 직렬화되지 않습니다. "marshal" 은 이렇게 하지 않습
+  니다.
+
+  이는 재귀 객체와 객체 공유에 모두 관련이 있습니다. 재귀 객체는 자신
+  에 대한 참조를 포함하는 객체입니다. 이것은 마샬에 의해 처리되지 않으
+  며, 실제로 재귀 객체를 마샬 하려고 하면 파이썬 인터프리터가 충돌합니
+  다. 객체 공유는 직렬화되는 객체 계층의 다른 위치에서 같은 객체에 대
+  한 다중 참조가 있을 때 발생합니다. "pickle" 은 그러한 객체를 한 번만
+  저장하고, 다른 모든 참조가 마스터 복사본을 가리키도록 만듭니다. 공유
+  객체는 공유된 상태로 유지되는데, 가변 객체의 경우 매우 중요할 수 있
+  습니다.
+
+* "marshal"은 사용자 정의 클래스와 인스턴스를 직렬화하는 데 사용할 수
+  없습니다. "pickle" 은 클래스 인스턴스를 투명하게 저장하고 복원할 수
+  있지만, 클래스 정의는 객체를 저장할 때와 같은 모듈에 존재하고 임포트
+  할 수 있어야 합니다.
+
+* "marshal" 직렬화 형식은 파이썬 버전 간에 이식성이 보장되지 않습니다.
+  가장 중요한 일은 ".pyc" 파일을 지원하는 것이므로, 파이썬 구현자는 필
+  요할 때 직렬화 형식을 과거 호환되지 않는 방식으로 변경할 권리를 갖습
+  니다. "pickle" 직렬화 형식은, 호환성 있는 피클 프로토콜이 선택되고
+  여러분의 데이터가 파이썬 2와 파이썬 3의 호환되지 않는 언어 경계를 가
+  로지를 때 피클링과 역 피클링 코드가 두 파이썬 형의 차이점을 다루는
+  한, 파이썬 배포 간의 과거 호환성을 보장합니다.
+
+
+"json" 과의 비교
+----------------
+
+pickle 프로토콜과 JSON (JavaScript Object Notation) 간에는 근본적인 차
+이가 있습니다:
+
+* JSON은 텍스트 직렬화 형식(유니코드 텍스트를 출력하지만, 대개는
+  "utf-8" 으로 인코딩됩니다)인 반면, pickle은 바이너리 직렬화 형식입니
+  다.
+
+* JSON은 사람이 읽을 수 있지만, 피클은 그렇지 않습니다.
+
+* JSON은 상호 운용이 가능하며 파이썬 생태계 외부에서 널리 사용되는 반
+  면, 피클은 파이썬으로만 한정됩니다.
+
+* JSON은, 기본적으로, 파이썬 내장형 일부만 표시할 수 있으며 사용자 정
+  의 클래스는 표시할 수 없습니다; 피클은 매우 많은 수의 파이썬 형을 나
+  타낼 수 있습니다 (그중 많은 것들은 파이썬의 인트로스펙션 기능을 영리
+  하게 사용하여 자동으로; 복잡한 경우는 특정 객체 API 를 구현해서 해결
+  할 수 있습니다);
+
+* pickle과 달리, 신뢰할 수 없는 JSON의 역 직렬화는 그 자체로 임의 코드
+  실행 취약점을 만들지는 않습니다.
+
+더 보기: "json" 모듈: JSON 직렬화와 역 직렬화를 가능하게 하는 표준 라이브러리
+      모듈.
+
+
+데이터 스트림 형식
+==================
+
+The data format used by "pickle" is Python-specific.  This has the
+advantage that there are no restrictions imposed by external standards
+such as JSON or XDR (which can't represent pointer sharing); however
+it means that non-Python programs may not be able to reconstruct
+pickled Python objects.
+
+기본적으로, "pickle" 데이터 포맷은 상대적으로 간결한 바이너리 표현을
+사용합니다. 최적의 크기 특성이 필요하다면, 피클 된 데이터를 효율적으로
+압축 할 수 있습니다.
+
+모듈 "pickletools" 에는 "pickle" 에 의해 생성된 데이터 스트림을 분석하
+는 도구가 있습니다. "pickletools" 소스 코드에는 피클 프로토콜에서 사용
+되는 옵코드(opcode)에 대한 광범위한 주석이 있습니다.
+
+현재 피클링에 쓸 수 있는 6가지 프로토콜이 있습니다. 사용된 프로토콜이
+높을수록, 생성된 피클을 읽으려면 더 최신 파이썬 버전이 필요합니다.
+
+* 프로토콜 버전 0은 최초의 "사람이 읽을 수 있는" 프로토콜이며 이전 버
+  전의 파이썬과 과거 호환됩니다.
+
+* 프로토콜 버전 1은 역시 이전 버전의 파이썬과 호환되는 오래된 바이너리
+  형식입니다.
+
+* 프로토콜 버전 2는 파이썬 2.3에서 소개되었습니다. 그것은 훨씬 더 효율
+  적인 *뉴스타일 클래스*의 피클링을 제공합니다. 프로토콜 2에 의해 개선
+  된 사항에 대한 정보는 **PEP 307**을 참조하십시오.
+
+* 프로토콜 버전 3은 파이썬 3.0에서 추가되었습니다. 명시적으로 "bytes"
+  객체를 지원하며 파이썬 2.x에서 역 피클 될 수 없습니다. 이것은 파이썬
+  3.0--3.7에서 기본 프로토콜이었습니다.
+
+* 프로토콜 버전 4가 파이썬 3.4에 추가되었습니다. 매우 큰 객체, 더 많은
+  종류의 객체에 대한 피클링, 일부 데이터 형식 최적화에 대한 지원을 추
+  가합니다. 파이썬 3.8부터 이것이 기본 프로토콜입니다. 프로토콜 4에 의
+  해 개선된 사항에 대한 정보는 **PEP 3154**를 참조하십시오.
+
+* 프로토콜 버전 5는 파이썬 3.8에서 추가되었습니다. 아웃 오브 밴드 데이
+  터에 대한 지원과 인 밴드 데이터에 대한 속도 향상을 추가합니다. 프로
+  토콜 5의 개선 사항에 대한 정보는 **PEP 574**를 참조하십시오.
+
+참고:
+
+  직렬화는 지속성보다 더 원시적인 개념입니다; "pickle" 이 파일 객체를
+  읽거나 쓰기는 하지만, 지속적인 객체의 이름 지정도 (더 복잡한) 지속적
+  인 객체에 대한 동시 액세스 문제도 처리하지 않습니다. "pickle" 모듈은
+  복잡한 객체를 바이트 스트림으로 변환할 수 있고 바이트 스트림을 같은
+  내부 구조를 가진 객체로 변환할 수 있습니다. 아마도 이러한 바이트 스
+  트림으로 할 가장 분명한 작업은 파일에 쓰는 것이겠지만, 네트워크를 통
+  해 보내거나 데이터베이스에 저장하는 것도 고려할 수 있습니다.
+  "shelve" 모듈은 DBM 스타일의 데이터베이스 파일에 객체를 피클/역 피클
+  하는 간단한 인터페이스를 제공합니다.
+
+
+모듈 인터페이스
+===============
+
+객체 계층 구조를 직렬화하려면, 단순히 "dumps()" 함수를 호출하면 됩니다
+. 마찬가지로, 데이터 스트림을 역 직렬화하려면 "loads()" 함수를 호출합
+니다. 그러나, 직렬화와 역 직렬화에 대한 더 많은 제어를 원하면, 각각
+"Pickler" 나 "Unpickler" 객체를 만들 수 있습니다.
+
+"pickle" 모듈은 다음과 같은 상수를 제공합니다:
+
+pickle.HIGHEST_PROTOCOL
+
+   정수, 사용 가능한 가장 높은 프로토콜 버전. 이 값은 함수 "dump()"와
+   "dumps()" 그리고 "Pickler" 생성자에 *protocol* 값으로 전달될 수 있
+   습니다.
+
+pickle.DEFAULT_PROTOCOL
+
+   정수, 피클링에 사용되는 기본 프로토콜 버전. "HIGHEST_PROTOCOL" 보다
+   작을 수 있습니다. 현재 기본 프로토콜은 4인데, 파이썬 3.4에서 처음
+   소개되었으며 이전 버전과 호환되지 않습니다.
+
+   버전 3.0에서 변경: 기본 프로토콜은 3입니다.
+
+   버전 3.8에서 변경: 기본 프로토콜은 4입니다.
+
+"pickle" 모듈은 피클링 절차를 보다 편리하게 하려고 다음과 같은 함수를
+제공합니다:
+
+pickle.dump(obj, file, protocol=None, *, fix_imports=True, buffer_callback=None)
+
+   객체 *obj* 의 피클 된 표현을 열린 *파일 객체* *file* 에 씁니다. 이
+   것은 "Pickler(file, protocol).dump(obj)" 와 동등합니다.
+
+   인자 *file*, *protocol*, *fix_imports* 및 *buffer_callback*은
+   "Pickler" 생성자에서와 같은 의미입니다.
+
+   버전 3.8에서 변경: *buffer_callback* 인자가 추가되었습니다.
+
+pickle.dumps(obj, protocol=None, *, fix_imports=True, buffer_callback=None)
+
+   객체 *obj*의 피클 된 표현을 파일에 쓰는 대신 "bytes" 객체로 반환합
+   니다.
+
+   인자 *protocol*, *fix_imports* 및 *buffer_callback*은 "Pickler" 생
+   성자에서와 같은 의미입니다.
+
+   버전 3.8에서 변경: *buffer_callback* 인자가 추가되었습니다.
+
+pickle.load(file, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)
+
+   열린 *파일 객체* *file* 에서 객체의 피클 된 표현을 읽고, 그 안에 지
+   정된 객체 계층 구조를 재구성하여 반환합니다. 이것은
+   "Unpickler(file).load()" 와 동등합니다.
+
+   피클의 프로토콜 버전이 자동으로 감지되므로 프로토콜 인자가 필요하지
+   않습니다. 객체의 피클 된 표현 뒤에 남는 바이트열은 무시됩니다.
+
+   인자 *file*, *fix_imports*, *encoding*, *errors*, *strict* 및
+   *buffers*는 "Unpickler" 생성자에서와 같은 의미입니다.
+
+   버전 3.8에서 변경: *buffers* 인자가 추가되었습니다.
+
+pickle.loads(data, /, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)
+
+   객체의 피클 된 표현 *data*의 재구성된 객체 계층 구조를 반환합니다.
+   *data*는 *바이트열류 객체*여야 합니다.
+
+   피클의 프로토콜 버전이 자동으로 감지되므로 프로토콜 인자가 필요하지
+   않습니다. 객체의 피클 된 표현 뒤에 남는 바이트열은 무시됩니다.
+
+   인자 *fix_imports*, *encoding*, *errors*, *strict* 및 *buffers*는
+   "Unpickler" 생성자에서와 같은 의미입니다.
+
+   버전 3.8에서 변경: *buffers* 인자가 추가되었습니다.
+
+"pickle" 모듈은 세 가지 예외를 정의합니다:
+
+exception pickle.PickleError
+
+   Common base class for the other pickling exceptions.  It inherits
+   "Exception".
+
+exception pickle.PicklingError
+
+   Error raised when an unpicklable object is encountered by
+   "Pickler". It inherits "PickleError".
+
+   어떤 종류의 객체가 피클 될 수 있는지 배우려면 어떤 것이 피클 되고
+   역 피클 될 수 있을까요?를 참조하십시오.
+
+exception pickle.UnpicklingError
+
+   Error raised when there is a problem unpickling an object, such as
+   a data corruption or a security violation.  It inherits
+   "PickleError".
+
+   역 피클링 중에 다른 예외도 발생할 수 있음에 유의하십시오.
+   AttributeError, EOFError, ImportError, IndexError 등이 발생할 수 있
+   지만, 이에 국한되지는 않습니다.
+
+"pickle" 모듈은 세 개의 클래스를 노출합니다, "Pickler", "Unpickler" 및
+"PickleBuffer":
+
+class pickle.Pickler(file, protocol=None, *, fix_imports=True, buffer_callback=None)
+
+   피클 데이터 스트림을 쓸 바이너리 파일을 받아들입니다.
+
+   선택적 *protocol* 인자(정수)는 피클러가 주어진 프로토콜을 사용하도
+   록 지시합니다; 지원되는 프로토콜은 0부터 "HIGHEST_PROTOCOL" 입니다.
+   지정하지 않으면 기본값은 "DEFAULT_PROTOCOL" 입니다. 음수가 지정되면
+   , "HIGHEST_PROTOCOL" 이 선택됩니다.
+
+   *file* 인자에는 단일 바이트열 인자를 받아들이는 write() 메서드가 있
+   어야 합니다. 따라서 바이너리 쓰기를 위해 열린 디스크 상의 파일,
+   "io.BytesIO" 인스턴스 또는 이 인터페이스를 충족시키는 다른 사용자
+   정의 객체일 수 있습니다.
+
+   *fix_imports* 가 참이고 *protocol* 이 3보다 작으면, pickle은 새로운
+   파이썬 3 이름을 파이썬 2에서 사용된 이전 모듈 이름에 매핑하려고 시
+   도하여, 파이썬 2에서 피클 데이터 스트림을 읽을 수 있도록 합니다.
+
+   If *buffer_callback* is None (the default), buffer views are
+   serialized into *file* as part of the pickle stream.
+
+   If *buffer_callback* is not None, then it can be called any number
+   of times with a buffer view.  If the callback returns a false value
+   (such as None), the given buffer is out-of-band; otherwise the
+   buffer is serialized in-band, i.e. inside the pickle stream.
+
+   It is an error if *buffer_callback* is not None and *protocol* is
+   None or smaller than 5.
+
+   버전 3.8에서 변경: *buffer_callback* 인자가 추가되었습니다.
+
+   dump(obj)
+
+      생성자에 주어진 열린 파일 객체에 *obj* 의 피클 된 표현을 씁니다.
+
+   persistent_id(obj)
+
+      기본적으로 아무것도 하지 않습니다. 이것은 서브 클래스가 재정의할
+      수 있게 하려고 존재합니다.
+
+      "persistent_id()" 가 "None" 을 반환하면, *obj* 는 보통 때처럼 피
+      클 됩니다. 다른 값은 "Pickler" 가 *obj* 의 지속성(persistent) ID
+      로 반환 값을 출력하도록 합니다. 이 지속성 ID의 의미는
+      "Unpickler.persistent_load()" 에 의해 정의되어야 합니다.
+      "persistent_id()" 에 의해 반환된 값 자체는 지속성 ID를 가질 수
+      없음에 유의하십시오.
+
+      자세한 내용과 사용 예는 외부 객체의 지속성를 참조하십시오.
+
+   dispatch_table
+
+      A pickler object's dispatch table is a registry of *reduction
+      functions* of the kind which can be declared using
+      "copyreg.pickle()".  It is a mapping whose keys are classes and
+      whose values are reduction functions.  A reduction function
+      takes a single argument of the associated class and should
+      conform to the same interface as a "__reduce__()" method.
+
+      기본적으로, 피클러 객체는 "dispatch_table" 어트리뷰트를 가지지
+      않을 것이고, 대신 "copyreg" 모듈에 의해 관리되는 전역 디스패치
+      테이블을 사용할 것입니다. 그러나 특정 피클러 객체의 피클링을 사
+      용자 정의하기 위해서 "dispatch_table" 어트리뷰트를 딕셔너리류 객
+      체로 설정할 수 있습니다. 또는, "Pickler" 의 서브 클래스가
+      "dispatch_table" 어트리뷰트를 가지고 있다면, 이 클래스의 인스턴
+      스를 위한 기본 디스패치 테이블로 사용됩니다.
+
+      사용 예는 디스패치 테이블을 참조하십시오.
+
+      버전 3.3에 추가.
+
+   reducer_override(obj)
+
+      Special reducer that can be defined in "Pickler" subclasses.
+      This method has priority over any reducer in the
+      "dispatch_table".  It should conform to the same interface as a
+      "__reduce__()" method, and can optionally return
+      "NotImplemented" to fallback on "dispatch_table"-registered
+      reducers to pickle "obj".
+
+      자세한 예는 형, 함수 및 기타 객체에 대한 사용자 정의 환원을 참조
+      하십시오.
+
+      버전 3.8에 추가.
+
+   fast
+
+      폐지되었습니다. 참값으로 설정된 경우 빠른 모드를 활성화합니다.
+      빠른 모드는 메모 사용을 비활성화하므로, 불필요한 PUT 옵코드를 생
+      성하지 않아 피클링 절차의 속도를 높입니다. 자신을 참조하는 객체
+      에 사용되면 안 됩니다. 그렇지 않으면 "Pickler" 가 무한 재귀에 빠
+      집니다.
+
+      더 간결한 피클이 필요하면 "pickletools.optimize()" 를 사용하십시
+      오.
+
+class pickle.Unpickler(file, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)
+
+   피클 데이터 스트림을 읽는 데 사용될 바이너리 파일을 받아들입니다.
+
+   피클의 프로토콜 버전이 자동으로 감지되므로 프로토콜 인자가 필요하지
+   않습니다.
+
+   인자 *file* 에는 세 가지 메서드가 있어야 합니다,
+   "io.BufferedIOBase" 인터페이스 처럼, 정수 인자를 받아들이는 read()
+   메서드, 버퍼 인자를 받아들이는 readinto() 메서드 그리고 인자가 없는
+   readline() 메서드. 따라서 *file* 은 바이너리 읽기를 위해 열린 디스
+   크 상의 파일, "io.BytesIO" 객체 또는 이 인터페이스를 만족하는 다른
+   사용자 정의 객체일 수 있습니다.
+
+   선택적 인자 *fix_imports*, *encoding* 및 *errors*는 파이썬 2에서 생
+   성된 피클 스트림에 대한 호환성 지원을 제어하는 데 사용됩니다.
+   *fix_imports* 가 참이면, pickle은 이전 파이썬 2 이름을 파이썬 3에서
+   사용된 새로운 이름으로 매핑하려고 합니다. *encoding* 과 *errors* 는
+   파이썬 2에 의해 피클 된 8비트 문자열 인스턴스를 디코딩하는 방법을
+   pickle에게 알려줍니다. 기본값은 각각 'ASCII'와 'strict' 입니다.
+   *encoding* 은 'bytes' 가 될 수 있는데, 8비트 문자열 인스턴스를 바이
+   트열 객체로 읽습니다. NumPy 배열과 파이썬 2에서 피클 된 "datetime",
+   "date" 및 "time" 인스턴스를 역 피클링하려면 "encoding='latin1'"을
+   사용해야 합니다.
+
+   If *buffers* is None (the default), then all data necessary for
+   deserialization must be contained in the pickle stream.  This means
+   that the *buffer_callback* argument was None when a "Pickler" was
+   instantiated (or when "dump()" or "dumps()" was called).
+
+   If *buffers* is not None, it should be an iterable of buffer-
+   enabled objects that is consumed each time the pickle stream
+   references an out-of-band buffer view.  Such buffers have been
+   given in order to the *buffer_callback* of a Pickler object.
+
+   버전 3.8에서 변경: *buffers* 인자가 추가되었습니다.
+
+   load()
+
+      생성자에 주어진 열린 파일 객체에서 객체의 피클 된 표현을 읽고,
+      그 안에 지정된 객체 계층 구조를 재구성하여 반환합니다. 객체의 피
+      클 된 표현 뒤에 남는 바이트열은 무시됩니다.
+
+   persistent_load(pid)
+
+      기본적으로 "UnpicklingError"를 발생시킵니다.
+
+      정의되면, "persistent_load()" 는 지속성 ID *pid* 로 지정된 객체
+      를 반환해야 합니다. 유효하지 않은 지속성 ID가 발견되면
+      "UnpicklingError"를 일으켜야 합니다.
+
+      자세한 내용과 사용 예는 외부 객체의 지속성를 참조하십시오.
+
+   find_class(module, name)
+
+      필요하면 *module* 을 임포트하고 거기에서 *name* 이라는 객체를 반
+      환합니다. 여기서 *module* 및 *name* 인자는 "str" 객체입니다. 그
+      이름이 제시하는 것과는 달리, "find_class()" 는 함수를 찾는 데에
+      도 사용됨에 유의하십시오.
+
+      로드되는 객체의 형과 로드 방법을 제어하기 위해 서브 클래스는 이
+      것을 재정의할 수 있고, 잠재적으로 보안 위험을 감소시킵니다. 자세
+      한 내용은 전역 제한하기를 참조하십시오.
+
+      "module", "name"을 인자로 감사 이벤트(auditing event)
+      "pickle.find_class"를 발생시킵니다.
+
+class pickle.PickleBuffer(buffer)
+
+   피클 가능한 데이터를 나타내는 버퍼의 래퍼. *buffer*는 *바이트열류
+   객체*나 N-차원 배열과 같은 버퍼 제공 객체여야 합니다.
+
+   "PickleBuffer" 자체가 버퍼 제공자이므로, "memoryview"와 같은 버퍼
+   제공 객체를 기대하는 다른 API로 전달할 수 있습니다.
+
+   "PickleBuffer" 객체는 피클 프로토콜 5 이상만 사용하여 직렬화할 수
+   있습니다. 그들은 아웃 오브 밴드 직렬화 대상입니다.
+
+   버전 3.8에 추가.
+
+   raw()
+
+      이 버퍼의 하부 메모리 영역의 "memoryview"를 반환합니다. 반환된
+      객체는 "B" (부호 없는 바이트) 형식의 1-차원 C 연속 메모리 뷰입니
+      다. 버퍼가 C나 포트란 연속적이지 않으면 "BufferError"가 발생합니
+      다.
+
+   release()
+
+      PickleBuffer 객체에 의해 노출된 하부 버퍼를 해제합니다.
+
+
+어떤 것이 피클 되고 역 피클 될 수 있을까요?
+===========================================
+
+다음 형을 피클 할 수 있습니다:
+
+* "None", "True", and "False";
+
+* 정수, 실수, 복소수;
+
+* 문자열, 바이트열, 바이트 배열(bytearray);
+
+* 피클 가능한 객체만 포함하는 튜플, 리스트, 집합과 딕셔너리;
+
+* 모듈의 최상위 수준에서 액세스할 수 있는 (내장 및 사용자 정의) 함수
+  ("lambda" 가 아니라 "def" 를 사용하는);
+
+* 모듈의 최상위 수준에서 액세스할 수 있는 클래스;
+
+* instances of such classes whose "__dict__" or the result of calling
+  "__getstate__()" is picklable  (see section 클래스 인스턴스 피클링
+  for details).
+
+피클 가능하지 않은 객체를 피클 하려고 하면 "PicklingError" 예외가 발생
+합니다; 이런 일이 일어났을 때, 특정할 수 없는 길이의 바이트열이 하부
+파일에 이미 기록되었을 수 있습니다. 매우 재귀적인 데이터 구조를 피클
+하려고 하면 최대 재귀 깊이를 초과할 수 있고, 이때 "RecursionError" 가
+발생합니다. "sys.setrecursionlimit()" 을 사용하여 이 제한을 조심스럽게
+올릴 수 있습니다.
+
+함수(내장 및 사용자 정의)는 값이 아니라 완전히 *정규화된 이름*으로 피
+클 됨에 유의하십시오. [2] 이것은 함수를 포함하는 모듈과 클래스의 이름
+과 함께 함수의 이름만 피클 된다는 것을 의미합니다. 함수의 코드도 함수
+어트리뷰트도 피클 되지 않습니다. 따라서 정의하는 모듈은 역 피클 환경에
+서 임포트 가능해야 하며, 모듈에는 그 이름의 객체가 있어야 합니다. 그렇
+지 않으면 예외가 발생합니다. [3]
+
+마찬가지로, 클래스는 완전히 정규화된 이름으로 피클 되므로 역 피클링 환
+경에서 같은 제한이 적용됩니다. 클래스의 코드 나 데이터가 피클 되지 않
+음에 유의하세요. 그래서 다음 예제에서 클래스 어트리뷰트 "attr" 은 역
+피클링 환경에서 복원되지 않습니다:
+
+   class Foo:
+       attr = 'A class attribute'
+
+   picklestring = pickle.dumps(Foo)
+
+이러한 제한이 피클 가능한 함수와 클래스가 모듈의 최상위 수준에서 정의
+되어야 하는 이유입니다.
+
+Similarly, when class instances are pickled, their class's code and
+data are not pickled along with them.  Only the instance data are
+pickled.  This is done on purpose, so you can fix bugs in a class or
+add methods to the class and still load objects that were created with
+an earlier version of the class.  If you plan to have long-lived
+objects that will see many versions of a class, it may be worthwhile
+to put a version number in the objects so that suitable conversions
+can be made by the class's "__setstate__()" method.
+
+
+클래스 인스턴스 피클링
+======================
+
+이 절에서는 클래스 인스턴스를 피클 및 역 피클 하는 방법을 정의, 사용자
+정의 및 제어할 수 있는 일반적인 메커니즘을 설명합니다.
+
+In most cases, no additional code is needed to make instances
+picklable.  By default, pickle will retrieve the class and the
+attributes of an instance via introspection. When a class instance is
+unpickled, its "__init__()" method is usually *not* invoked.  The
+default behaviour first creates an uninitialized instance and then
+restores the saved attributes.  The following code shows an
+implementation of this behaviour:
+
+   def save(obj):
+       return (obj.__class__, obj.__dict__)
+
+   def restore(cls, attributes):
+       obj = cls.__new__(cls)
+       obj.__dict__.update(attributes)
+       return obj
+
+클래스는 다음과 같은 하나 이상의 특수 메서드를 제공하여 기본 동작을 변
+경할 수 있습니다:
+
+object.__getnewargs_ex__()
+
+   프로토콜 2 이상에서, "__getnewargs_ex__()" 메서드를 구현하는 클래스
+   는 역 피클링 때 "__new__()" 메서드에 전달되는 값을 지시할 수 있습니
+   다. 이 메서드는 "(args, kwargs)" 쌍을 반환해야 합니다. *args* 는 위
+   치 인자의 튜플이고 *kwargs* 는 이름있는 인자의 딕셔너리인데, 객체를
+   구성하는 데 사용됩니다. 그것들은 역 피클링 때 "__new__()" 메서드로
+   전달될 것입니다.
+
+   클래스의 "__new__()" 메서드에 키워드 전용 인자가 필요하면 이 메서드
+   를 구현해야 합니다. 그렇지 않으면 호환성을 위해 "__getnewargs__()"
+   를 구현하는 것이 좋습니다.
+
+   버전 3.6에서 변경: "__getnewargs_ex__()" 는 이제 프로토콜 2와 3에서
+   사용됩니다.
+
+object.__getnewargs__()
+
+   이 메서드는 "__getnewargs_ex__()" 와 비슷한 목적을 수행하지만, 위치
+   인자만 지원합니다. 역 피클링 때 "__new__()" 메서드에 전달될 인자의
+   튜플 "args" 를 반환해야 합니다.
+
+   "__getnewargs_ex__()" 가 정의되면 "__getnewargs__()" 는 호출되지 않
+   습니다.
+
+   버전 3.6에서 변경: 파이썬 3.6 이전에는, 프로토콜 2와 3에서
+   "__getnewargs_ex__()" 대신 "__getnewargs__()" 가 호출되었습니다.
+
+object.__getstate__()
+
+   Classes can further influence how their instances are pickled; if
+   the class defines the method "__getstate__()", it is called and the
+   returned object is pickled as the contents for the instance,
+   instead of the contents of the instance's dictionary.  If the
+   "__getstate__()" method is absent, the instance's "__dict__" is
+   pickled as usual.
+
+object.__setstate__(state)
+
+   역 피클링 때, 클래스가 "__setstate__()" 를 정의하면, 그것은 역 피클
+   된 상태(state)로 호출됩니다. 이 경우 상태 객체가 딕셔너리일 필요는
+   없습니다. 그렇지 않으면, 피클 된 상태는 딕셔너리 여야하고 그 항목이
+   새 인스턴스의 딕셔너리에 삽입됩니다.
+
+   참고:
+
+     If "__getstate__()" returns a false value, the "__setstate__()"
+     method will not be called upon unpickling.
+
+Refer to the section 상태 저장 객체 처리 for more information about
+how to use the methods "__getstate__()" and "__setstate__()".
+
+참고:
+
+  At unpickling time, some methods like "__getattr__()",
+  "__getattribute__()", or "__setattr__()" may be called upon the
+  instance.  In case those methods rely on some internal invariant
+  being true, the type should implement "__new__()" to establish such
+  an invariant, as "__init__()" is not called when unpickling an
+  instance.
+
+As we shall see, pickle does not use directly the methods described
+above.  In fact, these methods are part of the copy protocol which
+implements the "__reduce__()" special method.  The copy protocol
+provides a unified interface for retrieving the data necessary for
+pickling and copying objects. [4]
+
+Although powerful, implementing "__reduce__()" directly in your
+classes is error prone.  For this reason, class designers should use
+the high-level interface (i.e., "__getnewargs_ex__()",
+"__getstate__()" and "__setstate__()") whenever possible.  We will
+show, however, cases where using "__reduce__()" is the only option or
+leads to more efficient pickling or both.
+
+object.__reduce__()
+
+   인터페이스는 현재 다음과 같이 정의됩니다. "__reduce__()" 메서드는
+   아무런 인자도 받아들이지 않으며 문자열이나 바람직하게는 튜플을 반환
+   합니다 (반환된 객체는 흔히 "환원 값(reduce value)"이라고 불립니다).
+
+   문자열이 반환되면, 문자열은 전역 변수의 이름으로 해석되어야 합니다.
+   모듈에 상대적인 객체의 지역 이름이어야 합니다; pickle 모듈은 객체의
+   모듈을 결정하기 위해 모듈 이름 공간을 검색합니다. 이 동작은 일반적
+   으로 싱글톤에 유용합니다.
+
+   튜플이 반환될 때는, 길이가 2나 6이 되어야 합니다. 선택적인 항목은
+   생략되거나 "None" 이 값으로 제공될 수 있습니다. 각 항목의 의미는 순
+   서대로 다음과 같습니다:
+
+   * 객체의 초기 버전을 만들기 위해 호출할 콜러블 객체.
+
+   * 콜러블 객체에 대한 인자의 튜플. 콜러블 객체가 인자를 받아들이지
+     않으면 빈 튜플을 제공해야 합니다.
+
+   * 선택적으로, 객체의 상태. 앞에서 설명한 대로 객체의
+     "__setstate__()" 메서드에 전달됩니다. 객체에 그런 메서드가 없다면
+     , 그 값은 딕셔너리 여야 하며 객체의 "__dict__" 어트리뷰트에 추가
+     됩니다.
+
+   * Optionally, an iterator (and not a sequence) yielding successive
+     items. These items will be appended to the object either using
+     "obj.append(item)" or, in batch, using
+     "obj.extend(list_of_items)". This is primarily used for list
+     subclasses, but may be used by other classes as long as they have
+     "append()" and "extend()" methods with the appropriate signature.
+     (Whether "append()" or "extend()" is used depends on which pickle
+     protocol version is used as well as the number of items to
+     append, so both must be supported.)
+
+   * 선택적으로, 연속적인 키-값 쌍을 생성하는 이터레이터(시퀀스가 아닙
+     니다). 이 항목들은 "obj[key] = value" 를 사용하여 객체에 저장됩니
+     다. 이것은 주로 딕셔너리 서브 클래스에 사용되지만,
+     "__setitem__()" 을 구현하는 한 다른 클래스에서 사용될 수 있습니다
+     .
+
+   * 선택적으로, "(obj, state)" 서명을 가진 콜러블. 이 콜러블은 "obj"
+     의 정적 "__setstate__()" 메서드 대신에 특정 객체의 상태 갱신 동작
+     을 프로그래밍 방식으로 제어할 수 있도록 합니다. "None"이 아니면,
+     이 콜러블은 "obj"의 "__setstate__()"보다 우선 합니다.
+
+     버전 3.8에 추가: 선택적인 여섯 번째 튜플 항목 "(obj, state)"가 추
+     가되었습니다.
+
+object.__reduce_ex__(protocol)
+
+   또는, "__reduce_ex__()" 메서드를 정의할 수 있습니다. 유일한 차이점
+   은 이 메서드가 프로토콜 버전인 단일 정수 인자를 받아들여야 한다는
+   것입니다. 정의되면, pickle은 "__reduce__()" 메서드보다 선호합니다.
+   또한, "__reduce__()" 는 자동으로 확장 버전의 동의어가 됩니다. 이 메
+   서드의 주된 용도는 구형 파이썬 배포를 위해 과거 호환성 있는 환원 값
+   을 제공하는 것입니다.
+
+
+외부 객체의 지속성
+------------------
+
+객체 지속성의 효용을 위해, "pickle" 모듈은 피클 된 데이터 스트림 밖의
+객체에 대한 참조 개념을 지원합니다. 이러한 객체는 지속성 ID에 의해 참
+조되며, 영숫자 문자열(프로토콜 0의 경우) [5] 또는 임의의 객체(모든 최
+신 프로토콜의 경우)여야 합니다.
+
+그러한 지속성 ID의 해석은 "pickle" 모듈에 의해 정의되지 않습니다; 이
+해석을 피클러와 역 피클러의 사용자 정의 메서드에 위임합니다, 각각
+"persistent_id()"와 "persistent_load()".
+
+지속성 ID를 가진 객체를 피클 하기 위해서, 피클러는 객체를 인자로 받아
+서 그 객체에 대해 "None" 또는 지속성 ID를 반환하는 사용자 정의
+"persistent_id()" 메서드가 있어야 합니다. "None" 이 반환되면, 피클러는
+단순히 객체를 피클 합니다. 지속성 ID 문자열이 반환되면, 피클러는 마커
+와 함께 해당 객체를 피클 하여 역 피클러가 이를 지속성 ID로 인식하게 합
+니다.
+
+외부 객체를 역 피클 하려면, 역 피클러는 지속성 ID 객체를 받아들여 참조
+된 객체를 반환하는 사용자 정의 "persistent_load()" 메서드를 가져야 합
+니다.
+
+다음은 지속성 ID를 외부 객체를 참조로 피클 하는데 사용하는 방법을 보여
+주는 포괄적인 예입니다.
+
+   # Simple example presenting how persistent ID can be used to pickle
+   # external objects by reference.
+
+   import pickle
+   import sqlite3
+   from collections import namedtuple
+
+   # Simple class representing a record in our database.
+   MemoRecord = namedtuple("MemoRecord", "key, task")
+
+   class DBPickler(pickle.Pickler):
+
+       def persistent_id(self, obj):
+           # Instead of pickling MemoRecord as a regular class instance, we emit a
+           # persistent ID.
+           if isinstance(obj, MemoRecord):
+               # Here, our persistent ID is simply a tuple, containing a tag and a
+               # key, which refers to a specific record in the database.
+               return ("MemoRecord", obj.key)
+           else:
+               # If obj does not have a persistent ID, return None. This means obj
+               # needs to be pickled as usual.
+               return None
+
+
+   class DBUnpickler(pickle.Unpickler):
+
+       def __init__(self, file, connection):
+           super().__init__(file)
+           self.connection = connection
+
+       def persistent_load(self, pid):
+           # This method is invoked whenever a persistent ID is encountered.
+           # Here, pid is the tuple returned by DBPickler.
+           cursor = self.connection.cursor()
+           type_tag, key_id = pid
+           if type_tag == "MemoRecord":
+               # Fetch the referenced record from the database and return it.
+               cursor.execute("SELECT * FROM memos WHERE key=?", (str(key_id),))
+               key, task = cursor.fetchone()
+               return MemoRecord(key, task)
+           else:
+               # Always raises an error if you cannot return the correct object.
+               # Otherwise, the unpickler will think None is the object referenced
+               # by the persistent ID.
+               raise pickle.UnpicklingError("unsupported persistent object")
+
+
+   def main():
+       import io
+       import pprint
+
+       # Initialize and populate our database.
+       conn = sqlite3.connect(":memory:")
+       cursor = conn.cursor()
+       cursor.execute("CREATE TABLE memos(key INTEGER PRIMARY KEY, task TEXT)")
+       tasks = (
+           'give food to fish',
+           'prepare group meeting',
+           'fight with a zebra',
+           )
+       for task in tasks:
+           cursor.execute("INSERT INTO memos VALUES(NULL, ?)", (task,))
+
+       # Fetch the records to be pickled.
+       cursor.execute("SELECT * FROM memos")
+       memos = [MemoRecord(key, task) for key, task in cursor]
+       # Save the records using our custom DBPickler.
+       file = io.BytesIO()
+       DBPickler(file).dump(memos)
+
+       print("Pickled records:")
+       pprint.pprint(memos)
+
+       # Update a record, just for good measure.
+       cursor.execute("UPDATE memos SET task='learn italian' WHERE key=1")
+
+       # Load the records from the pickle data stream.
+       file.seek(0)
+       memos = DBUnpickler(file, conn).load()
+
+       print("Unpickled records:")
+       pprint.pprint(memos)
+
+
+   if __name__ == '__main__':
+       main()
+
+
+디스패치 테이블
+---------------
+
+피클링에 의존하는 다른 코드를 방해하지 않고 일부 클래스의 피클링을 사
+용자 정의하려면, 사설 디스패치 테이블을 갖는 피클러를 만들 수 있습니다
+.
+
+The global dispatch table managed by the "copyreg" module is available
+as "copyreg.dispatch_table".  Therefore, one may choose to use a
+modified copy of "copyreg.dispatch_table" as a private dispatch table.
+
+예를 들면
+
+   f = io.BytesIO()
+   p = pickle.Pickler(f)
+   p.dispatch_table = copyreg.dispatch_table.copy()
+   p.dispatch_table[SomeClass] = reduce_SomeClass
+
+는 "SomeClass" 클래스를 특별히 처리하는 사설 디스패치 테이블을 갖는
+"pickle.Pickler" 의 인스턴스를 생성합니다. 또는, 코드
+
+   class MyPickler(pickle.Pickler):
+       dispatch_table = copyreg.dispatch_table.copy()
+       dispatch_table[SomeClass] = reduce_SomeClass
+   f = io.BytesIO()
+   p = MyPickler(f)
+
+가 같은 일을 하지만, "MyPickler" 의 모든 인스턴스는 기본적으로 사설 디
+스패치 테이블을 공유합니다. 반면에, 다음 코드
+
+   copyreg.pickle(SomeClass, reduce_SomeClass)
+   f = io.BytesIO()
+   p = pickle.Pickler(f)
+
+는 "copyreg" 모듈의 모든 사용자가 공유하는 전역 디스패치 테이블을 수정
+합니다.
+
+
+상태 저장 객체 처리
+-------------------
+
+Here's an example that shows how to modify pickling behavior for a
+class. The "TextReader" class opens a text file, and returns the line
+number and line contents each time its "readline()" method is called.
+If a "TextReader" instance is pickled, all attributes *except* the
+file object member are saved. When the instance is unpickled, the file
+is reopened, and reading resumes from the last location. The
+"__setstate__()" and "__getstate__()" methods are used to implement
+this behavior.
+
+   class TextReader:
+       """Print and number lines in a text file."""
+
+       def __init__(self, filename):
+           self.filename = filename
+           self.file = open(filename)
+           self.lineno = 0
+
+       def readline(self):
+           self.lineno += 1
+           line = self.file.readline()
+           if not line:
+               return None
+           if line.endswith('\n'):
+               line = line[:-1]
+           return "%i: %s" % (self.lineno, line)
+
+       def __getstate__(self):
+           # Copy the object's state from self.__dict__ which contains
+           # all our instance attributes. Always use the dict.copy()
+           # method to avoid modifying the original state.
+           state = self.__dict__.copy()
+           # Remove the unpicklable entries.
+           del state['file']
+           return state
+
+       def __setstate__(self, state):
+           # Restore instance attributes (i.e., filename and lineno).
+           self.__dict__.update(state)
+           # Restore the previously opened file's state. To do so, we need to
+           # reopen it and read from it until the line count is restored.
+           file = open(self.filename)
+           for _ in range(self.lineno):
+               file.readline()
+           # Finally, save the file.
+           self.file = file
+
+사용 예는 다음과 같은 식입니다:
+
+   >>> reader = TextReader("hello.txt")
+   >>> reader.readline()
+   '1: Hello world!'
+   >>> reader.readline()
+   '2: I am line number two.'
+   >>> new_reader = pickle.loads(pickle.dumps(reader))
+   >>> new_reader.readline()
+   '3: Goodbye!'
+
+
+형, 함수 및 기타 객체에 대한 사용자 정의 환원
+=============================================
+
+버전 3.8에 추가.
+
+때로, "dispatch_table"이 충분히 유연하지 않을 수 있습니다. 특히 객체의
+형이 아닌 다른 기준에 따라 피클링을 사용자 정의하거나, 함수와 클래스
+피클링을 사용자 정의하고 싶을 수 있습니다.
+
+For those cases, it is possible to subclass from the "Pickler" class
+and implement a "reducer_override()" method. This method can return an
+arbitrary reduction tuple (see "__reduce__()"). It can alternatively
+return "NotImplemented" to fallback to the traditional behavior.
+
+"dispatch_table"과 "reducer_override()"가 모두 정의되면,
+"reducer_override()" 메서드가 우선합니다.
+
+참고:
+
+  성능상의 이유로, 다음과 같은 객체에 대해서는 "reducer_override()"가
+  호출되지 않을 수 있습니다: "None", "True", "False" 및 "int",
+  "float", "bytes", "str", "dict", "set", "frozenset", "list" 및
+  "tuple"의 정확한(exact) 인스턴스.
+
+다음은 주어진 클래스를 피클링하고 재구성할 수 있도록 하는 간단한 예제
+입니다:
+
+   import io
+   import pickle
+
+   class MyClass:
+       my_attribute = 1
+
+   class MyPickler(pickle.Pickler):
+       def reducer_override(self, obj):
+           """Custom reducer for MyClass."""
+           if getattr(obj, "__name__", None) == "MyClass":
+               return type, (obj.__name__, obj.__bases__,
+                             {'my_attribute': obj.my_attribute})
+           else:
+               # For any other object, fallback to usual reduction
+               return NotImplemented
+
+   f = io.BytesIO()
+   p = MyPickler(f)
+   p.dump(MyClass)
+
+   del MyClass
+
+   unpickled_class = pickle.loads(f.getvalue())
+
+   assert isinstance(unpickled_class, type)
+   assert unpickled_class.__name__ == "MyClass"
+   assert unpickled_class.my_attribute == 1
+
+
+아웃 오브 밴드 버퍼
+===================
+
+버전 3.8에 추가.
+
+일부 상황에서는, "pickle" 모듈을 사용하여 많은 양의 데이터를 전송합니
+다. 따라서 성능과 자원 소비를 보존하기 위해 메모리 복사 횟수를 최소화
+하는 것이 중요할 수 있습니다. 그러나, "pickle" 모듈의 정상적인 작동은,
+객체의 그래프(graph)적인 구조를 순차적인 바이트 스트림으로 변환하기 때
+문에, 본질적으로 피클 스트림과의 데이터 복사를 수반합니다.
+
+*제공자(provider)*(전송될 객체 형의 구현)와 *소비자(consumer)*(통신 시
+스템의 구현)가 모두 피클 프로토콜 5 이상에서 제공되는 아웃 오브 밴드
+전송 기능을 지원하면 이 제약 조건을 피할 수 있습니다.
+
+
+제공자 API
+----------
+
+The large data objects to be pickled must implement a
+"__reduce_ex__()" method specialized for protocol 5 and higher, which
+returns a "PickleBuffer" instance (instead of e.g. a "bytes" object)
+for any large data.
+
+"PickleBuffer" 객체는 하부 버퍼가 아웃 오브 밴드 전송 대상이라는 *신호
+를 보냅니다*. 이러한 객체는 "pickle" 모듈의 일반적인 사용과 호환됩니다
+. 그러나, 소비자는 "pickle"에게 그 버퍼를 스스로 처리하겠다고 알릴 수
+도 있습니다.
+
+
+소비자 API
+----------
+
+통신 시스템은 객체 그래프를 직렬화할 때 생성된 "PickleBuffer" 객체의
+사용자 정의 처리를 활성화할 수 있습니다.
+
+송신 측에서는, *buffer_callback* 인자를 "Pickler" (또는 "dump()"나
+"dumps()" 함수)에 전달해야 합니다. 이 인자는 객체 그래프를 피클링할 때
+생성된 각 "PickleBuffer"로 호출됩니다. *buffer_callback*에 의해 누적된
+버퍼는 피클 스트림으로 복사되지 않고, 저렴한 마커만 삽입됩니다.
+
+수신 측에서는, *buffer_callback*에 전달된 버퍼의 이터러블인 *buffers*
+인자를 "Unpickler" (또는 "load()"나 "loads()" 함수)에 전달해야 합니다.
+그 이터러블은 *buffer_callback*에 전달된 것과 같은 순서로 버퍼를 만들
+어야 합니다. 이러한 버퍼는 피클링이 원래 "PickleBuffer" 객체를 생성한
+객체의 재구성자가 기대하는 데이터를 제공합니다.
+
+송신 측과 수신 측 사이에서, 통신 시스템은 아웃 오브 밴드 버퍼를 위한
+자체 전송 메커니즘을 자유롭게 구현할 수 있습니다. 잠재적인 최적화에는
+공유 메모리나 데이터 유형에 따른 압축이 포함됩니다.
+
+
+예제
+----
+
+다음은 아웃 오브 버퍼 피클링에 참여할 수 있는 "bytearray" 서브 클래스
+를 구현하는 간단한 예제입니다:
+
+   class ZeroCopyByteArray(bytearray):
+
+       def __reduce_ex__(self, protocol):
+           if protocol >= 5:
+               return type(self)._reconstruct, (PickleBuffer(self),), None
+           else:
+               # PickleBuffer is forbidden with pickle protocols <= 4.
+               return type(self)._reconstruct, (bytearray(self),)
+
+       @classmethod
+       def _reconstruct(cls, obj):
+           with memoryview(obj) as m:
+               # Get a handle over the original buffer object
+               obj = m.obj
+               if type(obj) is cls:
+                   # Original buffer object is a ZeroCopyByteArray, return it
+                   # as-is.
+                   return obj
+               else:
+                   return cls(obj)
+
+재구성자("_reconstruct" 클래스 메서드)는 올바른 형이면 버퍼를 제공하는
+객체를 반환합니다. 이것은 이 장난감 예제에서 제로-복사 동작을 흉내 내
+는 손쉬운 방법입니다.
+
+소비자 측에서는, 그 객체들을 일반적인 방법으로 피클 할 수 있습니다. 역
+직렬화될 때 원래 객체의 사본을 제공합니다:
+
+   b = ZeroCopyByteArray(b"abc")
+   data = pickle.dumps(b, protocol=5)
+   new_b = pickle.loads(data)
+   print(b == new_b)  # True
+   print(b is new_b)  # False: a copy was made
+
+그러나 *buffer_callback*을 전달하고 역 직렬화할 때 누적된 버퍼를 돌려
+주면, 원래의 객체를 다시 얻을 수 있습니다:
+
+   b = ZeroCopyByteArray(b"abc")
+   buffers = []
+   data = pickle.dumps(b, protocol=5, buffer_callback=buffers.append)
+   new_b = pickle.loads(data, buffers=buffers)
+   print(b == new_b)  # True
+   print(b is new_b)  # True: no copy was made
+
+이 예제는 "bytearray"가 자체 메모리를 할당한다는 사실로 인해 제한됩니
+다: 즉, 다른 객체의 메모리를 사용하는 "bytearray" 인스턴스를 만들 수
+없습니다. 그러나, NumPy 배열과 같은 제삼자 데이터형에는 이러한 제한이
+없으며, 별개의 프로세스나 시스템 간에 전송할 때 제로-복사 피클링(또는
+최소한의 복사)을 사용할 수 있습니다.
+
+더 보기: **PEP 574** -- 아웃 오브 밴드 데이터를 포함하는 피클 프로토콜 5
+
+
+전역 제한하기
+=============
+
+기본적으로, 역 피클링은 피클 데이터에서 찾은 모든 클래스나 함수를 임포
+트 합니다. 많은 응용 프로그램에서는, 역 피클러가 임의 코드를 임포트하
+고 호출할 수 있으므로, 이 동작을 받아들일 수 없습니다. 이 손으로 만든
+피클 데이터 스트림이 로드될 때 하는 일을 생각해보십시오:
+
+   >>> import pickle
+   >>> pickle.loads(b"cos\nsystem\n(S'echo hello world'\ntR.")
+   hello world
+   0
+
+이 예제에서, 역 피클러는 "os.system()" 함수를 임포트하고 문자열 인자
+"echo hello world"를 적용합니다. 이 예제가 공격적이지는 않지만, 어떤
+것들은 시스템을 손상할 수 있다고 상상하기 어렵지 않습니다.
+
+이런 이유로, 여러분은 "Unpickler.find_class()"를 사용자 정의하여 언 피
+클 되는 것을 제어하고 싶을 수 있습니다. 이름이 제안하는 것과는 달리,
+"Unpickler.find_class()" 는 전역(즉, 클래스나 함수)이 요청될 때마다 호
+출됩니다. 따라서 전역을 완전히 금지하거나 안전한 부분집합으로 제한할
+수 있습니다.
+
+다음은 "builtins" 모듈에서 몇 가지 안전한 클래스만 로드되도록 허용하는
+역 피클러의 예입니다:
+
+   import builtins
+   import io
+   import pickle
+
+   safe_builtins = {
+       'range',
+       'complex',
+       'set',
+       'frozenset',
+       'slice',
+   }
+
+   class RestrictedUnpickler(pickle.Unpickler):
+
+       def find_class(self, module, name):
+           # Only allow safe classes from builtins.
+           if module == "builtins" and name in safe_builtins:
+               return getattr(builtins, name)
+           # Forbid everything else.
+           raise pickle.UnpicklingError("global '%s.%s' is forbidden" %
+                                        (module, name))
+
+   def restricted_loads(s):
+       """Helper function analogous to pickle.loads()."""
+       return RestrictedUnpickler(io.BytesIO(s)).load()
+
+우리의 역 피클러가 의도대로 작동하는 사용 예:
+
+   >>> restricted_loads(pickle.dumps([1, 2, range(15)]))
+   [1, 2, range(0, 15)]
+   >>> restricted_loads(b"cos\nsystem\n(S'echo hello world'\ntR.")
+   Traceback (most recent call last):
+     ...
+   pickle.UnpicklingError: global 'os.system' is forbidden
+   >>> restricted_loads(b'cbuiltins\neval\n'
+   ...                  b'(S\'getattr(__import__("os"), "system")'
+   ...                  b'("echo hello world")\'\ntR.')
+   Traceback (most recent call last):
+     ...
+   pickle.UnpicklingError: global 'builtins.eval' is forbidden
+
+예를 통해 알 수 있듯이, 역 피클을 허락하는 것에 주의를 기울여야 합니다
+. 따라서 보안이 중요하다면, "xmlrpc.client" 나 제삼자 솔루션의 마샬링
+API 같은 대안을 고려할 수 있습니다.
+
+
+성능
+====
+
+최신 버전의 피클 프로토콜(프로토콜 2 이상)은 몇 가지 공통 기능 및 내장
+형에 대한 효율적인 바이너리 인코딩을 제공합니다. 또한, "pickle" 모듈은
+C로 작성된 투명한 최적화기를 가지고 있습니다.
+
+
+예제
+====
+
+가장 간단한 코드로, "dump()"와 "load()" 함수를 사용하십시오.
+
+   import pickle
+
+   # An arbitrary collection of objects supported by pickle.
+   data = {
+       'a': [1, 2.0, 3+4j],
+       'b': ("character string", b"byte string"),
+       'c': {None, True, False}
+   }
+
+   with open('data.pickle', 'wb') as f:
+       # Pickle the 'data' dictionary using the highest protocol available.
+       pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+다음 예제는 결과로 나온 피클 데이터를 읽습니다.
+
+   import pickle
+
+   with open('data.pickle', 'rb') as f:
+       # The protocol version used is detected automatically, so we do not
+       # have to specify it.
+       data = pickle.load(f)
+
+더 보기:
+
+  모듈 "copyreg"
+     확장형에 대한 피클 인터페이스 생성자 등록
+
+  모듈 "pickletools"
+     피클 된 데이터로 작업하고 분석하는 도구.
+
+  모듈 "shelve"
+     객체의 인덱싱 된 데이터베이스; "pickle"을 사용합니다.
+
+  모듈 "copy"
+     얕거나 깊은 객체 복사.
+
+  모듈 "marshal"
+     내장형의 고성능 직렬화.
+
+-[ 각주 ]-
+
+[1] 이것을 "marshal" 모듈과 혼동하지 마십시오.
+
+[2] 이것이 "lambda" 함수가 pickle 될 수 없는 이유입니다: 모든 "lambda"
+    함수는 같은 이름을 공유합니다: "<lambda>".
+
+[3] 발생하는 예외는 "ImportError" 나 "AttributeError" 일 가능성이 크지
+    만, 그 밖의 다른 것일 수 있습니다.
+
+[4] "copy" 모듈은 얕거나 깊은 복사 연산에 이 프로토콜을 사용합니다.
+
+[5] 영숫자 문자의 제한은 프로토콜 0에서 지속성 ID가 개행 문자로 구분되
+    기 때문입니다. 따라서 지속성 ID에 개행 문자가 포함되면 결과 피클돤
+    데이터를 읽을 수 없게 됩니다.

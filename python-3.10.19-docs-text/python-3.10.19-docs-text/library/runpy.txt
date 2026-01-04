@@ -1,0 +1,165 @@
+"runpy" --- Locating and executing Python modules
+*************************************************
+
+**소스 코드:** Lib/runpy.py
+
+======================================================================
+
+"runpy" 모듈은 파이썬 모듈을 먼저 임포트 하지 않고 찾아서 실행하는 데
+사용합니다. 주요 용도는 파일 시스템이 아닌 파이썬 모듈 이름 공간을 사
+용하여 스크립트를 찾을 수 있는 "-m" 명령 줄 스위치를 구현하는 것입니다
+.
+
+이것은 샌드박스 모듈이 *아닙니다* - 모든 코드가 현재 프로세스에서 실행
+되고, 모든 부작용(가령 다른 모듈의 캐시된 임포트)은 함수가 반환된 후에
+도 그대로 유지됩니다.
+
+또한, 실행된 코드에서 정의된 모든 함수와 클래스는 "runpy" 함수가 반환
+된 후 올바르게 작동하지 않을 수 있습니다. 이러한 제한이 주어진 사용 사
+례에 적합하지 않으면, 이 모듈보다 "importlib"가 더 적합한 선택일 수 있
+습니다.
+
+"runpy" 모듈은 두 가지 함수를 제공합니다:
+
+runpy.run_module(mod_name, init_globals=None, run_name=None, alter_sys=False)
+
+   Execute the code of the specified module and return the resulting
+   module globals dictionary. The module's code is first located using
+   the standard import mechanism (refer to **PEP 302** for details)
+   and then executed in a fresh module namespace.
+
+   The *mod_name* argument should be an absolute module name. If the
+   module name refers to a package rather than a normal module, then
+   that package is imported and the "__main__" submodule within that
+   package is then executed and the resulting module globals
+   dictionary returned.
+
+   The optional dictionary argument *init_globals* may be used to pre-
+   populate the module's globals dictionary before the code is
+   executed. The supplied dictionary will not be modified. If any of
+   the special global variables below are defined in the supplied
+   dictionary, those definitions are overridden by "run_module()".
+
+   The special global variables "__name__", "__spec__", "__file__",
+   "__cached__", "__loader__" and "__package__" are set in the globals
+   dictionary before the module code is executed (Note that this is a
+   minimal set of variables - other variables may be set implicitly as
+   an interpreter implementation detail).
+
+   "__name__"은 (이 선택적 인자가 "None"이 아니면) *run_name*으로, 명
+   명된 모듈이 패키지면 "mod_name + '.__main__'"으로, 그렇지 않으면
+   *mod_name* 인자로 설정됩니다.
+
+   "__spec__" will be set appropriately for the *actually* imported
+   module (that is, "__spec__.name" will always be *mod_name* or
+   "mod_name + '.__main__", never *run_name*).
+
+   "__file__", "__cached__", "__loader__" 및 "__package__"는 모듈 스펙
+   에 따라 표준적으로 설정됩니다.
+
+   인자 *alter_sys*가 제공되고 "True"로 평가되면, "sys.argv[0]"은
+   "__file__" 값으로 갱신되고 "sys.modules[__name__]"은 실행 중인 모듈
+   에 대한 임시 모듈 객체로 갱신됩니다. "sys.argv[0]"과
+   "sys.modules[__name__]"은 함수가 반환되기 전에 원래 값으로 복원됩니
+   다.
+
+   Note that this manipulation of "sys" is not thread-safe. Other
+   threads may see the partially initialised module, as well as the
+   altered list of arguments. It is recommended that the "sys" module
+   be left alone when invoking this function from threaded code.
+
+   더 보기: 명령 줄에서 동등한 기능을 제공하는 "-m" 옵션.
+
+   버전 3.1에서 변경: Added ability to execute packages by looking for
+   a "__main__" submodule.
+
+   버전 3.2에서 변경: "__cached__" 전역 변수 추가 (**PEP 3147**을 참조
+   하십시오).
+
+   버전 3.4에서 변경: **PEP 451**이 추가한 모듈 스펙 기능을 활용하도록
+   갱신되었습니다. 이것은 실제 모듈 이름을 항상 "__spec__.name"으로 액
+   세스할 수 있으면서, "__cached__"가 이 방법으로 실행되는 모듈에 대해
+   올바르게 설정되도록 합니다.
+
+runpy.run_path(path_name, init_globals=None, run_name=None)
+
+   Execute the code at the named filesystem location and return the
+   resulting module globals dictionary. As with a script name supplied
+   to the CPython command line, the supplied path may refer to a
+   Python source file, a compiled bytecode file or a valid sys.path
+   entry containing a "__main__" module (e.g. a zipfile containing a
+   top-level "__main__.py" file).
+
+   For a simple script, the specified code is simply executed in a
+   fresh module namespace. For a valid sys.path entry (typically a
+   zipfile or directory), the entry is first added to the beginning of
+   "sys.path". The function then looks for and executes a "__main__"
+   module using the updated path. Note that there is no special
+   protection against invoking an existing "__main__" entry located
+   elsewhere on "sys.path" if there is no such module at the specified
+   location.
+
+   The optional dictionary argument *init_globals* may be used to pre-
+   populate the module's globals dictionary before the code is
+   executed. The supplied dictionary will not be modified. If any of
+   the special global variables below are defined in the supplied
+   dictionary, those definitions are overridden by "run_path()".
+
+   The special global variables "__name__", "__spec__", "__file__",
+   "__cached__", "__loader__" and "__package__" are set in the globals
+   dictionary before the module code is executed (Note that this is a
+   minimal set of variables - other variables may be set implicitly as
+   an interpreter implementation detail).
+
+   "__name__"은 (이 선택적 인자가 "None"이 아니면) *run_name*으로, 그
+   렇지 않으면 "'<run_path>'"로 설정됩니다.
+
+   If the supplied path directly references a script file (whether as
+   source or as precompiled byte code), then "__file__" will be set to
+   the supplied path, and "__spec__", "__cached__", "__loader__" and
+   "__package__" will all be set to "None".
+
+   If the supplied path is a reference to a valid sys.path entry, then
+   "__spec__" will be set appropriately for the imported "__main__"
+   module (that is, "__spec__.name" will always be "__main__").
+   "__file__", "__cached__", "__loader__" and "__package__" will be
+   set as normal based on the module spec.
+
+   A number of alterations are also made to the "sys" module. Firstly,
+   "sys.path" may be altered as described above. "sys.argv[0]" is
+   updated with the value of "path_name" and "sys.modules[__name__]"
+   is updated with a temporary module object for the module being
+   executed. All modifications to items in "sys" are reverted before
+   the function returns.
+
+   Note that, unlike "run_module()", the alterations made to "sys" are
+   not optional in this function as these adjustments are essential to
+   allowing the execution of sys.path entries. As the thread-safety
+   limitations still apply, use of this function in threaded code
+   should be either serialised with the import lock or delegated to a
+   separate process.
+
+   더 보기: 명령 줄에서의 동등한 기능에 대한 인터페이스 옵션 ("python
+         path/to/script").
+
+   버전 3.2에 추가.
+
+   버전 3.4에서 변경: Updated to take advantage of the module spec
+   feature added by **PEP 451**. This allows "__cached__" to be set
+   correctly in the case where "__main__" is imported from a valid
+   sys.path entry rather than being executed directly.
+
+더 보기:
+
+  **PEP 338** -- 모듈을 스크립트로 실행하기
+     Nick Coghlan이 작성하고 구현한 PEP.
+
+  **PEP 366** -- 메인 모듈 명시적 상대 임포트
+     Nick Coghlan이 작성하고 구현한 PEP.
+
+  **PEP 451** -- 임포트 시스템의 ModuleSpec 형
+     Eric Snow가 작성하고 구현한 PEP
+
+  명령 줄과 환경 - CPython 명령 줄 세부 사항
+
+  "importlib.import_module()" 함수

@@ -1,0 +1,293 @@
+"token" --- Constants used with Python parse trees
+**************************************************
+
+**소스 코드:** Lib/token.py
+
+======================================================================
+
+이 모듈은 구문 분석 트리의 말단 노드의 숫자 값을 나타내는 상수를 제공
+합니다 (터미널 토큰). 언어 문법의 문맥에서 이름의 정의는 파이썬 배포판
+의 "Grammar/Tokens" 파일을 참조하십시오. 이름이 매핑되는 특정 숫자 값
+은 파이썬 버전 간에 변경될 수 있습니다.
+
+이 모듈은 숫자 코드에서 이름으로의 매핑과 몇몇 함수도 제공합니다. 이
+함수는 파이썬 C 헤더 파일의 정의를 반영합니다.
+
+token.tok_name
+
+   이 모듈에 정의된 상수의 숫자 값을 다시 이름 문자열로 매핑하여 사람
+   이 읽을 수 있는 구문 분석 트리 표현을 생성할 수 있도록 하는 딕셔너
+   리.
+
+token.ISTERMINAL(x)
+
+   터미널 토큰값이면 "True"를 반환합니다.
+
+token.ISNONTERMINAL(x)
+
+   비 터미널 토큰값이면 "True"를 반환합니다.
+
+token.ISEOF(x)
+
+   *x*가 입력의 마지막을 나타내는 표시면 "True"를 반환합니다.
+
+토큰 상수는 다음과 같습니다:
+
+token.ENDMARKER
+
+token.NAME
+
+token.NUMBER
+
+token.STRING
+
+token.NEWLINE
+
+token.INDENT
+
+token.DEDENT
+
+token.LPAR
+
+   Token value for ""("".
+
+token.RPAR
+
+   Token value for "")"".
+
+token.LSQB
+
+   Token value for ""["".
+
+token.RSQB
+
+   Token value for ""]"".
+
+token.COLON
+
+   Token value for "":"".
+
+token.COMMA
+
+   Token value for "","".
+
+token.SEMI
+
+   Token value for "";"".
+
+token.PLUS
+
+   Token value for ""+"".
+
+token.MINUS
+
+   Token value for ""-"".
+
+token.STAR
+
+   Token value for ""*"".
+
+token.SLASH
+
+   Token value for ""/"".
+
+token.VBAR
+
+   Token value for ""|"".
+
+token.AMPER
+
+   Token value for ""&"".
+
+token.LESS
+
+   Token value for ""<"".
+
+token.GREATER
+
+   Token value for "">"".
+
+token.EQUAL
+
+   Token value for ""="".
+
+token.DOT
+
+   Token value for ""."".
+
+token.PERCENT
+
+   Token value for ""%"".
+
+token.LBRACE
+
+   Token value for ""{"".
+
+token.RBRACE
+
+   Token value for ""}"".
+
+token.EQEQUAL
+
+   Token value for ""=="".
+
+token.NOTEQUAL
+
+   Token value for ""!="".
+
+token.LESSEQUAL
+
+   Token value for ""<="".
+
+token.GREATEREQUAL
+
+   Token value for "">="".
+
+token.TILDE
+
+   Token value for ""~"".
+
+token.CIRCUMFLEX
+
+   Token value for ""^"".
+
+token.LEFTSHIFT
+
+   Token value for ""<<"".
+
+token.RIGHTSHIFT
+
+   Token value for "">>"".
+
+token.DOUBLESTAR
+
+   Token value for ""**"".
+
+token.PLUSEQUAL
+
+   Token value for ""+="".
+
+token.MINEQUAL
+
+   Token value for ""-="".
+
+token.STAREQUAL
+
+   Token value for ""*="".
+
+token.SLASHEQUAL
+
+   Token value for ""/="".
+
+token.PERCENTEQUAL
+
+   Token value for ""%="".
+
+token.AMPEREQUAL
+
+   Token value for ""&="".
+
+token.VBAREQUAL
+
+   Token value for ""|="".
+
+token.CIRCUMFLEXEQUAL
+
+   Token value for ""^="".
+
+token.LEFTSHIFTEQUAL
+
+   Token value for ""<<="".
+
+token.RIGHTSHIFTEQUAL
+
+   Token value for "">>="".
+
+token.DOUBLESTAREQUAL
+
+   Token value for ""**="".
+
+token.DOUBLESLASH
+
+   Token value for ""//"".
+
+token.DOUBLESLASHEQUAL
+
+   Token value for ""//="".
+
+token.AT
+
+   Token value for ""@"".
+
+token.ATEQUAL
+
+   Token value for ""@="".
+
+token.RARROW
+
+   Token value for ""->"".
+
+token.ELLIPSIS
+
+   Token value for ""..."".
+
+token.COLONEQUAL
+
+   Token value for "":="".
+
+token.OP
+
+token.AWAIT
+
+token.ASYNC
+
+token.TYPE_IGNORE
+
+token.TYPE_COMMENT
+
+token.SOFT_KEYWORD
+
+token.ERRORTOKEN
+
+token.N_TOKENS
+
+token.NT_OFFSET
+
+The following token type values aren't used by the C tokenizer but are
+needed for the "tokenize" module.
+
+token.COMMENT
+
+   Token value used to indicate a comment.
+
+token.NL
+
+   Token value used to indicate a non-terminating newline.  The
+   "NEWLINE" token indicates the end of a logical line of Python code;
+   "NL" tokens are generated when a logical line of code is continued
+   over multiple physical lines.
+
+token.ENCODING
+
+   소스 바이트열을 텍스트로 디코딩하는 데 사용되는 인코딩을 나타내는
+   토큰값. "tokenize.tokenize()"에 의해 반환되는 첫 번째 토큰은 항상
+   "ENCODING" 토큰입니다.
+
+token.TYPE_COMMENT
+
+   Token value indicating that a type comment was recognized.  Such
+   tokens are only produced when "ast.parse()" is invoked with
+   "type_comments=True".
+
+버전 3.5에서 변경: Added "AWAIT" and "ASYNC" tokens.
+
+버전 3.7에서 변경: "COMMENT", "NL" 및 "ENCODING" 토큰이 추가되었습니다
+.
+
+버전 3.7에서 변경: Removed "AWAIT" and "ASYNC" tokens. "async" and
+"await" are now tokenized as "NAME" tokens.
+
+버전 3.8에서 변경: Added "TYPE_COMMENT", "TYPE_IGNORE", "COLONEQUAL".
+Added "AWAIT" and "ASYNC" tokens back (they're needed to support
+parsing older Python versions for "ast.parse()" with "feature_version"
+set to 6 or lower).

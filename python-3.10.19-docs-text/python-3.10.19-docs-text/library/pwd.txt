@@ -1,0 +1,67 @@
+"pwd" --- The password database
+*******************************
+
+======================================================================
+
+이 모듈은 유닉스 사용자 계정과 암호 데이터베이스에 대한 액세스를 제공
+합니다. 모든 유닉스 버전에서 사용할 수 있습니다.
+
+암호 데이터베이스 항목은 "passwd" 구조체(아래의 어트리뷰트 필드,
+"<pwd.h>"를 보세요)의 멤버에 해당하는 어트리뷰트를 가진 튜플류 객체로
+보고됩니다.:
+
++---------+-----------------+-------------------------------+
+| 인덱스  | 어트리뷰트      | 의미                          |
+|=========|=================|===============================|
+| 0       | "pw_name"       | 로그인 이름                   |
++---------+-----------------+-------------------------------+
+| 1       | "pw_passwd"     | 선택적 암호화된 암호          |
++---------+-----------------+-------------------------------+
+| 2       | "pw_uid"        | 숫자 사용자 ID                |
++---------+-----------------+-------------------------------+
+| 3       | "pw_gid"        | 숫자 그룹 ID                  |
++---------+-----------------+-------------------------------+
+| 4       | "pw_gecos"      | 사용자 이름이나 주석 필드     |
++---------+-----------------+-------------------------------+
+| 5       | "pw_dir"        | 사용자 홈 디렉터리            |
++---------+-----------------+-------------------------------+
+| 6       | "pw_shell"      | 사용자 명령 인터프리터        |
++---------+-----------------+-------------------------------+
+
+uid 및 gid 항목은 정수이고, 다른 모든 항목은 문자열입니다. 요청된 항목
+을 찾을 수 없으면 "KeyError"가 발생합니다.
+
+참고:
+
+  In traditional Unix the field "pw_passwd" usually contains a
+  password encrypted with a DES derived algorithm (see module
+  "crypt").  However most modern unices  use a so-called *shadow
+  password* system.  On those unices the *pw_passwd* field only
+  contains an asterisk ("'*'") or the  letter "'x'" where the
+  encrypted password is stored in a file "/etc/shadow" which is not
+  world readable.  Whether the *pw_passwd* field contains anything
+  useful is system-dependent.  If available, the "spwd" module should
+  be used where access to the encrypted password is required.
+
+다음 항목을 정의합니다:
+
+pwd.getpwuid(uid)
+
+   주어진 숫자 사용자 ID에 대한 암호 데이터베이스 항목을 반환합니다.
+
+pwd.getpwnam(name)
+
+   주어진 사용자 이름에 대한 암호 데이터베이스 항목을 반환합니다.
+
+pwd.getpwall()
+
+   사용 가능한 모든 암호 데이터베이스 항목의 리스트를 임의의 순서로 반
+   환합니다.
+
+더 보기:
+
+  모듈 "grp"
+     그룹 데이터베이스에 대한 인터페이스, 이것과 유사합니다.
+
+  Module "spwd"
+     An interface to the shadow password database, similar to this.

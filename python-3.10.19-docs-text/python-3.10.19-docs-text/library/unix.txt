@@ -1,0 +1,40 @@
+유닉스 특정 서비스
+******************
+
+이 장에서 설명하는 모듈은 유닉스 운영 체제(혹은 때에 따라 일부 혹은 많
+은 변종)에 고유한 기능에 대한 인터페이스를 제공합니다. 다음은 개요입니
+다:
+
+* "posix" --- The most common POSIX system calls
+
+  * 대용량 파일 지원
+
+  * 주목할만한 모듈 내용
+
+* "pwd" --- The password database
+
+* "grp" --- The group database
+
+* "termios" --- POSIX style tty control
+
+  * 예제
+
+* "tty" --- Terminal control functions
+
+* "pty" --- Pseudo-terminal utilities
+
+  * 예제
+
+* "fcntl" --- The "fcntl" and "ioctl" system calls
+
+* "resource" --- Resource usage information
+
+  * 자원 제한
+
+  * 자원 사용량
+
+* "syslog" --- Unix syslog library routines
+
+  * 예제
+
+    * 간단한 예제

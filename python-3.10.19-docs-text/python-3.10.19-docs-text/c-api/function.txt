@@ -1,0 +1,97 @@
+함수 객체
+*********
+
+파이썬 함수와 관련된 몇 가지 함수가 있습니다.
+
+type PyFunctionObject
+
+   함수에 사용되는 C 구조체.
+
+PyTypeObject PyFunction_Type
+
+   이것은 "PyTypeObject"의 인스턴스이며 파이썬 함수 형을 나타냅니다.
+   파이썬 프로그래머에게 "types.FunctionType"으로 노출됩니다.
+
+int PyFunction_Check(PyObject *o)
+
+   *o*가 함수 객체("PyFunction_Type" 형)면 참을 반환합니다. 매개 변수
+   는 "NULL"이 아니어야 합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyFunction_New(PyObject *code, PyObject *globals)
+    *반환값: 새 참조.*
+
+   코드 객체 *code*와 연관된 새 함수 객체를 반환합니다. *globals*는 함
+   수에서 액세스할 수 있는 전역 변수가 있는 딕셔너리이어야 합니다.
+
+   The function's docstring and name are retrieved from the code
+   object. *__module__* is retrieved from *globals*. The argument
+   defaults, annotations and closure are set to "NULL". *__qualname__*
+   is set to the same value as the function's name.
+
+PyObject *PyFunction_NewWithQualName(PyObject *code, PyObject *globals, PyObject *qualname)
+    *반환값: 새 참조.*
+
+   As "PyFunction_New()", but also allows setting the function
+   object's "__qualname__" attribute.  *qualname* should be a unicode
+   object or "NULL"; if "NULL", the "__qualname__" attribute is set to
+   the same value as its "__name__" attribute.
+
+   버전 3.3에 추가.
+
+PyObject *PyFunction_GetCode(PyObject *op)
+    *반환값: 빌린 참조.*
+
+   함수 객체 *op*와 연관된 코드 객체를 반환합니다.
+
+PyObject *PyFunction_GetGlobals(PyObject *op)
+    *반환값: 빌린 참조.*
+
+   함수 객체 *op*와 연관된 전역 딕셔너리를 반환합니다.
+
+PyObject *PyFunction_GetModule(PyObject *op)
+    *반환값: 빌린 참조.*
+
+   Return a *borrowed reference* to the *__module__* attribute of the
+   function object *op*. It can be *NULL*.
+
+   This is normally a string containing the module name, but can be
+   set to any other object by Python code.
+
+PyObject *PyFunction_GetDefaults(PyObject *op)
+    *반환값: 빌린 참조.*
+
+   함수 객체 *op*의 인자 기본값을 반환합니다. 이는 인자의 튜플이나
+   "NULL"일 수 있습니다.
+
+int PyFunction_SetDefaults(PyObject *op, PyObject *defaults)
+
+   함수 객체 *op*의 인자 기본값을 설정합니다. *defaults*는 "Py_None"
+   이나 튜플이어야 합니다.
+
+   실패하면 "SystemError"를 발생시키고 "-1"을 반환합니다.
+
+PyObject *PyFunction_GetClosure(PyObject *op)
+    *반환값: 빌린 참조.*
+
+   함수 객체 *op*와 연관된 클로저를 반환합니다. 이것은 "NULL" 이나 셀
+   객체의 튜플일 수 있습니다.
+
+int PyFunction_SetClosure(PyObject *op, PyObject *closure)
+
+   함수 객체 *op*와 연관된 클로저를 설정합니다. *closure*는 "Py_None"
+   이나 셀 객체의 튜플이어야 합니다.
+
+   실패하면 "SystemError"를 발생시키고 "-1"을 반환합니다.
+
+PyObject *PyFunction_GetAnnotations(PyObject *op)
+    *반환값: 빌린 참조.*
+
+   함수 객체 *op*의 어노테이션을 반환합니다. 이것은 가변 딕셔너리나
+   "NULL" 일 수 있습니다.
+
+int PyFunction_SetAnnotations(PyObject *op, PyObject *annotations)
+
+   함수 객체 *op*의 어노테이션을 설정합니다. *annotations*은 딕셔너리
+   나 "Py_None" 이어야 합니다.
+
+   실패하면 "SystemError"를 발생시키고 "-1"을 반환합니다.

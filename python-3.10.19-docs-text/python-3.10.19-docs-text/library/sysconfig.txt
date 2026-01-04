@@ -1,0 +1,299 @@
+"sysconfig" --- Provide access to Python's configuration information
+********************************************************************
+
+버전 3.2에 추가.
+
+**Source code:** Lib/sysconfig.py
+
+======================================================================
+
+"sysconfig" 모듈은 설치 경로 목록과 현재 플랫폼과 관련된 구성 변수와
+같은 파이썬 구성 정보에 대한 액세스를 제공합니다.
+
+
+구성 변수
+=========
+
+A Python distribution contains a "Makefile" and a "pyconfig.h" header
+file that are necessary to build both the Python binary itself and
+third-party C extensions compiled using "distutils".
+
+"sysconfig" 는 "get_config_vars()" 또는 "get_config_var()"를 사용하여
+액세스 할 수 있는 딕셔너리에 이들 파일에 있는 모든 변수를 넣습니다.
+
+윈도우에서는 훨씬 작은 세트입니다.
+
+sysconfig.get_config_vars(*args)
+
+   인자가 없으면, 현재 플랫폼과 관련된 모든 구성 변수의 딕셔너리를 반
+   환합니다.
+
+   인자가 있으면, 인자를 사용하여 구성 변수 딕셔너리에서 각 인자를 조
+   회한 결괏값 리스트를 돌려줍니다.
+
+   인자별로, 값이 없으면 "None" 을 반환합니다.
+
+sysconfig.get_config_var(name)
+
+   하나의 변수 *name* 의 값을 반환합니다.
+   "get_config_vars().get(name)" 과 같습니다.
+
+   *name* 을 찾지 못하면 "None" 을 반환합니다.
+
+사용 예:
+
+   >>> import sysconfig
+   >>> sysconfig.get_config_var('Py_ENABLE_SHARED')
+   0
+   >>> sysconfig.get_config_var('LIBDIR')
+   '/usr/local/lib'
+   >>> sysconfig.get_config_vars('AR', 'CXX')
+   ['ar', 'g++']
+
+
+설치 경로
+=========
+
+Python uses an installation scheme that differs depending on the
+platform and on the installation options.  These schemes are stored in
+"sysconfig" under unique identifiers based on the value returned by
+"os.name".
+
+Every new component that is installed using "distutils" or a
+Distutils-based system will follow the same scheme to copy its file in
+the right places.
+
+Python currently supports six schemes:
+
+* *posix_prefix*: 리눅스나 맥 OS 같은 포직스(POSIX) 플랫폼용 스킴. 이
+  것은 파이썬이나 컴포넌트가 설치될 때 사용되는 기본 스킴입니다.
+
+* *posix_home*: scheme for POSIX platforms used when a *home* option
+  is used upon installation.  This scheme is used when a component is
+  installed through Distutils with a specific home prefix.
+
+* *posix_user*: scheme for POSIX platforms used when a component is
+  installed through Distutils and the *user* option is used.  This
+  scheme defines paths located under the user home directory.
+
+* *nt*: scheme for NT platforms like Windows.
+
+* *nt_user*: scheme for NT platforms, when the *user* option is used.
+
+* *osx_framework_user*: *user* 옵션이 사용될, 맥 OS용 스킴.
+
+각 스킴은 일련의 경로로 구성되며 각 경로는 고유한 식별자를 가집니다.
+파이썬은 현재 8개의 경로를 사용합니다:
+
+* *stdlib*: 플랫폼마다 다르지 않은 표준 파이썬 라이브러리 파일이 들어
+  있는 디렉터리.
+
+* *platstdlib*: 플랫폼마다 다른 표준 파이썬 라이브러리 파일이 들어있는
+  디렉터리.
+
+* *platlib*: 사이트마다, 플랫폼마다 다른 파일용 디렉터리.
+
+* *purelib*: directory for site-specific, non-platform-specific files.
+
+* *include*: directory for non-platform-specific header files.
+
+* *platinclude*: directory for platform-specific header files.
+
+* *scripts*: 스크립트 파일용 디렉터리.
+
+* *data*: 데이터 파일용 디렉터리.
+
+"sysconfig" provides some functions to determine these paths.
+
+sysconfig.get_scheme_names()
+
+   현재 "sysconfig" 에서 지원되는 모든 스킴을 포함하는 튜플을 돌려줍니
+   다.
+
+sysconfig.get_default_scheme()
+
+   현재 플랫폼에 대한 기본 스킴 이름을 반환합니다.
+
+   버전 3.10에 추가: This function was previously named
+   "_get_default_scheme()" and considered an implementation detail.
+
+sysconfig.get_preferred_scheme(key)
+
+   Return a preferred scheme name for an installation layout specified
+   by *key*.
+
+   *key* must be either ""prefix"", ""home"", or ""user"".
+
+   The return value is a scheme name listed in "get_scheme_names()".
+   It can be passed to "sysconfig" functions that take a *scheme*
+   argument, such as "get_paths()".
+
+   버전 3.10에 추가.
+
+sysconfig._get_preferred_schemes()
+
+   Return a dict containing preferred scheme names on the current
+   platform. Python implementers and redistributors may add their
+   preferred schemes to the "_INSTALL_SCHEMES" module-level global
+   value, and modify this function to return those scheme names, to
+   e.g. provide different schemes for system and language package
+   managers to use, so packages installed by either do not mix with
+   those by the other.
+
+   End users should not use this function, but "get_default_scheme()"
+   and "get_preferred_scheme()" instead.
+
+   버전 3.10에 추가.
+
+sysconfig.get_path_names()
+
+   현재 "sysconfig" 에서 지원되는 모든 경로명을 포함하는 튜플을 돌려줍
+   니다.
+
+sysconfig.get_path(name[, scheme[, vars[, expand]]])
+
+   *scheme* 이라는 설치 스킴에서, 경로 *name* 에 해당하는 설치 경로를
+   돌려줍니다.
+
+   *name* 은 "get_path_names()" 가 돌려주는 리스트에 있는 값이어야 합
+   니다.
+
+   "sysconfig" 는 각 경로명에 해당하는 설치 경로를 플랫폼별로 확장할
+   변수와 함께 저장합니다. 예를 들어, *nt* 스킴의 *stdlib* 경로는
+   "{base}/Lib" 입니다.
+
+   "get_path()" 는 "get_config_vars()" 에 의해 반환된 변수를 사용하여
+   경로를 확장합니다. 모든 변수는 각 플랫폼에 대한 기본값을 가지므로
+   이 함수를 호출하고 기본값을 가져올 수 있습니다.
+
+   *scheme* 이 제공되면, 그것은 "get_scheme_names()" 에 의해 반환된 리
+   스트에 있는 값이어야 합니다. 그렇지 않으면, 현재 플랫폼의 기본 스킴
+   이 사용됩니다.
+
+   If *vars* is provided, it must be a dictionary of variables that
+   will update the dictionary return by "get_config_vars()".
+
+   *expand* 가 "False" 로 설정되면, 경로는 변수를 사용하여 확장되지 않
+   습니다.
+
+   *name* 을 찾지 못하면, "KeyError"를 발생시킵니다.
+
+sysconfig.get_paths([scheme[, vars[, expand]]])
+
+   설치 스킴에 해당하는 모든 설치 경로를 포함하는 딕셔너리를 돌려줍니
+   다. 자세한 정보는 "get_path()" 를 보십시오.
+
+   *scheme* 을 제공하지 않으면, 현재 플랫폼에 대한 기본 스킴을 사용합
+   니다.
+
+   *vars* 가 제공되면, 경로를 확장하는 데 사용되는 딕셔너리를 갱신하는
+   변수의 딕셔너리여야 합니다.
+
+   *expand* 를 거짓으로 설정하면 경로가 확장되지 않습니다.
+
+   *scheme* 이 존재하는 스킴이 아니면, "get_paths()" 는 "KeyError" 를
+   발생시킵니다.
+
+
+기타 함수
+=========
+
+sysconfig.get_python_version()
+
+   "MAJOR.MINOR" 파이썬 버전 번호를 문자열로 반환합니다. "'%d.%d' %
+   sys.version_info[:2]" 와 유사합니다.
+
+sysconfig.get_platform()
+
+   현재의 플랫폼을 식별하는 문자열을 돌려줍니다.
+
+   This is used mainly to distinguish platform-specific build
+   directories and platform-specific built distributions.  Typically
+   includes the OS name and version and the architecture (as supplied
+   by 'os.uname()'), although the exact information included depends
+   on the OS; e.g., on Linux, the kernel version isn't particularly
+   important.
+
+   반환 값의 예:
+
+   * linux-i586
+
+   * linux-alpha (?)
+
+   * solaris-2.6-sun4u
+
+   윈도우는 다음 중 하나를 반환합니다:
+
+   * win-amd64 (64bit Windows on AMD64, aka x86_64, Intel64, and
+     EM64T)
+
+   * win32 (기타 모든 것 - 구체적으로, sys.platform이 반환됩니다)
+
+   맥 OS는 다음을 반환 할 수 있습니다:
+
+   * macosx-10.6-ppc
+
+   * macosx-10.4-ppc64
+
+   * macosx-10.3-i386
+
+   * macosx-10.4-fat
+
+   다른 포직스 이외의 플랫폼의 경우, 현재는 "sys.platform" 만 반환합니
+   다.
+
+sysconfig.is_python_build()
+
+   실행 중인 파이썬 인터프리터가 소스에서 빌드되어 빌드 된 위치에서 실
+   행되고, "make install" 을 실행하거나 바이너리 설치 프로그램을 통해
+   설치 한 결과가 아닌 위치에서 실행되는 것이 아니라면 "True" 를 반환
+   합니다.
+
+sysconfig.parse_config_h(fp[, vars])
+
+   "config.h"-스타일 파일을 해석합니다.
+
+   *fp* 는 "config.h"-류 파일을 가리키는 파일류 객체입니다.
+
+   이름/값 쌍을 포함하는 딕셔너리가 반환됩니다. 선택적 딕셔너리가 두
+   번째 인자로 전달되면, 새 사전 대신 사용되며 파일에서 읽은 값으로 갱
+   신됩니다.
+
+sysconfig.get_config_h_filename()
+
+   "pyconfig.h" 의 경로를 반환합니다.
+
+sysconfig.get_makefile_filename()
+
+   "Makefile" 의 경로를 반환합니다.
+
+
+"sysconfig" 를 스크립트로 사용하기
+==================================
+
+"sysconfig" 를 파이썬의 *-m* 옵션으로 스크립트로 사용할 수 있습니다:
+
+   $ python -m sysconfig
+   Platform: "macosx-10.4-i386"
+   Python version: "3.2"
+   Current installation scheme: "posix_prefix"
+
+   Paths:
+           data = "/usr/local"
+           include = "/Users/tarek/Dev/svn.python.org/py3k/Include"
+           platinclude = "."
+           platlib = "/usr/local/lib/python3.2/site-packages"
+           platstdlib = "/usr/local/lib/python3.2"
+           purelib = "/usr/local/lib/python3.2/site-packages"
+           scripts = "/usr/local/bin"
+           stdlib = "/usr/local/lib/python3.2"
+
+   Variables:
+           AC_APPLE_UNIVERSAL_BUILD = "0"
+           AIX_GENUINE_CPLUSPLUS = "0"
+           AR = "ar"
+           ARFLAGS = "rc"
+           ...
+
+이 호출은 "get_platform()", "get_python_version()", "get_path()" 및
+"get_config_vars()" 에 의해 반환된 정보를 표준 출력에 인쇄합니다.

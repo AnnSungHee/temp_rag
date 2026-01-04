@@ -1,0 +1,142 @@
+"xml.sax" --- Support for SAX2 parsers
+**************************************
+
+**소스 코드:** Lib/xml/sax/__init__.py
+
+======================================================================
+
+"xml.sax" 패키지는 파이썬용 SAX(Simple API for XML) 인터페이스를 구현
+하는 여러 모듈을 제공합니다. 패키지 자체는 대부분 SAX API의 사용자가
+사용하게 될 SAX 예외와 편리 함수를 제공합니다.
+
+경고:
+
+  "xml.sax" 모듈은 악의적으로 구성된 데이터로부터 안전하지 않습니다.
+  신뢰할 수 없거나 인증되지 않은 데이터를 구문 분석해야 하면 XML 취약
+  점을 참조하십시오.
+
+버전 3.7.1에서 변경: SAX 구문 분석기는 보안을 강화하기 위해 더는 일반
+외부 엔티티를 처리하지 않습니다. 이전에는, 구문 분석기가 DTD와 엔티티
+에 대해 네트워크 연결을 만들어 원격 파일을 가져오거나 파일 시스템에서
+로컬 파일을 로드했습니다. 이 기능은 구문 분석기 객체에 대해 인자
+"feature_external_ges"로 메서드 "setFeature()"를 사용하여 다시 활성화
+할 수 있습니다.
+
+편리 함수는 다음과 같습니다:
+
+xml.sax.make_parser(parser_list=[])
+
+   SAX "XMLReader" 객체를 만들고 반환합니다. 발견된 첫 번째 구문 분석
+   기가 사용됩니다. *parser_list*가 제공되면, "create_parser()"라는 함
+   수가 있는 모듈의 이름을 나타내는 문자열의 이터러블이어야 합니다.
+   *parser_list*에 나열된 모듈은 기본 구문 분석기 목록에 있는 모듈보다
+   먼저 사용됩니다.
+
+   버전 3.8에서 변경: *parser_list* 인자는 리스트뿐만 아니라 임의의 이
+   터러블일 수 있습니다.
+
+xml.sax.parse(filename_or_stream, handler, error_handler=handler.ErrorHandler())
+
+   SAX 구문 분석기를 만들어 문서 구문 분석에 사용합니다.
+   *filename_or_stream*으로 전달된 문서는 파일명이나 파일 객체일 수 있
+   습니다. *handler* 매개 변수는 SAX "ContentHandler" 인스턴스여야 합
+   니다. *error_handler*가 주어지면, SAX "ErrorHandler" 인스턴스여야
+   합니다; 생략하면, 모든 에러에서 "SAXParseException"이 발생합니다.
+   반환 값은 없습니다; 모든 작업은 전달된 *handler*가 처리해야 합니다.
+
+xml.sax.parseString(string, handler, error_handler=handler.ErrorHandler())
+
+   "parse()"와 비슷하지만, 매개 변수로 받은 버퍼 *string*에서 구문 분
+   석합니다. *string*은 "str" 인스턴스나 *바이트열류 객체*여야 합니다.
+
+   버전 3.5에서 변경: "str" 인스턴스에 대한 지원이 추가되었습니다.
+
+전형적인 SAX 응용 프로그램은 입력기(reader), 처리기(handler) 및 입력
+소스(input source)의 세 가지 종류의 객체를 사용합니다: 이 문맥에서 "입
+력기(Reader)"는 구문 분석기에 대한 또 다른 용어입니다, 즉, 입력 소스에
+서 바이트나 문자를 읽고, 이벤트 시퀀스를 생성하는 코드 조각입니다. 그
+런 다음 이벤트는 처리기 객체로 배포됩니다, 즉 입력기가 처리기의 메서드
+를 호출합니다. 따라서 SAX 응용 프로그램은 입력기 객체를 얻고, 입력 소
+스를 만들거나 열고, 처리기를 만들고, 이 객체들을 모두 연결해야 합니다.
+준비의 마지막 단계로, 입력기가 입력을 구문 분석하도록 호출됩니다. 구문
+분석하는 동안, 처리기 객체의 메서드는 입력 데이터로부터 온 구조적 및
+구문적 이벤트를 기반으로 호출됩니다.
+
+이러한 객체들은, 인터페이스만 중요합니다; 그들은 일반적으로 응용 프로
+그램 자체에 의해 인스턴스로 만들어지지 않습니다. 파이썬에는 인터페이스
+에 대한 명시적인 개념이 없으므로, 이것들이 형식적으로는 클래스로 소개
+되지만, 응용 프로그램은 제공된 클래스를 상속하지 않는 구현을 사용할 수
+있습니다. "InputSource", "Locator", "Attributes", "AttributesNS" 및
+"XMLReader" 인터페이스는 모듈 "xml.sax.xmlreader"에 정의되어 있습니다.
+처리기 인터페이스는 "xml.sax.handler"에 정의되어 있습니다. 편의상,
+"InputSource"(종종 직접 인스턴스를 만듭니다)와 처리기 클래스들은
+"xml.sax"에서도 사용할 수 있습니다. 이러한 인터페이스는 아래에 설명되
+어 있습니다.
+
+이러한 클래스 외에도, "xml.sax"는 다음과 같은 예외 클래스를 제공합니다
+.
+
+exception xml.sax.SAXException(msg, exception=None)
+
+   XML 에러나 경고를 캡슐화합니다. 이 클래스에는 XML 구문 분석기나 응
+   용 프로그램의 기본 에러나 경고 정보가 포함될 수 있습니다: 추가 기능
+   을 제공하거나 지역화를 추가하기 위해 서브 클래싱 될 수 있습니다.
+   "ErrorHandler" 인터페이스에 정의된 처리기가 이 예외의 인스턴스를 수
+   신하지만, 예외를 실제로 발생시킬 필요는 없음에 유의하십시오 --- 정
+   보를 담는 컨테이너로도 유용합니다.
+
+   인스턴스로 만들어질 때, *msg*는 사람이 읽을 수 있는 에러에 관한 설
+   명이어야 합니다. 선택적 *exception* 매개 변수를 주면, "None"이거나
+   구문 분석 코드에 의해 잡힌 예외여야 하고, 정보로 함께 전달됩니다.
+
+   이것은 다른 SAX 예외 클래스의 베이스 클래스입니다.
+
+exception xml.sax.SAXParseException(msg, exception, locator)
+
+   구문 분석 에러 시 발생하는 "SAXException"의 서브 클래스. 이 클래스
+   의 인스턴스는 SAX "ErrorHandler" 인터페이스의 메서드에 전달되어 구
+   문 분석 에러에 대한 정보를 제공합니다. 이 클래스는 "SAXException"
+   인터페이스뿐만 아니라 SAX "Locator" 인터페이스를 지원합니다.
+
+exception xml.sax.SAXNotRecognizedException(msg, exception=None)
+
+   SAX "XMLReader"가 인식할 수 없는 기능이나 속성을 만날 때 발생하는
+   "SAXException"의 서브 클래스. SAX 응용 프로그램과 확장은 유사한 목
+   적으로 이 클래스를 사용할 수 있습니다.
+
+exception xml.sax.SAXNotSupportedException(msg, exception=None)
+
+   SAX "XMLReader"가 지원되지 않는 기능을 활성화하거나 구현에서 지원하
+   지 않는 값으로 속성을 설정하도록 요청될 때 발생하는 "SAXException"
+   의 서브 클래스. SAX 응용 프로그램과 확장은 유사한 목적으로 이 클래
+   스를 사용할 수 있습니다.
+
+더 보기:
+
+  SAX: The Simple API for XML
+     이 사이트는 SAX API의 정의가 집중되는 곳입니다. Java 구현과 온라
+     인 설명서를 제공합니다. 구현과 역사적 정보에 대한 링크도 있습니다
+     .
+
+  모듈 "xml.sax.handler"
+     응용 프로그램이 제공하는 객체에 대한 인터페이스의 정의.
+
+  모듈 "xml.sax.saxutils"
+     SAX 응용 프로그램에서 사용하기 위한 편리 함수.
+
+  모듈 "xml.sax.xmlreader"
+     구문 분석기가 제공하는 객체에 대한 인터페이스의 정의.
+
+
+SAXException 객체
+=================
+
+"SAXException" 예외 클래스는 다음 메서드를 지원합니다:
+
+SAXException.getMessage()
+
+   에러 상태를 설명하는 사람이 읽을 수 있는 메시지를 반환합니다.
+
+SAXException.getException()
+
+   캡슐화된 예외 객체나 "None"을 반환합니다.

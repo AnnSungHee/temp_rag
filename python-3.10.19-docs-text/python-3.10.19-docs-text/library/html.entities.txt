@@ -1,0 +1,38 @@
+"html.entities" --- Definitions of HTML general entities
+********************************************************
+
+**소스 코드:** Lib/html/entities.py
+
+======================================================================
+
+이 모듈은 네 가지 딕셔너리 "html5", "name2codepoint", "codepoint2name"
+와 "entitydefs"를 정의합니다.
+
+html.entities.html5
+
+   HTML5 이름 문자 참조 [1] 를 해당 유니코드 문자에 매핑하는 딕셔너리,
+   예를 들어 "html5['gt;'] == '>'". 후미 세미콜론이 이름에 포함됨에 유
+   의하십시오 (예를 들어 "'gt;'"). 하지만 일부 이름은 세미콜론 없이도
+   표준에서 허용됩니다: 이럴 때 이름은 "';'"가 있거나 없는 형태가 모두
+   포함됩니다. "html.unescape()"도 참조하십시오.
+
+   버전 3.3에 추가.
+
+html.entities.entitydefs
+
+   XHTML 1.0 엔티티 정의를 ISO Latin-1의 치환 텍스트에 매핑하는 딕셔너
+   리.
+
+html.entities.name2codepoint
+
+   A dictionary that maps HTML entity names to the Unicode code
+   points.
+
+html.entities.codepoint2name
+
+   A dictionary that maps Unicode code points to HTML entity names.
+
+-[ 각주 ]-
+
+[1] https://html.spec.whatwg.org/multipage/named-characters.html
+    #named-character-references 를 참조하십시오.

@@ -1,0 +1,215 @@
+Tkinter 대화 상자
+*****************
+
+
+"tkinter.simpledialog" --- 표준 Tkinter 입력 대화 상자
+======================================================
+
+**소스 코드:** Lib/tkinter/simpledialog.py
+
+======================================================================
+
+"tkinter.simpledialog" 모듈에는 사용자로부터 값을 얻기 위한 간단한 모
+달 대화 상자를 만드는 편의 클래스와 함수가 포함되어 있습니다.
+
+tkinter.simpledialog.askfloat(title, prompt, **kw)
+tkinter.simpledialog.askinteger(title, prompt, **kw)
+tkinter.simpledialog.askstring(title, prompt, **kw)
+
+   위의 세 함수는 사용자에게 원하는 형의 값을 입력하도록 요구하는 대화
+   상자를 제공합니다.
+
+class tkinter.simpledialog.Dialog(parent, title=None)
+
+   사용자 정의 대화 상자의 베이스 클래스.
+
+      body(master)
+
+         대화 상자의 인터페이스를 구성하고 초기 포커스가 필요한 위젯을
+         반환하도록 재정의하십시오.
+
+      buttonbox()
+
+         기본 동작은 OK 와 Cancel 버튼을 추가합니다. 사용자 정의 버튼
+         레이아웃이 필요하면 재정의하십시오.
+
+
+"tkinter.filedialog" --- 파일 선택 대화 상자
+============================================
+
+**소스 코드:** Lib/tkinter/filedialog.py
+
+======================================================================
+
+"tkinter.filedialog" 모듈은 파일/디렉터리 선택 창을 만들기위한 클래스
+와 팩토리 함수를 제공합니다.
+
+
+네이티브 로드/저장 대화 상자
+----------------------------
+
+다음 클래스와 함수는 네이티브 모양과 느낌을 동작을 사용자 정의하는 구
+성 옵션과 결합하는 파일 대화 상자 창을 제공합니다. 다음 키워드 인자는
+아래 나열된 클래스와 함수에 적용할 수 있습니다:
+
+      *parent* - 대화 상자를 그 위에 놓을 창
+
+      *title* - 창의 제목
+
+      *initialdir* - 대화 상자가 시작되는 디렉터리
+
+      *initialfile* - 대화 상자를 열 때 선택된 파일
+
+      *filetypes* - (label, pattern) 튜플의 시퀀스, '*' 와일드카드가 허용됩니다
+
+      *defaultextension* - 파일에 추가할 기본 확장자 (저장 대화 상자)
+
+      *multiple* - 참일 때, 여러 항목을 선택할 수 있습니다
+
+**정적 팩토리 함수**
+
+아래 함수는 호출될 때 모달, 네이티브 모양과 느낌의 대화 상자를 만들고,
+사용자의 선택을 기다린 다음, 선택한 값이나 "None"을 호출자에게 반환합
+니다.
+
+tkinter.filedialog.askopenfile(mode='r', **options)
+tkinter.filedialog.askopenfiles(mode='r', **options)
+
+   위의 두 함수는 "Open" 대화 상자를 만들고 열린 파일 객체를 읽기 전용
+   모드로 반환합니다.
+
+tkinter.filedialog.asksaveasfile(mode='w', **options)
+
+   "SaveAs" 대화 상자를 만들고 쓰기 전용 모드로 열린 파일 객체를 반환
+   합니다.
+
+tkinter.filedialog.askopenfilename(**options)
+tkinter.filedialog.askopenfilenames(**options)
+
+   위의 두 함수는 "Open" 대화 상자를 만들고 기존 파일(들)에 해당하는
+   선택된 파일명(들)을 반환합니다.
+
+tkinter.filedialog.asksaveasfilename(**options)
+
+   "SaveAs" 대화 상자를 만들고 선택한 파일명을 반환합니다.
+
+tkinter.filedialog.askdirectory(**options)
+
+      사용자에게 디렉터리를 선택하라는 메시지를 표시합니다.
+      추가 키워드 옵션:
+         *mustexist* - 선택이 기존 디렉터리여야 하는지를 결정합니다.
+
+class tkinter.filedialog.Open(master=None, **options)
+class tkinter.filedialog.SaveAs(master=None, **options)
+
+   위의 두 클래스는 파일 저장과 로드를 위한 네이티브 대화 창을 제공합
+   니다.
+
+**편의 클래스**
+
+아래 클래스는 파일/디렉터리 창을 처음부터 만드는 데 사용됩니다. 이것들
+은 플랫폼의 네이티브 모양과 느낌을 모방하지 않습니다.
+
+class tkinter.filedialog.Directory(master=None, **options)
+
+   사용자에게 디렉터리를 선택하라는 대화 상자를 만듭니다.
+
+참고:
+
+  *FileDialog* 클래스는 사용자 정의 이벤트 처리와 동작을 위해 서브 클
+  래싱 되어야 합니다.
+
+class tkinter.filedialog.FileDialog(master, title=None)
+
+   기본 파일 선택 대화 상자를 만듭니다.
+
+   cancel_command(event=None)
+
+      대화 창의 종료를 트리거 합니다.
+
+   dirs_double_event(event)
+
+      디렉터리에 대한 더블 클릭 이벤트를 위한 이벤트 처리기.
+
+   dirs_select_event(event)
+
+      디렉터리에 대한 클릭 이벤트를 위한 이벤트 처리기.
+
+   files_double_event(event)
+
+      파일에 대한 더블 클릭 이벤트를 위한 이벤트 처리기.
+
+   files_select_event(event)
+
+      파일에 대한 단일 클릭 이벤트를 위한 이벤트 처리기.
+
+   filter_command(event=None)
+
+      디렉터리로 파일을 필터링합니다.
+
+   get_filter()
+
+      현재 사용 중인 파일 필터를 가져옵니다.
+
+   get_selection()
+
+      현재 선택된 항목을 가져옵니다.
+
+   go(dir_or_file=os.curdir, pattern='*', default='', key=None)
+
+      대화 상자를 렌더링하고 이벤트 루프를 시작합니다.
+
+   ok_event(event)
+
+      현재 선택을 반환하면서 대화 상자를 종료합니다.
+
+   quit(how=None)
+
+      파일명을 (있다면) 반환하면서 대화 상자를 종료합니다.
+
+   set_filter(dir, pat)
+
+      파일 필터를 설정합니다.
+
+   set_selection(file)
+
+      현재 파일 선택을 *file*로 갱신합니다.
+
+class tkinter.filedialog.LoadFileDialog(master, title=None)
+
+   기존 파일을 선택하기 위한 대화 상자 창을 만드는 FileDialog의 서브
+   클래스.
+
+   ok_command()
+
+      파일이 제공되고 선택이 이미 존재하는 파일을 가리키는지 테스트합
+      니다.
+
+class tkinter.filedialog.SaveFileDialog(master, title=None)
+
+   대상 파일을 선택하기 위한 대화 상자 창을 만드는 FileDialog의 서브
+   클래스.
+
+   ok_command()
+
+      선택이 디렉터리가 아닌 유효한 파일을 가리키는지 테스트합니다. 이
+      미 존재하는 파일을 선택했으면 확인이 필요합니다.
+
+
+"tkinter.commondialog" --- 대화창 템플릿
+========================================
+
+**소스 코드:** Lib/tkinter/commondialog.py
+
+======================================================================
+
+"tkinter.commondialog" 모듈은 다른 지원 모듈에 정의된 대화 상자의 베이
+스 클래스인 "Dialog" 클래스를 제공합니다.
+
+class tkinter.commondialog.Dialog(master=None, **options)
+
+   show(color=None, **options)
+
+      대화창을 렌더링합니다.
+
+더 보기: 모듈 "tkinter.messagebox", 파일을 읽고 쓰기

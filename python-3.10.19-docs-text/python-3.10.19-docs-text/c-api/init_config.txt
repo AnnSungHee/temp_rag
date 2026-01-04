@@ -1,0 +1,1533 @@
+파이썬 초기화 구성
+******************
+
+버전 3.8에 추가.
+
+Python can be initialized with "Py_InitializeFromConfig()" and the
+"PyConfig" structure. It can be preinitialized with
+"Py_PreInitialize()" and the "PyPreConfig" structure.
+
+There are two kinds of configuration:
+
+* The Python Configuration can be used to build a customized Python
+  which behaves as the regular Python. For example, environment
+  variables and command line arguments are used to configure Python.
+
+* The Isolated Configuration can be used to embed Python into an
+  application. It isolates Python from the system. For example,
+  environment variables are ignored, the LC_CTYPE locale is left
+  unchanged and no signal handler is registered.
+
+The "Py_RunMain()" function can be used to write a customized Python
+program.
+
+초기화, 파이널리제이션 및 스레드도 참조하십시오.
+
+더 보기: **PEP 587** "파이썬 초기화 구성".
+
+
+Example
+=======
+
+항상 격리 모드에서 실행되는 사용자 정의 파이썬의 예:
+
+   int main(int argc, char **argv)
+   {
+       PyStatus status;
+
+       PyConfig config;
+       PyConfig_InitPythonConfig(&config);
+       config.isolated = 1;
+
+       /* Decode command line arguments.
+          Implicitly preinitialize Python (in isolated mode). */
+       status = PyConfig_SetBytesArgv(&config, argc, argv);
+       if (PyStatus_Exception(status)) {
+           goto exception;
+       }
+
+       status = Py_InitializeFromConfig(&config);
+       if (PyStatus_Exception(status)) {
+           goto exception;
+       }
+       PyConfig_Clear(&config);
+
+       return Py_RunMain();
+
+   exception:
+       PyConfig_Clear(&config);
+       if (PyStatus_IsExit(status)) {
+           return status.exitcode;
+       }
+       /* Display the error message and exit the process with
+          non-zero exit code */
+       Py_ExitStatusException(status);
+   }
+
+
+PyWideStringList
+================
+
+type PyWideStringList
+
+   "wchar_t*" 문자열의 리스트.
+
+   *length*가 0이 아니면, *items*는 "NULL"이 아니어야 하고 모든 문자열
+   은 "NULL"이 아니어야 합니다.
+
+   메서드:
+
+   PyStatus PyWideStringList_Append(PyWideStringList *list, const wchar_t *item)
+
+      *item*을 *list*에 추가합니다.
+
+      이 함수를 호출하려면 파이썬을 사전 초기화해야 합니다.
+
+   PyStatus PyWideStringList_Insert(PyWideStringList *list, Py_ssize_t index, const wchar_t *item)
+
+      *item*을 *list*의 *index*에 삽입합니다.
+
+      *index*가 *list* 길이보다 크거나 같으면, *item*을 *list*에 추가
+      (append)합니다.
+
+      *index* must be greater than or equal to 0.
+
+      이 함수를 호출하려면 파이썬을 사전 초기화해야 합니다.
+
+   구조체 필드:
+
+   Py_ssize_t length
+
+      리스트 길이.
+
+   wchar_t **items
+
+      리스트 항목들.
+
+
+PyStatus
+========
+
+type PyStatus
+
+   초기화 함수 상태를 저장하는 구조체: 성공, 에러 또는 종료.
+
+   에러의 경우, 에러를 만든 C 함수 이름을 저장할 수 있습니다.
+
+   구조체 필드:
+
+   int exitcode
+
+      종료 코드. "exit()"에 전달된 인자.
+
+   const char *err_msg
+
+      에러 메시지.
+
+   const char *func
+
+      에러를 만든 함수의 이름, "NULL"일 수 있습니다.
+
+   상태를 만드는 함수:
+
+   PyStatus PyStatus_Ok(void)
+
+      성공.
+
+   PyStatus PyStatus_Error(const char *err_msg)
+
+      메시지가 포함된 초기화 에러.
+
+      *err_msg* must not be "NULL".
+
+   PyStatus PyStatus_NoMemory(void)
+
+      메모리 할당 실패 (메모리 부족).
+
+   PyStatus PyStatus_Exit(int exitcode)
+
+      지정된 종료 코드로 파이썬을 종료합니다.
+
+   상태를 처리하는 함수:
+
+   int PyStatus_Exception(PyStatus status)
+
+      상태가 에러입니까? 아니면 종료입니까? 참이면, 예외를 처리해야 합
+      니다; 예를 들어 "Py_ExitStatusException()" 을 호출하여.
+
+   int PyStatus_IsError(PyStatus status)
+
+      결과가 에러입니까?
+
+   int PyStatus_IsExit(PyStatus status)
+
+      결과가 종료입니까?
+
+   void Py_ExitStatusException(PyStatus status)
+
+      *status*가 종료이면 "exit(exitcode)"를 호출합니다. *status*가 에
+      러이면 에러 메시지를 인쇄하고 0이 아닌 종료 코드로 종료합니다.
+      "PyStatus_Exception(status)"가 0이 아닐 때만 호출해야 합니다.
+
+참고:
+
+  내부적으로, 파이썬은 "PyStatus.func"를 설정하는 데는 매크로를 사용하
+  는 반면, "func"가 "NULL"로 설정된 상태를 만드는 데는 함수를 사용합니
+  다.
+
+예:
+
+   PyStatus alloc(void **ptr, size_t size)
+   {
+       *ptr = PyMem_RawMalloc(size);
+       if (*ptr == NULL) {
+           return PyStatus_NoMemory();
+       }
+       return PyStatus_Ok();
+   }
+
+   int main(int argc, char **argv)
+   {
+       void *ptr;
+       PyStatus status = alloc(&ptr, 16);
+       if (PyStatus_Exception(status)) {
+           Py_ExitStatusException(status);
+       }
+       PyMem_Free(ptr);
+       return 0;
+   }
+
+
+PyPreConfig
+===========
+
+type PyPreConfig
+
+   Structure used to preinitialize Python.
+
+   사전 구성을 초기화하는 함수:
+
+   void PyPreConfig_InitPythonConfig(PyPreConfig *preconfig)
+
+      파이썬 구성으로 사전 구성을 초기화합니다.
+
+   void PyPreConfig_InitIsolatedConfig(PyPreConfig *preconfig)
+
+      격리된 구성으로 사전 구성을 초기화합니다.
+
+   구조체 필드:
+
+   int allocator
+
+      Name of the Python memory allocators:
+
+      * "PYMEM_ALLOCATOR_NOT_SET" ("0"): don't change memory
+        allocators (use defaults).
+
+      * "PYMEM_ALLOCATOR_DEFAULT" ("1"): default memory allocators.
+
+      * "PYMEM_ALLOCATOR_DEBUG" ("2"): default memory allocators with
+        debug hooks.
+
+      * "PYMEM_ALLOCATOR_MALLOC" ("3"): use "malloc()" of the C
+        library.
+
+      * "PYMEM_ALLOCATOR_MALLOC_DEBUG" ("4"): force usage of
+        "malloc()" with debug hooks.
+
+      * "PYMEM_ALLOCATOR_PYMALLOC" ("5"): Python pymalloc memory
+        allocator.
+
+      * "PYMEM_ALLOCATOR_PYMALLOC_DEBUG" ("6"): Python pymalloc memory
+        allocator with debug hooks.
+
+      "PYMEM_ALLOCATOR_PYMALLOC" and "PYMEM_ALLOCATOR_PYMALLOC_DEBUG"
+      are not supported if Python is "configured using --without-
+      pymalloc".
+
+      메모리 관리를 참조하십시오.
+
+      Default: "PYMEM_ALLOCATOR_NOT_SET".
+
+   int configure_locale
+
+      Set the LC_CTYPE locale to the user preferred locale.
+
+      If equals to 0, set "coerce_c_locale" and "coerce_c_locale_warn"
+      members to 0.
+
+      See the *locale encoding*.
+
+      Default: "1" in Python config, "0" in isolated config.
+
+   int coerce_c_locale
+
+      If equals to 2, coerce the C locale.
+
+      If equals to 1, read the LC_CTYPE locale to decide if it should
+      be coerced.
+
+      See the *locale encoding*.
+
+      Default: "-1" in Python config, "0" in isolated config.
+
+   int coerce_c_locale_warn
+
+      0이 아니면, C 로케일이 강제될 때 경고가 발생합니다.
+
+      Default: "-1" in Python config, "0" in isolated config.
+
+   int dev_mode
+
+      If non-zero, enables the Python Development Mode: see
+      "PyConfig.dev_mode".
+
+      Default: "-1" in Python mode, "0" in isolated mode.
+
+   int isolated
+
+      Isolated mode: see "PyConfig.isolated".
+
+      Default: "0" in Python mode, "1" in isolated mode.
+
+   int legacy_windows_fs_encoding
+
+      If non-zero:
+
+      * Set "PyPreConfig.utf8_mode" to "0",
+
+      * Set "PyConfig.filesystem_encoding" to ""mbcs"",
+
+      * Set "PyConfig.filesystem_errors" to ""replace"".
+
+      Initialized the from "PYTHONLEGACYWINDOWSFSENCODING" environment
+      variable value.
+
+      윈도우에서만 사용 가능합니다. "#ifdef MS_WINDOWS" 매크로는 윈도
+      우 특정 코드에 사용할 수 있습니다.
+
+      Default: "0".
+
+   int parse_argv
+
+      0이 아니면, "Py_PreInitializeFromArgs()"와
+      "Py_PreInitializeFromBytesArgs()"는 일반 파이썬이 명령 줄 인자를
+      구문 분석하는 것과 같은 방식으로 "argv" 인자를 구문 분석합니다.
+      명령 줄 인자를 참조하십시오.
+
+      Default: "1" in Python config, "0" in isolated config.
+
+   int use_environment
+
+      Use environment variables? See "PyConfig.use_environment".
+
+      Default: "1" in Python config and "0" in isolated config.
+
+   int utf8_mode
+
+      If non-zero, enable the Python UTF-8 Mode.
+
+      Set by the "-X utf8" command line option and the "PYTHONUTF8"
+      environment variable.
+
+      Default: "-1" in Python config and "0" in isolated config.
+
+
+Preinitialize Python with PyPreConfig
+=====================================
+
+The preinitialization of Python:
+
+* Set the Python memory allocators ("PyPreConfig.allocator")
+
+* Configure the LC_CTYPE locale (*locale encoding*)
+
+* Set the Python UTF-8 Mode ("PyPreConfig.utf8_mode")
+
+The current preconfiguration ("PyPreConfig" type) is stored in
+"_PyRuntime.preconfig".
+
+파이썬을 사전 초기화하는 함수:
+
+PyStatus Py_PreInitialize(const PyPreConfig *preconfig)
+
+   *preconfig* 사전 구성에서 파이썬을 사전 초기화합니다.
+
+   *preconfig* must not be "NULL".
+
+PyStatus Py_PreInitializeFromBytesArgs(const PyPreConfig *preconfig, int argc, char *const *argv)
+
+   *preconfig* 사전 구성에서 파이썬을 사전 초기화합니다.
+
+   Parse *argv* command line arguments (bytes strings) if "parse_argv"
+   of *preconfig* is non-zero.
+
+   *preconfig* must not be "NULL".
+
+PyStatus Py_PreInitializeFromArgs(const PyPreConfig *preconfig, int argc, wchar_t *const *argv)
+
+   *preconfig* 사전 구성에서 파이썬을 사전 초기화합니다.
+
+   Parse *argv* command line arguments (wide strings) if "parse_argv"
+   of *preconfig* is non-zero.
+
+   *preconfig* must not be "NULL".
+
+호출자는 "PyStatus_Exception()"과 "Py_ExitStatusException()" 을 사용하
+여 예외(에러나 종료)를 처리해야 합니다.
+
+For Python Configuration ("PyPreConfig_InitPythonConfig()"), if Python
+is initialized with command line arguments, the command line arguments
+must also be passed to preinitialize Python, since they have an effect
+on the pre-configuration like encodings. For example, the "-X utf8"
+command line option enables the Python UTF-8 Mode.
+
+"PyMem_SetAllocator()"는 "Py_PreInitialize()" 이후에
+"Py_InitializeFromConfig()" 이전에 호출하여 사용자 정의 메모리 할당자
+를 설치할 수 있습니다. "PyPreConfig.allocator"가
+"PYMEM_ALLOCATOR_NOT_SET"으로 설정되면 "Py_PreInitialize()" 전에 호출
+할 수 있습니다.
+
+Python memory allocation functions like "PyMem_RawMalloc()" must not
+be used before the Python preinitialization, whereas calling directly
+"malloc()" and "free()" is always safe. "Py_DecodeLocale()" must not
+be called before the Python preinitialization.
+
+Example using the preinitialization to enable the Python UTF-8 Mode:
+
+   PyStatus status;
+   PyPreConfig preconfig;
+   PyPreConfig_InitPythonConfig(&preconfig);
+
+   preconfig.utf8_mode = 1;
+
+   status = Py_PreInitialize(&preconfig);
+   if (PyStatus_Exception(status)) {
+       Py_ExitStatusException(status);
+   }
+
+   /* at this point, Python speaks UTF-8 */
+
+   Py_Initialize();
+   /* ... use Python API here ... */
+   Py_Finalize();
+
+
+PyConfig
+========
+
+type PyConfig
+
+   파이썬을 구성하기 위한 대부분의 파라미터를 포함하는 구조체.
+
+   When done, the "PyConfig_Clear()" function must be used to release
+   the configuration memory.
+
+   구조체 메서드:
+
+   void PyConfig_InitPythonConfig(PyConfig *config)
+
+      Initialize configuration with the Python Configuration.
+
+   void PyConfig_InitIsolatedConfig(PyConfig *config)
+
+      Initialize configuration with the Isolated Configuration.
+
+   PyStatus PyConfig_SetString(PyConfig *config, wchar_t *const *config_str, const wchar_t *str)
+
+      와이드 문자열 *str*을 "*config_str"로 복사합니다.
+
+      Preinitialize Python if needed.
+
+   PyStatus PyConfig_SetBytesString(PyConfig *config, wchar_t *const *config_str, const char *str)
+
+      Decode *str* using "Py_DecodeLocale()" and set the result into
+      "*config_str".
+
+      Preinitialize Python if needed.
+
+   PyStatus PyConfig_SetArgv(PyConfig *config, int argc, wchar_t *const *argv)
+
+      Set command line arguments ("argv" member of *config*) from the
+      *argv* list of wide character strings.
+
+      Preinitialize Python if needed.
+
+   PyStatus PyConfig_SetBytesArgv(PyConfig *config, int argc, char *const *argv)
+
+      Set command line arguments ("argv" member of *config*) from the
+      *argv* list of bytes strings. Decode bytes using
+      "Py_DecodeLocale()".
+
+      Preinitialize Python if needed.
+
+   PyStatus PyConfig_SetWideStringList(PyConfig *config, PyWideStringList *list, Py_ssize_t length, wchar_t **items)
+
+      와이드 문자열 리스트 *list*를 *length*와 *items*로 설정합니다.
+
+      Preinitialize Python if needed.
+
+   PyStatus PyConfig_Read(PyConfig *config)
+
+      모든 파이썬 구성을 읽습니다.
+
+      이미 초기화된 필드는 변경되지 않습니다.
+
+      The "PyConfig_Read()" function only parses "PyConfig.argv"
+      arguments once: "PyConfig.parse_argv" is set to "2" after
+      arguments are parsed. Since Python arguments are strippped from
+      "PyConfig.argv", parsing arguments twice would parse the
+      application options as Python options.
+
+      Preinitialize Python if needed.
+
+      버전 3.10에서 변경: The "PyConfig.argv" arguments are now only
+      parsed once, "PyConfig.parse_argv" is set to "2" after arguments
+      are parsed, and arguments are only parsed if
+      "PyConfig.parse_argv" equals "1".
+
+   void PyConfig_Clear(PyConfig *config)
+
+      구성 메모리를 해제합니다.
+
+   Most "PyConfig" methods preinitialize Python if needed. In that
+   case, the Python preinitialization configuration ("PyPreConfig") in
+   based on the "PyConfig". If configuration fields which are in
+   common with "PyPreConfig" are tuned, they must be set before
+   calling a "PyConfig" method:
+
+   * "PyConfig.dev_mode"
+
+   * "PyConfig.isolated"
+
+   * "PyConfig.parse_argv"
+
+   * "PyConfig.use_environment"
+
+   Moreover, if "PyConfig_SetArgv()" or "PyConfig_SetBytesArgv()" is
+   used, this method must be called before other methods, since the
+   preinitialization configuration depends on command line arguments
+   (if "parse_argv" is non-zero).
+
+   이 메서드의 호출자는 "PyStatus_Exception()"과
+   "Py_ExitStatusException()" 을 사용하여 예외(에러나 종료)를 처리해야
+   합니다.
+
+   구조체 필드:
+
+   PyWideStringList argv
+
+      Command line arguments: "sys.argv".
+
+      Set "parse_argv" to "1" to parse "argv" the same way the regular
+      Python parses Python command line arguments and then to strip
+      Python arguments from "argv".
+
+      If "argv" is empty, an empty string is added to ensure that
+      "sys.argv" always exists and is never empty.
+
+      Default: "NULL".
+
+      See also the "orig_argv" member.
+
+   wchar_t *base_exec_prefix
+
+      "sys.base_exec_prefix".
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration output.
+
+   wchar_t *base_executable
+
+      Python base executable: "sys._base_executable".
+
+      Set by the "__PYVENV_LAUNCHER__" environment variable.
+
+      Set from "PyConfig.executable" if "NULL".
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration output.
+
+   wchar_t *base_prefix
+
+      "sys.base_prefix".
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration output.
+
+   int buffered_stdio
+
+      If equals to 0 and "configure_c_stdio" is non-zero, disable
+      buffering on the C streams stdout and stderr.
+
+      Set to 0 by the "-u" command line option and the
+      "PYTHONUNBUFFERED" environment variable.
+
+      stdin은 항상 버퍼링 모드로 열립니다.
+
+      Default: "1".
+
+   int bytes_warning
+
+      If equals to 1, issue a warning when comparing "bytes" or
+      "bytearray" with "str", or comparing "bytes" with "int".
+
+      If equal or greater to 2, raise a "BytesWarning" exception in
+      these cases.
+
+      Incremented by the "-b" command line option.
+
+      Default: "0".
+
+   int warn_default_encoding
+
+      If non-zero, emit a "EncodingWarning" warning when
+      "io.TextIOWrapper" uses its default encoding. See Opt-in
+      EncodingWarning for details.
+
+      Default: "0".
+
+      버전 3.10에 추가.
+
+   wchar_t *check_hash_pycs_mode
+
+      Control the validation behavior of hash-based ".pyc" files:
+      value of the "--check-hash-based-pycs" command line option.
+
+      Valid values:
+
+      * "L"always"": Hash the source file for invalidation regardless
+        of value of the 'check_source' flag.
+
+      * "L"never"": Assume that hash-based pycs always are valid.
+
+      * "L"default"": The 'check_source' flag in hash-based pycs
+        determines invalidation.
+
+      Default: "L"default"".
+
+      See also **PEP 552** "Deterministic pycs".
+
+   int configure_c_stdio
+
+      If non-zero, configure C standard streams:
+
+      * On Windows, set the binary mode ("O_BINARY") on stdin, stdout
+        and stderr.
+
+      * If "buffered_stdio" equals zero, disable buffering of stdin,
+        stdout and stderr streams.
+
+      * If "interactive" is non-zero, enable stream buffering on stdin
+        and stdout (only stdout on Windows).
+
+      Default: "1" in Python config, "0" in isolated config.
+
+   int dev_mode
+
+      0이 아니면, 파이썬 개발 모드를 활성화합니다.
+
+      Default: "-1" in Python mode, "0" in isolated mode.
+
+   int dump_refs
+
+      Dump Python references?
+
+      0이 아니면, 종료 시 여전히 활성 상태인 모든 객체를 덤프합니다.
+
+      Set to "1" by the "PYTHONDUMPREFS" environment variable.
+
+      Need a special build of Python with the "Py_TRACE_REFS" macro
+      defined: see the "configure --with-trace-refs option".
+
+      Default: "0".
+
+   wchar_t *exec_prefix
+
+      The site-specific directory prefix where the platform-dependent
+      Python files are installed: "sys.exec_prefix".
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration output.
+
+   wchar_t *executable
+
+      The absolute path of the executable binary for the Python
+      interpreter: "sys.executable".
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration output.
+
+   int faulthandler
+
+      Enable faulthandler?
+
+      0이 아니면, 시작 시 "faulthandler.enable()"을 호출합니다.
+
+      Set to "1" by "-X faulthandler" and the "PYTHONFAULTHANDLER"
+      environment variable.
+
+      Default: "-1" in Python mode, "0" in isolated mode.
+
+   wchar_t *filesystem_encoding
+
+      *Filesystem encoding*: "sys.getfilesystemencoding()".
+
+      On macOS, Android and VxWorks: use ""utf-8"" by default.
+
+      On Windows: use ""utf-8"" by default, or ""mbcs"" if
+      "legacy_windows_fs_encoding" of "PyPreConfig" is non-zero.
+
+      Default encoding on other platforms:
+
+      * ""utf-8"" if "PyPreConfig.utf8_mode" is non-zero.
+
+      * ""ascii"" if Python detects that "nl_langinfo(CODESET)"
+        announces the ASCII encoding, whereas the "mbstowcs()"
+        function decodes from a different encoding (usually Latin1).
+
+      * ""utf-8"" if "nl_langinfo(CODESET)" returns an empty string.
+
+      * Otherwise, use the *locale encoding*: "nl_langinfo(CODESET)"
+        result.
+
+      At Python startup, the encoding name is normalized to the Python
+      codec name. For example, ""ANSI_X3.4-1968"" is replaced with
+      ""ascii"".
+
+      See also the "filesystem_errors" member.
+
+   wchar_t *filesystem_errors
+
+      *Filesystem error handler*: "sys.getfilesystemencodeerrors()".
+
+      On Windows: use ""surrogatepass"" by default, or ""replace""  if
+      "legacy_windows_fs_encoding" of "PyPreConfig" is non-zero.
+
+      On other platforms: use ""surrogateescape"" by default.
+
+      Supported error handlers:
+
+      * ""strict""
+
+      * ""surrogateescape""
+
+      * ""surrogatepass"" (only supported with the UTF-8 encoding)
+
+      See also the "filesystem_encoding" member.
+
+   unsigned long hash_seed
+
+   int use_hash_seed
+
+      무작위 해시 함수 시드.
+
+      If "use_hash_seed" is zero, a seed is chosen randomly at Python
+      startup, and "hash_seed" is ignored.
+
+      Set by the "PYTHONHASHSEED" environment variable.
+
+      Default *use_hash_seed* value: "-1" in Python mode, "0" in
+      isolated mode.
+
+   wchar_t *home
+
+      Python home directory.
+
+      If "Py_SetPythonHome()" has been called, use its argument if it
+      is not "NULL".
+
+      Set by the "PYTHONHOME" environment variable.
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration input.
+
+   int import_time
+
+      0이 아니면, 임포트 시간을 프로파일 합니다.
+
+      Set the "1" by the "-X importtime" option and the
+      "PYTHONPROFILEIMPORTTIME" environment variable.
+
+      Default: "0".
+
+   int inspect
+
+      스크립트나 명령을 실행한 후 대화식 모드로 들어갑니다.
+
+      If greater than 0, enable inspect: when a script is passed as
+      first argument or the -c option is used, enter interactive mode
+      after executing the script or the command, even when "sys.stdin"
+      does not appear to be a terminal.
+
+      Incremented by the "-i" command line option. Set to "1" if the
+      "PYTHONINSPECT" environment variable is non-empty.
+
+      Default: "0".
+
+   int install_signal_handlers
+
+      Install Python signal handlers?
+
+      Default: "1" in Python mode, "0" in isolated mode.
+
+   int interactive
+
+      If greater than 0, enable the interactive mode (REPL).
+
+      Incremented by the "-i" command line option.
+
+      Default: "0".
+
+   int isolated
+
+      If greater than 0, enable isolated mode:
+
+      * "sys.path" contains neither the script's directory (computed
+        from "argv[0]" or the current directory) nor the user's site-
+        packages directory.
+
+      * 파이썬 REPL은 대화식 프롬프트에서 "readline"을 임포트 하지도
+        기본 readline 구성을 활성화하지도 않습니다.
+
+      * Set "use_environment" and "user_site_directory" to 0.
+
+      Default: "0" in Python mode, "1" in isolated mode.
+
+      See also "PyPreConfig.isolated".
+
+   int legacy_windows_stdio
+
+      If non-zero, use "io.FileIO" instead of "io.WindowsConsoleIO"
+      for "sys.stdin", "sys.stdout" and "sys.stderr".
+
+      Set to "1" if the "PYTHONLEGACYWINDOWSSTDIO" environment
+      variable is set to a non-empty string.
+
+      윈도우에서만 사용 가능합니다. "#ifdef MS_WINDOWS" 매크로는 윈도
+      우 특정 코드에 사용할 수 있습니다.
+
+      Default: "0".
+
+      See also the **PEP 528** (Change Windows console encoding to
+      UTF-8).
+
+   int malloc_stats
+
+      0이 아니면, 종료 시 파이썬 pymalloc 메모리 할당자에 대한 통계를
+      덤프합니다.
+
+      Set to "1" by the "PYTHONMALLOCSTATS" environment variable.
+
+      The option is ignored if Python is "configured using the
+      --without-pymalloc option".
+
+      Default: "0".
+
+   wchar_t *platlibdir
+
+      Platform library directory name: "sys.platlibdir".
+
+      Set by the "PYTHONPLATLIBDIR" environment variable.
+
+      Default: value of the "PLATLIBDIR" macro which is set by the
+      "configure --with-platlibdir option" (default: ""lib"").
+
+      Part of the Python Path Configuration input.
+
+      버전 3.9에 추가.
+
+   wchar_t *pythonpath_env
+
+      Module search paths ("sys.path") as a string separated by
+      "DELIM" ("os.path.pathsep").
+
+      Set by the "PYTHONPATH" environment variable.
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration input.
+
+   PyWideStringList module_search_paths
+
+   int module_search_paths_set
+
+      Module search paths: "sys.path".
+
+      If "module_search_paths_set" is equal to 0, the function
+      calculating the Python Path Configuration overrides the
+      "module_search_paths" and sets "module_search_paths_set" to "1".
+
+      Default: empty list ("module_search_paths") and "0"
+      ("module_search_paths_set").
+
+      Part of the Python Path Configuration output.
+
+   int optimization_level
+
+      컴파일 최적화 수준:
+
+      * "0": Peephole optimizer, set "__debug__" to "True".
+
+      * "1": Level 0, remove assertions, set "__debug__" to "False".
+
+      * "2": Level 1, strip docstrings.
+
+      Incremented by the "-O" command line option. Set to the
+      "PYTHONOPTIMIZE" environment variable value.
+
+      Default: "0".
+
+   PyWideStringList orig_argv
+
+      The list of the original command line arguments passed to the
+      Python executable: "sys.orig_argv".
+
+      If "orig_argv" list is empty and "argv" is not a list only
+      containing an empty string, "PyConfig_Read()" copies "argv" into
+      "orig_argv" before modifying "argv" (if "parse_argv" is non-
+      zero).
+
+      See also the "argv" member and the "Py_GetArgcArgv()" function.
+
+      Default: empty list.
+
+      버전 3.10에 추가.
+
+   int parse_argv
+
+      Parse command line arguments?
+
+      If equals to "1", parse "argv" the same way the regular Python
+      parses command line arguments, and strip Python arguments from
+      "argv".
+
+      The "PyConfig_Read()" function only parses "PyConfig.argv"
+      arguments once: "PyConfig.parse_argv" is set to "2" after
+      arguments are parsed. Since Python arguments are strippped from
+      "PyConfig.argv", parsing arguments twice would parse the
+      application options as Python options.
+
+      Default: "1" in Python mode, "0" in isolated mode.
+
+      버전 3.10에서 변경: The "PyConfig.argv" arguments are now only
+      parsed if "PyConfig.parse_argv" equals to "1".
+
+   int parser_debug
+
+      Parser debug mode. If greater than 0, turn on parser debugging
+      output (for expert only, depending on compilation options).
+
+      Incremented by the "-d" command line option. Set to the
+      "PYTHONDEBUG" environment variable value.
+
+      Default: "0".
+
+   int pathconfig_warnings
+
+      On Unix, if non-zero, calculating the Python Path Configuration
+      can log warnings into "stderr". If equals to 0, suppress these
+      warnings.
+
+      It has no effect on Windows.
+
+      Default: "1" in Python mode, "0" in isolated mode.
+
+      Part of the Python Path Configuration input.
+
+   wchar_t *prefix
+
+      The site-specific directory prefix where the platform
+      independent Python files are installed: "sys.prefix".
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration output.
+
+   wchar_t *program_name
+
+      Program name used to initialize "executable" and in early error
+      messages during Python initialization.
+
+      * If "Py_SetProgramName()" has been called, use its argument.
+
+      * On macOS, use "PYTHONEXECUTABLE" environment variable if set.
+
+      * If the "WITH_NEXT_FRAMEWORK" macro is defined, use
+        "__PYVENV_LAUNCHER__" environment variable if set.
+
+      * Use "argv[0]" of "argv" if available and non-empty.
+
+      * Otherwise, use "L"python"" on Windows, or "L"python3"" on
+        other platforms.
+
+      Default: "NULL".
+
+      Part of the Python Path Configuration input.
+
+   wchar_t *pycache_prefix
+
+      Directory where cached ".pyc" files are written:
+      "sys.pycache_prefix".
+
+      Set by the "-X pycache_prefix=PATH" command line option and the
+      "PYTHONPYCACHEPREFIX" environment variable.
+
+      "NULL"이면, "sys.pycache_prefix"는 "None"으로 설정됩니다.
+
+      Default: "NULL".
+
+   int quiet
+
+      Quiet mode. If greater than 0, don't display the copyright and
+      version at Python startup in interactive mode.
+
+      Incremented by the "-q" command line option.
+
+      Default: "0".
+
+   wchar_t *run_command
+
+      Value of the "-c" command line option.
+
+      Used by "Py_RunMain()".
+
+      Default: "NULL".
+
+   wchar_t *run_filename
+
+      Filename passed on the command line: trailing command line
+      argument without "-c" or "-m".
+
+      For example, it is set to "script.py" by the "python3 script.py
+      arg" command.
+
+      Used by "Py_RunMain()".
+
+      Default: "NULL".
+
+   wchar_t *run_module
+
+      Value of the "-m" command line option.
+
+      Used by "Py_RunMain()".
+
+      Default: "NULL".
+
+   int show_ref_count
+
+      Show total reference count at exit?
+
+      Set to 1 by "-X showrefcount" command line option.
+
+      Need a debug build of Python (the "Py_REF_DEBUG" macro must be
+      defined).
+
+      Default: "0".
+
+   int site_import
+
+      시작할 때 "site" 모듈을 임포트 합니까?
+
+      If equal to zero, disable the import of the module site and the
+      site-dependent manipulations of "sys.path" that it entails.
+
+      Also disable these manipulations if the "site" module is
+      explicitly imported later (call "site.main()" if you want them
+      to be triggered).
+
+      Set to "0" by the "-S" command line option.
+
+      "sys.flags.no_site" is set to the inverted value of
+      "site_import".
+
+      Default: "1".
+
+   int skip_source_first_line
+
+      If non-zero, skip the first line of the "PyConfig.run_filename"
+      source.
+
+      It allows the usage of non-Unix forms of "#!cmd". This is
+      intended for a DOS specific hack only.
+
+      Set to "1" by the "-x" command line option.
+
+      Default: "0".
+
+   wchar_t *stdio_encoding
+
+   wchar_t *stdio_errors
+
+      Encoding and encoding errors of "sys.stdin", "sys.stdout" and
+      "sys.stderr" (but "sys.stderr" always uses ""backslashreplace""
+      error handler).
+
+      If "Py_SetStandardStreamEncoding()" has been called, use its
+      *error* and *errors* arguments if they are not "NULL".
+
+      Use the "PYTHONIOENCODING" environment variable if it is non-
+      empty.
+
+      Default encoding:
+
+      * ""UTF-8"" if "PyPreConfig.utf8_mode" is non-zero.
+
+      * Otherwise, use the *locale encoding*.
+
+      Default error handler:
+
+      * On Windows: use ""surrogateescape"".
+
+      * ""surrogateescape"" if "PyPreConfig.utf8_mode" is non-zero, or
+        if the LC_CTYPE locale is "C" or "POSIX".
+
+      * ""strict"" otherwise.
+
+   int tracemalloc
+
+      Enable tracemalloc?
+
+      0이 아니면, 시작 시 "tracemalloc.start()"를 호출합니다.
+
+      Set by "-X tracemalloc=N" command line option and by the
+      "PYTHONTRACEMALLOC" environment variable.
+
+      Default: "-1" in Python mode, "0" in isolated mode.
+
+   int use_environment
+
+      Use environment variables?
+
+      If equals to zero, ignore the environment variables.
+
+      Default: "1" in Python config and "0" in isolated config.
+
+   int user_site_directory
+
+      If non-zero, add the user site directory to "sys.path".
+
+      Set to "0" by the "-s" and "-I" command line options.
+
+      Set to "0" by the "PYTHONNOUSERSITE" environment variable.
+
+      Default: "1" in Python mode, "0" in isolated mode.
+
+   int verbose
+
+      Verbose mode. If greater than 0, print a message each time a
+      module is imported, showing the place (filename or built-in
+      module) from which it is loaded.
+
+      If greater or equal to 2, print a message for each file that is
+      checked for when searching for a module. Also provides
+      information on module cleanup at exit.
+
+      Incremented by the "-v" command line option.
+
+      Set to the "PYTHONVERBOSE" environment variable value.
+
+      Default: "0".
+
+   PyWideStringList warnoptions
+
+      Options of the "warnings" module to build warnings filters,
+      lowest to highest priority: "sys.warnoptions".
+
+      "warnings" 모듈은 "sys.warnoptions"를 역순으로 추가합니다: 마지
+      막 "PyConfig.warnoptions" 항목은 가장 먼저 검사되는
+      "warnings.filters"의 첫 번째 항목이 됩니다 (가장 높은 우선순위).
+
+      The "-W" command line options adds its value to "warnoptions",
+      it can be used multiple times.
+
+      The "PYTHONWARNINGS" environment variable can also be used to
+      add warning options. Multiple options can be specified,
+      separated by commas (",").
+
+      Default: empty list.
+
+   int write_bytecode
+
+      If equal to 0, Python won't try to write ".pyc" files on the
+      import of source modules.
+
+      Set to "0" by the "-B" command line option and the
+      "PYTHONDONTWRITEBYTECODE" environment variable.
+
+      "sys.dont_write_bytecode"는 "write_bytecode"의 반전된 값으로 초
+      기화됩니다.
+
+      Default: "1".
+
+   PyWideStringList xoptions
+
+      Values of the "-X" command line options: "sys._xoptions".
+
+      Default: empty list.
+
+If "parse_argv" is non-zero, "argv" arguments are parsed the same way
+the regular Python parses command line arguments, and Python arguments
+are stripped from "argv".
+
+The "xoptions" options are parsed to set other options: see the "-X"
+command line option.
+
+버전 3.9에서 변경: "show_alloc_count" 필드가 제거되었습니다.
+
+
+PyConfig를 사용한 초기화
+========================
+
+Function to initialize Python:
+
+PyStatus Py_InitializeFromConfig(const PyConfig *config)
+
+   Initialize Python from *config* configuration.
+
+호출자는 "PyStatus_Exception()"과 "Py_ExitStatusException()" 을 사용하
+여 예외(에러나 종료)를 처리해야 합니다.
+
+If "PyImport_FrozenModules()", "PyImport_AppendInittab()" or
+"PyImport_ExtendInittab()" are used, they must be set or called after
+Python preinitialization and before the Python initialization. If
+Python is initialized multiple times, "PyImport_AppendInittab()" or
+"PyImport_ExtendInittab()" must be called before each Python
+initialization.
+
+The current configuration ("PyConfig" type) is stored in
+"PyInterpreterState.config".
+
+프로그램 이름을 설정하는 예:
+
+   void init_python(void)
+   {
+       PyStatus status;
+
+       PyConfig config;
+       PyConfig_InitPythonConfig(&config);
+
+       /* Set the program name. Implicitly preinitialize Python. */
+       status = PyConfig_SetString(&config, &config.program_name,
+                                   L"/path/to/my_program");
+       if (PyStatus_Exception(status)) {
+           goto exception;
+       }
+
+       status = Py_InitializeFromConfig(&config);
+       if (PyStatus_Exception(status)) {
+           goto exception;
+       }
+       PyConfig_Clear(&config);
+       return;
+
+   exception:
+       PyConfig_Clear(&config);
+       Py_ExitStatusException(status);
+   }
+
+More complete example modifying the default configuration, read the
+configuration, and then override some parameters:
+
+   PyStatus init_python(const char *program_name)
+   {
+       PyStatus status;
+
+       PyConfig config;
+       PyConfig_InitPythonConfig(&config);
+
+       /* Set the program name before reading the configuration
+          (decode byte string from the locale encoding).
+
+          Implicitly preinitialize Python. */
+       status = PyConfig_SetBytesString(&config, &config.program_name,
+                                        program_name);
+       if (PyStatus_Exception(status)) {
+           goto done;
+       }
+
+       /* Read all configuration at once */
+       status = PyConfig_Read(&config);
+       if (PyStatus_Exception(status)) {
+           goto done;
+       }
+
+       /* Append our custom search path to sys.path */
+       status = PyWideStringList_Append(&config.module_search_paths,
+                                        L"/path/to/more/modules");
+       if (PyStatus_Exception(status)) {
+           goto done;
+       }
+
+       /* Override executable computed by PyConfig_Read() */
+       status = PyConfig_SetString(&config, &config.executable,
+                                   L"/path/to/my_executable");
+       if (PyStatus_Exception(status)) {
+           goto done;
+       }
+
+       status = Py_InitializeFromConfig(&config);
+
+   done:
+       PyConfig_Clear(&config);
+       return status;
+   }
+
+
+격리된 구성
+===========
+
+"PyPreConfig_InitIsolatedConfig()"와 "PyConfig_InitIsolatedConfig()"
+함수는 시스템에서 파이썬을 격리하는 구성을 만듭니다. 예를 들어, 파이썬
+을 응용 프로그램에 내장하기 위해.
+
+This configuration ignores global configuration variables, environment
+variables, command line arguments ("PyConfig.argv" is not parsed) and
+user site directory. The C standard streams (ex: "stdout") and the
+LC_CTYPE locale are left unchanged. Signal handlers are not installed.
+
+Configuration files are still used with this configuration. Set the
+Python Path Configuration ("output fields") to ignore these
+configuration files and avoid the function computing the default path
+configuration.
+
+
+파이썬 구성
+===========
+
+"PyPreConfig_InitPythonConfig()"와 "PyConfig_InitPythonConfig()" 함수
+는 일반 파이썬처럼 동작하는 사용자 정의된 파이썬을 빌드하기 위한 구성
+을 만듭니다.
+
+환경 변수와 명령 줄 인자는 파이썬을 구성하는 데 사용되는 반면, 전역 구
+성 변수는 무시됩니다.
+
+This function enables C locale coercion (**PEP 538**) and Python UTF-8
+Mode (**PEP 540**) depending on the LC_CTYPE locale, "PYTHONUTF8" and
+"PYTHONCOERCECLOCALE" environment variables.
+
+
+Python Path Configuration
+=========================
+
+"PyConfig"에는 경로 구성을 위한 여러 필드가 포함되어 있습니다:
+
+* 경로 구성 입력:
+
+  * "PyConfig.home"
+
+  * "PyConfig.platlibdir"
+
+  * "PyConfig.pathconfig_warnings"
+
+  * "PyConfig.program_name"
+
+  * "PyConfig.pythonpath_env"
+
+  * 현재 작업 디렉터리: 절대 경로를 얻기 위해
+
+  * ("PyConfig.program_name"에서) 프로그램 전체 경로를 얻기 위한
+    "PATH" 환경 변수
+
+  * "__PYVENV_LAUNCHER__" 환경 변수
+
+  * (윈도우 전용) HKEY_CURRENT_USER와 HKEY_LOCAL_MACHINE의
+    "SoftwarePythonPythonCoreX.YPythonPath" 아래에 있는 레지스트리의
+    응용 프로그램 경로 (여기서 X.Y는 파이썬 버전입니다).
+
+* 경로 구성 출력 필드:
+
+  * "PyConfig.base_exec_prefix"
+
+  * "PyConfig.base_executable"
+
+  * "PyConfig.base_prefix"
+
+  * "PyConfig.exec_prefix"
+
+  * "PyConfig.executable"
+
+  * "PyConfig.module_search_paths_set", "PyConfig.module_search_paths"
+
+  * "PyConfig.prefix"
+
+If at least one "output field" is not set, Python calculates the path
+configuration to fill unset fields. If "module_search_paths_set" is
+equal to 0, "module_search_paths" is overridden and
+"module_search_paths_set" is set to 1.
+
+It is possible to completely ignore the function calculating the
+default path configuration by setting explicitly all path
+configuration output fields listed above. A string is considered as
+set even if it is non-empty. "module_search_paths" is considered as
+set if "module_search_paths_set" is set to 1. In this case, path
+configuration input fields are ignored as well.
+
+Set "pathconfig_warnings" to 0 to suppress warnings when calculating
+the path configuration (Unix only, Windows does not log any warning).
+
+"base_prefix"나 "base_exec_prefix" 필드가 설정되지 않으면, 각각
+"prefix"와 "exec_prefix"의 값을 상속합니다.
+
+"Py_RunMain()"과 "Py_Main()"은 "sys.path"를 수정합니다:
+
+* "run_filename"이 설정되고 "__main__.py" 스크립트를 포함하는 디렉터리
+  이면, "run_filename"을 "sys.path" 앞에 추가합니다.
+
+* "isolated"가 0이면:
+
+  * "run_module"이 설정되면, 현재 디렉터리를 "sys.path" 앞에 추가합니
+    다. 현재 디렉터리를 읽을 수 없으면 아무것도 하지 않습니다.
+
+  * "run_filename"이 설정되면, 파일명의 디렉터리를 "sys.path" 앞에 추
+    가합니다.
+
+  * 그렇지 않으면, 빈 문자열을 "sys.path" 앞에 추가합니다.
+
+"site_import"가 0이 아니면, "site" 모듈이 "sys.path"를 수정할 수 있습
+니다. "user_site_directory"가 0이 아니고 사용자의 site-package 디렉터
+리가 존재하면, "site" 모듈은 사용자의 site-package 디렉터리를
+"sys.path"에 추가합니다.
+
+다음과 같은 구성 파일이 경로 구성에 사용됩니다:
+
+* "pyvenv.cfg"
+
+* "python._pth" (Windows only)
+
+* "pybuilddir.txt" (유닉스 전용)
+
+The "__PYVENV_LAUNCHER__" environment variable is used to set
+"PyConfig.base_executable"
+
+
+Py_RunMain()
+============
+
+int Py_RunMain(void)
+
+   Execute the command ("PyConfig.run_command"), the script
+   ("PyConfig.run_filename") or the module ("PyConfig.run_module")
+   specified on the command line or in the configuration.
+
+   By default and when if "-i" option is used, run the REPL.
+
+   Finally, finalizes Python and returns an exit status that can be
+   passed to the "exit()" function.
+
+See Python Configuration for an example of customized Python always
+running in isolated mode using "Py_RunMain()".
+
+
+Py_GetArgcArgv()
+================
+
+void Py_GetArgcArgv(int *argc, wchar_t ***argv)
+
+   파이썬이 수정하기 전의, 원래 명령 줄 인자를 가져옵니다.
+
+   See also "PyConfig.orig_argv" member.
+
+
+다단계 초기화 비공개 잠정적 API
+===============================
+
+This section is a private provisional API introducing multi-phase
+initialization, the core feature of **PEP 432**:
+
+* "핵심(Core)" 초기화 단계, "최소한의 파이썬":
+
+  * 내장형;
+
+  * 내장 예외;
+
+  * 내장과 프로즌 모듈(frozen modules);
+
+  * "sys" 모듈은 부분적으로만 초기화됩니다 (예를 들어: "sys.path"는 아
+    직 존재하지 않습니다).
+
+* "주(Main)" 초기화 단계, 파이썬이 완전히 초기화됩니다:
+
+  * "importlib"를 설치하고 구성합니다;
+
+  * 경로 구성을 적용합니다;
+
+  * 시그널 처리기를 설치합니다;
+
+  * "sys" 모듈 초기화를 완료합니다 (예를 들어: "sys.stdout"과
+    "sys.path"를 만듭니다);
+
+  * "faulthandler"와 "tracemalloc"과 같은 선택적 기능을 활성화합니다;
+
+  * "site" 모듈을 임포트 합니다;
+
+  * 등등
+
+비공개 잠정적 API:
+
+* "PyConfig._init_main": if set to 0, "Py_InitializeFromConfig()"
+  stops at the "Core" initialization phase.
+
+* "PyConfig._isolated_interpreter": if non-zero, disallow threads,
+  subprocesses and fork.
+
+PyStatus _Py_InitializeMain(void)
+
+   "주" 초기화 단계로 이동하여, 파이썬 초기화를 완료합니다.
+
+"핵심" 단계에서는 아무런 모듈도 임포트 하지 않고 "importlib" 모듈이 구
+성되지 않습니다: 경로 구성은 "주" 단계에서만 적용됩니다. 경로 구성을
+재정의하거나 조정하기 위해 파이썬에서 파이썬을 사용자 정의할 수 있으며
+, 사용자 정의 "sys.meta_path" 임포터(importer)나 임포트 훅 등을 설치할
+수 있습니다.
+
+It may become possible to calculatin the Path Configuration in Python,
+after the Core phase and before the Main phase, which is one of the
+**PEP 432** motivation.
+
+"핵심" 단계가 제대로 정의되지 않았습니다: 이 단계에서 무엇을 사용할 수
+있고, 무엇이 그렇지 않아야 하는지는 아직 지정되지 않았습니다. API는 비
+공개이자 잠정적인 것으로 표시됩니다: 적절한 공개 API가 설계될 때까지
+언제든지 API를 수정하거나 제거할 수 있습니다.
+
+"핵심"과 "주" 초기화 단계 사이에서 파이썬 코드를 실행하는 예제:
+
+   void init_python(void)
+   {
+       PyStatus status;
+
+       PyConfig config;
+       PyConfig_InitPythonConfig(&config);
+       config._init_main = 0;
+
+       /* ... customize 'config' configuration ... */
+
+       status = Py_InitializeFromConfig(&config);
+       PyConfig_Clear(&config);
+       if (PyStatus_Exception(status)) {
+           Py_ExitStatusException(status);
+       }
+
+       /* Use sys.stderr because sys.stdout is only created
+          by _Py_InitializeMain() */
+       int res = PyRun_SimpleString(
+           "import sys; "
+           "print('Run Python code before _Py_InitializeMain', "
+                  "file=sys.stderr)");
+       if (res < 0) {
+           exit(1);
+       }
+
+       /* ... put more configuration code here ... */
+
+       status = _Py_InitializeMain();
+       if (PyStatus_Exception(status)) {
+           Py_ExitStatusException(status);
+       }
+   }

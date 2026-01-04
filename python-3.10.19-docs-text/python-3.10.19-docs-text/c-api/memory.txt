@@ -1,0 +1,728 @@
+메모리 관리
+***********
+
+
+개요
+====
+
+파이썬의 메모리 관리에는 모든 파이썬 객체와 데이터 구조를 포함하는 비
+공개 힙(private heap)을 수반합니다. 이 비공개 힙의 관리는 *파이썬 메모
+리 관리자*에 의해 내부적으로 이루어집니다. 파이썬 메모리 관리자는 공유
+, 세그먼트 화, 사전 할당 또는 캐싱과 같은 동적 스토리지 관리의 다양한
+측면을 처리하는 서로 다른 구성 요소를 가지고 있습니다.
+
+가장 낮은 수준에서, 원시 메모리 할당자는 운영 체제의 메모리 관리자와
+상호 작용하여 비공개 힙에 모든 파이썬 관련 데이터를 저장하기에 충분한
+공간이 있는지 확인합니다. 원시 메모리 할당자 위에, 여러 개의 객체별 할
+당자가 같은 힙에서 작동하며 각 객체 형의 특성에 맞는 고유한 메모리 관
+리 정책을 구현합니다. 예를 들어, 정수는 다른 스토리지 요구 사항과 속도
+/공간 절충을 의미하므로, 정수 객체는 힙 내에서 문자열, 튜플 또는 딕셔
+너리와는 다르게 관리됩니다. 따라서 파이썬 메모리 관리자는 일부 작업을
+객체별 할당자에게 위임하지만, 후자가 비공개 힙의 경계 내에서 작동하도
+록 합니다.
+
+파이썬 힙의 관리는 인터프리터 자체에 의해 수행되며, 사용자는 힙 내부의
+메모리 블록에 대한 객체 포인터를 규칙적으로 조작하더라도, 사용자가 제
+어할 수 없다는 것을 이해하는 것이 중요합니다. 파이썬 객체와 기타 내부
+버퍼를 위한 힙 공간 할당은 이 설명서에 나열된 파이썬/C API 함수를 통해
+파이썬 메모리 관리자의 요청에 따라 수행됩니다.
+
+메모리 손상을 피하고자, 확장 작성자는 C 라이브러리에서 내보낸 함수를
+파이썬 객체에 대해 실행하지 않아야 합니다: "malloc()", "calloc()",
+"realloc()" 및 "free()". 그렇게 한다면, 서로 다른 알고리즘을 구현하고
+다른 힘에 작동하기 때문에, C 할당자와 파이썬 메모리 관리자 간에 혼합
+호출이 발생하여 치명적인 결과를 초래합니다. 그러나, 다음 예제와 같이
+개별 목적으로 C 라이브러리 할당자를 사용하여 메모리 블록을 안전하게 할
+당하고 해제할 수 있습니다:
+
+   PyObject *res;
+   char *buf = (char *) malloc(BUFSIZ); /* for I/O */
+
+   if (buf == NULL)
+       return PyErr_NoMemory();
+   ...Do some I/O operation involving buf...
+   res = PyBytes_FromString(buf);
+   free(buf); /* malloc'ed */
+   return res;
+
+이 예에서, I/O 버퍼에 대한 메모리 요청은 C 라이브러리 할당자에 의해 처
+리됩니다. 파이썬 메모리 관리자는 결과로 반환되는 바이트열 객체의 할당
+에만 관여합니다.
+
+그러나 대부분의 경우, 파이썬 힙에서 메모리를 할당하는 것이 좋습니다.
+파이썬 힙은 파이썬 메모리 관리자가 제어하기 때문입니다. 예를 들어, 인
+터프리터가 C로 작성된 새로운 객체 형으로 확장될 때 필요합니다. 파이썬
+힙을 사용하는 또 다른 이유는 확장 모듈의 메모리 요구에 대해 파이썬 메
+모리 관리자에게 *알리고자* 하는 것입니다. 요청된 메모리가 내부적이고
+매우 특정한 목적으로만 사용될 때도, 모든 메모리 요청을 파이썬 메모리
+관리자에 위임하면 인터프리터가 전체 메모리 요구량에 대한 더 정확한 이
+미지를 갖게 됩니다. 결과적으로, 특정 상황에서, 파이썬 메모리 관리자는
+가비지 수집, 메모리 압축 또는 기타 예방 절차와 같은 적절한 작업을 트리
+거 하거나 그러지 않을 수 있습니다. 앞의 예에서와같이 C 라이브러리 할당
+자를 사용하면, I/O 버퍼에 할당된 메모리가 파이썬 메모리 관리자를 완전
+히 우회하게 됨에 유의하십시오.
+
+더 보기:
+
+  "PYTHONMALLOC" 환경 변수를 사용하여 파이썬에서 사용하는 메모리 할당
+  자를 구성할 수 있습니다.
+
+  "PYTHONMALLOCSTATS" 환경 변수는 새로운 pymalloc 객체 아레나(arena)가
+  만들어질 때마다 그리고 종료 시 pymalloc 메모리 할당자의 통계를 인쇄
+  하는 데 사용될 수 있습니다.
+
+
+Allocator Domains
+=================
+
+All allocating functions belong to one of three different "domains"
+(see also "PyMemAllocatorDomain"). These domains represent different
+allocation strategies and are optimized for different purposes. The
+specific details on how every domain allocates memory or what internal
+functions each domain calls is considered an implementation detail,
+but for debugging purposes a simplified table can be found at here.
+There is no hard requirement to use the memory returned by the
+allocation functions belonging to a given domain for only the purposes
+hinted by that domain (although this is the recommended practice). For
+example, one could use the memory returned by "PyMem_RawMalloc()" for
+allocating Python objects or the memory returned by
+"PyObject_Malloc()" for allocating memory for buffers.
+
+The three allocation domains are:
+
+* Raw domain: intended for allocating memory for general-purpose
+  memory buffers where the allocation *must* go to the system
+  allocator or where the allocator can operate without the *GIL*. The
+  memory is requested directly to the system.
+
+* "Mem" domain: intended for allocating memory for Python buffers and
+  general-purpose memory buffers where the allocation must be
+  performed with the *GIL* held. The memory is taken from the Python
+  private heap.
+
+* Object domain: intended for allocating memory belonging to Python
+  objects. The memory is taken from the Python private heap.
+
+When freeing memory previously allocated by the allocating functions
+belonging to a given domain,the matching specific deallocating
+functions must be used. For example, "PyMem_Free()" must be used to
+free memory allocated using "PyMem_Malloc()".
+
+
+원시 메모리 인터페이스
+======================
+
+다음 함수 집합은 시스템 할당자에 대한 래퍼입니다. 이러한 함수는 스레드
+안전해서, *GIL*을 유지할 필요는 없습니다.
+
+The default raw memory allocator uses the following functions:
+"malloc()", "calloc()", "realloc()" and "free()"; call "malloc(1)" (or
+"calloc(1, 1)") when requesting zero bytes.
+
+버전 3.4에 추가.
+
+void *PyMem_RawMalloc(size_t n)
+
+   *n* 바이트를 할당하고 할당된 메모리를 가리키는 "void*" 형의 포인터
+   를 반환하거나, 요청이 실패하면 "NULL"을 반환합니다.
+
+   0바이트를 요청하면 가능하면 "PyMem_RawMalloc(1)"이 대신 호출된 것처
+   럼 가능하면 고유한 "NULL"이 아닌 포인터를 반환합니다. 메모리는 어떤
+   식으로든 초기화되지 않습니다.
+
+void *PyMem_RawCalloc(size_t nelem, size_t elsize)
+
+   크기가 각각 *elsize* 바이트인 *nelem* 개의 요소를 할당하고 할당된
+   메모리를 가리키는 "void*" 형의 포인터를 반환하거나, 요청이 실패하면
+   "NULL"을 반환합니다. 메모리는 0으로 초기화됩니다.
+
+   0개의 요소나 0바이트 크기의 요소를 요청하면 "PyMem_RawCalloc(1, 1)"
+   이 대신 호출된 것처럼 가능하면 고유한 "NULL"이 아닌 포인터를 반환합
+   니다.
+
+   버전 3.5에 추가.
+
+void *PyMem_RawRealloc(void *p, size_t n)
+
+   *p*가 가리키는 메모리 블록의 크기를 *n* 바이트로 조정합니다. 내용은
+   이전과 새로운 크기의 최솟값 내에서는 변경되지 않습니다.
+
+   *p*가 "NULL"이면, 호출은 "PyMem_RawMalloc(n)"과 동등합니다; *n*이 0
+   과 같으면, 메모리 블록의 크기는 조정되지만 해제되지는 않고, 반환된
+   포인터는 "NULL"이 아닙니다.
+
+   *p*가 "NULL"이 아닌 한, "PyMem_RawMalloc()", "PyMem_RawRealloc()"
+   또는 "PyMem_RawCalloc()"에 대한 이전 호출에 의해 반환된 것이어야 합
+   니다.
+
+   요청이 실패하면, "PyMem_RawRealloc()"은 "NULL"을 반환하고 *p*는 이
+   전 메모리 영역에 대한 유효한 포인터로 유지됩니다.
+
+void PyMem_RawFree(void *p)
+
+   *p*가 가리키는 메모리 블록을 해제합니다. *p*는 "PyMem_RawMalloc()",
+   "PyMem_RawRealloc()" 또는 "PyMem_RawCalloc()"에 대한 이전 호출로 반
+   환된 것이어야 합니다. 그렇지 않거나 "PyMem_RawFree(p)"가 앞서 호출
+   되었으면, 정의되지 않은 동작이 일어납니다.
+
+   *p*가 "NULL"이면, 아무 작업도 수행되지 않습니다.
+
+
+메모리 인터페이스
+=================
+
+ANSI C 표준에 따라 모델링 되었지만 0바이트를 요청할 때의 동작을 지정한
+다음 함수 집합은 파이썬 힙에서 메모리를 할당하고 해제하는 데 사용할 수
+있습니다.
+
+기본 메모리 할당자는 pymalloc 메모리 할당자를 사용합니다.
+
+경고:
+
+  이 함수를 사용할 때는 *GIL*을 유지해야 합니다.
+
+버전 3.6에서 변경: 기본 할당자는 이제 시스템 "malloc()" 대신 pymalloc
+입니다.
+
+void *PyMem_Malloc(size_t n)
+    * Part of the Stable ABI.*
+
+   *n* 바이트를 할당하고 할당된 메모리를 가리키는 "void*" 형의 포인터
+   를 반환하거나, 요청이 실패하면 "NULL"을 반환합니다.
+
+   0바이트를 요청하면 "PyMem_Malloc(1)"이 대신 호출된 것처럼 가능하면
+   고유한 "NULL"이 아닌 포인터를 반환합니다. 메모리는 어떤 식으로든 초
+   기화되지 않습니다.
+
+void *PyMem_Calloc(size_t nelem, size_t elsize)
+    * Part of the Stable ABI since version 3.7.*
+
+   크기가 각각 *elsize* 바이트인 *nelem* 개의 요소를 할당하고 할당된
+   메모리를 가리키는 "void*" 형의 포인터를 반환하거나, 요청이 실패하면
+   "NULL"을 반환합니다. 메모리는 0으로 초기화됩니다.
+
+   0개의 요소나 0바이트 크기의 요소를 요청하면 "PyMem_Calloc(1, 1)"이
+   대신 호출된 것처럼 가능하면 고유한 "NULL"이 아닌 포인터를 반환합니
+   다.
+
+   버전 3.5에 추가.
+
+void *PyMem_Realloc(void *p, size_t n)
+    * Part of the Stable ABI.*
+
+   *p*가 가리키는 메모리 블록의 크기를 *n* 바이트로 조정합니다. 내용은
+   이전과 새로운 크기의 최솟값 내에서는 변경되지 않습니다.
+
+   *p*가 "NULL"이면, 호출은 "PyMem_Malloc(n)"과 동등합니다; 그렇지 않
+   고 *n*이 0과 같으면, 메모리 블록의 크기는 조정되지만 해제되지는 않
+   으며, 반환된 포인터는 "NULL"이 아닙니다.
+
+   *p*가 "NULL"이 아닌 한, "PyMem_Malloc()", "PyMem_Realloc()" 또는
+   "PyMem_Calloc()"에 대한 이전 호출이 반환한 것이어야 합니다.
+
+   요청이 실패하면, "PyMem_Realloc()"은 "NULL"을 반환하고 *p*는 이전
+   메모리 영역에 대한 유효한 포인터로 유지됩니다.
+
+void PyMem_Free(void *p)
+    * Part of the Stable ABI.*
+
+   *p*가 가리키는 메모리 블록을 해제합니다. *p*는 "PyMem_Malloc()",
+   "PyMem_Realloc()" 또는 "PyMem_Calloc()"에 대한 이전 호출이 반환한
+   것이어야 합니다. 그렇지 않거나 "PyMem_Free(p)"가 앞서 호출되었으면
+   정의되지 않은 동작이 일어납니다.
+
+   *p*가 "NULL"이면, 아무 작업도 수행되지 않습니다.
+
+편의를 위해 다음과 같은 형 지향 매크로가 제공됩니다. *TYPE*이 모든 C형
+을 나타냄에 유의하십시오.
+
+TYPE *PyMem_New(TYPE, size_t n)
+
+   Same as "PyMem_Malloc()", but allocates "(n * sizeof(TYPE))" bytes
+   of memory.  Returns a pointer cast to "TYPE*".  The memory will not
+   have been initialized in any way.
+
+TYPE *PyMem_Resize(void *p, TYPE, size_t n)
+
+   Same as "PyMem_Realloc()", but the memory block is resized to "(n *
+   sizeof(TYPE))" bytes.  Returns a pointer cast to "TYPE*". On
+   return, *p* will be a pointer to the new memory area, or "NULL" in
+   the event of failure.
+
+   이것은 C 전처리기 매크로입니다; *p*는 항상 다시 대입됩니다. 에러를
+   처리할 때 메모리 손실을 피하려면 *p*의 원래 값을 보관하십시오.
+
+void PyMem_Del(void *p)
+
+   "PyMem_Free()"와 같습니다.
+
+또한, 위에 나열된 C API 함수를 사용하지 않고, 파이썬 메모리 할당자를
+직접 호출하기 위해 다음 매크로 집합이 제공됩니다. 그러나, 이들을 사용
+하면 파이썬 버전을 가로지르는 바이너리 호환성이 유지되지 않아서 확장
+모듈에서는 폐지되었습니다.
+
+* "PyMem_MALLOC(size)"
+
+* "PyMem_NEW(type, size)"
+
+* "PyMem_REALLOC(ptr, size)"
+
+* "PyMem_RESIZE(ptr, type, size)"
+
+* "PyMem_FREE(ptr)"
+
+* "PyMem_DEL(ptr)"
+
+
+객체 할당자
+===========
+
+ANSI C 표준에 따라 모델링 되었지만 0바이트를 요청할 때의 동작을 지정한
+다음 함수 집합은 파이썬 힙에서 메모리를 할당하고 해제하는 데 사용할 수
+있습니다.
+
+참고:
+
+  There is no guarantee that the memory returned by these allocators
+  can be successfully cast to a Python object when intercepting the
+  allocating functions in this domain by the methods described in the
+  Customize Memory Allocators section.
+
+기본 객체 할당자는 pymalloc 메모리 할당자를 사용합니다.
+
+경고:
+
+  이 함수를 사용할 때는 *GIL*을 유지해야 합니다.
+
+void *PyObject_Malloc(size_t n)
+    * Part of the Stable ABI.*
+
+   *n* 바이트를 할당하고 할당된 메모리를 가리키는 "void*" 형의 포인터
+   를 반환하거나, 요청이 실패하면 "NULL"을 반환합니다.
+
+   0바이트를 요청하면 "PyObject_Malloc(1)"이 대신 호출된 것처럼 가능하
+   면 고유한 "NULL"이 아닌 포인터를 반환합니다. 메모리는 어떤 식으로든
+   초기화되지 않습니다.
+
+void *PyObject_Calloc(size_t nelem, size_t elsize)
+    * Part of the Stable ABI since version 3.7.*
+
+   크기가 각각 *elsize* 바이트인 *nelem* 개의 요소를 할당하고 할당된
+   메모리를 가리키는 "void*" 형의 포인터를 반환하거나, 요청이 실패하면
+   "NULL"을 반환합니다. 메모리는 0으로 초기화됩니다.
+
+   0개의 요소나 0바이트 크기의 요소를 요청하면 "PyObject_Calloc(1, 1)"
+   이 대신 호출된 것처럼 가능하면 고유한 "NULL"이 아닌 포인터를 반환합
+   니다.
+
+   버전 3.5에 추가.
+
+void *PyObject_Realloc(void *p, size_t n)
+    * Part of the Stable ABI.*
+
+   *p*가 가리키는 메모리 블록의 크기를 *n* 바이트로 조정합니다. 내용은
+   이전과 새로운 크기의 최솟값 내에서는 변경되지 않습니다.
+
+   *p*가 "NULL"이면, 호출은 "PyObject_Malloc(n)"과 동등합니다; 그렇지
+   않고 *n*이 0과 같으면, 메모리 블록의 크기는 조정되지만 해제되지 않
+   고, 반환된 포인터는 "NULL"이 아닙니다.
+
+   *p*가 "NULL"이 아닌 한, "PyObject_Malloc()", "PyObject_Realloc()"
+   또는 "PyObject_Calloc()"에 대한 이전 호출에 의해 반환된 것이어야 합
+   니다.
+
+   요청이 실패하면, "PyObject_Realloc()"은 "NULL"을 반환하고 *p*는 이
+   전 메모리 영역에 대한 유효한 포인터로 유지됩니다.
+
+void PyObject_Free(void *p)
+    * Part of the Stable ABI.*
+
+   *p*가 가리키는 메모리 블록을 해제합니다. 이 블록은
+   "PyObject_Malloc()", "PyObject_Realloc()" 또는 "PyObject_Calloc()"
+   에 대한 이전 호출에 의해 반환된 것이어야 합니다. 그렇지 않거나
+   "PyObject_Free(p)"가 이전에 호출되었으면 정의되지 않은 동작이 일어
+   납니다.
+
+   *p*가 "NULL"이면, 아무 작업도 수행되지 않습니다.
+
+
+기본 메모리 할당자
+==================
+
+기본 메모리 할당자:
+
++---------------------------------+----------------------+--------------------+-----------------------+----------------------+
+| 구성                            | 이름                 | PyMem_RawMalloc    | PyMem_Malloc          | PyObject_Malloc      |
+|=================================|======================|====================|=======================|======================|
+| 릴리스 빌드                     | ""pymalloc""         | "malloc"           | "pymalloc"            | "pymalloc"           |
++---------------------------------+----------------------+--------------------+-----------------------+----------------------+
+| 디버그 빌드                     | ""pymalloc_debug""   | "malloc" + 디버그  | "pymalloc" + 디버그   | "pymalloc" + 디버그  |
++---------------------------------+----------------------+--------------------+-----------------------+----------------------+
+| pymalloc 없는 배포 빌드         | ""malloc""           | "malloc"           | "malloc"              | "malloc"             |
++---------------------------------+----------------------+--------------------+-----------------------+----------------------+
+| pymalloc 없는 디버그 빌드       | ""malloc_debug""     | "malloc" + 디버그  | "malloc" + 디버그     | "malloc" + 디버그    |
++---------------------------------+----------------------+--------------------+-----------------------+----------------------+
+
+범례:
+
+* 이름: "PYTHONMALLOC" 환경 변수의 값.
+
+* "malloc": 표준 C 라이브러리의 시스템 할당자, C 함수: "malloc()",
+  "calloc()", "realloc()" 및 "free()".
+
+* "pymalloc": pymalloc 메모리 할당자.
+
+* "+ 디버그": 파이썬 메모리 할당기의 디버그 훅 포함.
+
+* "Debug build": Python build in debug mode.
+
+
+메모리 할당자 사용자 정의
+=========================
+
+버전 3.4에 추가.
+
+type PyMemAllocatorEx
+
+   메모리 블록 할당자를 기술하는 데 사용되는 구조체. 구조체에는 다음과
+   같은 필드가 있습니다:
+
+   +------------------------------------------------------------+-----------------------------------------+
+   | 필드                                                       | 의미                                    |
+   |============================================================|=========================================|
+   | "void *ctx"                                                | 첫 번째 인자로 전달된 사용자 컨텍스트   |
+   +------------------------------------------------------------+-----------------------------------------+
+   | "void* malloc(void *ctx, size_t size)"                     | 메모리 블록을 할당합니다                |
+   +------------------------------------------------------------+-----------------------------------------+
+   | "void* calloc(void *ctx, size_t nelem, size_t elsize)"     | 0으로 초기화된 메모리 블록을 할당합니다 |
+   +------------------------------------------------------------+-----------------------------------------+
+   | "void* realloc(void *ctx, void *ptr, size_t new_size)"     | 메모리 블록을 할당하거나 크기 조정합니  |
+   |                                                            | 다                                      |
+   +------------------------------------------------------------+-----------------------------------------+
+   | "void free(void *ctx, void *ptr)"                          | 메모리 블록을 해제합니다                |
+   +------------------------------------------------------------+-----------------------------------------+
+
+   버전 3.5에서 변경: The "PyMemAllocator" structure was renamed to
+   "PyMemAllocatorEx" and a new "calloc" field was added.
+
+type PyMemAllocatorDomain
+
+   할당자 도메인을 식별하는 데 사용되는 열거형. 도메인:
+
+   PYMEM_DOMAIN_RAW
+
+      함수:
+
+      * "PyMem_RawMalloc()"
+
+      * "PyMem_RawRealloc()"
+
+      * "PyMem_RawCalloc()"
+
+      * "PyMem_RawFree()"
+
+   PYMEM_DOMAIN_MEM
+
+      함수:
+
+      * "PyMem_Malloc()",
+
+      * "PyMem_Realloc()"
+
+      * "PyMem_Calloc()"
+
+      * "PyMem_Free()"
+
+   PYMEM_DOMAIN_OBJ
+
+      함수:
+
+      * "PyObject_Malloc()"
+
+      * "PyObject_Realloc()"
+
+      * "PyObject_Calloc()"
+
+      * "PyObject_Free()"
+
+void PyMem_GetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)
+
+   지정된 도메인의 메모리 블록 할당자를 가져옵니다.
+
+void PyMem_SetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)
+
+   지정된 도메인의 메모리 블록 할당자를 설정합니다.
+
+   새 할당자는 0바이트를 요청할 때 고유한 "NULL"이 아닌 포인터를 반환
+   해야 합니다.
+
+   For the "PYMEM_DOMAIN_RAW" domain, the allocator must be thread-
+   safe: the *GIL* is not held when the allocator is called.
+
+   새 할당자가 훅이 아니면 (이전 할당자를 호출하지 않으면),
+   "PyMem_SetupDebugHooks()" 함수를 호출하여 새 할당자 위에 디버그 훅
+   을 다시 설치해야 합니다.
+
+   경고:
+
+     "PyMem_SetAllocator()" does have the following contract:
+
+        * It can be called after "Py_PreInitialize()" and before
+          "Py_InitializeFromConfig()" to install a custom memory
+          allocator. There are no restrictions over the installed
+          allocator other than the ones imposed by the domain (for
+          instance, the Raw Domain allows the allocator to be called
+          without the GIL held). See the section on allocator domains
+          for more information.
+
+        * If called after Python has finish initializing (after
+          "Py_InitializeFromConfig()" has been called) the allocator
+          **must** wrap the existing allocator. Substituting the
+          current allocator for some other arbitrary one is **not
+          supported**.
+
+void PyMem_SetupDebugHooks(void)
+
+   Setup debug hooks in the Python memory allocators to detect memory
+   errors.
+
+
+파이썬 메모리 할당자의 디버그 훅
+================================
+
+When Python is built in debug mode, the "PyMem_SetupDebugHooks()"
+function is called at the Python preinitialization to setup debug
+hooks on Python memory allocators to detect memory errors.
+
+"PYTHONMALLOC" 환경 변수를 사용하여 릴리스 모드에서 컴파일된 파이썬에
+디버그 훅을 설치할 수 있습니다 (예: "PYTHONMALLOC=debug").
+
+The "PyMem_SetupDebugHooks()" function can be used to set debug hooks
+after calling "PyMem_SetAllocator()".
+
+이 디버그 훅은 동적으로 할당된 메모리 블록을 특수하고, 인식 가능한 비
+트 패턴으로 채웁니다. 새로 할당된 메모리는 바이트
+"0xCD"("PYMEM_CLEANBYTE")로 채워지고, 해제된 메모리는 바이트
+"0xDD"("PYMEM_DEADBYTE")로 채워집니다. 메모리 블록은 바이트 "0xFD"
+("PYMEM_FORBIDDENBYTE")로 채워진 "금지된 바이트"로 둘러싸입니다. 이 바
+이트들의 문자열은 유효한 주소, 부동 소수점 또는 ASCII 문자열일 가능성
+이 낮습니다.
+
+실행 시간 검사:
+
+* API 위반 탐지. 예를 들어, "PyMem_Malloc()"이 할당한 메모리 블록에
+  "PyObject_Free()"가 호출되었는지 탐지합니다.
+
+* 버퍼 시작 전에 쓰기 감지 (버퍼 언더플로).
+
+* 버퍼 끝 뒤에 쓰기 감지 (버퍼 오버플로).
+
+* Check that the *GIL* is held when allocator functions of
+  "PYMEM_DOMAIN_OBJ" (ex: "PyObject_Malloc()") and "PYMEM_DOMAIN_MEM"
+  (ex: "PyMem_Malloc()") domains are called.
+
+에러가 발생하면, 디버그 훅은 "tracemalloc" 모듈을 사용하여 메모리 블록
+이 할당된 곳의 트레이스백을 가져옵니다. "tracemalloc"이 파이썬 메모리
+할당을 추적 중이고 메모리 블록이 추적될 때만 트레이스백이 표시됩니다.
+
+Let *S* = "sizeof(size_t)". "2*S" bytes are added at each end of each
+block of *N* bytes requested.  The memory layout is like so, where p
+represents the address returned by a malloc-like or realloc-like
+function ("p[i:j]" means the slice of bytes from "*(p+i)" inclusive up
+to "*(p+j)" exclusive; note that the treatment of negative indices
+differs from a Python slice):
+
+"p[-2*S:-S]"
+   Number of bytes originally asked for.  This is a size_t, big-endian
+   (easier to read in a memory dump).
+
+"p[-S]"
+   API identifier (ASCII character):
+
+   * "'r'" for "PYMEM_DOMAIN_RAW".
+
+   * "'m'" for "PYMEM_DOMAIN_MEM".
+
+   * "'o'" for "PYMEM_DOMAIN_OBJ".
+
+"p[-S+1:0]"
+   Copies of PYMEM_FORBIDDENBYTE.  Used to catch under- writes and
+   reads.
+
+"p[0:N]"
+   The requested memory, filled with copies of PYMEM_CLEANBYTE, used
+   to catch reference to uninitialized memory.  When a realloc-like
+   function is called requesting a larger memory block, the new excess
+   bytes are also filled with PYMEM_CLEANBYTE.  When a free-like
+   function is called, these are overwritten with PYMEM_DEADBYTE, to
+   catch reference to freed memory.  When a realloc- like function is
+   called requesting a smaller memory block, the excess old bytes are
+   also filled with PYMEM_DEADBYTE.
+
+"p[N:N+S]"
+   Copies of PYMEM_FORBIDDENBYTE.  Used to catch over- writes and
+   reads.
+
+"p[N+S:N+2*S]"
+   Only used if the "PYMEM_DEBUG_SERIALNO" macro is defined (not
+   defined by default).
+
+   A serial number, incremented by 1 on each call to a malloc-like or
+   realloc-like function.  Big-endian "size_t".  If "bad memory" is
+   detected later, the serial number gives an excellent way to set a
+   breakpoint on the next run, to capture the instant at which this
+   block was passed out.  The static function bumpserialno() in
+   obmalloc.c is the only place the serial number is incremented, and
+   exists so you can set such a breakpoint easily.
+
+A realloc-like or free-like function first checks that the
+PYMEM_FORBIDDENBYTE bytes at each end are intact.  If they've been
+altered, diagnostic output is written to stderr, and the program is
+aborted via Py_FatalError().  The other main failure mode is provoking
+a memory error when a program reads up one of the special bit patterns
+and tries to use it as an address.  If you get in a debugger then and
+look at the object, you're likely to see that it's entirely filled
+with PYMEM_DEADBYTE (meaning freed memory is getting used) or
+PYMEM_CLEANBYTE (meaning uninitialized memory is getting used).
+
+버전 3.6에서 변경: The "PyMem_SetupDebugHooks()" function now also
+works on Python compiled in release mode.  On error, the debug hooks
+now use "tracemalloc" to get the traceback where a memory block was
+allocated. The debug hooks now also check if the GIL is held when
+functions of "PYMEM_DOMAIN_OBJ" and "PYMEM_DOMAIN_MEM" domains are
+called.
+
+버전 3.8에서 변경: 바이트 패턴 "0xCB"("PYMEM_CLEANBYTE"),
+"0xDB"("PYMEM_DEADBYTE") 및 "0xFB"("PYMEM_FORBIDDENBYTE")는 윈도우 CRT
+디버그 "malloc()" 및 "free()"와 같은 값을 사용하도록 "0xCD", "0xDD" 및
+"0xFD"로 대체되었습니다.
+
+
+pymalloc 할당자
+===============
+
+Python has a *pymalloc* allocator optimized for small objects (smaller
+or equal to 512 bytes) with a short lifetime. It uses memory mappings
+called "arenas" with a fixed size of 256 KiB. It falls back to
+"PyMem_RawMalloc()" and "PyMem_RawRealloc()" for allocations larger
+than 512 bytes.
+
+*pymalloc* is the default allocator of the "PYMEM_DOMAIN_MEM" (ex:
+"PyMem_Malloc()") and "PYMEM_DOMAIN_OBJ" (ex: "PyObject_Malloc()")
+domains.
+
+아레나 할당자는 다음 함수를 사용합니다:
+
+* "VirtualAlloc()" and "VirtualFree()" on Windows,
+
+* "mmap()" and "munmap()" if available,
+
+* 그렇지 않으면 "malloc()"과 "free()"
+
+This allocator is disabled if Python is configured with the "--
+without-pymalloc" option. It can also be disabled at runtime using the
+"PYTHONMALLOC" environment variable (ex: "PYTHONMALLOC=malloc").
+
+
+pymalloc 아레나 할당자 사용자 정의
+----------------------------------
+
+버전 3.4에 추가.
+
+type PyObjectArenaAllocator
+
+   아레나 할당자를 기술하는 데 사용되는 구조체. 이 구조체에는 세 개의
+   필드가 있습니다:
+
+   +----------------------------------------------------+-----------------------------------------+
+   | 필드                                               | 의미                                    |
+   |====================================================|=========================================|
+   | "void *ctx"                                        | 첫 번째 인자로 전달된 사용자 컨텍스트   |
+   +----------------------------------------------------+-----------------------------------------+
+   | "void* alloc(void *ctx, size_t size)"              | size 바이트의 아레나를 할당합니다       |
+   +----------------------------------------------------+-----------------------------------------+
+   | "void free(void *ctx, void *ptr, size_t size)"     | 아레나를 해제합니다                     |
+   +----------------------------------------------------+-----------------------------------------+
+
+void PyObject_GetArenaAllocator(PyObjectArenaAllocator *allocator)
+
+   아레나 할당자를 얻습니다.
+
+void PyObject_SetArenaAllocator(PyObjectArenaAllocator *allocator)
+
+   아레나 할당자를 설정합니다.
+
+
+tracemalloc C API
+=================
+
+버전 3.7에 추가.
+
+int PyTraceMalloc_Track(unsigned int domain, uintptr_t ptr, size_t size)
+
+   "tracemalloc" 모듈에서 할당된 메모리 블록을 추적합니다.
+
+   성공하면 "0"을 반환하고, 에러가 발생하면 (추적을 저장하기 위한 메모
+   리를 할당하지 못했습니다) "-1"을 반환합니다. tracemalloc이 비활성화
+   되었으면 "-2"를 반환합니다.
+
+   메모리 블록이 이미 추적되면, 기존 추적을 갱신합니다.
+
+int PyTraceMalloc_Untrack(unsigned int domain, uintptr_t ptr)
+
+   "tracemalloc" 모듈에서 할당된 메모리 블록을 추적 해제합니다. 블록이
+   추적되지 않으면 아무것도 하지 않습니다.
+
+   tracemalloc이 비활성화되었으면 "-2"를 반환하고, 그렇지 않으면 "0"을
+   반환합니다.
+
+
+예
+==
+
+다음은 개요 섹션에서 따온 예제입니다. I/O 버퍼가 첫 번째 함수 집합을
+사용하여 파이썬 힙에서 할당되도록 다시 작성되었습니다:
+
+   PyObject *res;
+   char *buf = (char *) PyMem_Malloc(BUFSIZ); /* for I/O */
+
+   if (buf == NULL)
+       return PyErr_NoMemory();
+   /* ...Do some I/O operation involving buf... */
+   res = PyBytes_FromString(buf);
+   PyMem_Free(buf); /* allocated with PyMem_Malloc */
+   return res;
+
+형 지향 함수 집합을 사용하는 같은 코드입니다:
+
+   PyObject *res;
+   char *buf = PyMem_New(char, BUFSIZ); /* for I/O */
+
+   if (buf == NULL)
+       return PyErr_NoMemory();
+   /* ...Do some I/O operation involving buf... */
+   res = PyBytes_FromString(buf);
+   PyMem_Del(buf); /* allocated with PyMem_New */
+   return res;
+
+위의 두 가지 예에서, 버퍼는 항상 같은 집합에 속하는 함수를 통해 조작됨
+에 유의하십시오. 실제로, 서로 다른 할당자를 혼합할 위험이 최소로 줄어
+들도록, 주어진 메모리 블록에 대해 같은 메모리 API 패밀리를 사용하는 것
+은 필수입니다 . 다음 코드 시퀀스에는 두 개의 에러가 있으며, 그중 하나
+는 서로 다른 힙에서 작동하는 두 개의 다른 할당자를 혼합하기 때문에 *치
+명적(fatal)*인 것으로 표시됩니다.
+
+   char *buf1 = PyMem_New(char, BUFSIZ);
+   char *buf2 = (char *) malloc(BUFSIZ);
+   char *buf3 = (char *) PyMem_Malloc(BUFSIZ);
+   ...
+   PyMem_Del(buf3);  /* Wrong -- should be PyMem_Free() */
+   free(buf2);       /* Right -- allocated via malloc() */
+   free(buf1);       /* Fatal -- should be PyMem_Del()  */
+
+In addition to the functions aimed at handling raw memory blocks from
+the Python heap, objects in Python are allocated and released with
+"PyObject_New()", "PyObject_NewVar()" and "PyObject_Del()".
+
+이것들은 C로 새로운 객체 형을 정의하고 구현하는 것에 대한 다음 장에서
+설명될 것입니다.

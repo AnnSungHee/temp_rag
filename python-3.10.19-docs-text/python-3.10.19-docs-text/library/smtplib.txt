@@ -1,0 +1,532 @@
+"smtplib" --- SMTP protocol client
+**********************************
+
+**소스 코드:** Lib/smtplib.py
+
+======================================================================
+
+"smtplib" 모듈은 SMTP나 ESMTP 리스너 데몬을 사용하여 모든 인터넷 기계
+로 메일을 보내는 데 사용할 수 있는 SMTP 클라이언트 세션 객체를 정의합
+니다. SMTP와 ESMTP 연산에 대한 자세한 내용은 **RFC 821**(Simple Mail
+Transfer Protocol)과 **RFC 1869**(SMTP Service Extensions)를 참조하십
+시오.
+
+class smtplib.SMTP(host='', port=0, local_hostname=None[, timeout], source_address=None)
+
+   An "SMTP" instance encapsulates an SMTP connection.  It has methods
+   that support a full repertoire of SMTP and ESMTP operations. If the
+   optional host and port parameters are given, the SMTP "connect()"
+   method is called with those parameters during initialization.  If
+   specified, *local_hostname* is used as the FQDN of the local host
+   in the HELO/EHLO command.  Otherwise, the local hostname is found
+   using "socket.getfqdn()".  If the "connect()" call returns anything
+   other than a success code, an "SMTPConnectError" is raised. The
+   optional *timeout* parameter specifies a timeout in seconds for
+   blocking operations like the connection attempt (if not specified,
+   the global default timeout setting will be used).  If the timeout
+   expires, "TimeoutError" is raised.  The optional source_address
+   parameter allows binding to some specific source address in a
+   machine with multiple network interfaces, and/or to some specific
+   source TCP port. It takes a 2-tuple (host, port), for the socket to
+   bind to as its source address before connecting. If omitted (or if
+   host or port are "''" and/or 0 respectively) the OS default
+   behavior will be used.
+
+   일반적인 사용을 위해서는, 초기화/연결, "sendmail()" 및
+   "SMTP.quit()" 메서드 만 필요합니다. 아래에 예가 포함되어 있습니다.
+
+   "SMTP" 클래스는 "with" 문을 지원합니다. 이처럼 사용되면, "with" 문
+   이 종료될 때 SMTP "QUIT" 명령이 자동으로 발행됩니다. 예를 들어:
+
+      >>> from smtplib import SMTP
+      >>> with SMTP("domain.org") as smtp:
+      ...     smtp.noop()
+      ...
+      (250, b'Ok')
+      >>>
+
+   모든 명령은 인자 "self"와 "data"로 감사 이벤트 "smtplib.SMTP.send"
+   를 발생시킵니다. 여기서 "data"는 원격 호스트로 전송될 바이트열입니
+   다.
+
+   버전 3.3에서 변경: "with" 문에 대한 지원이 추가되었습니다.
+
+   버전 3.3에서 변경: source_address argument was added.
+
+   버전 3.5에 추가: SMTPUTF8 확장(**RFC 6531**)이 이제 지원됩니다.
+
+   버전 3.9에서 변경: *timeout* 매개 변수가 0으로 설정되면, 비 블로킹
+   소켓을 만드는 것을 막기 위해 "ValueError"가 발생합니다.
+
+class smtplib.SMTP_SSL(host='', port=0, local_hostname=None, keyfile=None, certfile=None[, timeout], context=None, source_address=None)
+
+   "SMTP_SSL" 인스턴스는 "SMTP" 인스턴스와 정확히 같게 작동합니다. 연
+   결 시작 시 SSL이 필요하고 "starttls()" 사용이 적합하지 않은 상황에
+   서는 "SMTP_SSL"을 사용해야 합니다. *host*를 지정하지 않으면, 로컬
+   호스트가 사용됩니다. *port*가 0이면, 표준 SMTP-over-SSL 포트(465)가
+   사용됩니다. 선택적 인자 *local_hostname*, *timeout* 및
+   *source_address*는 "SMTP" 클래스에서와 같은 의미입니다. 역시 선택적
+   인 *context*는 "SSLContext"를 포함할 수 있으며 보안 연결의 다양한
+   측면을 구성하도록 합니다. 모범 사례는 보안 고려 사항을 읽으십시오.
+
+   *keyfile* and *certfile* are a legacy alternative to *context*, and
+   can point to a PEM formatted private key and certificate chain file
+   for the SSL connection.
+
+   버전 3.3에서 변경: *context*가 추가되었습니다.
+
+   버전 3.3에서 변경: source_address argument was added.
+
+   버전 3.4에서 변경: The class now supports hostname check with
+   "ssl.SSLContext.check_hostname" and *Server Name Indication* (see
+   "ssl.HAS_SNI").
+
+   버전 3.6부터 폐지: *keyfile* and *certfile* are deprecated in favor
+   of *context*. Please use "ssl.SSLContext.load_cert_chain()"
+   instead, or let "ssl.create_default_context()" select the system's
+   trusted CA certificates for you.
+
+   버전 3.9에서 변경: *timeout* 매개 변수가 0으로 설정되면, 비 블로킹
+   소켓을 만드는 것을 막기 위해 "ValueError"가 발생합니다.
+
+class smtplib.LMTP(host='', port=LMTP_PORT, local_hostname=None, source_address=None[, timeout])
+
+   The LMTP protocol, which is very similar to ESMTP, is heavily based
+   on the standard SMTP client. It's common to use Unix sockets for
+   LMTP, so our "connect()" method must support that as well as a
+   regular host:port server. The optional arguments local_hostname and
+   source_address have the same meaning as they do in the "SMTP"
+   class. To specify a Unix socket, you must use an absolute path for
+   *host*, starting with a '/'.
+
+   일반 SMTP 메커니즘을 사용하여 인증이 지원됩니다. 유닉스 소켓을 사용
+   할 때, LMTP는 일반적으로 인증을 지원하지 않거나 요구하지 않지만, 여
+   러분의 상황에서는 다를 수 있습니다.
+
+   버전 3.9에서 변경: 선택적 *timeout* 매개 변수가 추가되었습니다.
+
+훌륭한 예외 모음도 정의되어 있습니다:
+
+exception smtplib.SMTPException
+
+   이 모듈에서 제공하는 다른 모든 예외에 대한 베이스 예외 클래스인
+   "OSError"의 서브 클래스.
+
+   버전 3.4에서 변경: SMTPException이 "OSError"의 서브 클래스가 되었습
+   니다.
+
+exception smtplib.SMTPServerDisconnected
+
+   이 예외는 예기치 않게 서버와의 연결이 끊어지거나, 서버에 연결하기
+   전에 "SMTP" 인스턴스를 사용하려고 할 때 발생합니다.
+
+exception smtplib.SMTPResponseException
+
+   SMTP 에러 코드가 포함된 모든 예외의 베이스 클래스. 이러한 예외는
+   SMTP 서버가 에러 코드를 반환하는 일부 경우에 생성됩니다. 에러 코드
+   는 에러의 "smtp_code" 어트리뷰트에 저장되며, "smtp_error" 어트리뷰
+   트는 에러 메시지로 설정됩니다.
+
+exception smtplib.SMTPSenderRefused
+
+   발신자 주소가 거부되었습니다. 모든 "SMTPResponseException" 예외에
+   의해 설정된 어트리뷰트 외에도, 이것은 'sender'를 SMTP 서버가 거부한
+   문자열로 설정합니다.
+
+exception smtplib.SMTPRecipientsRefused
+
+   모든 수신자 주소가 거부되었습니다. 각 수신자의 에러는
+   "SMTP.sendmail()"이 반환하는 것과 정확히 같은 종류의 딕셔너리인
+   "recipients" 어트리뷰트를 통해 액세스 할 수 있습니다.
+
+exception smtplib.SMTPDataError
+
+   SMTP 서버가 메시지 데이터 수락을 거부했습니다.
+
+exception smtplib.SMTPConnectError
+
+   서버와의 연결을 설정하는 동안 에러가 발생했습니다.
+
+exception smtplib.SMTPHeloError
+
+   서버가 "HELO" 메시지를 거부했습니다.
+
+exception smtplib.SMTPNotSupportedError
+
+   시도한 명령이나 옵션이 서버에서 지원되지 않습니다.
+
+   버전 3.5에 추가.
+
+exception smtplib.SMTPAuthenticationError
+
+   SMTP 인증이 잘못되었습니다. 서버가 제공된 username/password 조합을
+   수락하지 않았을 가능성이 높습니다.
+
+더 보기:
+
+  **RFC 821** - Simple Mail Transfer Protocol
+     SMTP의 프로토콜 정의. 이 문서는 SMTP의 모델, 운영 절차 및 프로토
+     콜 세부 사항을 다룹니다.
+
+  **RFC 1869** - SMTP Service Extensions
+     SMTP를 위한 ESMTP 확장의 정의. 이 문서는 새로운 명령으로 SMTP를
+     확장하고 서버에서 제공하는 명령의 동적 발견을 지원하는 프레임워크
+     에 관해 설명하고, 몇 가지 추가 명령을 정의합니다.
+
+
+SMTP 객체
+=========
+
+"SMTP" 인스턴스에는 다음과 같은 메서드가 있습니다:
+
+SMTP.set_debuglevel(level)
+
+   디버그 출력 수준을 설정합니다. *level*의 값이 1이나 "True"이면 연결
+   과 서버와 주고받는 모든 메시지에 대한 디버그 메시지가 생성됩니다.
+   *level*의 값이 2이면 이러한 메시지에 타임 스탬프가 추가됩니다.
+
+   버전 3.5에서 변경: 디버그 수준 2를 추가했습니다.
+
+SMTP.docmd(cmd, args='')
+
+   서버에 *cmd* 명령을 전송합니다. 선택적 인자 *args*는 단순히 공백으
+   로 구분하여 명령에 이어붙입니다.
+
+   숫자 응답 코드와 실제 응답 줄로 구성된 2-튜플을 반환합니다 (여러 줄
+   응답은 하나의 긴 줄로 결합합니다).
+
+   일반적인 작업에서 이 메서드를 명시적으로 호출할 필요는 없습니다. 다
+   른 메서드를 구현하는 데 사용되며 개인적인 확장을 테스트하는 데 유용
+   할 수 있습니다.
+
+   응답을 기다리는 동안 서버와의 연결이 끊어지면,
+   "SMTPServerDisconnected" 가 발생합니다.
+
+SMTP.connect(host='localhost', port=0)
+
+   지정된 포트(port)의 호스트(host)에 연결합니다. 기본값은 표준 SMTP
+   포트(25)로 로컬 호스트에 연결하는 것입니다. 호스트 이름이 콜론
+   ("':'")으로 끝나고 그 뒤에 숫자가 오면 해당 접미사가 제거되고 숫자
+   는 사용할 포트 번호로 해석됩니다. 이 메서드는 인스턴스 화 중에 호스
+   트가 지정되면 생성자에 의해 자동으로 호출됩니다. 연결 응답에서 서버
+   가 보낸 응답 코드와 메시지의 2-튜플을 반환합니다.
+
+   인자 "self", "host", "port"로 감사 이벤트 "smtplib.connect"를 발생
+   시킵니다.
+
+SMTP.helo(name='')
+
+   "HELO" 를 사용하여 SMTP 서버에 자신을 식별합니다. hostname 인자의
+   기본값은 로컬 호스트의 완전히 정규화된 도메인 이름(fully qualified
+   domain name)입니다. 서버가 반환한 메시지는 객체의 "helo_resp" 어트
+   리뷰트로 저장됩니다.
+
+   정상적인 작업에서는 이 메서드를 명시적으로 호출할 필요가 없습니다.
+   필요할 때 "sendmail()"에 의해 묵시적으로 호출됩니다.
+
+SMTP.ehlo(name='')
+
+   "EHLO"를 사용하여 ESMTP 서버에 자신을 식별합니다. hostname 인자의
+   기본값은 로컬 호스트의 완전히 정규화된 도메인 이름(fully qualified
+   domain name)입니다. ESMTP 옵션에 대한 응답을 검사하고 "has_extn()"
+   에서 사용할 수 있도록 저장합니다. 또한 여러 정보 어트리뷰트를 설정
+   합니다: 서버가 반환한 메시지는 "ehlo_resp" 어트리뷰트로 저장되고,
+   서버가 ESMTP를 지원하는지에 따라 "does_esmtp"가 "True"나 "False"로
+   설정되며, "esmtp_features"는 이 서버가 지원하는 SMTP 서비스 확장의
+   이름과 그 매개 변수(있다면)를 포함하는 딕셔너리가 됩니다.
+
+   메일을 보내기 전에 "has_extn()"을 사용하고 싶지 않은 한, 이 메서드
+   를 명시적으로 호출할 필요는 없습니다. 필요할 때 "sendmail()"에 의해
+   묵시적으로 호출됩니다.
+
+SMTP.ehlo_or_helo_if_needed()
+
+   이 세션에서 앞선 "EHLO"나 "HELO" 명령이 없으면, 이 메서드는
+   "ehlo()" 및/또는 "helo()"를 호출합니다. ESMTP "EHLO"를 먼저 시도합
+   니다.
+
+   "SMTPHeloError"
+      서버가 "HELO" 인사에 올바르게 응답하지 않았습니다.
+
+SMTP.has_extn(name)
+
+   *name*이 서버가 반환한 SMTP 서비스 확장 집합에 있으면 "True"를 반환
+   하고, 그렇지 않으면 "False"를 반환합니다. 대소 문자는 무시됩니다.
+
+SMTP.verify(address)
+
+   SMTP "VRFY"를 사용하여 이 서버에서 주소의 유효성을 확인합니다. 사용
+   자 주소가 유효하면 코드 250과 전체 **RFC 822** 주소(사람 이름 포함)
+   로 구성된 튜플을 반환합니다. 그렇지 않으면 400 이상의 SMTP 에러 코
+   드와 에러 문자열을 반환합니다.
+
+   참고:
+
+     많은 사이트에서 스패머를 제거하기 위해 SMTP "VRFY"를 비활성화합니
+     다.
+
+SMTP.login(user, password, *, initial_response_ok=True)
+
+   인증이 필요한 SMTP 서버에 로그인합니다. 인자는 인증할 사용자 이름과
+   비밀번호입니다. 이 세션에 앞선 "EHLO"나 "HELO" 명령이 없었으면, 이
+   메서드는 ESMTP "EHLO"를 먼저 시도합니다. 인증에 성공하면 이 메서드
+   는 정상적으로 반환하고, 그렇지 않으면 다음 예외를 발생시킬 수 있습
+   니다:
+
+   "SMTPHeloError"
+      서버가 "HELO" 인사에 올바르게 응답하지 않았습니다.
+
+   "SMTPAuthenticationError"
+      서버가 사용자 이름/비밀번호 조합을 수락하지 않았습니다.
+
+   "SMTPNotSupportedError"
+      서버가 "AUTH" 명령을 지원하지 않습니다.
+
+   "SMTPException"
+      적합한 인증 메서드가 없습니다.
+
+   "smtplib"가 지원하는 각 인증 메서드는 서버가 지원하는 것으로 광고되
+   면 차례로 시도됩니다. 지원되는 인증 메서드 목록은 "auth()"를 참조하
+   십시오. *initial_response_ok*는 "auth()"로 전달됩니다.
+
+   선택적 키워드 인자 *initial_response_ok*는, 이를 지원하는 인증 메서
+   드의 경우, 챌린지/응답을 요구하지 않고 **RFC 4954**에 지정된 "초기
+   응답(initial response)"을 "AUTH" 명령과 함께 보낼 수 있는지를 지정
+   합니다.
+
+   버전 3.5에서 변경: "SMTPNotSupportedError" 가 발생할 수 있고,
+   *initial_response_ok* 매개 변수가 추가되었습니다.
+
+SMTP.auth(mechanism, authobject, *, initial_response_ok=True)
+
+   지정된 인증 *메커니즘(mechanism)*으로 "SMTP" "AUTH" 명령을 발행하고
+   , *authobject*를 통해 챌린지 응답을 처리합니다.
+
+   *mechanism*은 "AUTH" 명령의 인자로 사용할 인증 메커니즘을 지정합니
+   다; 유효한 값은 "esmtp_features"의 "auth" 요소에 나열된 값입니다.
+
+   *authobject* must be a callable object taking an optional single
+   argument:
+
+      data = authobject(challenge=None)
+
+   선택적 키워드 인자 *initial_response_ok*가 참이면, 인자 없이
+   "authobject()"가 먼저 호출됩니다. 이것은 **RFC 4954** "초기 응답
+   (initial response)" ASCII "str"을 반환할 수 있으며, 이는 아래와 같
+   이 "AUTH" 명령으로 인코딩되고 전송됩니다. "authobject()"가 초기 응
+   답을 지원하지 않으면 (예를 들어 챌린지가 필요하기 때문에),
+   "challenge=None"으로 호출될 때 "None"을 반환해야 합니다.
+   *initial_response_ok*가 거짓이면, "authobject()"는 "None"으로 먼저
+   호출되지 않습니다.
+
+   초기 응답 확인이 "None"을 반환하거나, *initial_response_ok*가 거짓
+   이면, 서버의 챌린지 응답을 처리하기 위해 "authobject()"가 호출됩니
+   다; 전달된 *challenge* 인자는 "bytes"입니다. base64로 인코딩되어 서
+   버로 전송될 ASCII "str" *data*를 반환해야 합니다.
+
+   "SMTP" 클래스는 "CRAM-MD5", "PLAIN" 및 "LOGIN" 메커니즘을 위한
+   "authobjects"를 제공합니다. 그것들은 각각 "SMTP.auth_cram_md5",
+   "SMTP.auth_plain" 및 "SMTP.auth_login"으로 명명됩니다. 모두 "SMTP"
+   인스턴스의 "user"와 "password" 프로퍼티가 적절한 값으로 설정되어 있
+   도록 요구합니다.
+
+   사용자 코드는 일반적으로 "auth"를 직접 호출할 필요는 없지만, 대신
+   "login()" 메서드를 호출할 수는 있는데, 위의 각 메커니즘을 나열된 순
+   서대로 시도합니다. "auth"는 "smtplib"가 직접 지원하지 않는 (또는 아
+   직 지원하지 않는) 인증 메서드를 쉽게 구현할 수 있도록 노출되어 있습
+   니다.
+
+   버전 3.5에 추가.
+
+SMTP.starttls(keyfile=None, certfile=None, context=None)
+
+   SMTP 연결을 TLS (Transport Layer Security) 모드로 전환합니다. 뒤따
+   르는 모든 SMTP 명령은 암호화됩니다. 그런 다음 "ehlo()"를 다시 호출
+   해야 합니다.
+
+   *keyfile*과 *certfile*이 제공되면, "ssl.SSLContext"를 만드는 데 사
+   용됩니다.
+
+   선택적 *context* 매개 변수는 "ssl.SSLContext" 객체입니다; 이것은
+   keyfile과 certfile대신 사용할 수 있으며 *keyfile*과 *certfile*이 모
+   두 지정되면 "None"이어야 합니다.
+
+   이 세션에 앞선 "EHLO"나 "HELO" 명령이 없었으면, 이 메서드는 ESMTP
+   "EHLO"를 먼저 시도합니다.
+
+   버전 3.6부터 폐지: *keyfile* and *certfile* are deprecated in favor
+   of *context*. Please use "ssl.SSLContext.load_cert_chain()"
+   instead, or let "ssl.create_default_context()" select the system's
+   trusted CA certificates for you.
+
+   "SMTPHeloError"
+      서버가 "HELO" 인사에 올바르게 응답하지 않았습니다.
+
+   "SMTPNotSupportedError"
+      서버가 STARTTLS 확장을 지원하지 않습니다.
+
+   "RuntimeError"
+      파이썬 인터프리터가 SSL/TLS를 지원하지 않습니다.
+
+   버전 3.3에서 변경: *context*가 추가되었습니다.
+
+   버전 3.4에서 변경: The method now supports hostname check with
+   "SSLContext.check_hostname" and *Server Name Indicator* (see
+   "HAS_SNI").
+
+   버전 3.5에서 변경: STARTTLS 지원 부족으로 발생한 에러는 이제 베이스
+   "SMTPException" 대신 "SMTPNotSupportedError" 서브 클래스입니다.
+
+SMTP.sendmail(from_addr, to_addrs, msg, mail_options=(), rcpt_options=())
+
+   메일을 보냅니다. 필수 인자는 **RFC 822** from-address 문자열, **RFC
+   822** to-address 문자열의 리스트 (단순 문자열은 주소가 한 개인 리스
+   트로 처리됩니다) 및 메시지 문자열입니다. 호출자는 "MAIL FROM" 명령
+   에 사용되는 ESMTP 옵션 (가령 "8bitmime") 리스트를 *mail_options*로
+   전달할 수 있습니다. 모든 "RCPT" 명령과 함께 사용해야 하는 ESMTP 옵
+   션(가령 "DSN" 명령)을 *rcpt_options*로 전달할 수 있습니다. (다른 수
+   신자에게 다른 ESMTP 옵션을 사용해야 하면 메시지를 보내는 데
+   "mail()", "rcpt()" 및 "data()"와 같은 저수준 메서드를 사용해야 합니
+   다.)
+
+   참고:
+
+     *from_addr*과 *to_addrs* 매개 변수는 전송 에이전트가 사용하는 메
+     시지 봉투(envelope)를 구성하는 데 사용됩니다. "sendmail"은 어떤
+     방식으로든 메시지 헤더를 수정하지 않습니다.
+
+   *msg*는 ASCII 범위의 문자를 포함하는 문자열이거나, 바이트 문자열일
+   수 있습니다. 문자열은 ascii 코덱을 사용하여 바이트열로 인코딩되며,
+   독립된 "\r"과 "\n" 문자는 "\r\n" 문자로 변환됩니다. 바이트 문자열은
+   수정되지 않습니다.
+
+   이 세션에 앞선 "EHLO"나 "HELO" 명령이 없었으면, 이 메서드는 ESMTP
+   "EHLO"를 먼저 시도합니다. 서버가 ESMTP를 지원하면, 메시지 크기와 지
+   정된 각 옵션이 전달됩니다 (옵션이 서버가 광고한 기능 집합에 있다면
+   ). "EHLO"가 실패하면, "HELO"가 시도되고 ESMTP 옵션이 억제됩니다.
+
+   이 메서드는 적어도 한 명의 수신자에게 메일이 수락되면 정상적으로 반
+   환됩니다. 그렇지 않으면 예외가 발생합니다. 즉, 이 메서드로 예외가
+   발생하지 않으면 누군가 메일을 받아야 합니다. 이 메서드에서 예외가
+   발생하지 않으면, 거부된 각 수신자에 대해 하나의 항목이 있는 딕셔너
+   리를 반환합니다. 각 항목에는 서버에서 보낸 SMTP 에러 코드와 해당 에
+   러 메시지의 튜플이 포함됩니다.
+
+   "SMTPUTF8"이 *mail_options*에 포함되어 있고, 서버가 이를 지원하면,
+   *from_addr*과 *to_addrs*는 ASCII가 아닌 문자를 포함할 수 있습니다.
+
+   이 메서드는 다음과 같은 예외를 발생시킬 수 있습니다:
+
+   "SMTPRecipientsRefused"
+      모든 수신자가 거부되었습니다. 아무도 메일을 받지 못했습니다. 예
+      외 객체의 "recipients" 어트리뷰트는 거부된 수신자에 대한 정보가
+      있는 딕셔너리입니다 (적어도 한 명의 수신자가 수락되었을 때 반환
+      되는 것과 같습니다).
+
+   "SMTPHeloError"
+      서버가 "HELO" 인사에 올바르게 응답하지 않았습니다.
+
+   "SMTPSenderRefused"
+      서버가 *from_addr*을 수락하지 않았습니다.
+
+   "SMTPDataError"
+      서버가 예기치 않은 에러 코드(수신자 거부는 제외하고)로 응답했습
+      니다.
+
+   "SMTPNotSupportedError"
+      "SMTPUTF8"이 *mail_options*에 제공되었지만, 서버에서 지원되지 않
+      습니다.
+
+   달리 명시되지 않는 한, 예외가 발생한 후에도 연결은 열려있습니다.
+
+   버전 3.2에서 변경: *msg*는 바이트 문자열일 수 있습니다.
+
+   버전 3.5에서 변경: "SMTPUTF8" 지원이 추가되었으며, "SMTPUTF8"이 지
+   정되었지만, 서버가 지원하지 않으면 "SMTPNotSupportedError" 가 발생
+   할 수 있습니다.
+
+SMTP.send_message(msg, from_addr=None, to_addrs=None, mail_options=(), rcpt_options=())
+
+   이는 "email.message.Message" 객체로 표현되는 메시지로 "sendmail()"
+   을 호출하는 편의 메서드입니다. 인자는 *msg*가 "Message" 객체라는 점
+   을 제외하고 "sendmail()"과 같은 의미입니다.
+
+   *from_addr*이 "None"이거나 *to_addrs*가 "None"이면, "send_message"
+   는 **RFC 5322** 에 지정된 대로 *msg*의 헤더에서 추출된 주소로 해당
+   인자를 채웁니다: *from_addr*은 *Sender* 필드가 있으면 이것으로 설정
+   되고, 그렇지 않으면 *From* 필드로 설정됩니다. *to_addrs*는 (있다면)
+   *msg*의 *To*, *Cc* 및 *Bcc* 필드 값을 결합합니다. 정확히 하나의
+   *Resent-** 헤더 집합이 메시지에 등장하면, 일반 헤더는 무시되고
+   *Resent-** 헤더가 대신 사용됩니다. 메시지에 둘 이상의 *Resent-** 헤
+   더 집합이 포함되면, 가장 최근의 *Resent-* 헤더 집합을 모호하지 않게
+   감지할 방법이 없어서 "ValueError"가 발생합니다.
+
+   "send_message" serializes *msg* using "BytesGenerator" with "\r\n"
+   as the *linesep*, and calls "sendmail()" to transmit the resulting
+   message.  Regardless of the values of *from_addr* and *to_addrs*,
+   "send_message" does not transmit any *Bcc* or *Resent-Bcc* headers
+   that may appear in *msg*.  If any of the addresses in *from_addr*
+   and *to_addrs* contain non-ASCII characters and the server does not
+   advertise "SMTPUTF8" support, an "SMTPNotSupported" error is
+   raised.  Otherwise the "Message" is serialized with a clone of its
+   "policy" with the "utf8" attribute set to "True", and "SMTPUTF8"
+   and "BODY=8BITMIME" are added to *mail_options*.
+
+   버전 3.2에 추가.
+
+   버전 3.5에 추가: 국제화된 주소 ("SMTPUTF8") 지원.
+
+SMTP.quit()
+
+   SMTP 세션을 종료하고 연결을 닫습니다. SMTP "QUIT" 명령의 결과를 반
+   환합니다.
+
+표준 SMTP/ESMTP 명령 "HELP", "RSET", "NOOP", "MAIL", "RCPT" 및 "DATA"
+에 해당하는 저수준 메서드도 지원됩니다. 일반적으로 이들은 직접 호출할
+필요가 없어서, 여기에 설명되어 있지 않습니다. 자세한 내용은, 모듈 코드
+를 참조하십시오.
+
+
+SMTP 예
+=======
+
+This example prompts the user for addresses needed in the message
+envelope ('To' and 'From' addresses), and the message to be delivered.
+Note that the headers to be included with the message must be included
+in the message as entered; this example doesn't do any processing of
+the **RFC 822** headers.  In particular, the 'To' and 'From' addresses
+must be included in the message headers explicitly.
+
+   import smtplib
+
+   def prompt(prompt):
+       return input(prompt).strip()
+
+   fromaddr = prompt("From: ")
+   toaddrs  = prompt("To: ").split()
+   print("Enter message, end with ^D (Unix) or ^Z (Windows):")
+
+   # Add the From: and To: headers at the start!
+   msg = ("From: %s\r\nTo: %s\r\n\r\n"
+          % (fromaddr, ", ".join(toaddrs)))
+   while True:
+       try:
+           line = input()
+       except EOFError:
+           break
+       if not line:
+           break
+       msg = msg + line
+
+   print("Message length is", len(msg))
+
+   server = smtplib.SMTP('localhost')
+   server.set_debuglevel(1)
+   server.sendmail(fromaddr, toaddrs, msg)
+   server.quit()
+
+참고:
+
+  일반적으로, "email" 패키지의 기능을 사용하여 전자 메일 메시지를 만들
+  고자 할 것이고, 그런 다음 "send_message()"를 통해 보낼 수 있습니다;
+  email: 예제를 참조하십시오.

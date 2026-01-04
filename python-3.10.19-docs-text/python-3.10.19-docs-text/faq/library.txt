@@ -1,0 +1,706 @@
+라이브러리와 확장 FAQ
+*********************
+
+
+일반 라이브러리 관련 질문
+=========================
+
+
+작업 X를 수행할 모듈이나 응용 프로그램을 어떻게 찾습니까?
+---------------------------------------------------------
+
+관련 표준 라이브러리 모듈이 있는지 라이브러리 레퍼런스를 확인하십시오.
+(결국에는 표준 라이브러리에 있는 내용을 배우고 이 단계를 건너뛸 수 있
+게 됩니다.)
+
+제삼자 패키지의 경우 파이썬 패키지 색인을 검색하거나 구글 또는 다른 웹
+검색 엔진을 사용해보십시오. "Python"에 관심 있는 주제에 관한 한두 개의
+키워드를 더해 검색하면 보통 도움이 될만한 것을 찾게 될 것입니다.
+
+
+math.py (socket.py, regex.py 등) 소스 파일은 어디에 있습니까?
+-------------------------------------------------------------
+
+모듈의 소스 파일을 찾을 수 없으면 C, C++ 또는 기타 컴파일된 언어로 구
+현된 내장이나 동적으로 로드된 모듈일 수 있습니다. 이 경우 소스 파일이
+없거나 C 소스 디렉터리(파이썬 경로에 없는)의 "mathmodule.c"와 같은 파
+일일 수 있습니다.
+
+파이썬에는 (적어도) 세 가지 종류의 모듈이 있습니다:
+
+1. 파이썬으로 작성된 모듈 (.py);
+
+2. C로 작성되고 동적으로 로드되는 모듈 (.dll, .pyd, .so, .sl 등);
+
+3. C로 작성되고 인터프리터와 링크된 모듈; 이 목록을 얻으려면, 다음을
+   입력하십시오:
+
+      import sys
+      print(sys.builtin_module_names)
+
+
+유닉스에서 파이썬 스크립트를 실행 파일로 만들려면 어떻게 해야 합니까?
+---------------------------------------------------------------------
+
+두 가지를 해야 합니다: 스크립트 파일의 모드는 실행 가능해야 하고 첫 번
+째 줄은 "#!"로 시작하고 그 뒤에 파이썬 인터프리터 경로가 있어야 합니다
+.
+
+첫 번째는 "chmod +x scriptfile"이나 아마도 "chmod 755 scriptfile"을 실
+행하여 수행됩니다.
+
+두 번째는 여러 가지 방법으로 수행 할 수 있습니다. 가장 간단한 방법은
+다음과 같은 줄을
+
+   #!/usr/local/bin/python
+
+파이썬 인터프리터가 플랫폼에 설치된 경로 이름을 사용하여 파일의 첫 번
+째 줄로 작성하는 것입니다.
+
+스크립트가 파이썬 인터프리터가 있는 위치와 독립적으로 되도록 하려면,
+**env** 프로그램을 사용할 수 있습니다. 파이썬 인터프리터가 사용자
+"PATH"의 디렉터리에 있다고 가정하면, 거의 모든 유닉스 변형이 다음을 지
+원합니다:
+
+   #!/usr/bin/env python
+
+이것을 CGI 스크립트에 적용하지 *마십시오*. CGI 스크립트의 "PATH" 변수
+는 종종 최소한이라서, 인터프리터의 실제 절대 경로명을 사용해야 합니다.
+
+때때로, 사용자 환경이 가득 차서 **/usr/bin/env** 프로그램이 실패합니다
+; 또는 env 프로그램이 아예 없습니다. 이 경우, 다음과 같은 핵을 시도할
+수 있습니다 (Alex Rezinsky의 기법입니다):
+
+   #! /bin/sh
+   """:"
+   exec python $0 ${1+"$@"}
+   """
+
+작은 단점은 이것이 스크립트의 __doc__ 문자열을 정의한다는 것입니다. 그
+러나, 다음을 추가하여 문제를 해결할 수 있습니다
+
+   __doc__ = """...Whatever..."""
+
+
+파이썬 용 curses/termcap 패키지가 있습니까?
+-------------------------------------------
+
+유닉스 변형의 경우: 표준 파이썬 소스 배포판은 기본적으로 컴파일되지는
+않지만, Modules 서브 디렉터리에 curses 모듈을 포함합니다. (윈도우 배포
+판에서는 사용할 수 없습니다 -- 윈도우용 curses 모듈은 없습니다.)
+
+"curses" 모듈은 기본 curses 기능뿐만 아니라 색상, 대체 문자 집합 지원,
+패드 및 마우스 지원과 같은 ncurses와 SYSV curses의 많은 추가 기능을 지
+원합니다. 이는 모듈이 BSD curses만 있는 운영 체제와 호환되지 않음을 뜻
+하지만, 현재 유지 보수되는 OS들은 어느 것도 이 범주에 속하지 않는 것
+같습니다.
+
+
+파이썬에 C의 onexit()와 동등한 것이 있습니까?
+---------------------------------------------
+
+The "atexit" module provides a register function that is similar to
+C's "onexit()".
+
+
+시그널 처리기가 작동하지 않는 이유는 무엇입니까?
+------------------------------------------------
+
+가장 흔한 문제점은 시그널 처리기가 잘못된 인자 목록으로 선언되는 것입
+니다. 이렇게 호출됩니다
+
+   handler(signum, frame)
+
+따라서 두 개의 매개 변수로 선언해야 합니다:
+
+   def handler(signum, frame):
+       ...
+
+
+일반적인 작업
+=============
+
+
+파이썬 프로그램이나 컴포넌트를 어떻게 테스트합니까?
+---------------------------------------------------
+
+파이썬에는 두 가지 테스트 프레임워크가 있습니다. "doctest" 모듈은 모듈
+의 독스트링에 있는 예제를 찾고 실행한 후, 출력을 독스트링에 제공된 예
+상 출력과 비교합니다.
+
+"unittest" 모듈은 Java와 Smalltalk 테스트 프레임 워크에서 모델링 된 더
+멋진 테스트 프레임워크입니다.
+
+테스트를 더 쉽게 하려면, 여러분의 프로그램에 좋은 모듈식 디자인을 사용
+해야 합니다. 프로그램은 거의 모든 기능을 함수나 클래스 메서드로 캡슐화
+해야 합니다 -- 그리고 이는 때로 프로그램을 더 빠르게 실행하는 놀라운
+효과가 있습니다 (지역 변수 액세스가 전역 액세스보다 빠르기 때문에). 또
+한 프로그램은 전역 변수를 변경하는 것에 의존하지 않아야 합니다, 이렇게
+하면 테스트하기가 훨씬 어렵기 때문입니다.
+
+프로그램의 "전역 메인 논리"는 다음과 같은 코드를
+
+   if __name__ == "__main__":
+       main_logic()
+
+프로그램의 메인 모듈 하단에 넣는 것처럼 간단할 수 있습니다.
+
+일단 프로그램이 다루기 쉬운 함수와 클래스 동작의 모음으로 구성되면, 이
+동작을 검사하는 테스트 함수를 작성해야 합니다. 일련의 테스트를 자동화
+하는 테스트 스위트는 각 모듈과 연관될 수 있습니다. 이것은 많은 작업처
+럼 들리지만, 파이썬이 아주 간결하고 유연하기 때문에 놀랍도록 쉽습니다.
+"프로덕션 코드"와 함께 테스트 함수를 작성하여 코딩을 훨씬 더 즐겁고 재
+미있게 만들 수 있습니다. 버그를 쉽게 찾고 결함을 조기에 발견할 수 있기
+때문입니다.
+
+프로그램의 메인 모듈이 아닌 "지원 모듈"에는 모듈의 자체 테스트가 포함
+될 수 있습니다.
+
+   if __name__ == "__main__":
+       self_test()
+
+복잡한 외부 인터페이스와 상호 작용하는 프로그램조차도 파이썬으로 구현
+된 "가짜" 인터페이스를 사용하여 외부 인터페이스를 사용할 수 없을 때 테
+스트할 수 있습니다.
+
+
+독스트링으로 설명서를 어떻게 만듭니까?
+--------------------------------------
+
+"pydoc" 모듈은 파이썬 소스 코드의 독스트링에서 HTML을 만들 수 있습니다
+. 순수하게 독스트링에서 API 설명서를 만드는 대안은 epydoc입니다.
+Sphinx도 독스트링 내용을 포함할 수 있습니다.
+
+
+한 번에 하나의 키 입력을 받는 방법은 무엇입니까?
+------------------------------------------------
+
+유닉스 변형에는 몇 가지 해결책이 있습니다. curses를 사용하여 이 작업을
+수행하는 것은 간단하지만, curses는 배우기에 상당히 큰 모듈입니다.
+
+
+스레드
+======
+
+
+스레드를 사용하여 어떻게 프로그래밍합니까?
+------------------------------------------
+
+"_thread" 모듈이 아닌 "threading" 모듈을 사용하십시오. "threading" 모
+듈은 "_thread" 모듈이 제공하는 저수준 프리미티브 위에 편리한 추상화를
+구축합니다.
+
+
+제 스레드가 아무것도 실행되지 않는 것 같습니다: 왜 그런가요?
+------------------------------------------------------------
+
+메인 스레드가 종료되자마자, 모든 스레드가 죽습니다. 메인 스레드가 너무
+빨리 실행되어, 스레드가 작업을 수행할 시간이 없습니다.
+
+간단한 수정은 프로그램 끝에 모든 스레드가 완료될 만큼 충분히 긴 휴면을
+추가하는 것입니다:
+
+   import threading, time
+
+   def thread_task(name, n):
+       for i in range(n):
+           print(name, i)
+
+   for i in range(10):
+       T = threading.Thread(target=thread_task, args=(str(i), i))
+       T.start()
+
+   time.sleep(10)  # <---------------------------!
+
+그러나 이제 (많은 플랫폼에서) 스레드는 병렬로 실행되지 않고, 한 번에
+하나씩 순차적으로 실행되는 것처럼 보입니다! 그 이유는 OS 스레드 스케줄
+러가 이전 스레드가 블록 될 때까지 새 스레드를 시작하지 않기 때문입니다
+.
+
+간단한 수정은 실행 함수의 시작 부분에 작은 휴면을 추가하는 것입니다:
+
+   def thread_task(name, n):
+       time.sleep(0.001)  # <--------------------!
+       for i in range(n):
+           print(name, i)
+
+   for i in range(10):
+       T = threading.Thread(target=thread_task, args=(str(i), i))
+       T.start()
+
+   time.sleep(10)
+
+"time.sleep()"을 위한 좋은 지연 값을 추측하는 대신, 일종의 세마포어 메
+커니즘을 사용하는 것이 좋습니다. 한 가지 아이디어는 "queue" 모듈을 사
+용하여 큐 객체를 만들고, 각 스레드가 완료될 때 큐에 토큰을 추가하게 하
+고, 메인 스레드가 스레드 수 만큼의 토큰을 읽도록 하는 것입니다.
+
+
+여러 작업자 스레드 간에 작업을 어떻게 배달합니까?
+-------------------------------------------------
+
+가장 쉬운 방법은 "concurrent.futures" 모듈, 특히 "ThreadPoolExecutor"
+클래스를 사용하는 것입니다.
+
+또는, 디스패치 알고리즘을 세밀하게 제어하려면, 직접 논리를 작성할 수
+있습니다. "queue" 모듈을 사용하여 작업 목록을 포함하는 큐를 만드십시오
+. "Queue" 클래스는 객체 목록을 유지하고 큐에 항목을 추가하는
+".put(obj)" 메서드와 이를 반환하는 ".get()" 메서드를 갖습니다. 클래스
+는 각 작업이 정확히 한 번만 전달되도록 하는 데 필요한 록을 관리합니다.
+
+간단한 예를 들면 다음과 같습니다:
+
+   import threading, queue, time
+
+   # The worker thread gets jobs off the queue.  When the queue is empty, it
+   # assumes there will be no more work and exits.
+   # (Realistically workers will run until terminated.)
+   def worker():
+       print('Running worker')
+       time.sleep(0.1)
+       while True:
+           try:
+               arg = q.get(block=False)
+           except queue.Empty:
+               print('Worker', threading.current_thread(), end=' ')
+               print('queue empty')
+               break
+           else:
+               print('Worker', threading.current_thread(), end=' ')
+               print('running with argument', arg)
+               time.sleep(0.5)
+
+   # Create queue
+   q = queue.Queue()
+
+   # Start a pool of 5 workers
+   for i in range(5):
+       t = threading.Thread(target=worker, name='worker %i' % (i+1))
+       t.start()
+
+   # Begin adding work to the queue
+   for i in range(50):
+       q.put(i)
+
+   # Give threads time to run
+   print('Main thread sleeping')
+   time.sleep(5)
+
+실행하면 다음과 같은 출력이 생성됩니다:
+
+   Running worker
+   Running worker
+   Running worker
+   Running worker
+   Running worker
+   Main thread sleeping
+   Worker <Thread(worker 1, started 130283832797456)> running with argument 0
+   Worker <Thread(worker 2, started 130283824404752)> running with argument 1
+   Worker <Thread(worker 3, started 130283816012048)> running with argument 2
+   Worker <Thread(worker 4, started 130283807619344)> running with argument 3
+   Worker <Thread(worker 5, started 130283799226640)> running with argument 4
+   Worker <Thread(worker 1, started 130283832797456)> running with argument 5
+   ...
+
+자세한 내용은 모듈 설명서를 참조하십시오. "Queue" 클래스는 기능이 풍부
+한 인터페이스를 제공합니다.
+
+
+어떤 종류의 전역 값 변경이 스레드 안전합니까?
+---------------------------------------------
+
+내부적으로 *전역 인터프리터 록*(GIL)이 사용되어 한 번에 하나의 스레드
+만 파이썬 VM에서 실행되도록 합니다. 일반적으로, 파이썬은 바이트 코드
+명령어들 사이에서만 스레드 간 전환을 제공합니다;
+"sys.setswitchinterval()"을 통해 얼마나 자주 전환할지를 설정할 수 있습
+니다. 따라서 각 바이트 코드 명령어와 각 명령어에서 도달하는 모든 C 구
+현 코드는 파이썬 프로그램의 관점에서 원자 적입니다.
+
+이론적으로, 이것은 정확하게 따지기 위해서는 PVM 바이트 코드 구현에 대
+한 정확한 이해가 필요하다는 것을 의미합니다. 경험적으로는, 이것은 "원
+자 적으로 보이는" 내장 데이터형(정수, 리스트, 딕셔너리 등)의 공유 변수
+에 대한 조작이 실제로 원자 적임을 의미합니다.
+
+예를 들어, 다음 연산은 모두 원자 적입니다 (L, L1, L2는 리스트, D, D1,
+D2는 딕셔너리, x, y는 객체, i, j는 정수입니다):
+
+   L.append(x)
+   L1.extend(L2)
+   x = L[i]
+   x = L.pop()
+   L1[i:j] = L2
+   L.sort()
+   x = y
+   x.field = y
+   D[x] = y
+   D1.update(D2)
+   D.keys()
+
+이것들은 아닙니다:
+
+   i = i+1
+   L.append(L[-1])
+   L[i] = L[j]
+   D[x] = D[x] + 1
+
+Operations that replace other objects may invoke those other objects'
+"__del__()" method when their reference count reaches zero, and that
+can affect things.  This is especially true for the mass updates to
+dictionaries and lists.  When in doubt, use a mutex!
+
+
+전역 인터프리터 록을 제거할 수 없습니까?
+----------------------------------------
+
+*전역 인터프리터 록*(GIL)은 종종 하이 엔드 다중 프로세서 서버 기계에
+파이썬을 배치하는 데 방해가 된다고 여겨집니다, (거의) 모든 파이썬 코드
+가 GIL을 잡고 있는 동안에만 실행하려고 해서, 다중 스레드 파이썬 프로그
+램이 사실상 오직 하나의 CPU만 사용하기 때문입니다.
+
+Back in the days of Python 1.5, Greg Stein actually implemented a
+comprehensive patch set (the "free threading" patches) that removed
+the GIL and replaced it with fine-grained locking.  Adam Olsen
+recently did a similar experiment in his python-safethread project.
+Unfortunately, both experiments exhibited a sharp drop in single-
+thread performance (at least 30% slower), due to the amount of fine-
+grained locking necessary to compensate for the removal of the GIL.
+
+This doesn't mean that you can't make good use of Python on multi-CPU
+machines! You just have to be creative with dividing the work up
+between multiple *processes* rather than multiple *threads*.  The
+"ProcessPoolExecutor" class in the new "concurrent.futures" module
+provides an easy way of doing so; the "multiprocessing" module
+provides a lower-level API in case you want more control over
+dispatching of tasks.
+
+C 확장을 신중하게 사용하는 것도 도움이 됩니다; C 확장을 사용하여 시간
+이 오래 걸리는 작업을 수행하면, 확장은 실행 스레드가 C 코드에 있는 동
+안 GIL을 해제하고 다른 스레드가 어떤 작업을 수행할 수 있도록 할 수 있
+습니다. "zlib"와 "hashlib"와 같은 일부 표준 라이브러리 모듈은 이미 이
+렇게 합니다.
+
+It has been suggested that the GIL should be a per-interpreter-state
+lock rather than truly global; interpreters then wouldn't be able to
+share objects. Unfortunately, this isn't likely to happen either.  It
+would be a tremendous amount of work, because many object
+implementations currently have global state. For example, small
+integers and short strings are cached; these caches would have to be
+moved to the interpreter state.  Other object types have their own
+free list; these free lists would have to be moved to the interpreter
+state. And so on.
+
+And I doubt that it can even be done in finite time, because the same
+problem exists for 3rd party extensions.  It is likely that 3rd party
+extensions are being written at a faster rate than you can convert
+them to store all their global state in the interpreter state.
+
+And finally, once you have multiple interpreters not sharing any
+state, what have you gained over running each interpreter in a
+separate process?
+
+
+입력과 출력
+===========
+
+
+파일을 어떻게 삭제합니까? (그리고 다른 파일 질문들...)
+------------------------------------------------------
+
+"os.remove(filename)"이나 "os.unlink(filename)"을 사용하십시오; 설명서
+는 "os" 모듈을 참조하십시오. 두 함수는 동일합니다; "unlink()"는 단순히
+이 함수에 대한 유닉스 시스템 호출의 이름입니다.
+
+디렉터리를 제거하려면, "os.rmdir()"을 사용하십시오; 만들려면
+"os.mkdir()"을 사용하십시오. "os.makedirs(path)"는 존재하지 않는
+"path"의 중간 디렉터리를 만듭니다. "os.removedirs(path)"는 비어있는 한
+, 중간 디렉터리를 제거합니다; 전체 디렉터리 트리와 그 내용을 삭제하려
+면 "shutil.rmtree()"를 사용하십시오.
+
+파일 이름을 바꾸려면 "os.rename(old_path, new_path)"를 사용하십시오.
+
+파일을 자르려면, "f = open(filename, "rb+")"를 사용하여 열고
+"f.truncate(offset)"을 사용하십시오; offset의 기본값은 현재 탐색(seek)
+위치입니다. "os.open()"으로 열린 파일의 경우 "os.ftruncate(fd,
+offset)"도 있습니다. 여기서 *fd*는 파일 기술자(작은 정수)입니다.
+
+"shutil" 모듈에도 "copyfile()", "copytree()" 및 "rmtree()"를 포함한 파
+일에서 작동하는 많은 함수가 포함되어 있습니다.
+
+
+파일을 어떻게 복사합니까?
+-------------------------
+
+The "shutil" module contains a "copyfile()" function. Note that on
+Windows NTFS volumes, it does not copy alternate data streams nor
+resource forks on macOS HFS+ volumes, though both are now rarely used.
+It also doesn't copy file permissions and metadata, though using
+"shutil.copy2()" instead will preserve most (though not all) of it.
+
+
+바이너리 데이터를 읽는 (또는 쓰는) 방법은 무엇입니까?
+-----------------------------------------------------
+
+복잡한 바이너리 데이터 형식을 읽거나 쓰려면, "struct" 모듈을 사용하는
+것이 가장 좋습니다. 바이너리 데이터(보통 숫자)를 포함하는 문자열을 취
+해서 파이썬 객체로 변환할 수 있도록 합니다; 그리고 그 반대도 가능합니
+다.
+
+예를 들어, 다음 코드는 파일에서 빅 엔디안 형식의 두 개의 2-바이트 정수
+와 하나의 4-바이트 정수를 읽습니다:
+
+   import struct
+
+   with open(filename, "rb") as f:
+       s = f.read(8)
+       x, y, z = struct.unpack(">hhl", s)
+
+포맷 문자열의 '>'는 빅 엔디안 데이터를 강제합니다; 문자 'h'는 하나의 "
+짧은(short) 정수"(2바이트)를 읽고, 'l'은 문자열에서 하나의 "긴(long)
+정수"(4바이트)를 읽습니다.
+
+더욱 규칙적인 데이터(예를 들어 int나 float의 동종 리스트)의 경우,
+"array" 모듈을 사용할 수도 있습니다.
+
+참고:
+
+  바이너리 데이터를 읽고 쓰려면, 바이너리 모드로 파일을 열어야 합니다
+  (여기서는, ""rb""를 "open()"으로 전달합니다). 대신 ""r""(기본값)을
+  사용하면, 파일이 텍스트 모드로 열리고 "f.read()"는 "bytes" 객체 대신
+  "str" 객체를 반환합니다.
+
+
+os.popen()으로 만든 파이프에서 os.read()를 사용할 수 없는 것처럼 보입니다; 왜입니까?
+------------------------------------------------------------------------------------
+
+"os.read()"는 열린 파일을 나타내는 작은 정수인 파일 기술자를 취하는 저
+수준 함수입니다. "os.popen()"은 내장 "open()" 함수에서 반환하는 것과
+같은 형의 고수준 파일 객체를 만듭니다. 따라서, "os.popen()"으로 만들어
+진 파이프 *p*에서 *n* 바이트를 읽으려면, "p.read(n)"을 사용해야 합니다
+.
+
+
+직렬 (RS232) 포트에 어떻게 액세스합니까?
+----------------------------------------
+
+Win32, OSX, Linux, BSD, Jython, IronPython의 경우:
+
+   https://pypi.org/project/pyserial/
+
+유닉스의 경우, Mitch Chapman의 유즈넷 게시물을 참조하십시오:
+
+   https://groups.google.com/groups?selm=34A04430.CF9@ohioee.com
+
+
+왜 sys.stdout(stdin, stderr)을 닫아도 닫히지 않습니까?
+------------------------------------------------------
+
+파이썬 *파일 객체*는 저수준 C 파일 기술자의 고수준 추상화 계층입니다.
+
+내장 "open()" 함수를 통해 파이썬에서 만드는 대부분 파일 객체의 경우,
+"f.close()"는 파이썬 파일 객체를 파이썬의 관점에서 닫은 것으로 표시하
+고 하부 C 파일 기술자를 닫도록 합니다. 이것은 "f"가 가비지가 될 때 "f"
+의 파괴자에서 자동으로 일어나기도 합니다.
+
+그러나 stdin, stdout 및 stderr은 파이썬에서 특별하게 처리되는데, C 역
+시 이들에게 특수한 상태를 부여하기 때문입니다. "sys.stdout.close()"를
+실행하면 파이썬 수준 파일 객체가 닫힌 것으로 표시되지만, 연관된 C 파일
+기술자를 닫지 *않습니다*.
+
+이 세 가지 중 하나에 대한 하부 C 파일 기술자를 닫으려면, 먼저 이것이
+정말로 여러분이 하고 싶은 것인지 확인해야 합니다 (예를 들어, I/O를 수
+행하려는 확장 모듈이 혼동할 수 있습니다). 그렇다면, "os.close()"를 사
+용하십시오:
+
+   os.close(stdin.fileno())
+   os.close(stdout.fileno())
+   os.close(stderr.fileno())
+
+또는 숫자 상수 0, 1 및 2를 각각 사용할 수 있습니다.
+
+
+네트워크/인터넷 프로그래밍
+==========================
+
+
+파이썬에는 어떤 WWW 도구가 있습니까?
+------------------------------------
+
+라이브러리 레퍼런스 매뉴얼의 인터넷 프로토콜과 지원과 인터넷 데이터 처
+리 장을 참조하십시오. 파이썬에는 서버 측과 클라이언트 측 웹 시스템을
+구축하는 데 도움이 되는 많은 모듈이 있습니다.
+
+사용 가능한 프레임워크 요약은 Paul Boddie가
+https://wiki.python.org/moin/WebProgramming에서 유지 관리합니다.
+
+Cameron Laird maintains a useful set of pages about Python web
+technologies at https://web.archive.org/web/20210224183619/http://pha
+seit.net/claird/comp.lang.python/web_python.
+
+
+How can I mimic CGI form submission (METHOD=POST)?
+--------------------------------------------------
+
+I would like to retrieve web pages that are the result of POSTing a
+form. Is there existing code that would let me do this easily?
+
+Yes. Here's a simple example that uses "urllib.request":
+
+   #!/usr/local/bin/python
+
+   import urllib.request
+
+   # build the query string
+   qs = "First=Josephine&MI=Q&Last=Public"
+
+   # connect and send the server a path
+   req = urllib.request.urlopen('http://www.some-server.out-there'
+                                '/cgi-bin/some-cgi-script', data=qs)
+   with req:
+       msg, hdrs = req.read(), req.info()
+
+Note that in general for percent-encoded POST operations, query
+strings must be quoted using "urllib.parse.urlencode()".  For example,
+to send "name=Guy Steele, Jr.":
+
+   >>> import urllib.parse
+   >>> urllib.parse.urlencode({'name': 'Guy Steele, Jr.'})
+   'name=Guy+Steele%2C+Jr.'
+
+더 보기: urllib 패키지를 사용하여 인터넷 리소스를 가져오는 방법 for extensive
+      examples.
+
+
+HTML 생성을 위해 어떤 모듈을 사용해야 합니까?
+---------------------------------------------
+
+Web Programming wiki page에서 유용한 링크 모음을 찾을 수 있습니다.
+
+
+파이썬 스크립트에서 메일을 보내려면 어떻게 해야 합니까?
+-------------------------------------------------------
+
+표준 라이브러리 모듈 "smtplib"를 사용하십시오.
+
+다음은 이를 사용하는 매우 간단한 대화식 메일 발신기입니다. 이 방법은
+SMTP 리스너를 지원하는 모든 호스트에서 작동합니다.
+
+   import sys, smtplib
+
+   fromaddr = input("From: ")
+   toaddrs  = input("To: ").split(',')
+   print("Enter message, end with ^D:")
+   msg = ''
+   while True:
+       line = sys.stdin.readline()
+       if not line:
+           break
+       msg += line
+
+   # The actual mail send
+   server = smtplib.SMTP('localhost')
+   server.sendmail(fromaddr, toaddrs, msg)
+   server.quit()
+
+유닉스 전용 대안은 sendmail을 사용합니다. sendmail 프로그램의 위치는
+시스템마다 다릅니다; 때로는 "/usr/lib/sendmail", 때로는
+"/usr/sbin/sendmail". sendmail 매뉴얼 페이지가 도움이 될 것입니다. 샘
+플 코드는 다음과 같습니다:
+
+   import os
+
+   SENDMAIL = "/usr/sbin/sendmail"  # sendmail location
+   p = os.popen("%s -t -i" % SENDMAIL, "w")
+   p.write("To: receiver@example.com\n")
+   p.write("Subject: test\n")
+   p.write("\n")  # blank line separating headers from body
+   p.write("Some text\n")
+   p.write("some more text\n")
+   sts = p.close()
+   if sts != 0:
+       print("Sendmail exit status", sts)
+
+
+소켓의 connect() 메서드에서 블로킹을 피하려면 어떻게 해야 합니까?
+-----------------------------------------------------------------
+
+"select" 모듈이 소켓의 비동기 I/O를 지원하는 데 흔히 사용됩니다.
+
+To prevent the TCP connect from blocking, you can set the socket to
+non-blocking mode.  Then when you do the "socket.connect()", you will
+either connect immediately (unlikely) or get an exception that
+contains the error number as ".errno". "errno.EINPROGRESS" indicates
+that the connection is in progress, but hasn't finished yet.
+Different OSes will return different values, so you're going to have
+to check what's returned on your system.
+
+You can use the "socket.connect_ex()" method to avoid creating an
+exception.  It will just return the errno value.  To poll, you can
+call "socket.connect_ex()" again later -- "0" or "errno.EISCONN"
+indicate that you're connected -- or you can pass this socket to
+"select.select()" to check if it's writable.
+
+참고:
+
+  The "asyncio" module provides a general purpose single-threaded and
+  concurrent asynchronous library, which can be used for writing non-
+  blocking network code. The third-party Twisted library is a popular
+  and feature-rich alternative.
+
+
+데이터베이스
+============
+
+
+파이썬에 데이터베이스 패키지에 대한 인터페이스가 있습니까?
+----------------------------------------------------------
+
+예.
+
+"DBM"과 "GDBM"같은 디스크 기반 해시에 대한 인터페이스도 표준 파이썬에
+포함되어 있습니다. 경량 디스크 기반 관계형 데이터베이스를 제공하는
+"sqlite3" 모듈도 있습니다.
+
+대부분 관계형 데이터베이스에 대한 지원이 제공됩니다. 자세한 내용은
+DatabaseProgramming wiki page를 참조하십시오.
+
+
+파이썬에서 영속 객체를 어떻게 구현합니까?
+-----------------------------------------
+
+"pickle" 라이브러리 모듈은 이것을 매우 일반적인 방식으로 해결하고 (여
+전히 열린 파일, 소켓 또는 창과 같은 것을 저장할 수는 없지만), "shelve"
+라이브러리 모듈은 pickle과 (g)dbm을 사용하여 임의의 파이썬 객체를 포함
+하는 영속적(persistent) 매핑을 만듭니다.
+
+
+수학과 숫자
+===========
+
+
+파이썬에서 난수를 어떻게 생성합니까?
+------------------------------------
+
+표준 모듈 "random"은 난수 생성기를 구현합니다. 사용법은 간단합니다:
+
+   import random
+   random.random()
+
+This returns a random floating point number in the range [0, 1).
+
+이 모듈에는 다른 많은 특수 생성기가 있습니다, 가령:
+
+* "randrange(a, b)"는 [a, b) 범위의 정수를 선택합니다.
+
+* "uniform(a, b)" chooses a floating point number in the range [a, b).
+
+* "normalvariate(mean, sdev)"는 정규 (가우시안) 분포를 샘플링합니다.
+
+일부 고수준 함수는 시퀀스에서 직접 작동합니다, 가령:
+
+* "choice(S)"는 주어진 시퀀스에서 무작위 요소 하나를 선택합니다.
+
+* "shuffle(L)"은 리스트를 제자리에서 섞습니다, 즉 무작위로 순서를 바꿉
+  니다.
+
+독립적인 여러 개의 난수 생성기를 만들기 위해 인스턴스 화 할 수 있는
+"Random" 클래스도 있습니다.

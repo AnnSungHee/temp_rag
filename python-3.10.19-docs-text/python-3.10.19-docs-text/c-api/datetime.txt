@@ -1,0 +1,252 @@
+DateTime 객체
+*************
+
+Various date and time objects are supplied by the "datetime" module.
+Before using any of these functions, the header file "datetime.h" must
+be included in your source (note that this is not included by
+"Python.h"), and the macro "PyDateTime_IMPORT" must be invoked,
+usually as part of the module initialisation function.  The macro puts
+a pointer to a C structure into a static variable, "PyDateTimeAPI",
+that is used by the following macros.
+
+UTC 싱글톤에 액세스하기 위한 매크로:
+
+PyObject *PyDateTime_TimeZone_UTC
+
+   UTC를 나타내는 시간대 싱글톤을 반환합니다, "datetime.timezone.utc"
+   와 같은 객체입니다.
+
+   버전 3.7에 추가.
+
+형 검사 매크로:
+
+int PyDate_Check(PyObject *ob)
+
+   Return true if *ob* is of type "PyDateTime_DateType" or a subtype
+   of "PyDateTime_DateType".  *ob* must not be "NULL".  This function
+   always succeeds.
+
+int PyDate_CheckExact(PyObject *ob)
+
+   *ob*가 "PyDateTime_DateType" 형이면 참을 돌려줍니다. *ob*는 "NULL"
+   이 아니어야 합니다. 이 함수는 항상 성공합니다.
+
+int PyDateTime_Check(PyObject *ob)
+
+   Return true if *ob* is of type "PyDateTime_DateTimeType" or a
+   subtype of "PyDateTime_DateTimeType".  *ob* must not be "NULL".
+   This function always succeeds.
+
+int PyDateTime_CheckExact(PyObject *ob)
+
+   *ob*가 "PyDateTime_DateTimeType" 형이면 참을 돌려줍니다. *ob*는
+   "NULL"이 아니어야 합니다. 이 함수는 항상 성공합니다.
+
+int PyTime_Check(PyObject *ob)
+
+   Return true if *ob* is of type "PyDateTime_TimeType" or a subtype
+   of "PyDateTime_TimeType".  *ob* must not be "NULL".  This function
+   always succeeds.
+
+int PyTime_CheckExact(PyObject *ob)
+
+   *ob*가 "PyDateTime_TimeType" 형이면 참을 돌려줍니다. *ob*는 "NULL"
+   이 아니어야 합니다. 이 함수는 항상 성공합니다.
+
+int PyDelta_Check(PyObject *ob)
+
+   Return true if *ob* is of type "PyDateTime_DeltaType" or a subtype
+   of "PyDateTime_DeltaType".  *ob* must not be "NULL".  This function
+   always succeeds.
+
+int PyDelta_CheckExact(PyObject *ob)
+
+   *ob*가 "PyDateTime_DeltaType" 형이면 참을 돌려줍니다. *ob*는 "NULL"
+   이 아니어야 합니다. 이 함수는 항상 성공합니다.
+
+int PyTZInfo_Check(PyObject *ob)
+
+   Return true if *ob* is of type "PyDateTime_TZInfoType" or a subtype
+   of "PyDateTime_TZInfoType".  *ob* must not be "NULL".  This
+   function always succeeds.
+
+int PyTZInfo_CheckExact(PyObject *ob)
+
+   *ob*가 "PyDateTime_TZInfoType" 형이면 참을 돌려줍니다. *ob*는
+   "NULL"이 아니어야 합니다. 이 함수는 항상 성공합니다.
+
+객체를 만드는 매크로:
+
+PyObject *PyDate_FromDate(int year, int month, int day)
+    *반환값: 새 참조.*
+
+   지정된 년, 월, 일의 "datetime.date" 객체를 반환합니다.
+
+PyObject *PyDateTime_FromDateAndTime(int year, int month, int day, int hour, int minute, int second, int usecond)
+    *반환값: 새 참조.*
+
+   지정된 년, 월, 일, 시, 분, 초 및 마이크로초의 "datetime.datetime"
+   객체를 반환합니다.
+
+PyObject *PyDateTime_FromDateAndTimeAndFold(int year, int month, int day, int hour, int minute, int second, int usecond, int fold)
+    *반환값: 새 참조.*
+
+   지정된 년, 월, 일, 시, 분, 초, 마이크로초 및 fold의
+   "datetime.datetime" 객체를 반환합니다.
+
+   버전 3.6에 추가.
+
+PyObject *PyTime_FromTime(int hour, int minute, int second, int usecond)
+    *반환값: 새 참조.*
+
+   지정된 시, 분, 초 및 마이크로초의 "datetime.time" 객체를 반환합니다
+   .
+
+PyObject *PyTime_FromTimeAndFold(int hour, int minute, int second, int usecond, int fold)
+    *반환값: 새 참조.*
+
+   지정된 시, 분, 초, 마이크로초 및 fold의 "datetime.time" 객체를 반환
+   합니다.
+
+   버전 3.6에 추가.
+
+PyObject *PyDelta_FromDSU(int days, int seconds, int useconds)
+    *반환값: 새 참조.*
+
+   지정된 일, 초 및 마이크로초 수를 나타내는 "datetime.timedelta" 객체
+   를 반환합니다. 결과 마이크로초와 초가 "datetime.timedelta" 객체에
+   관해 설명된 범위에 있도록 정규화가 수행됩니다.
+
+PyObject *PyTimeZone_FromOffset(PyDateTime_DeltaType *offset)
+    *반환값: 새 참조.*
+
+   *offset* 인자로 나타내지는 이름이 없는 고정 오프셋의
+   "datetime.timezone" 객체를 돌려줍니다.
+
+   버전 3.7에 추가.
+
+PyObject *PyTimeZone_FromOffsetAndName(PyDateTime_DeltaType *offset, PyUnicode *name)
+    *반환값: 새 참조.*
+
+   *offset* 인자와 tzname *name*으로 나타내지는 고정 오프셋의
+   "datetime.timezone" 객체를 돌려줍니다.
+
+   버전 3.7에 추가.
+
+Macros to extract fields from date objects.  The argument must be an
+instance of "PyDateTime_Date", including subclasses (such as
+"PyDateTime_DateTime").  The argument must not be "NULL", and the type
+is not checked:
+
+int PyDateTime_GET_YEAR(PyDateTime_Date *o)
+
+   양의 int로, 년을 반환합니다.
+
+int PyDateTime_GET_MONTH(PyDateTime_Date *o)
+
+   1에서 12까지의 int로, 월을 반환합니다.
+
+int PyDateTime_GET_DAY(PyDateTime_Date *o)
+
+   1에서 31까지의 int로, 일을 반환합니다.
+
+Macros to extract fields from datetime objects.  The argument must be
+an instance of "PyDateTime_DateTime", including subclasses. The
+argument must not be "NULL", and the type is not checked:
+
+int PyDateTime_DATE_GET_HOUR(PyDateTime_DateTime *o)
+
+   0부터 23까지의 int로, 시를 반환합니다.
+
+int PyDateTime_DATE_GET_MINUTE(PyDateTime_DateTime *o)
+
+   0부터 59까지의 int로, 분을 반환합니다.
+
+int PyDateTime_DATE_GET_SECOND(PyDateTime_DateTime *o)
+
+   0부터 59까지의 int로, 초를 반환합니다.
+
+int PyDateTime_DATE_GET_MICROSECOND(PyDateTime_DateTime *o)
+
+   0부터 999999까지의 int로, 마이크로초를 반환합니다.
+
+int PyDateTime_DATE_GET_FOLD(PyDateTime_DateTime *o)
+
+   0에서 1까지의 int로, 폴드를 반환합니다.
+
+   버전 3.6에 추가.
+
+PyObject *PyDateTime_DATE_GET_TZINFO(PyDateTime_DateTime *o)
+
+   Return the tzinfo (which may be "None").
+
+   버전 3.10에 추가.
+
+Macros to extract fields from time objects.  The argument must be an
+instance of "PyDateTime_Time", including subclasses. The argument must
+not be "NULL", and the type is not checked:
+
+int PyDateTime_TIME_GET_HOUR(PyDateTime_Time *o)
+
+   0부터 23까지의 int로, 시를 반환합니다.
+
+int PyDateTime_TIME_GET_MINUTE(PyDateTime_Time *o)
+
+   0부터 59까지의 int로, 분을 반환합니다.
+
+int PyDateTime_TIME_GET_SECOND(PyDateTime_Time *o)
+
+   0부터 59까지의 int로, 초를 반환합니다.
+
+int PyDateTime_TIME_GET_MICROSECOND(PyDateTime_Time *o)
+
+   0부터 999999까지의 int로, 마이크로초를 반환합니다.
+
+int PyDateTime_TIME_GET_FOLD(PyDateTime_Time *o)
+
+   0에서 1까지의 int로, 폴드를 반환합니다.
+
+   버전 3.6에 추가.
+
+PyObject *PyDateTime_TIME_GET_TZINFO(PyDateTime_Time *o)
+
+   Return the tzinfo (which may be "None").
+
+   버전 3.10에 추가.
+
+Macros to extract fields from time delta objects.  The argument must
+be an instance of "PyDateTime_Delta", including subclasses. The
+argument must not be "NULL", and the type is not checked:
+
+int PyDateTime_DELTA_GET_DAYS(PyDateTime_Delta *o)
+
+   -999999999에서 999999999까지의 int로, 일 수를 반환합니다.
+
+   버전 3.3에 추가.
+
+int PyDateTime_DELTA_GET_SECONDS(PyDateTime_Delta *o)
+
+   0부터 86399까지의 int로, 초 수를 반환합니다.
+
+   버전 3.3에 추가.
+
+int PyDateTime_DELTA_GET_MICROSECONDS(PyDateTime_Delta *o)
+
+   0에서 999999까지의 int로, 마이크로초 수를 반환합니다.
+
+   버전 3.3에 추가.
+
+DB API를 구현하는 모듈의 편의를 위한 매크로:
+
+PyObject *PyDateTime_FromTimestamp(PyObject *args)
+    *반환값: 새 참조.*
+
+   Create and return a new "datetime.datetime" object given an
+   argument tuple suitable for passing to
+   "datetime.datetime.fromtimestamp()".
+
+PyObject *PyDate_FromTimestamp(PyObject *args)
+    *반환값: 새 참조.*
+
+   Create and return a new "datetime.date" object given an argument
+   tuple suitable for passing to "datetime.date.fromtimestamp()".

@@ -1,0 +1,1082 @@
+"io" --- Core tools for working with streams
+********************************************
+
+**소스 코드:** Lib/io.py
+
+======================================================================
+
+
+개요
+====
+
+"io" 모듈은 다양한 유형의 I/O를 처리하기 위한 파이썬의 주 장치를 제공
+합니다. I/O에는 세 가지 주요 유형이 있습니다: *텍스트(text) I/O*, *바
+이너리(binary) I/O* 및 *원시(raw) I/O*. 이들은 일반적인 범주이며 다양
+한 배경 저장소를 각각에 사용할 수 있습니다. 이러한 범주 중 하나에 속하
+는 구상 객체를 *파일 객체*라고 합니다. 다른 일반적인 용어는 *스트림
+(stream)*과 *파일류 객체(file-like object)*입니다.
+
+범주와 상관없이, 각 구상 스트림 객체에는 다양한 기능이 있습니다: 읽기
+전용, 쓰기 전용 또는 읽고-쓰기일 수 있습니다. 또한 임의의 무작위 액세
+스(임의의 위치로 전방이나 후방 탐색)를 허용하거나 순차적 액세스(예를
+들어 소켓이나 파이프의 경우)만 허용할 수 있습니다.
+
+All streams are careful about the type of data you give to them.  For
+example giving a "str" object to the "write()" method of a binary
+stream will raise a "TypeError".  So will giving a "bytes" object to
+the "write()" method of a text stream.
+
+버전 3.3에서 변경: "IOError"가 이제는 "OSError"의 별칭이라서,
+"IOError"를 발생시켰던 연산은 이제 "OSError"를 발생시킵니다.
+
+
+텍스트 I/O
+----------
+
+텍스트 I/O는 "str" 객체를 기대하고 생성합니다. 이는 배경 저장소가 네이
+티브 하게 바이트열로 구성되었을 때마다 (가령 파일의 경우), 플랫폼별 줄
+넘김 문자의 선택적 변환뿐만 아니라 데이터의 인코딩과 디코딩이 투명하게
+이루어짐을 의미합니다.
+
+The easiest way to create a text stream is with "open()", optionally
+specifying an encoding:
+
+   f = open("myfile.txt", "r", encoding="utf-8")
+
+인 메모리 텍스트 스트림도 "StringIO" 객체로 제공됩니다:
+
+   f = io.StringIO("some initial text data")
+
+텍스트 스트림 API는 "TextIOBase"의 설명서에 자세히 설명되어 있습니다.
+
+
+바이너리 I/O
+------------
+
+바이너리 I/O(*버퍼링 된(buffered) I/O*라고도 합니다)는 *바이트열류 객
+체*를 기대하고 "bytes" 객체를 생성합니다. 인코딩, 디코딩 또는 줄 넘김
+변환이 수행되지 않습니다. 이 범주의 스트림은 모든 종류의 텍스트가 아닌
+데이터에 사용할 수 있으며, 텍스트 데이터 처리를 수동으로 제어해야 할
+때도 사용할 수 있습니다.
+
+The easiest way to create a binary stream is with "open()" with "'b'"
+in the mode string:
+
+   f = open("myfile.jpg", "rb")
+
+인 메모리 바이너리 스트림도 "BytesIO" 객체로 제공됩니다:
+
+   f = io.BytesIO(b"some initial binary data: \x00\x01")
+
+바이너리 스트림 API는 "BufferedIOBase" 설명서에 자세히 설명되어 있습니
+다.
+
+다른 라이브러리 모듈은 텍스트나 바이너리 스트림을 만드는 다른 방법을
+제공할 수 있습니다. 예를 들어 "socket.socket.makefile()"을 참조하십시
+오.
+
+
+원시 I/O
+--------
+
+원시 I/O(*버퍼링 되지 않은(unbuffered) I/O*라고도 합니다)는 일반적으로
+바이너리와 텍스트 스트림을 위한 저수준 빌딩 블록으로 사용됩니다; 사용
+자 코드에서 원시 스트림을 직접 조작하는 것은 거의 유용하지 않습니다.
+그런데도, 버퍼링을 비활성화해서 바이너리 모드로 파일을 열어 원시 스트
+림을 만들 수 있습니다:
+
+   f = open("myfile.jpg", "rb", buffering=0)
+
+원시 스트림 API는 "RawIOBase" 설명서에 자세히 설명되어 있습니다.
+
+
+텍스트 인코딩
+=============
+
+The default encoding of "TextIOWrapper" and "open()" is locale-
+specific ("locale.getpreferredencoding(False)").
+
+However, many developers forget to specify the encoding when opening
+text files encoded in UTF-8 (e.g. JSON, TOML, Markdown, etc...) since
+most Unix platforms use UTF-8 locale by default. This causes bugs
+because the locale encoding is not UTF-8 for most Windows users. For
+example:
+
+   # May not work on Windows when non-ASCII characters in the file.
+   with open("README.md") as f:
+       long_description = f.read()
+
+Additionally, while there is no concrete plan as of yet, Python may
+change the default text file encoding to UTF-8 in the future.
+
+Accordingly, it is highly recommended that you specify the encoding
+explicitly when opening text files. If you want to use UTF-8, pass
+"encoding="utf-8"". To use the current locale encoding,
+"encoding="locale"" is supported in Python 3.10.
+
+When you need to run existing code on Windows that attempts to open
+UTF-8 files using the default locale encoding, you can enable the
+UTF-8 mode. See UTF-8 mode on Windows.
+
+
+Opt-in EncodingWarning
+----------------------
+
+버전 3.10에 추가: See **PEP 597** for more details.
+
+To find where the default locale encoding is used, you can enable the
+"-X warn_default_encoding" command line option or set the
+"PYTHONWARNDEFAULTENCODING" environment variable, which will emit an
+"EncodingWarning" when the default encoding is used.
+
+If you are providing an API that uses "open()" or "TextIOWrapper" and
+passes "encoding=None" as a parameter, you can use "text_encoding()"
+so that callers of the API will emit an "EncodingWarning" if they
+don't pass an "encoding". However, please consider using UTF-8 by
+default (i.e. "encoding="utf-8"") for new APIs.
+
+
+고수준 모듈 인터페이스
+======================
+
+io.DEFAULT_BUFFER_SIZE
+
+   모듈의 버퍼링 된 I/O 클래스에서 사용하는 기본 버퍼 크기를 포함하는
+   int. "open()"은 가능하면 파일의 blksize("os.stat()"으로 얻은)를 사
+   용합니다.
+
+io.open(file, mode='r', buffering=- 1, encoding=None, errors=None, newline=None, closefd=True, opener=None)
+
+   이것은 내장 "open()" 함수의 별칭입니다.
+
+   This function raises an auditing event "open" with arguments
+   "path", "mode" and "flags". The "mode" and "flags" arguments may
+   have been modified or inferred from the original call.
+
+io.open_code(path)
+
+   제공된 파일을 "'rb'" 모드로 엽니다. 이 함수는 내용을 실행 코드로 취
+   급하려고 할 때 사용해야 합니다.
+
+   "path" should be a "str" and an absolute path.
+
+   The behavior of this function may be overridden by an earlier call
+   to the "PyFile_SetOpenCodeHook()". However, assuming that "path" is
+   a "str" and an absolute path, "open_code(path)" should always
+   behave the same as "open(path, 'rb')". Overriding the behavior is
+   intended for additional validation or preprocessing of the file.
+
+   버전 3.8에 추가.
+
+io.text_encoding(encoding, stacklevel=2, /)
+
+   This is a helper function for callables that use "open()" or
+   "TextIOWrapper" and have an "encoding=None" parameter.
+
+   This function returns *encoding* if it is not "None" and ""locale""
+   if *encoding* is "None".
+
+   This function emits an "EncodingWarning" if
+   "sys.flags.warn_default_encoding" is true and *encoding* is None.
+   *stacklevel* specifies where the warning is emitted. For example:
+
+      def read_text(path, encoding=None):
+          encoding = io.text_encoding(encoding)  # stacklevel=2
+          with open(path, encoding) as f:
+              return f.read()
+
+   In this example, an "EncodingWarning" is emitted for the caller of
+   "read_text()".
+
+   See 텍스트 인코딩 for more information.
+
+   버전 3.10에 추가.
+
+exception io.BlockingIOError
+
+   이것은 내장 "BlockingIOError" 예외에 대한 호환 별칭입니다.
+
+exception io.UnsupportedOperation
+
+   지원되지 않는 연산이 스트림에서 호출될 때 발생하는 "OSError"와
+   "ValueError"를 상속하는 예외.
+
+더 보기:
+
+  "sys"
+     표준 IO 스트림을 포함합니다: "sys.stdin", "sys.stdout" 및
+     "sys.stderr".
+
+
+클래스 위계
+===========
+
+I/O 스트림의 구현은 클래스의 위계(hierarchy)로 구성됩니다. 먼저 다양한
+범주의 스트림을 지정하는 데 사용되는 *추상 베이스 클래스*(ABC)가 있고,
+그다음으로 표준 스트림 구현을 제공하는 구상 클래스가 있습니다.
+
+   참고:
+
+     The abstract base classes also provide default implementations of
+     some methods in order to help implementation of concrete stream
+     classes.  For example, "BufferedIOBase" provides unoptimized
+     implementations of "readinto()" and "readline()".
+
+I/O 위계의 맨 위에는 추상 베이스 클래스 "IOBase"가 있습니다. 스트림에
+대한 기본 인터페이스를 정의합니다. 그러나 스트림에 대한 읽기와 쓰기가
+분리되지 않음에 유의하십시오; 구현은 주어진 연산을 지원하지 않으면
+"UnsupportedOperation"을 발생시킬 수 있습니다.
+
+"RawIOBase" ABC는 "IOBase"를 확장합니다. 스크림에 대한 바이트열의 읽기
+와 쓰기를 처리합니다. "FileIO"는 "RawIOBase"를 서브 클래싱하여 기계의
+파일 시스템에 있는 파일에 대한 인터페이스를 제공합니다.
+
+"BufferedIOBase" ABC는 "IOBase"를 확장합니다. 원시 바이너리 스트림
+("RawIOBase")에 대한 버퍼링을 다룹니다. 이것의 서브 클래스,
+"BufferedWriter", "BufferedReader" 및 "BufferedRWPair"는 각각 쓸 수 있
+는, 읽을 수 있는, 그리고 읽고 쓸 수 있는 원시 바이너리 스트림을 버퍼링
+합니다. "BufferedRandom"은 탐색할 수 있는 (seekable) 스트림에 버퍼 인
+터페이스를 제공합니다. 또 다른 "BufferedIOBase" 서브 클래스 "BytesIO"
+는 인 메모리 바이트열의 스트림입니다.
+
+"TextIOBase" ABC는 "IOBase"를 확장합니다. 이것은 바이트가 텍스트를 나
+타내는 스트림을 다루고, 문자열과의 인코딩과 디코딩을 처리합니다.
+"TextIOBase"를 확장하는 "TextIOWrapper"는 버퍼링 된 원시 스트림
+("BufferedIOBase")에 대한 버퍼링 된 텍스트 인터페이스입니다. 마지막으
+로, "StringIO"는 텍스트에 대한 인 메모리 스트림입니다.
+
+인자 이름은 명세의 일부가 아니며, "open()"의 인자는 키워드 인자로만 사
+용하려는 의도입니다.
+
+다음 표는 "io" 모듈에서 제공하는 ABC를 요약합니다:
+
++---------------------------+--------------------+--------------------------+----------------------------------------------------+
+| ABC                       | 상속               | 스텁(stub) 메서드        | 믹스 인 메서드와 프로퍼티                          |
+|===========================|====================|==========================|====================================================|
+| "IOBase"                  |                    | "fileno", "seek" 및      | "close", "closed", "__enter__", "__exit__",        |
+|                           |                    | "truncate"               | "flush", "isatty", "__iter__", "__next__",         |
+|                           |                    |                          | "readable", "readline", "readlines", "seekable",   |
+|                           |                    |                          | "tell", "writable" 및 "writelines"                 |
++---------------------------+--------------------+--------------------------+----------------------------------------------------+
+| "RawIOBase"               | "IOBase"           | "readinto"와 "write"     | 상속된 "IOBase" 메서드, "read" 및 "readall"        |
++---------------------------+--------------------+--------------------------+----------------------------------------------------+
+| "BufferedIOBase"          | "IOBase"           | "detach", "read",        | 상속된 "IOBase" 메서드, "readinto" 및 "readinto1"  |
+|                           |                    | "read1" 및 "write"       |                                                    |
++---------------------------+--------------------+--------------------------+----------------------------------------------------+
+| "TextIOBase"              | "IOBase"           | "detach", "read",        | 상속된 "IOBase" 메서드, "encoding", "errors" 및    |
+|                           |                    | "readline" 및 "write"    | "newlines"                                         |
++---------------------------+--------------------+--------------------------+----------------------------------------------------+
+
+
+I/O 베이스 클래스
+-----------------
+
+class io.IOBase
+
+   모든 I/O 클래스의 추상 베이스 클래스.
+
+   이 클래스는 파생 클래스가 선택적으로 재정의할 수 있는 많은 메서드에
+   대해 빈 추상 구현을 제공합니다; 기본 구현은 읽거나 쓰거나 탐색할 수
+   없는 파일을 나타냅니다.
+
+   Even though "IOBase" does not declare "read()" or "write()" because
+   their signatures will vary, implementations and clients should
+   consider those methods part of the interface.  Also,
+   implementations may raise a "ValueError" (or
+   "UnsupportedOperation") when operations they do not support are
+   called.
+
+   파일에서 읽거나 파일에 쓰는 바이너리 데이터에 사용되는 기본형은
+   "bytes"입니다. 다른 *바이트열류 객체*도 메서드 인자로 허용됩니다.
+   텍스트 I/O 클래스는 "str" 데이터로 작동합니다.
+
+   닫힌 스트림에 대한 모든 메서드(조회조차도) 호출은 정의되어 있지 않
+   습니다. 이 경우 구현은 "ValueError"를 발생시킬 수 있습니다.
+
+   "IOBase"(및 그 서브 클래스)는 이터레이터 프로토콜을 지원합니다. 즉,
+   스트림에서 줄을 산출하면서 "IOBase" 객체를 이터레이트 할 수 있습니
+   다. 스트림이 바이너리 스트림(바이트열을 산출합니다)인지 텍스트 스트
+   림(문자열을 산출합니다)인지에 따라 줄은 약간 다르게 정의됩니다. 아
+   래 "readline()"을 참조하십시오.
+
+   "IOBase"는 컨텍스트 관리자이기도 해서, "with" 문을 지원합니다. 이
+   예에서, *file*은 "with" 문의 스위트가 완료된 후에 닫힙니다 --- 예외
+   가 발생하더라도:
+
+      with open('spam.txt', 'w') as file:
+          file.write('Spam and eggs!')
+
+   "IOBase"는 다음 데이터 어트리뷰트와 메서드를 제공합니다:
+
+   close()
+
+      이 스트림을 플러시하고 닫습니다. 파일이 이미 닫혔으면 이 메서드
+      는 효과가 없습니다. 일단 파일이 닫히면, 파일에 대한 모든 연산(예
+      를 들어 읽기나 쓰기)이 "ValueError"를 발생시킵니다.
+
+      편의상, 이 메서드를 두 번 이상 호출할 수 있습니다; 그러나 첫 번
+      째 호출만 효과가 있습니다.
+
+   closed
+
+      스트림이 닫혔으면 "True".
+
+   fileno()
+
+      존재한다면 스트림의 하부 파일 기술자(정수)를 반환합니다. IO 객체
+      가 파일 기술자를 사용하지 않으면 "OSError"가 발생합니다.
+
+   flush()
+
+      해당하면 스트림의 쓰기 버퍼를 플러시합니다. 이것은 읽기 전용과
+      비 블로킹 스트림에 대해서는 아무것도 하지 않습니다.
+
+   isatty()
+
+      스트림이 대화형이면 (즉, 터미널/tty 장치에 연결되었으면) "True"
+      를 반환합니다.
+
+   readable()
+
+      Return "True" if the stream can be read from.  If "False",
+      "read()" will raise "OSError".
+
+   readline(size=- 1, /)
+
+      스트림에서 한 줄을 읽고 반환합니다. *size*가 지정되면, 최대
+      *size* 바이트를 읽습니다.
+
+      줄 종결자는 바이너리 파일의 경우 항상 "b'\n'"입니다; 텍스트 파일
+      의 경우, "open()"에 대한 *newline* 인자를 사용하여 인식되는 줄
+      종결자를 선택할 수 있습니다.
+
+   readlines(hint=- 1, /)
+
+      스트림에서 줄 리스트를 읽고 반환합니다. *hint*는 읽을 줄 수를 제
+      어하도록 지정할 수 있습니다: 지금까지 모든 줄의 총 크기(바이트/
+      문자 단위)가 *hint*를 초과하면 더는 줄을 읽지 않습니다.
+
+      *hint* values of "0" or less, as well as "None", are treated as
+      no hint.
+
+      Note that it's already possible to iterate on file objects using
+      "for line in file: ..." without calling "file.readlines()".
+
+   seek(offset, whence=SEEK_SET, /)
+
+      Change the stream position to the given byte *offset*.  *offset*
+      is interpreted relative to the position indicated by *whence*.
+      The default value for *whence* is "SEEK_SET".  Values for
+      *whence* are:
+
+      * "SEEK_SET" or "0" -- start of the stream (the default);
+        *offset* should be zero or positive
+
+      * "SEEK_CUR" or "1" -- current stream position; *offset* may be
+        negative
+
+      * "SEEK_END" or "2" -- end of the stream; *offset* is usually
+        negative
+
+      Return the new absolute position.
+
+      버전 3.1에 추가: The "SEEK_*" constants.
+
+      버전 3.3에 추가: Some operating systems could support additional
+      values, like "os.SEEK_HOLE" or "os.SEEK_DATA". The valid values
+      for a file could depend on it being open in text or binary mode.
+
+   seekable()
+
+      스트림이 무작위 액세스를 지원하면 "True"를 반환합니다. "False"이
+      면, "seek()", "tell()" 및 "truncate()"가 "OSError"를 발생시킵니
+      다.
+
+   tell()
+
+      현재의 스트림 위치를 반환합니다.
+
+   truncate(size=None, /)
+
+      바이트 단위로 지정된 *size*로 스트림 크기를 조정합니다 (또는
+      *size*가 지정되지 않으면 현재 위치). 현재 스트림 위치는 변경되지
+      않습니다. 이 크기 조정은 현재 파일 크기를 늘리거나 줄일 수 있습
+      니다. 확장의 경우, 새 파일 영역의 내용은 플랫폼에 따라 다릅니다
+      (대부분의 시스템에서, 추가 바이트는 0으로 채워집니다). 새 파일
+      크기가 반환됩니다.
+
+      버전 3.5에서 변경: 윈도우는 이제 확장 시 파일을 0으로 채웁니다.
+
+   writable()
+
+      Return "True" if the stream supports writing.  If "False",
+      "write()" and "truncate()" will raise "OSError".
+
+   writelines(lines, /)
+
+      스트림에 줄 리스트를 씁니다. 줄 구분자는 추가되지 않아서, 제공된
+      각 줄 끝에 줄 구분자가 있는 것이 일반적입니다.
+
+   __del__()
+
+      객체 파괴를 준비합니다. "IOBase"는 인스턴스의 "close()" 메서드를
+      호출하는 이 메서드의 기본 구현을 제공합니다.
+
+class io.RawIOBase
+
+   Base class for raw binary streams.  It inherits "IOBase".
+
+   원시 바이너리 스트림은 일반적으로 하부 OS 장치나 API에 대한 저수준
+   액세스를 제공하며, 이것을 고수준 프리미티브로 캡슐화하려고 하지 않
+   습니다 (이 기능은 이 페이지에서 나중에 설명할 버퍼링 된 바이너리 스
+   트림과 텍스트 스트림에서 고수준으로 수행됩니다).
+
+   "RawIOBase"는 "IOBase"에서 온 것 외에 이 메서드를 제공합니다:
+
+   read(size=- 1, /)
+
+      객체에서 최대 *size* 바이트를 읽고 반환합니다. 편의상, *size*가
+      지정되지 않거나 -1이면, EOF까지의 모든 바이트가 반환됩니다. 그렇
+      지 않으면, 하나의 시스템 호출만 수행됩니다. 운영 체제 시스템 호
+      출이 *size* 바이트 미만을 반환하면 *size* 바이트 미만이 반환될
+      수 있습니다.
+
+      0바이트가 반환되고, *size*가 0이 아니면, 파일의 끝을 나타냅니다.
+      객체가 비 블로킹 모드이고 사용 가능한 바이트가 없으면 "None"이
+      반환됩니다.
+
+      기본 구현은 "readall()"과 "readinto()"로 위임합니다.
+
+   readall()
+
+      필요한 경우 스트림에 대한 다중 호출을 사용하여, EOF까지 스트림의
+      모든 바이트를 읽고 반환합니다.
+
+   readinto(b, /)
+
+      미리 할당되고, 쓰기 가능한 *바이트열류 객체* *b*로 바이트를 읽고
+      읽은 바이트 수를 반환합니다. 예를 들어, *b*는 "bytearray"일 수
+      있습니다. 객체가 비 블로킹 모드이고 사용 가능한 바이트가 없으면,
+      "None"이 반환됩니다.
+
+   write(b, /)
+
+      주어진 *바이트열류 객체*, *b*를 하부 원시 스트림에 쓰고, 쓴 바이
+      트 수를 반환합니다. 하부 원시 스트림의 특성에 따라, 특히 비 블로
+      킹 모드이면 바이트 단위로 *b*의 길이보다 짧을 수 있습니다. 원시
+      스트림이 블록 하지 않도록 설정되었고 단일 바이트를 당장 쓸 수 없
+      으면 "None"이 반환됩니다. 호출자는 이 메서드가 반환된 후 *b*를
+      해제하거나 변경할 수 있어서, 구현은 메서드 호출 중에만 *b*에 액
+      세스해야 합니다.
+
+class io.BufferedIOBase
+
+   Base class for binary streams that support some kind of buffering.
+   It inherits "IOBase".
+
+   "RawIOBase"와의 주요 차이점은 메서드 "read()", "readinto()" 및
+   "write()"는 요청된 만큼 많은 입력을 읽거나 주어진 출력을 모두 소비
+   하려고 시도한다는 것입니다, 아마도 하나 이상의 시스템 호출을 하는
+   비용을 치르고서라도.
+
+   또한, 하부 원시 스트림이 비 블로킹 모드에 있고 충분한 데이터를 취하
+   거나 제공할 수 없으면 이러한 메서드들은 "BlockingIOError"를 발생시
+   킬 수 있습니다; "RawIOBase"의 메서드들과는 달리 "None"을 반환하지
+   않습니다.
+
+   또한, "read()" 메서드에는 "readinto()"로 위임하는 기본 구현이 없습
+   니다.
+
+   일반적인 "BufferedIOBase" 구현은 "RawIOBase" 구현에서 상속하지 말고
+   , "BufferedWriter"와 "BufferedReader"처럼 감싸야 합니다.
+
+   "BufferedIOBase"는 "IOBase"에서 온 것 외에 다음 데이터 어트리뷰트와
+   메서드를 제공하거나 재정의합니다:
+
+   raw
+
+      "BufferedIOBase" 가 다루는 하부 원시 스트림 ("RawIOBase" 인스턴
+      스). 이것은 "BufferedIOBase" API의 일부가 아니며 일부 구현에는
+      없을 수 있습니다.
+
+   detach()
+
+      하부 원시 스트림을 버퍼에서 분리하고 반환합니다.
+
+      원시 스트림이 분리된 후에는, 버퍼가 사용할 수 없는 상태가 됩니다
+      .
+
+      "BytesIO"와 같은 일부 버퍼에는 이 메서드가 반환할 단일 원시 스트
+      림 개념이 없습니다. 그들은 "UnsupportedOperation"을 발생시킵니다
+      .
+
+      버전 3.1에 추가.
+
+   read(size=- 1, /)
+
+      최대 *size* 바이트를 읽고 반환합니다. 인자가 생략되거나, "None"
+      이거나 음수이면, EOF에 도달할 때까지 데이터를 읽고 반환합니다.
+      스트림이 이미 EOF에 있으면 빈 "bytes" 객체가 반환됩니다.
+
+      인자가 양수이고, 하부 원시 스트림이 대화식이 아니면, 바이트 수를
+      충족시키기 위해 여러 원시 읽기가 수행될 수 있습니다 (EOF에 먼저
+      도달하지 않는 한). 그러나 대화식 원시 스트림의 경우, 최대 하나의
+      원시 읽기가 수행되고 짧은 결과가 EOF가 임박했음을 의미하지는 않
+      습니다.
+
+      하부 원시 스트림이 비 블로킹 모드이고, 현재 사용 가능한 데이터가
+      없으면 "BlockingIOError" 가 발생합니다.
+
+   read1(size=- 1, /)
+
+      하부 원시 스트림의 "read()" (또는 "readinto()") 메서드를 최대 한
+      번만 호출하여, 최대 *size* 바이트를 읽고 반환합니다.
+      "BufferedIOBase" 객체 위에 자체 버퍼링을 구현하는 경우 유용할 수
+      있습니다.
+
+      *size*가 "-1"(기본값)이면, 임의의 수의 바이트가 반환됩니다 (EOF
+      에 도달하지 않았으면 0보다 큽니다).
+
+   readinto(b, /)
+
+      미리 할당되고, 쓰기 가능한 *바이트열류 객체* *b*로 바이트를 읽고
+      읽은 바이트 수를 반환합니다. 예를 들어, *b*는 "bytearray"일 수
+      있습니다.
+
+      "read()"와 마찬가지로, 하부 원시 스트림이 대화식이 아닌 한, 여러
+      읽기가 수행될 수 있습니다.
+
+      하부 원시 스트림이 비 블로킹 모드이고, 현재 사용 가능한 데이터가
+      없으면 "BlockingIOError" 가 발생합니다.
+
+   readinto1(b, /)
+
+      하부 원시 스트림의 "read()" (또는 "readinto()") 메서드를 최대 한
+      번만 호출하여, 미리 할당된 쓰기 가능한 *바이트열류 객체* *b*로
+      바이트를 읽습니다. 읽은 바이트 수를 반환합니다.
+
+      하부 원시 스트림이 비 블로킹 모드이고, 현재 사용 가능한 데이터가
+      없으면 "BlockingIOError" 가 발생합니다.
+
+      버전 3.5에 추가.
+
+   write(b, /)
+
+      주어진 *바이트열류 객체*, *b*를 쓰고 기록된 바이트 수를 반환합니
+      다 (쓰기에 실패하면 "OSError"가 발생하기 때문에 항상 바이트 단위
+      로 *b* 길이와 같습니다). 실제 구현에 따라, 이러한 바이트는 하부
+      스트림에 쉽게 쓸 수 있거나, 성능과 지연 이유로 버퍼에 보관될 수
+      있습니다.
+
+      비 블로킹 모드에서, 데이터를 원시 스트림에 기록해야 하지만 원시
+      스트림이 블로킹 없이 모든 데이터를 받아들일 수 없으면,
+      "BlockingIOError" 가 발생합니다.
+
+      호출자는 이 메서드가 반환된 후 *b*를 해제하거나 변경할 수 있어서
+      , 구현은 메서드 호출 중에만 *b*에 액세스해야 합니다.
+
+
+원시 파일 I/O
+-------------
+
+class io.FileIO(name, mode='r', closefd=True, opener=None)
+
+   A raw binary stream representing an OS-level file containing bytes
+   data.  It inherits "RawIOBase".
+
+   *name*은 다음 두 가지 중 하나일 수 있습니다:
+
+   * 열릴 파일의 경로를 나타내는 문자열이나 "bytes" 객체. 이 경우
+     closefd는 "True"(기본값)이어야 합니다. 그렇지 않으면 에러가 발생
+     합니다.
+
+   * 결과 "FileIO" 객체가 액세스할 기존 OS 수준 파일 기술자의 번호를
+     나타내는 정수. FileIO 객체가 닫힐 때, *closefd*가 "False"로 설정
+     되어 있지 않은 한 이 fd도 닫힙니다.
+
+   *mode*는 읽기(기본값), 쓰기, 배타적 생성 또는 덧붙이기를 위해
+   "'r'", "'w'", "'x'" 또는 "'a'"일 수 있습니다. 쓰기나 덧붙이기로 열
+   때 파일이 존재하지 않으면 만들어집니다; 쓰기 위해 열면 파일이 잘립
+   니다. 생성을 위해 열었을 때 파일이 이미 존재하면 "FileExistsError"
+   가 발생합니다. 생성하기 위해 파일을 여는 것은 쓰기를 의미하므로, 이
+   모드는 "'w'"와 유사한 방식으로 작동합니다. 읽기와 쓰기를 동시에 허
+   락하려면 "'+'"를 모드에 추가하십시오.
+
+   The "read()" (when called with a positive argument), "readinto()"
+   and "write()" methods on this class will only make one system call.
+
+   콜러블을 *opener*로 전달하여 사용자 정의 오프너를 사용할 수 있습니
+   다. 그러면 파일 객체의 하부 파일 기술자는 (*name*, *flags*)로
+   *opener*를 호출하여 얻습니다. *opener*는 열린 파일 기술자를 반환해
+   야 합니다 ("os.open"을 *opener*로 전달하면 "None"을 전달하는 것과
+   유사한 기능이 됩니다).
+
+   새로 만들어진 파일은 상속 불가능합니다.
+
+   *opener* 매개 변수 사용에 대한 예는 "open()" 내장 함수를 참조하십시
+   오.
+
+   버전 3.3에서 변경: *opener* 매개 변수가 추가되었습니다. "'x'" 모드
+   가 추가되었습니다.
+
+   버전 3.4에서 변경: 이제 파일이 상속 불가능합니다.
+
+   "FileIO"는 "RawIOBase"와 "IOBase"에서 온 것 외에 다음 데이터 어트리
+   뷰트를 제공합니다:
+
+   mode
+
+      생성자에 제공된 모드.
+
+   name
+
+      파일 이름. 생성자에 이름이 지정되지 않으면 파일의 파일 기술자입
+      니다.
+
+
+버퍼링 된 스트림
+----------------
+
+버퍼링 된 I/O 스트림은 원시 I/O보다 I/O 장치에 대한 더 고수준의 인터페
+이스를 제공합니다.
+
+class io.BytesIO(initial_bytes=b'')
+
+   A binary stream using an in-memory bytes buffer.  It inherits
+   "BufferedIOBase".  The buffer is discarded when the "close()"
+   method is called.
+
+   선택적 인자 *initial_bytes*는 초기 데이터를 포함하는 *바이트열류 객
+   체*입니다.
+
+   "BytesIO"는 "BufferedIOBase"와 "IOBase"의 메서드 외에 다음 메서드를
+   제공하거나 재정의합니다:
+
+   getbuffer()
+
+      복사하지 않고 버퍼의 내용에 대한 읽을 수 있고 쓸 수 있는 뷰를 반
+      환합니다. 또한, 뷰를 변경하면 버퍼의 내용이 투명하게 갱신됩니다:
+
+         >>> b = io.BytesIO(b"abcdef")
+         >>> view = b.getbuffer()
+         >>> view[2:4] = b"56"
+         >>> b.getvalue()
+         b'ab56ef'
+
+      참고:
+
+        뷰가 존재하는 한, "BytesIO" 객체의 크기를 조정하거나 닫을 수
+        없습니다.
+
+      버전 3.2에 추가.
+
+   getvalue()
+
+      버퍼의 전체 내용을 포함하는 "bytes"를 반환합니다.
+
+   read1(size=- 1, /)
+
+      "BytesIO"에서, 이것은 "read()"와 같습니다.
+
+      버전 3.7에서 변경: *size* 인자는 이제 선택적입니다.
+
+   readinto1(b, /)
+
+      "BytesIO"에서, 이것은 "readinto()"와 같습니다.
+
+      버전 3.5에 추가.
+
+class io.BufferedReader(raw, buffer_size=DEFAULT_BUFFER_SIZE)
+
+   A buffered binary stream providing higher-level access to a
+   readable, non seekable "RawIOBase" raw binary stream.  It inherits
+   "BufferedIOBase".
+
+   이 객체에서 데이터를 읽을 때, 하부 원시 스트림에서 더 많은 양의 데
+   이터가 요청되어, 내부 버퍼에 보관될 수 있습니다. 버퍼링 된 데이터는
+   후속 읽기에서 직접 반환될 수 있습니다.
+
+   생성자는 주어진 읽을 수 있는 *raw* 스트림과 *buffer_size*에 대해
+   "BufferedReader"를 만듭니다. *buffer_size*를 생략하면,
+   "DEFAULT_BUFFER_SIZE"가 사용됩니다.
+
+   "BufferedReader"는 "BufferedIOBase"와 "IOBase"의 메서드 외에 다음
+   메서드를 제공하거나 재정의합니다:
+
+   peek(size=0, /)
+
+      위치를 전진시키지 않고 스트림에서 바이트열을 반환합니다. 호출을
+      충족시키기 위해 원시 스트림에서 최대 하나의 단일 읽기가 수행됩니
+      다. 반환된 바이트 수는 요청된 것보다 적거나 많을 수 있습니다.
+
+   read(size=- 1, /)
+
+      *size* 바이트를, *size*가 주어지지 않았거나 음수이면, EOF까지 혹
+      은 읽기 호출이 비 블로킹 모드에서 블록 되기 전까지 읽고 반환합니
+      다.
+
+   read1(size=- 1, /)
+
+      원시 스트림에 대한 한 번의 호출로 최대 *size* 바이트를 읽고 반환
+      합니다. 적어도 1바이트가 버퍼링 되어 있으면, 버퍼링 된 바이트만
+      반환됩니다. 그렇지 않으면, 하나의 원시 스트림 읽기 호출이 수행됩
+      니다.
+
+      버전 3.7에서 변경: *size* 인자는 이제 선택적입니다.
+
+class io.BufferedWriter(raw, buffer_size=DEFAULT_BUFFER_SIZE)
+
+   A buffered binary stream providing higher-level access to a
+   writeable, non seekable "RawIOBase" raw binary stream.  It inherits
+   "BufferedIOBase".
+
+   이 객체에 쓸 때, 데이터는 일반적으로 내부 버퍼에 배치됩니다. 버퍼는
+   다음과 같은 다양한 조건에서 하부 "RawIOBase" 객체에 기록됩니다:
+
+   * 계류 중인 모든 데이터에 비해 버퍼가 너무 작아질 때;
+
+   * when "flush()" is called;
+
+   * when a "seek()" is requested (for "BufferedRandom" objects);
+
+   * "BufferedWriter" 객체가 닫히거나 파괴될 때.
+
+   생성자는 주어진 쓰기 가능한 *raw* 스트림에 대해 "BufferedWriter"를
+   만듭니다. *buffer_size*가 제공되지 않으면, 기본값은
+   "DEFAULT_BUFFER_SIZE"입니다.
+
+   "BufferedWriter"는 "BufferedIOBase"와 "IOBase"의 메서드 외에 다음
+   메서드를 제공하거나 재정의합니다:
+
+   flush()
+
+      버퍼에 있는 바이트를 원시 스트림으로 강제 출력합니다. 원시 스트
+      림이 블록되면 "BlockingIOError"를 발생시켜야 합니다.
+
+   write(b, /)
+
+      *바이트열류 객체*, *b*를 쓰고 쓴 바이트 수를 반환합니다. 비 블로
+      킹 모드일 때, 버퍼를 기록해야 하지만 원시 스트림이 블록하면
+      "BlockingIOError" 가 발생합니다.
+
+class io.BufferedRandom(raw, buffer_size=DEFAULT_BUFFER_SIZE)
+
+   A buffered binary stream providing higher-level access to a
+   seekable "RawIOBase" raw binary stream.  It inherits
+   "BufferedReader" and "BufferedWriter".
+
+   생성자는 첫 번째 인자로 주어진 탐색 가능한 원시 스트림에 대한 판독
+   기(reader)와 기록기(writer)를 만듭니다. *buffer_size*를 생략하면 기
+   본값은 "DEFAULT_BUFFER_SIZE"입니다.
+
+   "BufferedRandom" is capable of anything "BufferedReader" or
+   "BufferedWriter" can do.  In addition, "seek()" and "tell()" are
+   guaranteed to be implemented.
+
+class io.BufferedRWPair(reader, writer, buffer_size=DEFAULT_BUFFER_SIZE, /)
+
+   A buffered binary stream providing higher-level access to two non
+   seekable "RawIOBase" raw binary streams---one readable, the other
+   writeable. It inherits "BufferedIOBase".
+
+   *reader*와 *writer*는 각각 읽고 쓸 수 있는 "RawIOBase" 객체입니다.
+   *buffer_size*가 생략되면 기본값은 "DEFAULT_BUFFER_SIZE"입니다.
+
+   "BufferedRWPair"는 "UnsupportedOperation"을 발생시키는 "detach()"를
+   제외한 모든 "BufferedIOBase" 의 메서드를 구현합니다.
+
+   경고:
+
+     "BufferedRWPair"는 하부 원시 스트림에 대한 동기화된 액세스를 시도
+     하지 않습니다. reader와 writer로 같은 객체를 전달해서는 안 됩니다
+     ; 대신 "BufferedRandom"을 사용하십시오.
+
+
+텍스트 I/O
+----------
+
+class io.TextIOBase
+
+   Base class for text streams.  This class provides a character and
+   line based interface to stream I/O.  It inherits "IOBase".
+
+   "TextIOBase"는 "IOBase"에서 온 것 외에 다음 데이터 어트리뷰트와 메
+   서드를 제공하거나 재정의합니다:
+
+   encoding
+
+      스트림의 바이트열을 문자열로 디코딩하고, 문자열을 바이트열로 인
+      코딩하는 데 사용되는 인코딩의 이름.
+
+   errors
+
+      디코더나 인코더의 에러 설정.
+
+   newlines
+
+      지금까지 번역된 줄 넘김을 나타내는, 문자열, 문자열 튜플 또는
+      "None". 구현과 초기 생성자 플래그에 따라, 사용하지 못할 수 있습
+      니다.
+
+   buffer
+
+      "TextIOBase"가 다루는 하부 바이너리 버퍼 ("BufferedIOBase" 인스
+      턴스). 이것은 "TextIOBase" API의 일부가 아니며 일부 구현에는 없
+      을 수 있습니다.
+
+   detach()
+
+      하부 바이너리 버퍼를 "TextIOBase"와 분리하여 반환합니다.
+
+      하부 버퍼가 분리된 후에는, "TextIOBase"는 사용할 수 없는 상태가
+      됩니다.
+
+      "StringIO"와 같은 일부 "TextIOBase" 구현에는 하부 버퍼 개념이 없
+      을 수 있으며 이 메서드를 호출하면 "UnsupportedOperation"이 발생
+      합니다.
+
+      버전 3.1에 추가.
+
+   read(size=- 1, /)
+
+      스트림에서 최대 *size* 문자를 단일 "str"로 읽고 반환합니다.
+      *size*가 음수이거나 "None"이면 EOF까지 읽습니다.
+
+   readline(size=- 1, /)
+
+      Read until newline or EOF and return a single "str".  If the
+      stream is already at EOF, an empty string is returned.
+
+      *size*가 지정되면, 최대 *size* 문자를 읽습니다.
+
+   seek(offset, whence=SEEK_SET, /)
+
+      Change the stream position to the given *offset*.  Behaviour
+      depends on the *whence* parameter.  The default value for
+      *whence* is "SEEK_SET".
+
+      * "SEEK_SET" or "0": seek from the start of the stream (the
+        default); *offset* must either be a number returned by
+        "TextIOBase.tell()", or zero.  Any other *offset* value
+        produces undefined behaviour.
+
+      * "SEEK_CUR" or "1": "seek" to the current position; *offset*
+        must be zero, which is a no-operation (all other values are
+        unsupported).
+
+      * "SEEK_END" or "2": seek to the end of the stream; *offset*
+        must be zero (all other values are unsupported).
+
+      새로운 절대 위치를 불투명한 숫자로 반환합니다.
+
+      버전 3.1에 추가: The "SEEK_*" constants.
+
+   tell()
+
+      현재 스트림 위치를 불투명한 숫자로 반환합니다. 숫자는 일반적으로
+      하부 바이너리 저장소의 바이트 수를 나타내지 않습니다.
+
+   write(s, /)
+
+      문자열 *s*를 스트림에 쓰고 쓴 문자 수를 반환합니다.
+
+class io.TextIOWrapper(buffer, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)
+
+   A buffered text stream providing higher-level access to a
+   "BufferedIOBase" buffered binary stream.  It inherits "TextIOBase".
+
+   *encoding* gives the name of the encoding that the stream will be
+   decoded or encoded with.  It defaults to
+   "locale.getpreferredencoding(False)". "encoding="locale"" can be
+   used to specify the current locale's encoding explicitly. See 텍스
+   트 인코딩 for more information.
+
+   *errors*는 인코딩과 디코딩 에러 처리 방법을 지정하는 선택적 문자열
+   입니다. 인코딩 에러가 있을 때 "ValueError" 예외를 발생시키려면
+   "'strict'"를 전달하고 (기본값 "None"은 같은 효과를 줍니다), 에러를
+   무시하려면 "'ignore'"를 전달하십시오. (인코딩 에러를 무시하면 데이
+   터가 손실될 수 있음에 유의하십시오.) "'replace'"는 잘못된 데이터가
+   있는 곳에 대체 마커(가령 "'?'")가 삽입되도록 합니다.
+   "'backslashreplace'"는 잘못된 데이터를 역 슬래시 이스케이프 시퀀스
+   로 대체합니다. 기록할 때, "'xmlcharrefreplace'"(적절한 XML 문자 참
+   조로 대체합니다)나 "'namereplace'"("\N{...}" 이스케이프 시퀀스로 대
+   체합니다)를 사용할 수 있습니다. "codecs.register_error()"로 등록된
+   다른 에러 처리 이름도 유효합니다.
+
+   *newline*은 줄 끝 처리 방법을 제어합니다. "None", "''", "'\n'",
+   "'\r'" 및 "'\r\n'" 일 수 있습니다. 다음과 같이 작동합니다:
+
+   * 스트림에서 입력을 읽을 때, *newline*이 "None"이면, *유니버설 줄
+     넘김* 모드가 활성화됩니다. 입력의 줄은 "'\n'", "'\r'" 또는
+     "'\r\n'"으로 끝날 수 있으며, 호출자에게 반환되기 전에 "'\n'"으로
+     변환됩니다. *newline*이 "''"이면, 유니버설 줄 넘김 모드가 활성화
+     되지만, 줄 끝은 변환되지 않은 상태로 호출자에게 반환됩니다.
+     *newline*이 다른 유효한 값이면, 입력 줄은 주어진 문자열로만 끝나
+     고, 줄 끝은 변환되지 않은 상태로 호출자에게 반환됩니다.
+
+   * 스트림에 출력을 기록할 때, *newline*이 "None"이면, 기록되는 모든
+     "'\n'" 문자는 시스템 기본 줄 구분자 "os.linesep"으로 변환됩니다.
+     *newline*이 "''"이나 "'\n'"이면, 변환이 수행되지 않습니다.
+     *newline*이 다른 유효한 값이면, 기록되는 모든 "'\n'" 문자는 주어
+     진 문자열로 변환됩니다.
+
+   If *line_buffering* is "True", "flush()" is implied when a call to
+   write contains a newline character or a carriage return.
+
+   If *write_through* is "True", calls to "write()" are guaranteed not
+   to be buffered: any data written on the "TextIOWrapper" object is
+   immediately handled to its underlying binary *buffer*.
+
+   버전 3.3에서 변경: *write_through* 인자가 추가되었습니다.
+
+   버전 3.3에서 변경: 기본 *encoding*은 이제
+   "locale.getpreferredencoding()" 대신
+   "locale.getpreferredencoding(False)"입니다. "locale.setlocale()"을
+   사용하여 임시 로케일 인코딩을 변경하지 않고, 사용자가 선호하는 인코
+   딩 대신 현재 로케일 인코딩을 사용합니다.
+
+   버전 3.10에서 변경: The *encoding* argument now supports the
+   ""locale"" dummy encoding name.
+
+   "TextIOWrapper"는 "TextIOBase"와 "IOBase"에서 온 것 외에 다음 데이
+   터 어트리뷰트와 메서드를 제공합니다:
+
+   line_buffering
+
+      줄 버퍼링이 활성화되었는지 여부.
+
+   write_through
+
+      쓰기가 하부 바이너리 버퍼로 즉시 전달되는지 여부.
+
+      버전 3.7에 추가.
+
+   reconfigure(*, encoding=None, errors=None, newline=None, line_buffering=None, write_through=None)
+
+      *encoding*, *errors*, *newline*, *line_buffering* 및
+      *write_through*에 대한 새로운 설정을 사용하여 이 텍스트 스트림을
+      재구성합니다.
+
+      *encoding*이 지정되었지만, *errors*가 지정되지 않았을 때
+      "errors='strict'"가 사용되는 것을 제외하고, 지정되지 않은 매개
+      변수는 현재 설정을 유지합니다.
+
+      스트림에서 일부 데이터를 이미 읽었다면 encoding이나 newline을 변
+      경할 수 없습니다. 반면에, 기록 후의 encoding 변경은 가능합니다.
+
+      이 메서드는 새 매개 변수를 설정하기 전에 묵시적 스트림 플러시를
+      수행합니다.
+
+      버전 3.7에 추가.
+
+class io.StringIO(initial_value='', newline='\n')
+
+   A text stream using an in-memory text buffer.  It inherits
+   "TextIOBase".
+
+   "close()" 메서드가 호출될 때 텍스트 버퍼가 폐기됩니다.
+
+   The initial value of the buffer can be set by providing
+   *initial_value*. If newline translation is enabled, newlines will
+   be encoded as if by "write()".  The stream is positioned at the
+   start of the buffer.
+
+   출력을 스트림에 쓸 때, *newline*이 "None"이면, 모든 플랫폼에서 줄
+   넘김이 "\n"로 기록된다는 점을 제외하고는, *newline* 인자는
+   "TextIOWrapper"에서 처럼 작동합니다.
+
+   "StringIO"는 "TextIOBase"와 "IOBase"의 메서드 외에 이 메서드를 제공
+   합니다:
+
+   getvalue()
+
+      Return a "str" containing the entire contents of the buffer.
+      Newlines are decoded as if by "read()", although the stream
+      position is not changed.
+
+   사용 예:
+
+      import io
+
+      output = io.StringIO()
+      output.write('First line.\n')
+      print('Second line.', file=output)
+
+      # Retrieve file contents -- this will be
+      # 'First line.\nSecond line.\n'
+      contents = output.getvalue()
+
+      # Close object and discard memory buffer --
+      # .getvalue() will now raise an exception.
+      output.close()
+
+class io.IncrementalNewlineDecoder
+
+   A helper codec that decodes newlines for *universal newlines* mode.
+   It inherits "codecs.IncrementalDecoder".
+
+
+성능
+====
+
+이 섹션에서는 제공된 구상 I/O 구현의 성능에 대해 논합니다.
+
+
+바이너리 I/O
+------------
+
+사용자가 단일 바이트를 요청할 때조차 큰 데이터 청크만 읽고 써서, 버퍼
+링 된 I/O는 운영 체제의 버퍼링 되지 않은 I/O 루틴을 호출하고 실행할 때
+의 비효율성을 숨깁니다. 이득은 OS 와 수행되는 I/O 종류에 따라 다릅니다
+. 예를 들어, 리눅스와 같은 일부 최신 OS에서는, 버퍼링 되지 않은 디스크
+I/O는 버퍼링 된 I/O만큼 빠를 수 있습니다. 그러나 요점은 버퍼링 된 I/O
+가 플랫폼과 배경 장치와 관계없이 예측 가능한 성능을 제공한다는 것입니
+다. 따라서, 바이너리 데이터에는 버퍼링 되지 않은 I/O보다는 버퍼링 된
+I/O를 사용하는 것이 거의 항상 바람직합니다.
+
+
+텍스트 I/O
+----------
+
+Text I/O over a binary storage (such as a file) is significantly
+slower than binary I/O over the same storage, because it requires
+conversions between unicode and binary data using a character codec.
+This can become noticeable handling huge amounts of text data like
+large log files.  Also, "TextIOWrapper.tell()" and
+"TextIOWrapper.seek()" are both quite slow due to the reconstruction
+algorithm used.
+
+그러나, "StringIO"는 네이티브 인 메모리 유니코드 컨테이너이며
+"BytesIO"와 비슷한 속도를 나타냅니다.
+
+
+다중 스레드
+-----------
+
+"FileIO" objects are thread-safe to the extent that the operating
+system calls (such as "read(2)" under Unix) they wrap are thread-safe
+too.
+
+바이너리 버퍼링 된 객체("BufferedReader", "BufferedWriter",
+"BufferedRandom" 및 "BufferedRWPair" 의 인스턴스)는 록을 사용하여 내부
+구조를 보호합니다; 따라서 여러 스레드에서 동시에 호출하는 것이 안전합
+니다.
+
+"TextIOWrapper" 객체는 스레드 안전하지 않습니다.
+
+
+재진입
+------
+
+바이너리 버퍼링 된 객체("BufferedReader", "BufferedWriter",
+"BufferedRandom" 및 "BufferedRWPair" 의 인스턴스)는 재진입할 수 없습니
+다. 재진입 호출이 정상적인 상황에서는 발생하지 않지만, "signal" 처리기
+에서 I/O를 수행한다면 발생할 수 있습니다. 스레드가 이미 액세스 중인 버
+퍼링 된 객체에 다시 진입하려고 하면, "RuntimeError"가 발생합니다. 이것
+이 다른 스레드가 버퍼링 된 객체에 진입하는 것을 막는 것은 아님에 유의
+하십시오.
+
+The above implicitly extends to text files, since the "open()"
+function will wrap a buffered object inside a "TextIOWrapper".  This
+includes standard streams and therefore affects the built-in "print()"
+function as well.

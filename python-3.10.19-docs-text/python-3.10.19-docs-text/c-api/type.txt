@@ -1,0 +1,283 @@
+형 객체
+*******
+
+type PyTypeObject
+    * Part of the Limited API (as an opaque struct).*
+
+   내장형을 기술하는 데 사용되는 객체의 C 구조체.
+
+PyTypeObject PyType_Type
+    * Part of the Stable ABI.*
+
+   이것은 형 객체의 형 객체입니다; 파이썬 계층의 "type"과 같은 객체입
+   니다.
+
+int PyType_Check(PyObject *o)
+
+   객체 *o*가 표준형 객체에서 파생된 형의 인스턴스를 포함하여 형 객체
+   면 0이 아닌 값을 반환합니다. 다른 모든 경우 0을 반환합니다. 이 함수
+   는 항상 성공합니다.
+
+int PyType_CheckExact(PyObject *o)
+
+   객체 *o*가 형 객체이지만, 표준형 객체의 서브 형이 아니면 0이 아닌
+   값을 반환합니다. 다른 모든 경우 0을 반환합니다. 이 함수는 항상 성공
+   합니다.
+
+unsigned int PyType_ClearCache()
+    * Part of the Stable ABI.*
+
+   내부 조회 캐시를 지웁니다. 현재의 버전 태그를 반환합니다.
+
+unsigned long PyType_GetFlags(PyTypeObject *type)
+    * Part of the Stable ABI.*
+
+   Return the "tp_flags" member of *type*. This function is primarily
+   meant for use with "Py_LIMITED_API"; the individual flag bits are
+   guaranteed to be stable across Python releases, but access to
+   "tp_flags" itself is not part of the limited API.
+
+   버전 3.2에 추가.
+
+   버전 3.4에서 변경: 반환형은 이제 "long"이 아니라 "unsigned long"입
+   니다.
+
+void PyType_Modified(PyTypeObject *type)
+    * Part of the Stable ABI.*
+
+   형과 그것의 모든 서브 형에 대한 내부 검색 캐시를 무효로 합니다. 형
+   의 어트리뷰트나 베이스 클래스를 수동으로 수정한 후에는 이 함수를 호
+   출해야 합니다.
+
+int PyType_HasFeature(PyTypeObject *o, int feature)
+
+   형 객체 *o*가 기능 *feature*를 설정하면 0이 아닌 값을 반환합니다.
+   형 기능은 단일 비트 플래그로 표시됩니다.
+
+int PyType_IS_GC(PyTypeObject *o)
+
+   Return true if the type object includes support for the cycle
+   detector; this tests the type flag "Py_TPFLAGS_HAVE_GC".
+
+int PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)
+    * Part of the Stable ABI.*
+
+   *a*가 *b*의 서브 형이면 참을 반환합니다.
+
+   This function only checks for actual subtypes, which means that
+   "__subclasscheck__()" is not called on *b*.  Call
+   "PyObject_IsSubclass()" to do the same check that "issubclass()"
+   would do.
+
+PyObject *PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   형 객체의 "tp_alloc" 슬롯을 위한 일반 처리기. 파이썬의 기본 메모리
+   할당 메커니즘을 사용하여 새 인스턴스를 할당하고 모든 내용을 "NULL"
+   로 초기화합니다.
+
+PyObject *PyType_GenericNew(PyTypeObject *type, PyObject *args, PyObject *kwds)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   형 객체의 "tp_new" 슬롯을 위한 일반 처리기. 형의 "tp_alloc" 슬롯을
+   사용하여 새 인스턴스를 만듭니다.
+
+int PyType_Ready(PyTypeObject *type)
+    * Part of the Stable ABI.*
+
+   형 개체를 마무리합니다. 초기화를 완료하려면 모든 형 객체에 대해 이
+   메서드를 호출해야 합니다. 이 함수는 형의 베이스 클래스에서 상속된
+   슬롯을 추가합니다. 성공 시 "0"을 반환하고, 오류 시 "-1"을 반환하고
+   예외를 설정합니다.
+
+   참고:
+
+     If some of the base classes implements the GC protocol and the
+     provided type does not include the "Py_TPFLAGS_HAVE_GC" in its
+     flags, then the GC protocol will be automatically implemented
+     from its parents. On the contrary, if the type being created does
+     include "Py_TPFLAGS_HAVE_GC" in its flags then it **must**
+     implement the GC protocol itself by at least implementing the
+     "tp_traverse" handle.
+
+void *PyType_GetSlot(PyTypeObject *type, int slot)
+    * Part of the Stable ABI since version 3.4.*
+
+   지정된 슬롯에 저장된 함수 포인터를 반환합니다. 결과가 "NULL"이면,
+   슬롯이 "NULL"이거나 함수가 유효하지 않은 매개 변수로 호출되었음을
+   나타냅니다. 호출자는 일반적으로 결과 포인터를 적절한 함수 형으로 캐
+   스팅합니다.
+
+   *slot* 인자의 가능한 값은 "PyType_Slot.slot"을 참조하십시오.
+
+   버전 3.4에 추가.
+
+   버전 3.10에서 변경: "PyType_GetSlot()" can now accept all types.
+   Previously, it was limited to heap types.
+
+PyObject *PyType_GetModule(PyTypeObject *type)
+    * Part of the Stable ABI since version 3.10.*
+
+   "PyType_FromModuleAndSpec()"를 사용하여 형을 만들 때 지정된 형과 관
+   련된 모듈 객체를 반환합니다.
+
+   주어진 형과 연관된 모듈이 없으면, "TypeError"를 설정하고 "NULL"을
+   반환합니다.
+
+   This function is usually used to get the module in which a method
+   is defined. Note that in such a method,
+   "PyType_GetModule(Py_TYPE(self))" may not return the intended
+   result. "Py_TYPE(self)" may be a *subclass* of the intended class,
+   and subclasses are not necessarily defined in the same module as
+   their superclass. See "PyCMethod" to get the class that defines the
+   method.
+
+   버전 3.9에 추가.
+
+void *PyType_GetModuleState(PyTypeObject *type)
+    * Part of the Stable ABI since version 3.10.*
+
+   주어진 형과 관련된 모듈 객체의 상태를 반환합니다.
+   "PyType_GetModule()" 결과에 "PyModule_GetState()"를 호출하는 바로
+   가기입니다.
+
+   주어진 형과 연관된 모듈이 없으면, "TypeError"를 설정하고 "NULL"을
+   반환합니다.
+
+   *type*에 연관된 모듈이 있지만, 상태가 "NULL"이면, 예외를 설정하지
+   않고 "NULL"을 반환합니다.
+
+   버전 3.9에 추가.
+
+
+힙에 할당된 형 만들기
+=====================
+
+다음 함수와 구조체는 힙 형을 만드는 데 사용됩니다.
+
+PyObject *PyType_FromModuleAndSpec(PyObject *module, PyType_Spec *spec, PyObject *bases)
+    *반환값: 새 참조.** Part of the Stable ABI since version 3.10.*
+
+   Creates and returns a heap type from the *spec*
+   ("Py_TPFLAGS_HEAPTYPE").
+
+   베이스 클래스를 지정하는 데 *bases* 인자를 사용할 수 있습니다; 하나
+   의 클래스 또는 클래스의 튜플일 수 있습니다. *bases*가 "NULL"이면,
+   *Py_tp_bases* 슬롯이 대신 사용됩니다. 그 또한 "NULL"이면,
+   *Py_tp_base* 슬롯이 대신 사용됩니다. 그 또한 "NULL"이면, 새 형은
+   "object"에서 파생됩니다.
+
+   *module* 인자는 새 클래스가 정의된 모듈을 기록하는 데 사용할 수 있
+   습니다. 모듈 객체나 "NULL"이어야 합니다. "NULL"이 아니면, 모듈은 새
+   형과 연관되며 나중에 "PyType_GetModule()"로 가져올 수 있습니다. 연
+   관된 모듈은 서브 클래스에 상속되지 않습니다; 각 클래스에 대해 개별
+   적으로 지정해야 합니다.
+
+   이 함수는 새로운 형에 "PyType_Ready()"를 호출합니다.
+
+   버전 3.9에 추가.
+
+   버전 3.10에서 변경: The function now accepts a single class as the
+   *bases* argument and "NULL" as the "tp_doc" slot.
+
+PyObject *PyType_FromSpecWithBases(PyType_Spec *spec, PyObject *bases)
+    *반환값: 새 참조.** Part of the Stable ABI since version 3.3.*
+
+   Equivalent to "PyType_FromModuleAndSpec(NULL, spec, bases)".
+
+   버전 3.3에 추가.
+
+PyObject *PyType_FromSpec(PyType_Spec *spec)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Equivalent to "PyType_FromSpecWithBases(spec, NULL)".
+
+type PyType_Spec
+    * Part of the Stable ABI (including all members).*
+
+   형의 행동을 정의하는 구조체.
+
+   const char *PyType_Spec.name
+
+      형의 이름, "PyTypeObject.tp_name"을 설정하는 데 사용됩니다.
+
+   int PyType_Spec.basicsize
+
+   int PyType_Spec.itemsize
+
+      Size of the instance in bytes, used to set
+      "PyTypeObject.tp_basicsize" and "PyTypeObject.tp_itemsize".
+
+   int PyType_Spec.flags
+
+      형 플래그, "PyTypeObject.tp_flags"를 설정하는 데 사용됩니다.
+
+      "Py_TPFLAGS_HEAPTYPE" 플래그가 설정되어 있지 않으면,
+      "PyType_FromSpecWithBases()" 가 자동으로 플래그를 설정합니다.
+
+   PyType_Slot *PyType_Spec.slots
+
+      "PyType_Slot" 구조체의 배열. 특수 슬롯값 "{0, NULL}"에 의해 종료
+      됩니다.
+
+type PyType_Slot
+    * Part of the Stable ABI (including all members).*
+
+   형의 선택적 기능을 정의하는 구조체, 슬롯 ID와 값 포인터를 포함합니
+   다.
+
+   int PyType_Slot.slot
+
+         슬롯 ID.
+
+         슬롯 ID는 구조체 "PyTypeObject", "PyNumberMethods",
+         "PySequenceMethods", "PyMappingMethods" 및 "PyAsyncMethods"
+         의 필드 이름에 "Py_" 접두사를 붙인 이름을 사용합니다. 예를 들
+         어, :
+
+         * "PyTypeObject.tp_dealloc"을 설정하는 "Py_tp_dealloc"
+
+         * "PyNumberMethods.nb_add"를 설정하는 "Py_nb_add"
+
+         * "PySequenceMethods.sq_length"를 설정하는 "Py_sq_length"
+
+         The following fields cannot be set at all using "PyType_Spec"
+         and "PyType_Slot":
+
+         * "tp_dict"
+
+         * "tp_mro"
+
+         * "tp_cache"
+
+         * "tp_subclasses"
+
+         * "tp_weaklist"
+
+         * "tp_vectorcall"
+
+         * "tp_weaklistoffset" (see PyMemberDef)
+
+         * "tp_dictoffset" (see PyMemberDef)
+
+         * "tp_vectorcall_offset" (see PyMemberDef)
+
+         The following fields cannot be set using "PyType_Spec" and
+         "PyType_Slot" under the limited API:
+
+         * "bf_getbuffer"
+
+         * "bf_releasebuffer"
+
+         Setting "Py_tp_bases" or "Py_tp_base" may be problematic on
+         some platforms. To avoid issues, use the *bases* argument of
+         "PyType_FromSpecWithBases()" instead.
+
+      버전 3.9에서 변경: "PyBufferProcs"의 슬롯은 제한 없는 API에서 설
+      정할 수 있습니다.
+
+   void *PyType_Slot.pfunc
+
+      슬롯의 원하는 값입니다. 대부분 이것은 함수에 대한 포인터입니다.
+
+      Slots other than "Py_tp_doc" may not be "NULL".

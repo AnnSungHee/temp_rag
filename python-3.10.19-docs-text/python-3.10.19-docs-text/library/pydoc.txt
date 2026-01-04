@@ -1,0 +1,93 @@
+"pydoc" --- Documentation generator and online help system
+**********************************************************
+
+**소스 코드:** Lib/pydoc.py
+
+======================================================================
+
+The "pydoc" module automatically generates documentation from Python
+modules.  The documentation can be presented as pages of text on the
+console, served to a web browser, or saved to HTML files.
+
+For modules, classes, functions and methods, the displayed
+documentation is derived from the docstring (i.e. the "__doc__"
+attribute) of the object, and recursively of its documentable members.
+If there is no docstring, "pydoc" tries to obtain a description from
+the block of comment lines just above the definition of the class,
+function or method in the source file, or at the top of the module
+(see "inspect.getcomments()").
+
+The built-in function "help()" invokes the online help system in the
+interactive interpreter, which uses "pydoc" to generate its
+documentation as text on the console.  The same text documentation can
+also be viewed from outside the Python interpreter by running
+**pydoc** as a script at the operating system's command prompt. For
+example, running
+
+   python -m pydoc sys
+
+를 셸 프롬프트에서 실행하면, "sys" 모듈의 설명서를 유닉스 **man** 명령
+으로 표시되는 매뉴얼 페이지와 비슷한 스타일로 표시합니다. **pydoc**의
+인자는 함수, 모듈 또는 패키지의 이름이거나 모듈이나 패키지의 모듈 내의
+클래스, 메서드 또는 함수에 대한 점으로 구분된 참조일 수 있습니다.
+**pydoc**에 대한 인자가 경로처럼 보이고 (즉, 유닉스의 슬래시와 같이 운
+영 체제의 경로 구분 기호가 포함되어 있으면), 기존 파이썬 소스 파일을
+가리키면, 해당 파일에 대한 설명서가 생성됩니다.
+
+참고:
+
+  In order to find objects and their documentation, "pydoc" imports
+  the module(s) to be documented.  Therefore, any code on module level
+  will be executed on that occasion.  Use an "if __name__ ==
+  '__main__':" guard to only execute code when a file is invoked as a
+  script and not just imported.
+
+When printing output to the console, **pydoc** attempts to paginate
+the output for easier reading.  If the "PAGER" environment variable is
+set, **pydoc** will use its value as a pagination program.
+
+인자 앞에 "-w" 플래그를 지정하면 콘솔에 텍스트를 표시하는 대신, HTML
+설명서가 현재 디렉터리에 파일로 기록됩니다.
+
+인자 앞에 "-k" 플래그를 지정하면 인자로 주어진 키워드에 대해 사용 가능
+한 모든 모듈의 개요 행을 검색할 수 있습니다. 역시 유닉스 **man** 명령
+과 유사한 방식입니다. 모듈의 개요 행은 설명서 문자열의 첫 행입니다.
+
+**pydoc**을 사용하여 방문하는 웹 브라우저에 설명서를 제공하는 HTTP 서
+버를 로컬 시스템에서 시작할 수도 있습니다. **python -m pydoc -p 1234**
+는 포트 1234에서 HTTP 서버를 시작해서, 여러분이 선호하는 웹 브라우저에
+서 "http://localhost:1234/"의 설명서를 볼 수 있도록 합니다. 포트 번호
+로 "0"을 지정하면 사용되지 않는 임의의 포트가 선택됩니다.
+
+**python -m pydoc -n <hostname>**은 주어진 호스트 이름에서 리스닝하는
+서버를 시작합니다. 기본적으로 호스트 이름은 'localhost' 이지만 다른 컴
+퓨터에서 서버에 도달하도록 하고 싶으면 서버가 응답하는 호스트 이름을
+변경해야 할 수 있습니다. 개발 중에 컨테이너 내에서 pydoc을 실행하려는
+경우 특히 유용합니다.
+
+**python -m pydoc -b**는 서버를 시작하고 모듈 색인 페이지로 웹 브라우
+저를 추가로 엽니다. 제공되는 각 페이지에는 상단에 탐색 바가 있어, 개별
+항목에 대한 도움말을 *조회(Get)*하고, 개요 행에 키워드가 있는 모든 모
+듈을 *검색(Search)*하고, *모듈 색인(Module index)*, *주제(Topics)* 및
+*키워드(Keywords)* 페이지로 이동할 수 있습니다.
+
+**pydoc**이 설명서를 생성할 때, 현재 환경과 경로를 사용하여 모듈을 찾
+습니다. 따라서, **pydoc spam**을 호출하면 정확히 파이썬 인터프리터를
+시작하고 "import spam"을 입력할 때 얻는 모듈의 버전을 설명합니다.
+
+Module docs for core modules are assumed to reside in
+"https://docs.python.org/X.Y/library/" where "X" and "Y" are the major
+and minor version numbers of the Python interpreter.  This can be
+overridden by setting the "PYTHONDOCS" environment variable to a
+different URL or to a local directory containing the Library Reference
+Manual pages.
+
+버전 3.2에서 변경: "-b" 옵션이 추가되었습니다.
+
+버전 3.3에서 변경: "-g" 명령 줄 옵션이 제거되었습니다.
+
+버전 3.4에서 변경: "pydoc" now uses "inspect.signature()" rather than
+"inspect.getfullargspec()" to extract signature information from
+callables.
+
+버전 3.7에서 변경: "-n" 옵션이 추가되었습니다.

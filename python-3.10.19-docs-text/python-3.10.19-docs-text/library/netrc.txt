@@ -1,0 +1,77 @@
+"netrc" --- netrc file processing
+*********************************
+
+**소스 코드:** Lib/netrc.py
+
+======================================================================
+
+"netrc" 클래스는 유닉스 **ftp** 프로그램과 다른 FTP 클라이언트가 사용
+하는 netrc 파일 형식을 구문 분석하고 캡슐화합니다.
+
+class netrc.netrc([file])
+
+   "netrc" 인스턴스나 서브 클래스 인스턴스는 netrc 파일의 데이터를 캡
+   슐화합니다. 초기화 인자가 있으면 구문 분석할 파일을 지정합니다. 인
+   자를 지정하지 않으면, "os.path.expanduser()"에 의해 결정된 사용자
+   홈 디렉터리에 있는 파일 ".netrc"를 읽습니다. 그렇지 않으면,
+   "FileNotFoundError" 예외가 발생합니다. 구문 분석 에러는 파일 이름,
+   줄 번호 및 종료 토큰을 포함하는 진단 정보로 "NetrcParseError"를 발
+   생시킵니다. POSIX 시스템에서 인자가 지정되지 않을 때, 파일 소유권이
+   나 권한이 안전하지 않으면 (프로세스를 실행하는 사용자가 아닌 다른
+   사용자가 소유하거나 다른 모든 사용자가 읽기 또는 쓰기로 액세스할 수
+   있는 경우), ".netrc" 파일에 암호가 존재하면 "NetrcParseError"가 발
+   생합니다. 이것은 ftp와 ".netrc"를 사용하는 다른 프로그램과 동등한
+   보안 행동을 구현합니다.
+
+   버전 3.4에서 변경: POSIX 권한 검사를 추가했습니다.
+
+   버전 3.7에서 변경: *file*이 인자로 전달되지 않으면
+   "os.path.expanduser()"가 ".netrc" 파일의 위치를 찾는 데 사용됩니다.
+
+   버전 3.10에서 변경: "netrc" try UTF-8 encoding before using locale
+   specific encoding.
+
+exception netrc.NetrcParseError
+
+   Exception raised by the "netrc" class when syntactical errors are
+   encountered in source text.  Instances of this exception provide
+   three interesting attributes:  "msg" is a textual explanation of
+   the error, "filename" is the name of the source file, and "lineno"
+   gives the line number on which the error was found.
+
+
+netrc 객체
+==========
+
+"netrc" 인스턴스에는 다음과 같은 메서드가 있습니다:
+
+netrc.authenticators(host)
+
+   *host*에 대한 인증 자의 3-tuple "(login, account, password)"를 반환
+   합니다. netrc 파일에 주어진 호스트에 대한 항목이 없으면 'default'
+   항목과 연관된 튜플을 반환합니다. 일치하는 호스트도 기본 항목도 사용
+   할 수 없으면 "None"을 반환합니다.
+
+netrc.__repr__()
+
+   클래스 데이터를 netrc 파일의 형식의 문자열로 덤프합니다. (이것은 주
+   석을 버리고 엔트리를 재정렬할 수 있습니다.)
+
+"netrc"의 인스턴스에는 공개 인스턴스 변수가 있습니다:
+
+netrc.hosts
+
+   호스트 이름을 "(login, account, password)" 튜플에 매핑하는 딕셔너리
+   . 'default' 항목이 있으면 그 이름의 의사 호스트로 표시됩니다.
+
+netrc.macros
+
+   매크로 이름을 문자열 리스트에 매핑하는 딕셔너리.
+
+참고:
+
+  Passwords are limited to a subset of the ASCII character set.  All
+  ASCII punctuation is allowed in passwords, however, note that
+  whitespace and non-printable characters are not allowed in
+  passwords.  This is a limitation of the way the .netrc file is
+  parsed and may be removed in the future.

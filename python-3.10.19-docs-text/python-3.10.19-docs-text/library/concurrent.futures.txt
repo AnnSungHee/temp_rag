@@ -1,0 +1,507 @@
+"concurrent.futures" --- Launching parallel tasks
+*************************************************
+
+버전 3.2에 추가.
+
+**소스 코드:** Lib/concurrent/futures/thread.py와
+Lib/concurrent/futures/process.py
+
+======================================================================
+
+"concurrent.futures" 모듈은 비동기적으로 콜러블을 실행하는 고수준 인터
+페이스를 제공합니다.
+
+비동기 실행은 ("ThreadPoolExecutor"를 사용해서) 스레드나
+("ProcessPoolExecutor"를 사용해서) 별도의 프로세스로 수행 할 수 있습니
+다. 둘 다 추상 "Executor" 클래스로 정의된 것과 같은 인터페이스를 구현
+합니다.
+
+
+Executor 객체
+=============
+
+class concurrent.futures.Executor
+
+   비동기적으로 호출을 실행하는 메서드를 제공하는 추상 클래스입니다.
+   직접 사용해서는 안 되며, 구체적인 하위 클래스를 통해 사용해야 합니
+   다.
+
+      submit(fn, /, *args, **kwargs)
+
+         콜러블 *fn* 이 "fn(*args, **kwargs)" 처럼 실행되도록 예약하고
+         , 콜러블 객체의 실행을 나타내는 "Future" 객체를 반환합니다.
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(pow, 323, 1235)
+                print(future.result())
+
+      map(func, *iterables, timeout=None, chunksize=1)
+
+         Similar to "map(func, *iterables)" except:
+
+         * *iterables* 는 느긋하게 처리되는 것이 아니라 즉시 수집됩니
+           다.
+
+         * *func* is executed asynchronously and several calls to
+           *func* may be made concurrently.
+
+         The returned iterator raises a
+         "concurrent.futures.TimeoutError" if "__next__()" is called
+         and the result isn't available after *timeout* seconds from
+         the original call to "Executor.map()". *timeout* can be an
+         int or a float.  If *timeout* is not specified or "None",
+         there is no limit to the wait time.
+
+         If a *func* call raises an exception, then that exception
+         will be raised when its value is retrieved from the iterator.
+
+         "ProcessPoolExecutor"를 사용할 때, 이 메서드는 *iterables* 를
+         다수의 덩어리로 잘라서 별도의 작업으로 풀에 제출합니다. 이러
+         한 덩어리의 (대략적인) 크기는 *chunksize* 를 양의 정수로 설정
+         하여 지정할 수 있습니다. 매우 긴 이터러블의 경우 *chunksize*
+         에 큰 값을 사용하면 기본 크기인 1에 비해 성능이 크게 향상될
+         수 있습니다. "ThreadPoolExecutor" 의 경우, *chunksize* 는 아
+         무런 효과가 없습니다.
+
+         버전 3.5에서 변경: *chunksize* 인자가 추가되었습니다.
+
+      shutdown(wait=True, *, cancel_futures=False)
+
+         현재 계류 중인 퓨처가 실행 완료될 때, 사용 중인 모든 자원을
+         해제해야 한다는 것을 실행기에 알립니다. 종료(shutdown) 후에
+         이루어지는 "Executor.submit()" 과 "Executor.map()" 호출은
+         "RuntimeError" 를 발생시킵니다.
+
+         *wait* 가 "True" 면, 계류 중인 모든 퓨처가 실행을 마치고 실행
+         기와 관련된 자원이 해제될 때까지 이 메서드는 돌아오지 않습니
+         다. *wait* 가 "False" 면, 이 메서드는 즉시 돌아오고 실행기와
+         연관된 자원은 계류 중인 모든 퓨처가 실행을 마칠 때 해제됩니다
+         . *wait* 의 값과 관계없이, 모든 계류 중인 퓨처가 실행을 마칠
+         때까지 전체 파이썬 프로그램이 종료되지 않습니다.
+
+         *cancel_futures*가 "True"이면, 이 메서드는 실행기가 실행을 시
+         작시키지 않은 계류 중인 모든 퓨처를 취소합니다.
+         *cancel_futures*의 값과 관계없이 완료되었거나 실행 중인 퓨처
+         는 취소되지 않습니다.
+
+         *cancel_futures*와 *wait*가 모두 "True"이면, 이 메서드가 반환
+         하기 전에 실행기가 실행을 시작한 모든 퓨처가 완료됩니다. 나머
+         지 퓨처는 취소됩니다.
+
+         "with" 문을 사용하여 "Executor"를 종료시키면
+         ("Executor.shutdown()" 를 *wait* 값 "True" 로 호출한 것처럼
+         대기합니다), 이 메서드를 명시적으로 호출할 필요가 없어집니다
+         .:
+
+            import shutil
+            with ThreadPoolExecutor(max_workers=4) as e:
+                e.submit(shutil.copy, 'src1.txt', 'dest1.txt')
+                e.submit(shutil.copy, 'src2.txt', 'dest2.txt')
+                e.submit(shutil.copy, 'src3.txt', 'dest3.txt')
+                e.submit(shutil.copy, 'src4.txt', 'dest4.txt')
+
+         버전 3.9에서 변경: *cancel_futures*를 추가했습니다.
+
+
+ThreadPoolExecutor
+==================
+
+"ThreadPoolExecutor" 는 스레드 풀을 사용하여 호출을 비동기적으로 실행
+하는 "Executor" 서브 클래스입니다.
+
+"Future"와 관련된 콜러블 객체가 다른 "Future" 의 결과를 기다릴 때 교착
+상태가 발생할 수 있습니다. 예를 들면:
+
+   import time
+   def wait_on_b():
+       time.sleep(5)
+       print(b.result())  # b will never complete because it is waiting on a.
+       return 5
+
+   def wait_on_a():
+       time.sleep(5)
+       print(a.result())  # a will never complete because it is waiting on b.
+       return 6
+
+
+   executor = ThreadPoolExecutor(max_workers=2)
+   a = executor.submit(wait_on_b)
+   b = executor.submit(wait_on_a)
+
+그리고:
+
+   def wait_on_future():
+       f = executor.submit(pow, 5, 2)
+       # This will never complete because there is only one worker thread and
+       # it is executing this function.
+       print(f.result())
+
+   executor = ThreadPoolExecutor(max_workers=1)
+   executor.submit(wait_on_future)
+
+class concurrent.futures.ThreadPoolExecutor(max_workers=None, thread_name_prefix='', initializer=None, initargs=())
+
+   최대 *max_workers* 스레드의 풀을 사용하여 호출을 비동기적으로 실행
+   하는 "Executor" 서브 클래스.
+
+   All threads enqueued to "ThreadPoolExecutor" will be joined before
+   the interpreter can exit. Note that the exit handler which does
+   this is executed *before* any exit handlers added using "atexit".
+   This means exceptions in the main thread must be caught and handled
+   in order to signal threads to exit gracefully. For this reason, it
+   is recommended that "ThreadPoolExecutor" not be used for long-
+   running tasks.
+
+   *initializer* 는 각 작업자 스레드의 시작 부분에서 호출되는 선택적
+   콜러블입니다; *initargs* 는 initializer에 전달되는 인자들의 튜플입
+   니다. *initializer* 가 예외를 발생시키는 경우, 현재 계류 중인 모든
+   작업과 풀에 추가로 작업을 제출하려는 시도는 "BrokenThreadPool" 을
+   발생시킵니다.
+
+   버전 3.5에서 변경: *max_workers* 가 "None" 이거나 주어지지 않았다면
+   , 기본값으로 기계의 프로세서 수에 "5" 를 곱한 값을 사용합니다.
+   "ThreadPoolExecutor" 가 CPU 작업보다는 I/O를 동시에 진행하는데 자주
+   쓰이고, 작업자의 수가 "ProcessPoolExecutor" 보다 많아야 한다고 가정
+   하고 있습니다.
+
+   버전 3.6에 추가: The *thread_name_prefix* argument was added to
+   allow users to control the "threading.Thread" names for worker
+   threads created by the pool for easier debugging.
+
+   버전 3.7에서 변경: *initializer* 및 *initargs* 인자가 추가되었습니
+   다.
+
+   버전 3.8에서 변경: *max_workers*의 기본값은 "min(32, os.cpu_count()
+   + 4)"로 변경됩니다. 이 기본값은 I/O 병목 작업을 위해 최소 5개의 작
+   업자를 유지합니다. GIL을 반납하는 CPU 병목 작업을 위해 최대 32개의
+   CPU 코어를 사용합니다. 또한 많은 코어를 가진 시스템에서 매우 큰 자
+   원을 묵시적으로 사용하는 것을 방지합니다.ThreadPoolExecutor는 이제
+   *max_workers* 작업자 스레드를 시작하기 전에 유휴 작업자 스레드를 재
+   사용합니다.
+
+
+ThreadPoolExecutor 예제
+-----------------------
+
+   import concurrent.futures
+   import urllib.request
+
+   URLS = ['http://www.foxnews.com/',
+           'http://www.cnn.com/',
+           'http://europe.wsj.com/',
+           'http://www.bbc.co.uk/',
+           'http://nonexistant-subdomain.python.org/']
+
+   # Retrieve a single page and report the URL and contents
+   def load_url(url, timeout):
+       with urllib.request.urlopen(url, timeout=timeout) as conn:
+           return conn.read()
+
+   # We can use a with statement to ensure threads are cleaned up promptly
+   with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+       # Start the load operations and mark each future with its URL
+       future_to_url = {executor.submit(load_url, url, 60): url for url in URLS}
+       for future in concurrent.futures.as_completed(future_to_url):
+           url = future_to_url[future]
+           try:
+               data = future.result()
+           except Exception as exc:
+               print('%r generated an exception: %s' % (url, exc))
+           else:
+               print('%r page is %d bytes' % (url, len(data)))
+
+
+ProcessPoolExecutor
+===================
+
+"ProcessPoolExecutor" 클래스는 프로세스 풀을 사용하여 호출을 비동기적
+으로 실행하는 "Executor" 서브 클래스입니다. "ProcessPoolExecutor" 는
+"multiprocessing" 모듈을 사용합니다. *전역 인터프리터 록* 을 피할 수
+있도록 하지만, 오직 피클 가능한 객체만 실행되고 반환될 수 있음을 의미
+합니다.
+
+"__main__" 모듈은 작업자 서브 프로세스가 임포트 할 수 있어야 합니다.
+즉, "ProcessPoolExecutor" 는 대화형 인터프리터에서 작동하지 않습니다.
+
+"ProcessPoolExecutor" 에 제출된 콜러블에서 "Executor" 나 "Future" 메서
+드를 호출하면 교착 상태가 발생합니다.
+
+class concurrent.futures.ProcessPoolExecutor(max_workers=None, mp_context=None, initializer=None, initargs=())
+
+   An "Executor" subclass that executes calls asynchronously using a
+   pool of at most *max_workers* processes.  If *max_workers* is
+   "None" or not given, it will default to the number of processors on
+   the machine. If *max_workers* is less than or equal to "0", then a
+   "ValueError" will be raised. On Windows, *max_workers* must be less
+   than or equal to "61". If it is not then "ValueError" will be
+   raised. If *max_workers* is "None", then the default chosen will be
+   at most "61", even if more processors are available. *mp_context*
+   can be a multiprocessing context or None. It will be used to launch
+   the workers. If *mp_context* is "None" or not given, the default
+   multiprocessing context is used.
+
+   *initializer* 는 각 작업자 프로세스의 시작 부분에서 호출되는 선택적
+   콜러블입니다; *initargs* 는 initializer에 전달되는 인자들의 튜플입
+   니다. *initializer* 가 예외를 발생시키는 경우, 현재 계류 중인 모든
+   작업과 풀에 추가로 작업을 제출하려는 시도는 "BrokenProcessPool" 을
+   발생시킵니다.
+
+   버전 3.3에서 변경: When one of the worker processes terminates
+   abruptly, a "BrokenProcessPool" error is now raised.  Previously,
+   behaviour was undefined but operations on the executor or its
+   futures would often freeze or deadlock.
+
+   버전 3.7에서 변경: *mp_context* 인자가 추가되어 사용자가 풀에서 만
+   드는 작업자 프로세스의 시작 방법을 제어 할 수 있습니다
+   .*initializer* 및 *initargs* 인자가 추가되었습니다.
+
+
+ProcessPoolExecutor 예제
+------------------------
+
+   import concurrent.futures
+   import math
+
+   PRIMES = [
+       112272535095293,
+       112582705942171,
+       112272535095293,
+       115280095190773,
+       115797848077099,
+       1099726899285419]
+
+   def is_prime(n):
+       if n < 2:
+           return False
+       if n == 2:
+           return True
+       if n % 2 == 0:
+           return False
+
+       sqrt_n = int(math.floor(math.sqrt(n)))
+       for i in range(3, sqrt_n + 1, 2):
+           if n % i == 0:
+               return False
+       return True
+
+   def main():
+       with concurrent.futures.ProcessPoolExecutor() as executor:
+           for number, prime in zip(PRIMES, executor.map(is_prime, PRIMES)):
+               print('%d is prime: %s' % (number, prime))
+
+   if __name__ == '__main__':
+       main()
+
+
+Future 객체
+===========
+
+"Future" 클래스는 콜러블 객체의 비동기 실행을 캡슐화합니다. "Future"
+인스턴스는 "Executor.submit()" 에 의해 생성됩니다.
+
+class concurrent.futures.Future
+
+   콜러블 객체의 비동기 실행을 캡슐화합니다. "Future" 인스턴스는
+   "Executor.submit()" 에 의해 생성되며 테스트를 제외하고는 직접 생성
+   되어서는 안 됩니다.
+
+      cancel()
+
+         호출을 취소하려고 시도합니다. 호출이 현재 실행 중이거나 실행
+         종료했고 취소할 수 없는 경우 메서드는 "False" 를 반환하고, 그
+         렇지 않으면 호출이 취소되고 메서드는 "True" 를 반환합니다.
+
+      cancelled()
+
+         호출이 성공적으로 취소되었으면 "True" 를 반환합니다.
+
+      running()
+
+         호출이 현재 실행 중이고 취소할 수 없는 경우 "True" 를 반환합
+         니다.
+
+      done()
+
+         호출이 성공적으로 취소되었거나 실행이 완료되었으면 "True" 를
+         반환합니다.
+
+      result(timeout=None)
+
+         Return the value returned by the call. If the call hasn't yet
+         completed then this method will wait up to *timeout* seconds.
+         If the call hasn't completed in *timeout* seconds, then a
+         "concurrent.futures.TimeoutError" will be raised. *timeout*
+         can be an int or float.  If *timeout* is not specified or
+         "None", there is no limit to the wait time.
+
+         완료하기 전에 퓨처가 취소되면 "CancelledError" 가 발생합니다.
+
+         호출이 예외를 일으키는 경우, 이 메서드는 같은 예외를 발생시킵
+         니다.
+
+      exception(timeout=None)
+
+         Return the exception raised by the call.  If the call hasn't
+         yet completed then this method will wait up to *timeout*
+         seconds.  If the call hasn't completed in *timeout* seconds,
+         then a "concurrent.futures.TimeoutError" will be raised.
+         *timeout* can be an int or float.  If *timeout* is not
+         specified or "None", there is no limit to the wait time.
+
+         완료하기 전에 퓨처가 취소되면 "CancelledError" 가 발생합니다.
+
+         호출이 예외 없이 완료되면, "None" 이 반환됩니다.
+
+      add_done_callback(fn)
+
+         콜러블 *fn* 을 퓨처에 연결합니다. *fn* 은 퓨처가 취소되거나
+         실행이 종료될 때 퓨처를 유일한 인자로 호출됩니다.
+
+         추가된 콜러블은 추가된 순서대로 호출되며, 항상 콜러블을 추가
+         한 프로세스에 속하는 스레드에서 호출됩니다. 콜러블이
+         "Exception" 서브 클래스를 발생시키면, 로그 되고 무시됩니다.
+         콜러블이 "BaseException" 서브 클래스를 발생시키면, 동작은 정
+         의되지 않습니다.
+
+         퓨처가 이미 완료되었거나 취소된 경우 *fn* 이 즉시 호출됩니다.
+
+   다음 "Future" 메서드는 단위 테스트와 "Executor" 의 구현을 위한 것입
+   니다.
+
+      set_running_or_notify_cancel()
+
+         이 메서드는 "Future"와 관련된 작업을 실행하기 전에 "Executor"
+         구현에 의해서만 호출되거나 단위 테스트에서만 호출되어야 합니
+         다.
+
+         메서드가 "False" 를 반환하면, "Future" 가 취소된 것입니다. 즉
+         "Future.cancel()" 이 호출되었고 "True"를 반환했습니다.
+         "Future" 완료를 기다리는 (즉, "as_completed()" 또는 "wait()"
+         를 통해) 모든 스레드는 깨어납니다.
+
+         메서드가 "True" 를 반환하면, "Future" 가 취소되지 않았고 실행
+         상태로 진입했습니다. 즉 "Future.running()" 을 호출하면 "True"
+         가 반환됩니다.
+
+         이 메서드는 한 번만 호출 할 수 있으며, "Future.set_result()"
+         또는 "Future.set_exception()" 이 호출 된 후에는 호출할 수 없
+         습니다.
+
+      set_result(result)
+
+         "Future"와 관련된 작업 결과를 *result* 로 설정합니다.
+
+         이 메서드는 "Executor" 구현과 단위 테스트에서만 사용해야 합니
+         다.
+
+         버전 3.8에서 변경: 이 메서드는 "Future"가 이미 완료되었으면
+         "concurrent.futures.InvalidStateError"를 발생시킵니다.
+
+      set_exception(exception)
+
+         "Future"와 관련된 작업 결과를 "Exception" *exception* 으로 설
+         정합니다.
+
+         이 메서드는 "Executor" 구현과 단위 테스트에서만 사용해야 합니
+         다.
+
+         버전 3.8에서 변경: 이 메서드는 "Future"가 이미 완료되었으면
+         "concurrent.futures.InvalidStateError"를 발생시킵니다.
+
+
+모듈 함수
+=========
+
+concurrent.futures.wait(fs, timeout=None, return_when=ALL_COMPLETED)
+
+   *fs* 로 주어진 여러 (서로 다른 "Executor" 인스턴스가 만든 것들도 가
+   능합니다) "Future" 인스턴스들이 완료할 때까지 기다립니다. *fs* 로
+   주어진 중복 퓨처는 제거되고 한 번만 반환됩니다. 집합들의 이름있는
+   2-튜플을 돌려줍니다. "done" 이라는 이름의 첫 번째 집합은 대기가 끝
+   나기 전에 완료된 (끝났거나 취소된) 퓨처를 담고 있습니다. "not_done"
+   이라는 이름의 두 번째 집합은 완료되지 않은 (계류 중이거나 실행 중인
+   ) 퓨처를 담고 있습니다.
+
+   *timeout* 은 반환하기 전에 대기 할 최대 시간(초)을 제어하는 데 사용
+   할 수 있습니다. *timeout* 은 int 또는 float가 될 수 있습니다.
+   *timeout* 이 지정되지 않았거나 "None" 인 경우, 대기 시간에는 제한이
+   없습니다.
+
+   *return_when* 은, 이 함수가 언제 반환되어야 하는지를 나타냅니다. 다
+   음 상수 중 하나여야 합니다:
+
+   +-------------------------------+------------------------------------------+
+   | 상수                          | 설명                                     |
+   |===============================|==========================================|
+   | "FIRST_COMPLETED"             | 퓨처가 어느 하나라도 끝나거나 취소될 때  |
+   |                               | 함수가 반환됩니다.                       |
+   +-------------------------------+------------------------------------------+
+   | "FIRST_EXCEPTION"             | The function will return when any future |
+   |                               | finishes by raising an exception.  If no |
+   |                               | future raises an exception then it is    |
+   |                               | equivalent to "ALL_COMPLETED".           |
+   +-------------------------------+------------------------------------------+
+   | "ALL_COMPLETED"               | 모든 퓨처가 끝나거나 취소되면 함수가 반  |
+   |                               | 환됩니다.                                |
+   +-------------------------------+------------------------------------------+
+
+concurrent.futures.as_completed(fs, timeout=None)
+
+   Returns an iterator over the "Future" instances (possibly created
+   by different "Executor" instances) given by *fs* that yields
+   futures as they complete (finished or cancelled futures). Any
+   futures given by *fs* that are duplicated will be returned once.
+   Any futures that completed before "as_completed()" is called will
+   be yielded first.  The returned iterator raises a
+   "concurrent.futures.TimeoutError" if "__next__()" is called and the
+   result isn't available after *timeout* seconds from the original
+   call to "as_completed()".  *timeout* can be an int or float. If
+   *timeout* is not specified or "None", there is no limit to the wait
+   time.
+
+더 보기:
+
+  **PEP 3148** -- 퓨처 - 계산을 비동기적으로 실행
+     파이썬 표준 라이브러리에 포함하기 위해, 이 기능을 설명한 제안.
+
+
+예외 클래스
+===========
+
+exception concurrent.futures.CancelledError
+
+   퓨처가 취소될 때 발생합니다.
+
+exception concurrent.futures.TimeoutError
+
+   Raised when a future operation exceeds the given timeout.
+
+exception concurrent.futures.BrokenExecutor
+
+   "RuntimeError" 에서 파생됩니다, 이 예외 클래스는 어떤 이유로 실행기
+   가 망가져서 새 작업을 제출하거나 실행할 수 없을 때 발생합니다.
+
+   버전 3.7에 추가.
+
+exception concurrent.futures.InvalidStateError
+
+   퓨처에 현재 상태에서 허용되지 않는 연산이 수행될 때 발생합니다.
+
+   버전 3.8에 추가.
+
+exception concurrent.futures.thread.BrokenThreadPool
+
+   Derived from "BrokenExecutor", this exception class is raised when
+   one of the workers of a "ThreadPoolExecutor" has failed
+   initializing.
+
+   버전 3.7에 추가.
+
+exception concurrent.futures.process.BrokenProcessPool
+
+   Derived from "BrokenExecutor" (formerly "RuntimeError"), this
+   exception class is raised when one of the workers of a
+   "ProcessPoolExecutor" has terminated in a non-clean fashion (for
+   example, if it was killed from the outside).
+
+   버전 3.3에 추가.

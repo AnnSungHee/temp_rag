@@ -1,0 +1,191 @@
+"symtable" --- Access to the compiler's symbol tables
+*****************************************************
+
+**소스 코드:** Lib/symtable.py
+
+======================================================================
+
+심볼 테이블은 바이트 코드가 생성되기 바로 전에 AST에서 컴파일러에 의해
+생성됩니다. 심볼 테이블은 코드에서 모든 식별자의 스코프를 계산합니다.
+"symtable"은 이러한 테이블을 검사하는 인터페이스를 제공합니다.
+
+
+심볼 테이블 생성하기
+====================
+
+symtable.symtable(code, filename, compile_type)
+
+   파이썬 소스 *code*에 대한 최상위 "SymbolTable"을 반환합니다.
+   *filename*은 코드가 들어있는 파일의 이름입니다. *compile_type*은
+   "compile()"에 대한 *mode* 인자와 같습니다.
+
+
+심볼 테이블 검사하기
+====================
+
+class symtable.SymbolTable
+
+   블록에 대한 이름 공간 테이블. 생성자는 공개되지 않습니다.
+
+   get_type()
+
+      Return the type of the symbol table.  Possible values are
+      "'class'", "'module'", and "'function'".
+
+   get_id()
+
+      테이블의 식별자를 돌려줍니다.
+
+   get_name()
+
+      Return the table's name.  This is the name of the class if the
+      table is for a class, the name of the function if the table is
+      for a function, or "'top'" if the table is global ("get_type()"
+      returns "'module'").
+
+   get_lineno()
+
+      이 테이블이 나타내는 블록의 첫 번째 줄 번호를 반환합니다.
+
+   is_optimized()
+
+      이 테이블의 지역(locals)을 최적화할 수 있으면 "True"를 반환합니
+      다.
+
+   is_nested()
+
+      블록이 중첩된 클래스나 함수면 "True"를 반환합니다.
+
+   has_children()
+
+      블록에 중첩된 이름 공간이 있으면 "True"를 반환합니다. 이것들은
+      "get_children()"으로 얻을 수 있습니다.
+
+   get_identifiers()
+
+      Return a view object containing the names of symbols in the
+      table. See the documentation of view objects.
+
+   lookup(name)
+
+      테이블에서 *name*을 찾아서 "Symbol" 인스턴스를 반환합니다.
+
+   get_symbols()
+
+      테이블에 있는 이름에 대한 "Symbol" 인스턴스 리스트를 반환합니다.
+
+   get_children()
+
+      중첩된 심볼 테이블의 리스트를 반환합니다.
+
+class symtable.Function
+
+   A namespace for a function or method.  This class inherits
+   "SymbolTable".
+
+   get_parameters()
+
+      이 함수의 매개 변수 이름을 포함하는 튜플을 반환합니다.
+
+   get_locals()
+
+      이 함수의 지역 이름을 포함하는 튜플을 반환합니다.
+
+   get_globals()
+
+      이 함수의 전역 이름을 포함하는 튜플을 반환합니다.
+
+   get_nonlocals()
+
+      Return a tuple containing names of nonlocals in this function.
+
+   get_frees()
+
+      Return a tuple containing names of free variables in this
+      function.
+
+class symtable.Class
+
+   A namespace of a class.  This class inherits "SymbolTable".
+
+   get_methods()
+
+      Return a tuple containing the names of methods declared in the
+      class.
+
+class symtable.Symbol
+
+   소스의 식별자에 해당하는 "SymbolTable"의 항목. 생성자는 공개되지 않
+   습니다.
+
+   get_name()
+
+      심볼의 이름을 돌려줍니다.
+
+   is_referenced()
+
+      심볼이 블록에서 사용되면 "True"를 반환합니다.
+
+   is_imported()
+
+      심볼이 import 문에서 만들어지면 "True"를 반환합니다.
+
+   is_parameter()
+
+      심볼이 매개 변수면 "True"를 반환합니다.
+
+   is_global()
+
+      심볼이 전역이면 "True"를 반환합니다.
+
+   is_nonlocal()
+
+      심볼이 nonlocal이면 "True"를 반환합니다.
+
+   is_declared_global()
+
+      심볼이 global 문으로 전역으로 선언되면 "True"를 반환합니다.
+
+   is_local()
+
+      심볼이 블록의 지역이면 "True"를 반환합니다.
+
+   is_annotated()
+
+      심볼이 어노테이트 되었으면 "True"를 반환합니다.
+
+      버전 3.6에 추가.
+
+   is_free()
+
+      심볼이 블록에서 참조되지만 대입되지 않으면 "True"를 반환합니다.
+
+   is_assigned()
+
+      심볼이 블록에 대입되면 "True"를 반환합니다.
+
+   is_namespace()
+
+      이름 연결(name binding)이 새로운 이름 공간을 도입하면 "True"를
+      반환합니다.
+
+      이름이 함수나 클래스 문의 대상으로 사용되면 참입니다.
+
+      예를 들면:
+
+         >>> table = symtable.symtable("def some_func(): pass", "string", "exec")
+         >>> table.lookup("some_func").is_namespace()
+         True
+
+      하나의 이름을 여러 객체에 연결할 수 있음에 유의하십시오. 결과가
+      "True" 이면, 이름은 새 이름 공간을 도입하지 않는 int 나 list와
+      같은 다른 객체에도 연결되어있을 수 있습니다.
+
+   get_namespaces()
+
+      이 이름에 연결된 이름 공간의 리스트를 돌려줍니다.
+
+   get_namespace()
+
+      Return the namespace bound to this name.  If more than one
+      namespace is bound, "ValueError" is raised.

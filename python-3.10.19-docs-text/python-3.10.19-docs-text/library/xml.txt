@@ -1,0 +1,138 @@
+XML 처리 모듈
+*************
+
+**소스 코드:** Lib/xml/
+
+======================================================================
+
+XML 처리를 위한 파이썬의 인터페이스는 "xml" 패키지로 묶여있습니다.
+
+경고:
+
+  XML 모듈은 잘못되었거나 악의적으로 구성된 데이터로부터 안전하지 않습
+  니다. 신뢰할 수 없거나 인증되지 않은 데이터를 구문 분석해야 하면 XML
+  취약점과 The defusedxml Package 절을 참조하십시오.
+
+"xml" 패키지의 모듈들은 최소한 하나의 SAX 호환 XML 구문 분석기가 있도
+록 요구함에 유의해야 합니다. Expat 구문 분석기가 파이썬에 포함되어 있
+으므로, "xml.parsers.expat" 모듈을 항상 사용할 수 있습니다.
+
+"xml.dom" 과 "xml.sax" 패키지에 대한 설명서는 DOM과 SAX 인터페이스에
+대한 파이썬 바인딩의 정의입니다.
+
+XML 처리 서브 모듈은 다음과 같습니다:
+
+* "xml.etree.ElementTree": ElementTree API, 간단하고 가벼운 XML 프로세
+  서
+
+* "xml.dom": DOM API 정의
+
+* "xml.dom.minidom": 최소 DOM 구현
+
+* "xml.dom.pulldom": 부분 DOM 트리 구축 지원
+
+* "xml.sax": SAX2 베이스 클래스와 편리 함수
+
+* "xml.parsers.expat": Expat 구문 분석기 바인딩
+
+
+XML 취약점
+==========
+
+XML 처리 모듈은 악의적으로 구성된 데이터로부터 안전하지 않습니다. 공격
+자는 XML 기능을 악용하여 서비스 거부 공격을 수행하거나, 로컬 파일에 액
+세스하거나, 다른 기계로 네트워크 연결을 만들거나, 방화벽을 우회할 수
+있습니다.
+
+다음 표는 알려진 공격의 개요와 다양한 모듈이 취약한지를 보여줍니다.
+
++---------------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
+| 종류                      | sax                | etree              | minidom            | pulldom            | xmlrpc             |
+|===========================|====================|====================|====================|====================|====================|
+| billion laughs(억만 웃음) | **취약** (1)       | **취약** (1)       | **취약** (1)       | **취약** (1)       | **취약** (1)       |
++---------------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
+| quadratic blowup(이차 폭  | **취약** (1)       | **취약** (1)       | **취약** (1)       | **취약** (1)       | **취약** (1)       |
+| 발)                       |                    |                    |                    |                    |                    |
++---------------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
+| external entity           | 안전 (5)           | 안전 (2)           | 안전 (3)           | 안전 (5)           | 안전 (4)           |
+| expansion(외부 엔티티 확  |                    |                    |                    |                    |                    |
+| 장)                       |                    |                    |                    |                    |                    |
++---------------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
+| DTD retrieval(DTD 조회)   | 안전 (5)           | 안전               | 안전               | 안전 (5)           | 안전               |
++---------------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
+| decompression bomb(압축해 | 안전               | 안전               | 안전               | 안전               | **취약**           |
+| 제 폭탄)                  |                    |                    |                    |                    |                    |
++---------------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
+| large tokens(대형 토큰)   | **취약** (6)       | **취약** (6)       | **취약** (6)       | **취약** (6)       | **취약** (6)       |
++---------------------------+--------------------+--------------------+--------------------+--------------------+--------------------+
+
+1. Expat 2.4.1 and newer is not vulnerable to the "billion laughs" and
+   "quadratic blowup" vulnerabilities. Items still listed as
+   vulnerable due to potential reliance on system-provided libraries.
+   Check "pyexpat.EXPAT_VERSION".
+
+2. "xml.etree.ElementTree" doesn't expand external entities and raises
+   a "ParserError" when an entity occurs.
+
+3. "xml.dom.minidom"은 외부 엔티티를 확장하지 않고 확장되지 않은 엔티
+   티를 그대로 반환합니다.
+
+4. "xmlrpclib" doesn't expand external entities and omits them.
+
+5. 파이썬 3.7.1부터, 외부 일반 엔티티는 더는 기본적으로 처리되지 않습
+   니다.
+
+6. Expat 2.6.0 and newer is not vulnerable to denial of service
+   through quadratic runtime caused by parsing large tokens. Items
+   still listed as vulnerable due to potential reliance on system-
+   provided libraries. Check "pyexpat.EXPAT_VERSION".
+
+billion laughs(억만 웃음) / exponential entity expansion(지수적 엔티티
+확장)
+   지수적 엔티티 확장으로도 알려진, Billion Laughs 공격은 여러 수준의
+   중첩된 엔티티를 사용합니다. 각 엔티티는 다른 엔티티를 여러 번 참조
+   하며, 최종 엔티티 정의에는 작은 문자열이 포함됩니다. 지수적인 확장
+   으로 수 기가바이트의 텍스트가 생성되고 많은 메모리와 CPU 시간이 소
+   모됩니다.
+
+quadratic blowup entity expansion(이차 폭발 엔티티 확장)
+   이차 폭발 공격은 Billion Laughs 공격과 유사합니다; 이 역시 엔티티
+   확장을 남용합니다. 중첩된 엔티티 대신 2천 개 이상의 문자를 갖는 커
+   다란 엔티티 하나를 계속 반복합니다. 공격은 지수적인 경우만큼 효율적
+   이지 않지만 깊이 중첩된 엔티티를 금지하는 구문 분석기 대응책을 우회
+   합니다.
+
+external entity expansion(외부 엔티티 확장)
+   엔티티 선언은 대체 텍스트 이상의 것을 포함할 수 있습니다. 외부 자원
+   이나 지역 파일을 가리킬 수도 있습니다. XML 구문 분석기는 자원에 액
+   세스하고 그 내용을 XML 문서에 포함합니다.
+
+DTD retrieval(DTD 조회)
+   파이썬의 "xml.dom.pulldom" 같은 일부 XML 라이브러리는 원격이나 지역
+   위치에서 문서 유형 정의(DTD)를 조회합니다. 이 기능은 외부 엔티티 확
+   장 문제와 비슷한 결과를 줍니다.
+
+decompression bomb(압축해제 폭탄)
+   압축 해제 폭탄(일명 ZIP bomb)은 gzip 압축된 HTTP 스트림이나 LZMA 압
+   축 파일과 같은, 압축된 XML 스트림을 구문 분석할 수 있는 모든 XML 라
+   이브러리에 적용됩니다. 공격자는 전송된 데이터의 양을 3배 이상 줄일
+   수 있습니다.
+
+large tokens(대형 토큰)
+   Expat needs to re-parse unfinished tokens; without the protection
+   introduced in Expat 2.6.0, this can lead to quadratic runtime that
+   can be used to cause denial of service in the application parsing
+   XML. The issue is known as CVE-2023-52425.
+
+The documentation for defusedxml on PyPI has further information about
+all known attack vectors with examples and references.
+
+
+The "defusedxml" Package
+========================
+
+defusedxml is a pure Python package with modified subclasses of all
+stdlib XML parsers that prevent any potentially malicious operation.
+Use of this package is recommended for any server code that parses
+untrusted XML data. The package also ships with example exploits and
+extended documentation on more XML exploits such as XPath injection.

@@ -1,0 +1,423 @@
+"ftplib" --- FTP protocol client
+********************************
+
+**소스 코드:** Lib/ftplib.py
+
+======================================================================
+
+이 모듈은 "FTP" 클래스와 몇 가지 관련 항목을 정의합니다. "FTP" 클래스
+는 FTP 프로토콜의 클라이언트 쪽을 구현합니다. 이것을 사용하여 다른 FTP
+서버 미러링과 같은 다양한 자동화된 FTP 작업을 수행하는 파이썬 프로그램
+을 작성할 수 있습니다. 또한 "urllib.request" 모듈에서 FTP를 사용하는
+URL을 처리하는 데 사용됩니다. FTP(File Transfer Protocol)에 대한 자세
+한 내용은 인터넷 **RFC 959**를 참조하십시오.
+
+**RFC 2640**에 따라, 기본 인코딩은 UTF-8입니다.
+
+"ftplib" 모듈을 사용한 샘플 세션은 다음과 같습니다:
+
+   >>> from ftplib import FTP
+   >>> ftp = FTP('ftp.us.debian.org')  # connect to host, default port
+   >>> ftp.login()                     # user anonymous, passwd anonymous@
+   '230 Login successful.'
+   >>> ftp.cwd('debian')               # change into "debian" directory
+   '250 Directory successfully changed.'
+   >>> ftp.retrlines('LIST')           # list directory contents
+   -rw-rw-r--    1 1176     1176         1063 Jun 15 10:18 README
+   ...
+   drwxr-sr-x    5 1176     1176         4096 Dec 19  2000 pool
+   drwxr-sr-x    4 1176     1176         4096 Nov 17  2008 project
+   drwxr-xr-x    3 1176     1176         4096 Oct 10  2012 tools
+   '226 Directory send OK.'
+   >>> with open('README', 'wb') as fp:
+   >>>     ftp.retrbinary('RETR README', fp.write)
+   '226 Transfer complete.'
+   >>> ftp.quit()
+   '221 Goodbye.'
+
+The module defines the following items:
+
+class ftplib.FTP(host='', user='', passwd='', acct='', timeout=None, source_address=None, *, encoding='utf-8')
+
+   Return a new instance of the "FTP" class.  When *host* is given,
+   the method call "connect(host)" is made.  When *user* is given,
+   additionally the method call "login(user, passwd, acct)" is made
+   (where *passwd* and *acct* default to the empty string when not
+   given).  The optional *timeout* parameter specifies a timeout in
+   seconds for blocking operations like the connection attempt (if is
+   not specified, the global default timeout setting will be used).
+   *source_address* is a 2-tuple "(host, port)" for the socket to bind
+   to as its source address before connecting. The *encoding*
+   parameter specifies the encoding for directories and filenames.
+
+   "FTP" 클래스는 "with" 문을 지원합니다, 예를 들어:
+
+   >>> from ftplib import FTP
+   >>> with FTP("ftp1.at.proftpd.org") as ftp:
+   ...     ftp.login()
+   ...     ftp.dir()
+   ... 
+   '230 Anonymous login ok, restrictions apply.'
+   dr-xr-xr-x   9 ftp      ftp           154 May  6 10:43 .
+   dr-xr-xr-x   9 ftp      ftp           154 May  6 10:43 ..
+   dr-xr-xr-x   5 ftp      ftp          4096 May  6 10:43 CentOS
+   dr-xr-xr-x   3 ftp      ftp            18 Jul 10  2008 Fedora
+   >>>
+
+   버전 3.2에서 변경: "with" 문에 대한 지원이 추가되었습니다.
+
+   버전 3.3에서 변경: *source_address* 매개 변수가 추가되었습니다.
+
+   버전 3.9에서 변경: *timeout* 매개 변수가 0으로 설정되면, 비 블로킹
+   소켓이 만들어지지 않도록 "ValueError"를 발생시킵니다. *encoding* 매
+   개 변수가 추가되었으며, 기본값은 Latin-1 에서 UTF-8로 변경되어
+   **RFC 2640**을 따릅니다.
+
+class ftplib.FTP_TLS(host='', user='', passwd='', acct='', keyfile=None, certfile=None, context=None, timeout=None, source_address=None, *, encoding='utf-8')
+
+   A "FTP" subclass which adds TLS support to FTP as described in
+   **RFC 4217**. Connect as usual to port 21 implicitly securing the
+   FTP control connection before authenticating. Securing the data
+   connection requires the user to explicitly ask for it by calling
+   the "prot_p()" method.  *context* is a "ssl.SSLContext" object
+   which allows bundling SSL configuration options, certificates and
+   private keys into a single (potentially long-lived) structure.
+   Please read 보안 고려 사항 for best practices.
+
+   *keyfile* and *certfile* are a legacy alternative to *context* --
+   they can point to PEM-formatted private key and certificate chain
+   files (respectively) for the SSL connection.
+
+   버전 3.2에 추가.
+
+   버전 3.3에서 변경: *source_address* 매개 변수가 추가되었습니다.
+
+   버전 3.4에서 변경: The class now supports hostname check with
+   "ssl.SSLContext.check_hostname" and *Server Name Indication* (see
+   "ssl.HAS_SNI").
+
+   버전 3.6부터 폐지: *keyfile* and *certfile* are deprecated in favor
+   of *context*. Please use "ssl.SSLContext.load_cert_chain()"
+   instead, or let "ssl.create_default_context()" select the system's
+   trusted CA certificates for you.
+
+   버전 3.9에서 변경: *timeout* 매개 변수가 0으로 설정되면, 비 블로킹
+   소켓이 만들어지지 않도록 "ValueError"를 발생시킵니다. *encoding* 매
+   개 변수가 추가되었으며, 기본값은 Latin-1 에서 UTF-8로 변경되어
+   **RFC 2640**을 따릅니다.
+
+   "FTP_TLS" 클래스를 사용한 샘플 세션은 다음과 같습니다:
+
+      >>> ftps = FTP_TLS('ftp.pureftpd.org')
+      >>> ftps.login()
+      '230 Anonymous user logged in'
+      >>> ftps.prot_p()
+      '200 Data protection level set to "private"'
+      >>> ftps.nlst()
+      ['6jack', 'OpenBSD', 'antilink', 'blogbench', 'bsdcam', 'clockspeed', 'djbdns-jedi', 'docs', 'eaccelerator-jedi', 'favicon.ico', 'francotone', 'fugu', 'ignore', 'libpuzzle', 'metalog', 'minidentd', 'misc', 'mysql-udf-global-user-variables', 'php-jenkins-hash', 'php-skein-hash', 'php-webdav', 'phpaudit', 'phpbench', 'pincaster', 'ping', 'posto', 'pub', 'public', 'public_keys', 'pure-ftpd', 'qscan', 'qtc', 'sharedance', 'skycache', 'sound', 'tmp', 'ucarp']
+
+exception ftplib.error_reply
+
+   서버에서 예기치 않은 응답이 수신될 때 발생하는 예외.
+
+exception ftplib.error_temp
+
+   일시적 에러(400--499 범위의 응답 코드)를 나타내는 에러 코드가 수신
+   될 때 발생하는 예외.
+
+exception ftplib.error_perm
+
+   영구 에러(500--599 범위의 응답 코드)를 나타내는 에러 코드가 수신될
+   때 발생하는 예외.
+
+exception ftplib.error_proto
+
+   서버로부터 FTP(File Transfer Protocol)의 응답 규격(즉, 1--5 범위의
+   숫자로 시작)에 맞지 않는 응답을 수신할 때 발생하는 예외.
+
+ftplib.all_errors
+
+   "FTP" 인스턴스의 메서드가 (호출자로 인한 프로그래밍 에러가 아니라)
+   FTP 연결 문제로 인해 발생시킬 수 있는 모든 예외의 집합 (튜플). 이
+   집합에는 위에 나열된 네 가지 예외뿐만 아니라 "OSError"와 "EOFError"
+   가 포함됩니다.
+
+더 보기:
+
+  모듈 "netrc"
+     ".netrc" 파일 형식의 구문 분석기. ".netrc" 파일은 일반적으로 FTP
+     클라이언트가 사용자에게 프롬프트 하기 전에 사용자 인증 정보를 로
+     드하는 데 사용됩니다.
+
+
+FTP Objects
+===========
+
+Several methods are available in two flavors: one for handling text
+files and another for binary files.  These are named for the command
+which is used followed by "lines" for the text version or "binary" for
+the binary version.
+
+"FTP" 인스턴스에는 다음과 같은 메서드가 있습니다:
+
+FTP.set_debuglevel(level)
+
+   Set the instance's debugging level.  This controls the amount of
+   debugging output printed.  The default, "0", produces no debugging
+   output.  A value of "1" produces a moderate amount of debugging
+   output, generally a single line per request.  A value of "2" or
+   higher produces the maximum amount of debugging output, logging
+   each line sent and received on the control connection.
+
+FTP.connect(host='', port=0, timeout=None, source_address=None)
+
+   Connect to the given host and port.  The default port number is
+   "21", as specified by the FTP protocol specification.  It is rarely
+   needed to specify a different port number.  This function should be
+   called only once for each instance; it should not be called at all
+   if a host was given when the instance was created.  All other
+   methods can only be used after a connection has been made. The
+   optional *timeout* parameter specifies a timeout in seconds for the
+   connection attempt. If no *timeout* is passed, the global default
+   timeout setting will be used. *source_address* is a 2-tuple "(host,
+   port)" for the socket to bind to as its source address before
+   connecting.
+
+   인자 "self", "host", "port"로 감사 이벤트 "ftplib.connect"를 발생시
+   킵니다.
+
+   버전 3.3에서 변경: *source_address* 매개 변수가 추가되었습니다.
+
+FTP.getwelcome()
+
+   초기 연결에 대한 응답으로 서버에서 보낸 환영 메시지를 반환합니다. (
+   이 메시지에는 때때로 사용자와 관련될 수 있는 고지 사항이나 도움말
+   정보가 포함되어 있습니다.)
+
+FTP.login(user='anonymous', passwd='', acct='')
+
+   Log in as the given *user*.  The *passwd* and *acct* parameters are
+   optional and default to the empty string.  If no *user* is
+   specified, it defaults to "'anonymous'".  If *user* is
+   "'anonymous'", the default *passwd* is "'anonymous@'".  This
+   function should be called only once for each instance, after a
+   connection has been established; it should not be called at all if
+   a host and user were given when the instance was created.  Most FTP
+   commands are only allowed after the client has logged in.  The
+   *acct* parameter supplies "accounting information"; few systems
+   implement this.
+
+FTP.abort()
+
+   진행 중인 파일 전송을 중단합니다. 이것을 사용하는 것이 항상 동작하
+   지는 않지만, 시도해 볼 가치가 있습니다.
+
+FTP.sendcmd(cmd)
+
+   간단한 명령 문자열을 서버로 보내고 응답 문자열을 반환합니다.
+
+   인자 "self", "cmd"로 감사 이벤트 "ftplib.sendcmd"를 발생시킵니다.
+
+FTP.voidcmd(cmd)
+
+   Send a simple command string to the server and handle the response.
+   Return nothing if a response code corresponding to success (codes
+   in the range 200--299) is received.  Raise "error_reply" otherwise.
+
+   인자 "self", "cmd"로 감사 이벤트 "ftplib.sendcmd"를 발생시킵니다.
+
+FTP.retrbinary(cmd, callback, blocksize=8192, rest=None)
+
+   Retrieve a file in binary transfer mode.  *cmd* should be an
+   appropriate "RETR" command: "'RETR filename'". The *callback*
+   function is called for each block of data received, with a single
+   bytes argument giving the data block. The optional *blocksize*
+   argument specifies the maximum chunk size to read on the low-level
+   socket object created to do the actual transfer (which will also be
+   the largest size of the data blocks passed to *callback*).  A
+   reasonable default is chosen. *rest* means the same thing as in the
+   "transfercmd()" method.
+
+FTP.retrlines(cmd, callback=None)
+
+   Retrieve a file or directory listing in the encoding specified by
+   the *encoding* parameter at initialization. *cmd* should be an
+   appropriate "RETR" command (see "retrbinary()") or a command such
+   as "LIST" or "NLST" (usually just the string "'LIST'"). "LIST"
+   retrieves a list of files and information about those files. "NLST"
+   retrieves a list of file names. The *callback* function is called
+   for each line with a string argument containing the line with the
+   trailing CRLF stripped.  The default *callback* prints the line to
+   "sys.stdout".
+
+FTP.set_pasv(val)
+
+   *val*이 참이면 "수동(passive)" 모드를 활성화하고, 그렇지 않으면 수
+   동 모드를 비활성화합니다. 수동 모드는 기본적으로 켜져 있습니다.
+
+FTP.storbinary(cmd, fp, blocksize=8192, callback=None, rest=None)
+
+   Store a file in binary transfer mode.  *cmd* should be an
+   appropriate "STOR" command: ""STOR filename"". *fp* is a *file
+   object* (opened in binary mode) which is read until EOF using its
+   "read()" method in blocks of size *blocksize* to provide the data
+   to be stored. The *blocksize* argument defaults to 8192.
+   *callback* is an optional single parameter callable that is called
+   on each block of data after it is sent. *rest* means the same thing
+   as in the "transfercmd()" method.
+
+   버전 3.2에서 변경: *rest* parameter added.
+
+FTP.storlines(cmd, fp, callback=None)
+
+   줄 모드로 파일을 저장합니다. *cmd*는 적절한 "STOR" 명령이어야 합니
+   다 ("storbinary()"를 참조하십시오). 저장될 데이터를 제공하기 위해
+   "readline()" 메서드를 사용하여 (바이너리 모드로 열린) *파일 객체*
+   *fp*에서 EOF까지 줄을 읽어 들입니다. *callback*은 줄마다 보내진 다
+   음에 호출되는 선택적 단일 매개 변수 콜러블입니다.
+
+FTP.transfercmd(cmd, rest=None)
+
+   데이터 연결을 통해 전송을 시작합니다. 전송이 활성화되면, "EPRT"나
+   "PORT" 명령과 *cmd*로 지정한 전송 명령을 보내고 연결을 받아들입니다
+   . 서버가 수동(passive)이면, "EPSV"나 "PASV" 명령을 전송하고, 서버에
+   연결한 다음 전송 명령을 시작합니다. 어느 쪽이든, 연결 소켓을 반환합
+   니다.
+
+   선택적 *rest*가 제공되면, "REST" 명령이 서버로 전송되고 *rest*를 인
+   자로 전달합니다. *rest*는 일반적으로 요청된 파일에 대한 바이트 오프
+   셋으로, 요청된 오프셋에서 파일 바이트 전송을 다시 시작하고 초기 바
+   이트를 건너뛰도록 서버에 지시합니다. 그러나 "transfercmd()" 메서드
+   는 초기화 때 지정된 *encoding* 매개 변수를 사용하여 *rest*를 문자열
+   로 변환하지만, 문자열의 내용은 점검하지 않음에 유의하십시오. 서버가
+   "REST" 명령을 인식하지 못하면, "error_reply" 예외가 발생합니다. 이
+   경우, 단순히 *rest* 인자 없이 "transfercmd()"를 호출하십시오.
+
+FTP.ntransfercmd(cmd, rest=None)
+
+   "transfercmd()"와 비슷하지만, 데이터 연결과 데이터의 예상 크기의 튜
+   플을 반환합니다. 예상 크기를 계산할 수 없으면, "None"이 예상 크기로
+   반환됩니다. *cmd*와 *rest*는 "transfercmd()"에서와 같은 의미입니다.
+
+FTP.mlsd(path='', facts=[])
+
+   "MLSD" 명령(**RFC 3659**)을 사용하여 표준화된 형식으로 디렉터리를
+   나열합니다. *path*가 생략되면 현재 디렉터리를 가정합니다. *facts*는
+   원하는 정보 유형을 나타내는 문자열의 리스트입니다 (예를 들어
+   "["type", "size", "perm"]"). 경로에서 발견된 모든 파일에 대해 두 요
+   소의 튜플을 산출하는 제너레이터 객체를 반환합니다. 첫 번째 요소는
+   파일 이름이고, 두 번째 요소는 파일 이름에 대한 사실(facts)을 포함하
+   는 딕셔너리입니다. 이 딕셔너리의 내용은 *facts* 인자에 의해 제한될
+   수 있지만, 서버가 요청된 모든 사실을 반환한다고 보장하지는 않습니다
+   .
+
+   버전 3.3에 추가.
+
+FTP.nlst(argument[, ...])
+
+   "NLST" 명령이 반환한 파일 이름 리스트를 반환합니다. 선택적
+   *argument*는 나열할 디렉터리입니다 (기본값은 현재 서버 디렉터리입니
+   다). 비표준 옵션을 "NLST" 명령에 전달하기 위해 여러 인자를 사용할
+   수 있습니다.
+
+   참고:
+
+     서버가 명령을 지원한다면, "mlsd()"가 더 나은 API를 제공합니다.
+
+FTP.dir(argument[, ...])
+
+   Produce a directory listing as returned by the "LIST" command,
+   printing it to standard output.  The optional *argument* is a
+   directory to list (default is the current server directory).
+   Multiple arguments can be used to pass non-standard options to the
+   "LIST" command.  If the last argument is a function, it is used as
+   a *callback* function as for "retrlines()"; the default prints to
+   "sys.stdout".  This method returns "None".
+
+   참고:
+
+     서버가 명령을 지원한다면, "mlsd()"가 더 나은 API를 제공합니다.
+
+FTP.rename(fromname, toname)
+
+   서버의 파일 *fromname*을 *toname*으로 이름을 바꿉니다.
+
+FTP.delete(filename)
+
+   서버에서 *filename*이라는 파일을 제거합니다. 성공하면, 응답 텍스트
+   를 반환하고, 그렇지 않으면 권한 에러면 "error_perm"을, 다른 에러면
+   "error_reply"를 발생시킵니다.
+
+FTP.cwd(pathname)
+
+   서버에서 현재 디렉터리를 설정합니다.
+
+FTP.mkd(pathname)
+
+   서버에서 새 디렉터리를 만듭니다.
+
+FTP.pwd()
+
+   서버에서 현재 디렉터리의 경로명을 반환합니다.
+
+FTP.rmd(dirname)
+
+   서버에서 *dirname*이라는 디렉터리를 제거합니다.
+
+FTP.size(filename)
+
+   서버에서 *filename*이라는 파일의 크기를 요청합니다. 성공하면, 파일
+   크기가 정수로 반환되고, 그렇지 않으면 "None"이 반환됩니다. "SIZE"
+   명령은 표준화되어 있지 않지만, 많은 일반적인 서버 구현에서 지원됨에
+   유의하십시오.
+
+FTP.quit()
+
+   "QUIT" 명령을 서버로 보내고 연결을 닫습니다. 이는 연결을 닫는 "정중
+   한" 방법이지만, 서버가 "QUIT" 명령에 대해 에러로 응답하면 예외가 발
+   생할 수 있습니다. 이것은 묵시적인 "close()" 메서드 호출을 수반하며,
+   이는 후속 호출에 "FTP" 인스턴스를 쓸모없게 만듭니다 (아래를 참조하
+   십시오).
+
+FTP.close()
+
+   일방적으로 연결을 닫습니다. 이것은 이미 닫힌 연결에는 적용되지 않아
+   야 합니다, 가령 "quit()"를 성공적으로 호출한 후에. 이 호출 후 "FTP"
+   인스턴스를 더는 사용하지 않아야 합니다 ("close()"나 "quit()" 호출
+   후 다른 "login()" 메서드를 사용해서 연결을 다시 열 수 없습니다).
+
+
+FTP_TLS Objects
+===============
+
+"FTP_TLS" class inherits from "FTP", defining these additional
+objects:
+
+FTP_TLS.ssl_version
+
+   The SSL version to use (defaults to "ssl.PROTOCOL_SSLv23").
+
+FTP_TLS.auth()
+
+   "ssl_version" 어트리뷰트에 지정된 내용에 따라, TLS나 SSL을 사용하여
+   보안 제어 연결을 설정합니다.
+
+   버전 3.4에서 변경: The method now supports hostname check with
+   "ssl.SSLContext.check_hostname" and *Server Name Indication* (see
+   "ssl.HAS_SNI").
+
+FTP_TLS.ccc()
+
+   제어 채널을 일반 텍스트로 되돌립니다. 고정 포트를 열지 않고 비보안
+   FTP로 NAT을 다루는 방법을 알고 있는 방화벽을 활용하는 데 유용할 수
+   있습니다.
+
+   버전 3.3에 추가.
+
+FTP_TLS.prot_p()
+
+   보안 데이터 연결을 설정합니다.
+
+FTP_TLS.prot_c()
+
+   일반 텍스트 데이터 연결을 설정합니다.

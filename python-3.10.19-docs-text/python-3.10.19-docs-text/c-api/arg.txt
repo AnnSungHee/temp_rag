@@ -1,0 +1,675 @@
+인자 구문 분석과 값 구축
+************************
+
+These functions are useful when creating your own extensions functions
+and methods.  Additional information and examples are available in 파
+이썬 인터프리터 확장 및 내장.
+
+설명된 이러한 함수 중 처음 세 개인 "PyArg_ParseTuple()",
+"PyArg_ParseTupleAndKeywords()" 및 "PyArg_Parse()"는 모두 예상 인자에
+관한 사항을 함수에 알리는 데 사용되는 *포맷 문자열(format strings)*을
+사용합니다. 포맷 문자열은 이러한 각 함수에 대해 같은 문법을 사용합니다
+.
+
+
+인자 구문 분석
+==============
+
+포맷 문자열은 0개 이상의 "포맷 단위(format units)"로 구성됩니다. 포맷
+단위는 하나의 파이썬 객체를 설명합니다; 일반적으로 단일 문자나 괄호로
+묶인 포맷 단위 시퀀스입니다. 몇 가지 예외를 제외하고, 괄호로 묶인 시퀀
+스가 아닌 포맷 단위는 일반적으로 이러한 함수에 대한 단일 주소 인자에
+대응합니다. 다음 설명에서, 인용된(quoted) 형식은 포맷 단위입니다; (둥
+근) 괄호 안의 항목은 포맷 단위와 일치하는 파이썬 객체 형입니다; [대괄
+호] 안의 항목은 주소를 전달해야 하는 C 변수의 형입니다.
+
+
+문자열과 버퍼
+-------------
+
+이러한 포맷을 사용하면 연속적인 메모리 청크로 객체에 액세스 할 수 있습
+니다. 반환된 유니코드나 바이트열 영역에 대한 원시 저장소를 제공할 필요
+가 없습니다.
+
+달리 명시되지 않는 한, 버퍼는 NUL로 종료되지 않습니다.
+
+There are three ways strings and buffers can be converted to C:
+
+* "y*" 와 "s*" 같은 포맷은 "Py_buffer" 구조체를 채웁니다. 이는 하부 버
+  퍼를 잠가서, 호출자가 "Py_BEGIN_ALLOW_THREADS" 블록 내에서도 가변 데
+  이터의 크기가 조정되거나 파괴될 위험 없이 이후에 버퍼를 사용할 수 있
+  습니다. 결과적으로, 데이터 처리를 마친 후 (또는 모든 조기 중단의 경
+  우) "PyBuffer_Release()"를 **호출해야 합니다**.
+
+* The "es", "es#", "et" and "et#" formats allocate the result buffer.
+  **You have to call** "PyMem_Free()" after you have finished
+  processing the data (or in any early abort case).
+
+* Other formats take a "str" or a read-only *bytes-like object*, such
+  as "bytes", and provide a "const char *" pointer to its buffer. In
+  this case the buffer is "borrowed": it is managed by the
+  corresponding Python object, and shares the lifetime of this object.
+  You won't have to release any memory yourself.
+
+  To ensure that the underlying buffer may be safely borrowed, the
+  object's "PyBufferProcs.bf_releasebuffer" field must be "NULL". This
+  disallows common mutable objects such as "bytearray", but also some
+  read-only objects such as "memoryview" of "bytes".
+
+  Besides this "bf_releasebuffer" requirement, there is no check to
+  verify whether the input object is immutable (e.g. whether it would
+  honor a request for a writable buffer, or whether another thread can
+  mutate the data).
+
+참고:
+
+  For all "#" variants of formats ("s#", "y#", etc.), the macro
+  "PY_SSIZE_T_CLEAN" must be defined before including "Python.h". On
+  Python 3.9 and older, the type of the length argument is
+  "Py_ssize_t" if the "PY_SSIZE_T_CLEAN" macro is defined, or int
+  otherwise.
+
+"s" ("str") [const char *]
+   유니코드 객체를 문자열에 대한 C 포인터로 변환합니다. 기존 문자열에
+   대한 포인터는 여러분이 주소를 전달한 문자 포인터 변수에 저장됩니다.
+   C 문자열은 NUL로 종료됩니다. 파이썬 문자열은 내장된 널 코드 포인트
+   를 포함하지 않아야 합니다; 그렇다면 "ValueError" 예외가 발생합니다.
+   유니코드 객체는 "'utf-8'" 인코딩을 사용하여 C 문자열로 변환됩니다.
+   이 변환이 실패하면, "UnicodeError"가 발생합니다.
+
+   참고:
+
+     이 포맷은 *바이트열류 객체*를 받아들이지 않습니다. 파일 시스템 경
+     로를 받아들이고 이를 C 문자열로 변환하려면,
+     "PyUnicode_FSConverter()"를 *converter*로 "O&" 포맷을 사용하는 것
+     이 좋습니다.
+
+   버전 3.5에서 변경: 이전에는, 파이썬 문자열에서 내장된 널 코드 포인
+   트가 발견되면 "TypeError"가 발생했습니다.
+
+"s*" ("str" 또는 *바이트열류 객체*) [Py_buffer]
+   이 포맷은 바이트열류 객체뿐만 아니라 유니코드 객체를 받아들입니다.
+   호출자가 제공한 "Py_buffer" 구조체를 채웁니다. 이 경우 결과 C 문자
+   열은 내장된 NUL 바이트를 포함할 수 있습니다. 유니코드 객체는
+   "'utf-8'" 인코딩을 사용하여 C 문자열로 변환됩니다.
+
+"s#" ("str", 읽기 전용 *바이트열류 객체*) [const char *, "Py_ssize_t"]
+   빌린 버퍼를 제공한다는 점을 제외하면, "s*"와 같습니다. 결과는 두 개
+   의 C 변수에 저장됩니다. 첫 번째 변수는 C 문자열에 대한 포인터이고,
+   두 번째 변수는 길이입니다. 문자열은 내장 널 바이트를 포함할 수  있
+   습니다. 유니코드 객체는 "'utf-8'" 인코딩을 사용하여 C 문자열로 변환
+   됩니다.
+
+"z" ("str" 또는 "None") [const char *]
+   "s"와 비슷하지만, 파이썬 객체가 "None"일 수도 있는데, 이 경우 C 포
+   인터가 "NULL"로 설정됩니다.
+
+"z*" ("str", *바이트열류 객체* 또는 "None") [Py_buffer]
+   "s*"와 비슷하지만, 파이썬 객체는 "None"일 수도 있습니다, 이 경우
+   "Py_buffer" 구조체의 "buf" 멤버가 "NULL"로 설정됩니다.
+
+"z#" ("str", 읽기 전용 *바이트열류 객체* 또는 "None") [const char *,
+"Py_ssize_t"]
+   "s#"와 비슷하지만, 파이썬 객체는 "None"일 수도 있습니다, 이 경우 C
+   포인터가 "NULL"로 설정됩니다.
+
+"y" (읽기 전용 *바이트열류 객체*) [const char *]
+   이 포맷은 바이트열류 객체를 빌린 문자열에 대한 C 포인터로 변환합니
+   다; 유니코드 객체를 받아들이지 않습니다. 바이트열 버퍼는 내장 널 바
+   이트를 포함하지 않아야 합니다; 만약 그렇다면, "ValueError" 예외가
+   발생합니다.
+
+   버전 3.5에서 변경: 이전에는, 바이트열 버퍼에서 내장 널 바이트가 발
+   견되면 "TypeError"가 발생했습니다.
+
+"y*" (*바이트열류 객체*) [Py_buffer]
+   "s*"의 이 변형은 유니코드 객체가 아니라 바이트열류 객체만 받아들입
+   니다. **바이너리 데이터를 받아들이는 권장 방법입니다.**
+
+"y#" (읽기 전용 *바이트열류 객체*) [const char *, "Py_ssize_t"]
+   "s#"의 이 변형은 유니코드 객체가 아니라 바이트열류 객체만 받아들입
+   니다.
+
+"S" ("bytes") [PyBytesObject *]
+   변환을 시도하지 않고, 파이썬 객체가 "bytes" 객체일 것을 요구합니다.
+   객체가 바이트열 객체가 아니면 "TypeError"를 발생시킵니다. C 변수는
+   "PyObject*"로 선언될 수도 있습니다.
+
+"Y" ("bytearray") [PyByteArrayObject *]
+   변환을 시도하지 않고, 파이썬 객체가 "bytearray" 객체일 것을 요구합
+   니다. 객체가 "bytearray" 객체가 아니면 "TypeError"를 발생시킵니다.
+   C 변수는 "PyObject*"로 선언될 수도 있습니다.
+
+"u" ("str") [const Py_UNICODE *]
+   Convert a Python Unicode object to a C pointer to a NUL-terminated
+   buffer of Unicode characters.  You must pass the address of a
+   "Py_UNICODE" pointer variable, which will be filled with the
+   pointer to an existing Unicode buffer.  Please note that the width
+   of a "Py_UNICODE" character depends on compilation options (it is
+   either 16 or 32 bits). The Python string must not contain embedded
+   null code points; if it does, a "ValueError" exception is raised.
+
+   버전 3.5에서 변경: 이전에는, 파이썬 문자열에서 내장된 널 코드 포인
+   트가 발견되면 "TypeError"가 발생했습니다.
+
+   Deprecated since version 3.3, will be removed in version 3.12: Part
+   of the old-style "Py_UNICODE" API; please migrate to using
+   "PyUnicode_AsWideCharString()".
+
+"u#" ("str") [const Py_UNICODE *, "Py_ssize_t"]
+   This variant on "u" stores into two C variables, the first one a
+   pointer to a Unicode data buffer, the second one its length.  This
+   variant allows null code points.
+
+   Deprecated since version 3.3, will be removed in version 3.12: Part
+   of the old-style "Py_UNICODE" API; please migrate to using
+   "PyUnicode_AsWideCharString()".
+
+"Z" ("str" or "None") [const Py_UNICODE *]
+   Like "u", but the Python object may also be "None", in which case
+   the "Py_UNICODE" pointer is set to "NULL".
+
+   Deprecated since version 3.3, will be removed in version 3.12: Part
+   of the old-style "Py_UNICODE" API; please migrate to using
+   "PyUnicode_AsWideCharString()".
+
+"Z#" ("str" or "None") [const Py_UNICODE *, "Py_ssize_t"]
+   Like "u#", but the Python object may also be "None", in which case
+   the "Py_UNICODE" pointer is set to "NULL".
+
+   Deprecated since version 3.3, will be removed in version 3.12: Part
+   of the old-style "Py_UNICODE" API; please migrate to using
+   "PyUnicode_AsWideCharString()".
+
+"U" ("str") [PyObject *]
+   변환을 시도하지 않고, 파이썬 객체가 유니코드 객체일 것을 요구합니다
+   . 객체가 유니코드 객체가 아니면 "TypeError"를 발생시킵니다. C 변수
+   는 "PyObject*"로 선언될 수도 있습니다.
+
+"w*" (읽기-쓰기 *바이트열류 객체*) [Py_buffer]
+   이 포맷은 읽기-쓰기 버퍼 인터페이스를 구현하는 모든 객체를 허용합니
+   다. 호출자가 제공한 "Py_buffer" 구조체를 채웁니다. 버퍼에는 내장 널
+   바이트가 포함될 수 있습니다. 호출자는 버퍼로 할 일을 마치면
+   "PyBuffer_Release()"를 호출해야 합니다.
+
+"es" ("str") [const char *encoding, char **buffer]
+   "s"의 이 변형은 유니코드를 문자 버퍼로 인코딩하는 데 사용됩니다. 내
+   장 NUL 바이트가 포함되지 않은 인코딩된 데이터에 대해서만 작동합니다
+   .
+
+   이 포맷에는 두 개의 인자가 필요합니다. 첫 번째는 입력으로만 사용되
+   며, 인코딩 이름을 가리키는 NUL 종료 문자열로 "const char*"이거나,
+   "'utf-8'" 인코딩이 사용되도록 하는 "NULL"이어야 합니다. 명명된 인코
+   딩이 파이썬에 알려지지 않았으면 예외가 발생합니다. 두 번째 인자는
+   "char**"여야 합니다; 참조하는 포인터의 값은 인자 텍스트의 내용이 있
+   는 버퍼로 설정됩니다. 텍스트는 첫 번째 인자에 지정된 인코딩으로 인
+   코딩됩니다.
+
+   "PyArg_ParseTuple()"은 필요한 크기의 버퍼를 할당하고, 인코딩된 데이
+   터를 이 버퍼에 복사하고 새로 할당된 스토리지를 참조하도록 **buffer*
+   를 조정합니다. 호출자는 사용 후에 할당된 버퍼를 해제하기 위해
+   "PyMem_Free()"를 호출해야 합니다.
+
+"et" ("str", "bytes" 또는 "bytearray") [const char *encoding, char
+**buffer]
+   바이트 문자열 객체를 다시 코딩하지 않고 통과시킨다는 점을 제외하면
+   "es"와 같습니다. 대신, 구현은 바이트 문자열 객체가 매개 변수로 전달
+   된 인코딩을 사용한다고 가정합니다.
+
+"es#" ("str") [const char *encoding, char **buffer, "Py_ssize_t"
+*buffer_length]
+   "s#"의 이 변형은 유니코드를 문자 버퍼로 인코딩하는 데 사용됩니다.
+   "es" 포맷과 달리, 이 변형은 NUL 문자를 포함하는 입력 데이터를 허용
+   합니다.
+
+   세 가지 인자가 필요합니다. 첫 번째는 입력으로만 사용되며, 인코딩 이
+   름을 가리키는 NUL 종료 문자열로 "const char*"이거나, "'utf-8'" 인코
+   딩이 사용되도록 하는 "NULL"이어야 합니다. 명명된 인코딩이 파이썬에
+   알려지지 않았으면 예외가 발생합니다. 두 번째 인자는 "char**"여야 합
+   니다; 참조하는 포인터의 값은 인자 텍스트의 내용이 있는 버퍼로 설정
+   됩니다. 텍스트는 첫 번째 인자에 지정된 인코딩으로 인코딩됩니다. 세
+   번째 인자는 정수에 대한 포인터여야 합니다; 참조된 정수는 출력 버퍼
+   의 바이트 수로 설정됩니다.
+
+   두 가지 작동 모드가 있습니다:
+
+   **buffer*가 "NULL" 포인터를 가리키면, 함수는 필요한 크기의 버퍼를
+   할당하고, 이 버퍼로 인코딩된 데이터를 복사하고 **buffer*를 새로 할
+   당된 스토리지를 참조하도록 설정합니다. 호출자는 사용 후 할당된 버퍼
+   를 해제하기 위해 "PyMem_Free()"를 호출해야 합니다.
+
+   **buffer*가 "NULL"이 아닌 포인터를 가리키면 (이미 할당된 버퍼),
+   "PyArg_ParseTuple()"은 이 위치를 버퍼로 사용하고 **buffer_length*의
+   초깃값을 버퍼 크기로 해석합니다. 그런 다음 인코딩된 데이터를 버퍼에
+   복사하고 NUL 종료합니다. 버퍼가 충분히 크지 않으면, "ValueError"가
+   설정됩니다.
+
+   두 경우 모두, **buffer_length*는 후행 NUL 바이트를 제외한 인코딩된
+   데이터의 길이로 설정됩니다.
+
+"et#" ("str", "bytes" 또는 "bytearray") [const char *encoding, char
+**buffer, "Py_ssize_t" *buffer_length]
+   바이트 문자열 객체를 다시 코딩하지 않고 통과시킨다는 점을 제외하면
+   "es#"와 같습니다. 대신, 구현은 바이트 문자열 객체가 매개 변수로 전
+   달된 인코딩을 사용한다고 가정합니다.
+
+
+숫자
+----
+
+"b" ("int") [unsigned char]
+   Convert a nonnegative Python integer to an unsigned tiny int,
+   stored in a C "unsigned char".
+
+"B" ("int") [unsigned char]
+   Convert a Python integer to a tiny int without overflow checking,
+   stored in a C "unsigned char".
+
+"h" ("int") [short int]
+   파이썬 정수를 C "short int"로 변환합니다.
+
+"H" ("int") [unsigned short int]
+   오버플로 검사 없이, 파이썬 정수를 C "unsigned short int"로 변환합니
+   다.
+
+"i" ("int") [int]
+   파이썬 정수를 일반 C "int"로 변환합니다.
+
+"I" ("int") [unsigned int]
+   오버플로 검사 없이, 파이썬 정수를 C "unsigned int"로 변환합니다.
+
+"l" ("int") [long int]
+   파이썬 정수를 C "long int"로 변환합니다.
+
+"k" ("int") [unsigned long]
+   오버플로 검사 없이 파이썬 정수를 C "unsigned long"으로 변환합니다.
+
+"L" ("int") [long long]
+   파이썬 정수를 C "long long"으로 변환합니다.
+
+"K" ("int") [unsigned long long]
+   오버플로 검사 없이 파이썬 정수를 C "unsigned long long"으로 변환합
+   니다.
+
+"n" ("int") ["Py_ssize_t"]
+   파이썬 정수를 C "Py_ssize_t"로 변환합니다.
+
+"c" (길이 1의 "bytes" 또는 "bytearray") [char]
+   길이가 1인 "bytes"나 "bytearray" 객체로 표시된, 파이썬 바이트를 C
+   "char"로 변환합니다.
+
+   버전 3.3에서 변경: "bytearray" 객체를 허용합니다.
+
+"C" (길이 1의 "str") [int]
+   길이가 1인 "str" 객체로 표시된, 파이썬 문자를 C "int"로 변환합니다.
+
+"f" ("float") [float]
+   Convert a Python floating point number to a C "float".
+
+"d" ("float") [double]
+   Convert a Python floating point number to a C "double".
+
+"D" ("complex") [Py_complex]
+   파이썬 복소수를 C "Py_complex" 구조체로 변환합니다.
+
+
+기타 객체
+---------
+
+"O" (object) [PyObject *]
+   C 객체 포인터에 파이썬 객체를 (변환 없이) 저장합니다. 따라서 C 프로
+   그램은 전달된 실제 객체를 받습니다. 객체에 대한 새로운 *강한 참조*
+   는 생성되지 않습니다 (즉, 객체의 참조 횟수는 증가하지 않습니다). 저
+   장된 포인터는 "NULL"이 아닙니다.
+
+"O!" (object) [*typeobject*, PyObject *]
+   C 객체 포인터에 파이썬 객체를 저장합니다. 이것은 "O"와 유사하지만,
+   두 개의 C 인자를 취합니다: 첫 번째는 파이썬 형 객체의 주소이고, 두
+   번째는 객체 포인터가 저장되는 ("PyObject*" 형의) C 변수의 주소입니
+   다. 파이썬 객체가 필요한 형이 아니면, "TypeError"가 발생합니다.
+
+"O&" (object) [*converter*, *anything*]
+   *converter* 함수를 통해 파이썬 객체를 C 변수로 변환합니다. 두 개의
+   인자를 취합니다: 첫 번째는 함수이고, 두 번째는 "void*"로 변환된, (
+   임의의 형의) C 변수의 주소입니다. *converter* 함수는 다음과 같이 호
+   출됩니다:
+
+      status = converter(object, address);
+
+   여기서 *object*는 변환할 파이썬 객체이고 *address*는 "PyArg_Parse*"
+   함수에 전달된 "void*" 인자입니다. 반환된 *status*는 성공적인 변환의
+   경우 "1"이고 변환에 실패한 경우 "0"이어야 합니다. 변환이 실패하면,
+   *converter* 함수는 예외를 발생시키고 *address*의 내용을 수정하지 않
+   은 상태로 두어야 합니다.
+
+   If the *converter* returns "Py_CLEANUP_SUPPORTED", it may get
+   called a second time if the argument parsing eventually fails,
+   giving the converter a chance to release any memory that it had
+   already allocated. In this second call, the *object* parameter will
+   be "NULL"; *address* will have the same value as in the original
+   call.
+
+   버전 3.1에서 변경: "Py_CLEANUP_SUPPORTED" was added.
+
+"p" ("bool") [int]
+   전달된 값의 논리값을 테스트(불리언 **p**redicate)하고 결과를 동등한
+   C 참/거짓 정숫값으로 변환합니다. 표현식이 참이면 int를 "1"로, 거짓
+   이면 "0"으로 설정합니다. 모든 유효한 파이썬 값을 허용합니다. 파이썬
+   이 논리값을 테스트하는 방법에 대한 자세한 내용은 논리값 검사를 참조
+   하십시오.
+
+   버전 3.3에 추가.
+
+"(items)" ("tuple") [*matching-items*]
+   객체는 길이가 *items*에 있는 포맷 단위의 수인 파이썬 시퀀스여야 합
+   니다. C 인자들은 *items*의 개별 포맷 단위에 대응해야 합니다. 시퀀스
+   의 포맷 단위는 중첩될 수 있습니다.
+
+It is possible to pass "long" integers (integers whose value exceeds
+the platform's "LONG_MAX") however no proper range checking is done
+--- the most significant bits are silently truncated when the
+receiving field is too small to receive the value (actually, the
+semantics are inherited from downcasts in C --- your mileage may
+vary).
+
+몇 가지 다른 문자는 포맷 문자열에서 의미가 있습니다. 중첩된 괄호 안에
+서는 나타날 수 없습니다. 그들은:
+
+"|"
+   파이썬 인자 리스트의 나머지 인자가 선택 사항임을 나타냅니다. 선택적
+   인자에 해당하는 C 변수는 기본값으로 초기화되어야 합니다 --- 선택적
+   인자가 지정되지 않을 때, "PyArg_ParseTuple()"은 해당 C 변수의 내용
+   을 건드리지 않습니다.
+
+"$"
+   "PyArg_ParseTupleAndKeywords()" 전용: 파이썬 인자 리스트의 나머지
+   인자가 키워드 전용임을 나타냅니다. 현재, 모든 키워드 전용 인자는 선
+   택적 인자여야 하므로, "|"는 항상 포맷 문자열에서 "$" 앞에 지정되어
+   야 합니다.
+
+   버전 3.3에 추가.
+
+":"
+   포맷 단위 리스트는 여기에서 끝납니다; 콜론 뒤의 문자열은 에러 메시
+   지에서 함수 이름으로 사용됩니다 ("PyArg_ParseTuple()"이 발생시키는
+   예외의 "연관된 값").
+
+";"
+   포맷 단위 리스트는 여기에서 끝납니다; 세미콜론 뒤의 문자열은 기본
+   에러 메시지의 에러 메시지 *대신* 에러 메시지로 사용됩니다. ":"와
+   ";"는 서로를 배제합니다.
+
+호출자에게 제공되는 모든 파이썬 객체 참조는 *빌려온(borrowed)* 참조임
+에 유의하십시오; 해제하지 마십시오 (즉, 참조 횟수를 줄이지 마십시오)!
+
+이러한 함수에 전달되는 추가 인자는 포맷 문자열에 의해 형이 결정되는 변
+수의 주소여야 합니다; 이들은 입력 튜플의 값을 저장하는 데 사용됩니다.
+위의 포맷 단위 리스트에서 설명된 대로, 이러한 매개 변수가 입력값으로
+사용되는 몇 가지 경우가 있습니다; 이 경우 해당 포맷 단위에 대해 지정된
+것과 일치해야 합니다.
+
+변환이 성공하려면, *arg* 객체가 포맷과 일치해야 하며 포맷이 소진되어야
+합니다. 성공하면, "PyArg_Parse*" 함수는 참을 반환하고, 그렇지 않으면
+거짓을 반환하고 적절한 예외를 발생시킵니다. 포맷 단위 중 하나의 변환
+실패로 인해 "PyArg_Parse*" 함수가 실패하면, 해당 주소의 변수와 그 뒤에
+오는 포맷 단위는 건드리지 않습니다.
+
+
+API 함수
+--------
+
+int PyArg_ParseTuple(PyObject *args, const char *format, ...)
+    * Part of the Stable ABI.*
+
+   위치 매개 변수만 지역 변수로 취하는 함수의 매개 변수를 구문 분석합
+   니다. 성공하면 참을 반환합니다; 실패하면, 거짓을 반환하고 적절한 예
+   외를 발생시킵니다.
+
+int PyArg_VaParse(PyObject *args, const char *format, va_list vargs)
+    * Part of the Stable ABI.*
+
+   가변 개수의 인자가 아닌 va_list를 받아들인다는 점을 제외하면,
+   "PyArg_ParseTuple()"과 동일합니다.
+
+int PyArg_ParseTupleAndKeywords(PyObject *args, PyObject *kw, const char *format, char *keywords[], ...)
+    * Part of the Stable ABI.*
+
+   Parse the parameters of a function that takes both positional and
+   keyword parameters into local variables.  The *keywords* argument
+   is a "NULL"-terminated array of keyword parameter names.  Empty
+   names denote positional-only parameters. Returns true on success;
+   on failure, it returns false and raises the appropriate exception.
+
+   버전 3.6에서 변경: 위치-전용 매개 변수에 대한 지원이 추가되었습니다
+   .
+
+int PyArg_VaParseTupleAndKeywords(PyObject *args, PyObject *kw, const char *format, char *keywords[], va_list vargs)
+    * Part of the Stable ABI.*
+
+   가변 개수의 인자가 아닌 va_list를 받아들인다는 점을 제외하면,
+   "PyArg_ParseTupleAndKeywords()" 와 동일합니다.
+
+int PyArg_ValidateKeywordArguments(PyObject*)
+    * Part of the Stable ABI.*
+
+   키워드 인자 딕셔너리의 키가 문자열인지 확인합니다.
+   "PyArg_ParseTupleAndKeywords()" 가 사용되지 않는 경우에만 필요합니
+   다, 여기서는 이미 이 검사를 수행하기 때문입니다.
+
+   버전 3.2에 추가.
+
+int PyArg_Parse(PyObject *args, const char *format, ...)
+    * Part of the Stable ABI.*
+
+   Function used to deconstruct the argument lists of "old-style"
+   functions --- these are functions which use the "METH_OLDARGS"
+   parameter parsing method, which has been removed in Python 3.  This
+   is not recommended for use in parameter parsing in new code, and
+   most code in the standard interpreter has been modified to no
+   longer use this for that purpose.  It does remain a convenient way
+   to decompose other tuples, however, and may continue to be used for
+   that purpose.
+
+int PyArg_UnpackTuple(PyObject *args, const char *name, Py_ssize_t min, Py_ssize_t max, ...)
+    * Part of the Stable ABI.*
+
+   A simpler form of parameter retrieval which does not use a format
+   string to specify the types of the arguments.  Functions which use
+   this method to retrieve their parameters should be declared as
+   "METH_VARARGS" in function or method tables.  The tuple containing
+   the actual parameters should be passed as *args*; it must actually
+   be a tuple.  The length of the tuple must be at least *min* and no
+   more than *max*; *min* and *max* may be equal.  Additional
+   arguments must be passed to the function, each of which should be a
+   pointer to a "PyObject*" variable; these will be filled in with the
+   values from *args*; they will contain *borrowed references*. The
+   variables which correspond to optional parameters not given by
+   *args* will not be filled in; these should be initialized by the
+   caller. This function returns true on success and false if *args*
+   is not a tuple or contains the wrong number of elements; an
+   exception will be set if there was a failure.
+
+   This is an example of the use of this function, taken from the
+   sources for the "_weakref" helper module for weak references:
+
+      static PyObject *
+      weakref_ref(PyObject *self, PyObject *args)
+      {
+          PyObject *object;
+          PyObject *callback = NULL;
+          PyObject *result = NULL;
+
+          if (PyArg_UnpackTuple(args, "ref", 1, 2, &object, &callback)) {
+              result = PyWeakref_NewRef(object, callback);
+          }
+          return result;
+      }
+
+   이 예제에서 "PyArg_UnpackTuple()"에 대한 호출은
+   "PyArg_ParseTuple()"에 대한 다음 호출과 전적으로 동등합니다:
+
+      PyArg_ParseTuple(args, "O|O:ref", &object, &callback)
+
+
+값 구축
+=======
+
+PyObject *Py_BuildValue(const char *format, ...)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   "PyArg_Parse*" 함수 계열에서 받아들이는 것과 유사한 포맷 문자열과
+   값 시퀀스를 기반으로 새 값을 만듭니다. 값을 반환하거나 에러가 발생
+   하면 "NULL"을 반환합니다; "NULL"이 반환되면 예외가 발생합니다.
+
+   "Py_BuildValue()"는 항상 튜플을 구축하지는 않습니다. 포맷 문자열에
+   둘 이상의 포맷 단위가 포함되었을 때만 튜플을 구축합니다. 포맷 문자
+   열이 비어 있으면, "None"을 반환합니다; 정확히 하나의 포맷 단위를 포
+   함하면, 해당 포맷 단위가 기술하는 객체가 무엇이건 반환합니다. 크기
+   가 0이나 1인 튜플을 반환하도록 하려면, 포맷 문자열을 괄호로 묶으십
+   시오.
+
+   "s"와 "s#" 포맷의 경우처럼, 메모리 버퍼가 데이터를 빌드 객체에 제공
+   하기 위해 매개 변수로 전달될 때, 필요한 데이터가 복사됩니다. 호출자
+   가 제공하는 버퍼는 "Py_BuildValue()"가 만든 객체에 의해 참조되지 않
+   습니다. 즉, 여러분의 코드가 "malloc()"을 호출하고 할당된 메모리를
+   "Py_BuildValue()"에 전달하면, 인단 "Py_BuildValue()"가 반환되면 여
+   러분이 코드가 해당 메모리에 대해 "free()"를 호출해야 합니다.
+
+   다음 설명에서, 인용된 형식은 포맷 단위입니다; (둥근) 괄호 안의 항목
+   은 포맷 단위가 반환할 파이썬 객체 형입니다; [대괄호] 안의 항목은 전
+   달할 C 값의 형입니다.
+
+   문자 스페이스, 탭, 콜론 및 쉼표는 포맷 문자열에서 무시됩니다 (하지
+   만 "s#"와 같은 포맷 단위 내에서는 아닙니다). 이것은 긴 포맷 문자열
+   을 좀 더 읽기 쉽게 만드는 데 사용할 수 있습니다.
+
+   "s" ("str" 또는 "None") [const char *]
+      "'utf-8'" 인코딩을 사용하여 널-종료 C 문자열을 파이썬 "str" 객체
+      로 변환합니다. C 문자열 포인터가 "NULL"이면, "None"이 사용됩니다
+      .
+
+   "s#" ("str" 또는 "None") [const char *, "Py_ssize_t"]
+      "'utf-8'" 인코딩을 사용하여 C 문자열과 그 길이를 파이썬 "str" 객
+      체로 변환합니다. C 문자열 포인터가 "NULL"이면, 길이가 무시되고
+      "None"이 반환됩니다.
+
+   "y" ("bytes") [const char *]
+      이것은 C 문자열을 파이썬 "bytes" 객체로 변환합니다. C 문자열 포
+      인터가 "NULL"이면, "None"이 반환됩니다.
+
+   "y#" ("bytes") [const char *, "Py_ssize_t"]
+      이것은 C 문자열과 그 길이를 파이썬 객체로 변환합니다. C 문자열
+      포인터가 "NULL"이면, "None"이 반환됩니다.
+
+   "z" ("str" 또는 "None") [const char *]
+      "s"와 같습니다.
+
+   "z#" ("str" 또는 "None") [const char *, "Py_ssize_t"]
+      "s#"과 같습니다.
+
+   "u" ("str") [const wchar_t *]
+      Convert a null-terminated "wchar_t" buffer of Unicode (UTF-16 or
+      UCS-4) data to a Python Unicode object.  If the Unicode buffer
+      pointer is "NULL", "None" is returned.
+
+   "u#" ("str") [const wchar_t *, "Py_ssize_t"]
+      유니코드 (UTF-16 또는 UCS-4) 데이터 버퍼와 그 길이를 파이썬 유니
+      코드 객체로 변환합니다. 유니코드 버퍼 포인터가 "NULL"이면, 길이
+      가 무시되고 "None"이 반환됩니다.
+
+   "U" ("str" 또는 "None") [const char *]
+      "s"와 같습니다.
+
+   "U#" ("str" 또는 "None") [const char *, "Py_ssize_t"]
+      "s#"과 같습니다.
+
+   "i" ("int") [int]
+      일반 C "int"를 파이썬 정수 객체로 변환합니다.
+
+   "b" ("int") [char]
+      일반 C "char"을 파이썬 정수 객체로 변환합니다.
+
+   "h" ("int") [short int]
+      일반 C "short int"를 파이썬 정수 객체로 변환합니다.
+
+   "l" ("int") [long int]
+      C "long int"를 파이썬 정수 객체로 변환합니다.
+
+   "B" ("int") [unsigned char]
+      C "unsigned char"을 파이썬 정수 객체로 변환합니다.
+
+   "H" ("int") [unsigned short int]
+      C "unsigned short int"를 파이썬 정수 객체로 변환합니다.
+
+   "I" ("int") [unsigned int]
+      C "unsigned int"를 파이썬 정수 객체로 변환합니다.
+
+   "k" ("int") [unsigned long]
+      C "unsigned long"을 파이썬 정수 객체로 변환합니다.
+
+   "L" ("int") [long long]
+      C "long long"을 파이썬 정수 객체로 변환합니다.
+
+   "K" ("int") [unsigned long long]
+      C "unsigned long long"을 파이썬 정수 객체로 변환합니다.
+
+   "n" ("int") ["Py_ssize_t"]
+      C "Py_ssize_t"를 파이썬 정수로 변환합니다.
+
+   "c" (길이 1의 "bytes") [char]
+      바이트를 나타내는 C "int"를 길이 1의 파이썬 "bytes" 객체로 변환
+      합니다.
+
+   "C" (길이 1의 "str") [int]
+      문자를 나타내는 C "int"를 길이 1의 파이썬 "str" 객체로 변환합니
+      다.
+
+   "d" ("float") [double]
+      Convert a C "double" to a Python floating point number.
+
+   "f" ("float") [float]
+      Convert a C "float" to a Python floating point number.
+
+   "D" ("complex") [Py_complex *]
+      C "Py_complex" 구조체를 파이썬 복소수로 변환합니다.
+
+   "O" (object) [PyObject *]
+      파이썬 객체를 그대로 전달하지만, 그 객체에 새로운 *강한 참조*를
+      만듭니다 (즉, 참조 횟수가 1 증가합니다). 전달된 객체가 "NULL" 포
+      인터면, 인자를 생성하는 호출이 에러를 발견하고 예외를 설정했기
+      때문으로 간주합니다. 따라서, "Py_BuildValue()"는 "NULL"을 반환하
+      지만, 예외를 발생시키지 않습니다. 아직 예외가 발생하지 않았으면,
+      "SystemError"가 설정됩니다.
+
+   "S" (object) [PyObject *]
+      "O"와 같습니다.
+
+   "N" (object) [PyObject *]
+      "O"와 같지만, 새로운 *강한 참조*를 만들지 않습니다. 인자 리스트
+      에서 객체 생성자를 호출하여 객체를 만들 때 유용합니다.
+
+   "O&" (object) [*converter*, *anything*]
+      *converter* 함수를 통해 *anything*을 파이썬 객체로 변환합니다.
+      함수는 인자로 *anything*("void*"와 호환되어야 합니다)을 사용하여
+      호출되며 "새" 파이썬 객체를 반환하거나, 에러가 발생하면 "NULL"을
+      반환해야 합니다.
+
+   "(items)" ("tuple") [*matching-items*]
+      C값의 시퀀스를 항목 수가 같은 파이썬 튜플로 변환합니다.
+
+   "[items]" ("list") [*matching-items*]
+      C값의 시퀀스를 항목 수가 같은 파이썬 리스트로 변환합니다.
+
+   "{items}" ("dict") [*matching-items*]
+      C값의 시퀀스를 파이썬 딕셔너리로 변환합니다. 연속된 C 값의 각 쌍
+      은 딕셔너리에 하나의 항목을 추가하여, 각각 키와 값으로 사용됩니
+      다.
+
+   포맷 문자열에 에러가 있으면, "SystemError" 예외가 설정되고 "NULL"이
+   반환됩니다.
+
+PyObject *Py_VaBuildValue(const char *format, va_list vargs)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   가변 개수의 인자가 아닌 va_list를 받아들인다는 점을 제외하면,
+   "Py_BuildValue()"와 동일합니다.

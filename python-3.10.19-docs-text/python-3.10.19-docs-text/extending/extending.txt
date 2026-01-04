@@ -1,0 +1,1267 @@
+1. C나 C++로 파이썬 확장하기
+****************************
+
+C로 프로그래밍하는 방법을 알고 있다면, 파이썬에 새로운 내장 모듈을 추
+가하기는 매우 쉽습니다. 그러한 *확장 모듈(extension modules)*은 파이썬
+에서 직접 할 수 없는 두 가지 일을 할 수 있습니다: 새로운 내장 객체 형
+을 구현할 수 있고, C 라이브러리 함수와 시스템 호출을 호출할 수 있습니
+다.
+
+확장을 지원하기 위해, 파이썬 API(Application Programmers Interface)는
+파이썬 런타임 시스템의 대부분 측면에 액세스 할 수 있는 함수, 매크로 및
+변수 집합을 정의합니다. 파이썬 API는 헤더 ""Python.h""를 포함해 C 소스
+파일에 통합됩니다.
+
+확장 모듈의 컴파일은 시스템 설정뿐만 아니라 의도하는 용도에 따라 다릅
+니다; 자세한 내용은 다음 장에서 설명합니다.
+
+참고:
+
+  C 확장 인터페이스는 CPython에만 해당하며, 확장 모듈은 다른 파이썬 구
+  현에서는 작동하지 않습니다. 많은 경우에, C 확장을 작성하지 않고 다른
+  구현으로의 이식성을 유지하는 것이 가능합니다. 예를 들어, 사용 사례가
+  C 라이브러리 함수나 시스템 호출을 호출하는 것이라면, 사용자 정의 C
+  코드를 작성하는 대신 "ctypes" 모듈이나 cffi 라이브러리 사용을 고려해
+  야 합니다. 이 모듈을 사용하면 C 코드와 인터페이스 하기 위한 파이썬
+  코드를 작성할 수 있으며 C 확장 모듈을 작성하고 컴파일하는 것보다 파
+  이썬 구현 간에 이식성이 더 좋습니다.
+
+
+1.1. 간단한 예
+==============
+
+"spam"(몬티 파이썬 팬들이 가장 좋아하는 음식...)이라는 확장 모듈을 만
+듭시다, 그리고 C 라이브러리 함수 "system()"에 대한 파이썬 인터페이스를
+만들고 싶다고 합시다 [1]. 이 함수는 널 종료 문자열을 인자로 취하고 정
+수를 반환합니다. 우리는 이 함수를 다음과 같이 파이썬에서 호출할 수 있
+기를 원합니다:
+
+   >>> import spam
+   >>> status = spam.system("ls -l")
+
+"spammodule.c" 파일을 만드는 것으로 시작하십시오. (역사적으로, 모듈을
+"spam"이라고 하면, 해당 구현을 포함하는 C 파일은 "spammodule.c"라고 합
+니다; 모듈 이름이 "spammify"처럼 매우 길면, 모듈 이름은 그냥
+"spammify.c"일 수 있습니다.)
+
+파일의 처음 두 줄은 다음과 같습니다:
+
+   #define PY_SSIZE_T_CLEAN
+   #include <Python.h>
+
+이것은 파이썬 API를 가져옵니다 (원한다면 모듈의 목적과 저작권 표시를
+설명하는 주석을 추가할 수 있습니다).
+
+참고:
+
+  파이썬이 일부 시스템의 표준 헤더에 영향을 미치는 일부 전처리기 정의
+  를 정의할 수 있어서, 표준 헤더가 포함되기 전에 *반드시* "Python.h"를
+  포함해야 합니다.It is recommended to always define
+  "PY_SSIZE_T_CLEAN" before including "Python.h".  See 확장 함수에서
+  매개 변수 추출하기 for a description of this macro.
+
+"Python.h"가 정의한 사용자가 볼 수 있는 기호는 표준 헤더 파일에 정의된
+기호를 제외하고 모두 "Py"나 "PY" 접두사를 갖습니다. 편의를 위해, 그리
+고 파이썬 인터프리터가 광범위하게 사용하기 때문에, ""Python.h""는 몇
+가지 표준 헤더 파일을 포함합니다: "<stdio.h>", "<string.h>",
+"<errno.h>" 및 "<stdlib.h>". 후자의 헤더 파일이 시스템에 없으면, 함수
+"malloc()", "free()" 및 "realloc()"을 직접 선언합니다.
+
+다음으로 모듈 파일에 추가하는 것은 파이썬 표현식 "spam.system(string)"
+이 평가될 때 호출될 C 함수입니다 (이것이 어떻게 호출되는지 곧 보게 될
+것입니다):
+
+   static PyObject *
+   spam_system(PyObject *self, PyObject *args)
+   {
+       const char *command;
+       int sts;
+
+       if (!PyArg_ParseTuple(args, "s", &command))
+           return NULL;
+       sts = system(command);
+       return PyLong_FromLong(sts);
+   }
+
+파이썬의 인자 목록(예를 들어, 단일 표현식 ""ls -l"")에서 C 함수로 전달
+되는 인자로의 간단한 변환이 있습니다. C 함수에는 항상 *self*와 *args*
+라는 두 개의 인자가 있습니다.
+
+*self* 인자는 모듈 수준 함수에서 모듈 객체를 가리킵니다; 메서드의 경우
+객체 인스턴스를 가리킵니다.
+
+*args* 인자는 인자를 포함하는 파이썬 튜플 객체에 대한 포인터입니다. 튜
+플의 각 항목은 호출의 인자 목록에 있는 인자에 해당합니다. 인자는 파이
+썬 객체입니다 --- C 함수에서 무언가를 수행하려면 이들을 C 값으로 변환
+해야 합니다. 파이썬 API의 "PyArg_ParseTuple()" 함수는 인자 형을 확인하
+고 C 값으로 변환합니다. 템플릿 문자열을 사용하여 필요한 인자 형과 변환
+된 값을 저장할 C 변수 형을 결정합니다. 나중에 이것에 대해 자세히 알아
+보겠습니다.
+
+모든 인자의 형이 올바르고 해당 구성 요소가 주소가 전달된 변수에 저장되
+면, "PyArg_ParseTuple()"은 참(0이 아닙니다)을 반환합니다. 유효하지 않
+은 인자 목록이 전달되면 거짓(0)을 반환합니다. 후자의 경우 호출 함수가
+(예에서 보듯이) "NULL"을 즉시 반환할 수 있도록 적절한 예외를 발생시킵
+니다.
+
+
+1.2. 막간극: 에러와 예외
+========================
+
+파이썬 인터프리터 전체에서 중요한 규칙은 다음과 같습니다: 함수가 실패
+하면 예외 조건을 설정하고 에러값(보통 "-1"이나 "NULL" 포인터)을 반환해
+야 합니다. 예외 정보는 인터프리터의 스레드 상태의 세 멤버에 저장됩니다
+. 예외가 발생하지 않았으면 이들은 "NULL"입니다. 그렇지 않으면,
+"sys.exc_info()"가 반환하는 파이썬 튜플 멤버의 C 동등 물입니다. 이들은
+예외 형, 예외 인스턴스, 트레이스백 객체입니다. 에러가 어떻게 전달되는
+지 이해하기 위해서는 이들에 대해 아는 것이 중요합니다.
+
+파이썬 API는 다양한 형의 예외를 설정하기 위한 여러 함수를 정의합니다.
+
+가장 일반적인 것은 "PyErr_SetString()"입니다. 인자는 예외 객체와 C 문
+자열입니다. 예외 객체는 보통 "PyExc_ZeroDivisionError"와 같은 미리 정
+의된 객체입니다. C 문자열은 에러의 원인을 나타내며 파이썬 문자열 객체
+로 변환되어 예외의 "연관된 값"으로 저장됩니다.
+
+또 다른 유용한 함수는 "PyErr_SetFromErrno()"입니다. 이 함수는 예외 인
+자만 취하고 전역 변수 "errno"를 검사하여 관련 값을 구성합니다. 가장 일
+반적인 함수는 "PyErr_SetObject()"이며, 예외와 관련 값인 두 개의 객체
+인자를 취합니다. 이러한 함수들에 전달되는 객체를 "Py_INCREF()" 할 필요
+는 없습니다.
+
+"PyErr_Occurred()"로 예외가 설정되어 있는지 비 파괴적으로 검사할 수 있
+습니다. 현재 예외 객체나 예외가 발생하지 않았으면 "NULL"을 반환합니다.
+반환 값에서 알 수 있어야 해서 일반적으로 함수 호출에서 에러가 발생했는
+지 확인하기 위해 "PyErr_Occurred()"를 호출할 필요는 없습니다.
+
+다른 함수 *g*를 호출하는 함수 *f*가 *g*의 실패를 감지할 때, *f* 자체가
+에러값(보통 "NULL"이나 "-1")을 반환해야 합니다. "PyErr_*" 함수 중 하나
+를 호출하지 *않아야* 합니다 --- *g*에 의해 이미 호출되었습니다. 그러면
+*f*의 호출자도 역시 "PyErr_*" 호출 *없이*, *자신의* 호출자에게 에러 표
+시를 반환하고, 이런 식으로 계속된다고 가정합니다 --- 에러를 가장 먼저
+감지한 함수에 의해 에러의 가장 자세한 원인이 이미 보고되었습니다. 일단
+에러가 파이썬 인터프리터의 메인 루프에 도달하면, 현재 실행 중인 파이썬
+코드를 중단하고 파이썬 프로그래머가 지정한 예외 처리기를 찾으려고 시도
+합니다.
+
+(모듈이 실제로 다른 "PyErr_*" 함수를 호출하여 더 자세한 에러 메시지를
+표시할 수 있는 상황이 있습니다. 그럴 때는 그렇게 하는 것이 좋습니다.
+그러나, 일반적인 규칙으로 이는 필요하지 않고, 에러가 발생하는 원인에
+관한 정보를 잃어버리게 합니다: 대부분의 연산은 다양한 이유로 실패할 수
+있습니다.)
+
+실패한 함수 호출로 설정된 예외를 무시하려면, "PyErr_Clear()"를 호출하
+여 예외 조건을 명시적으로 지워야 합니다. C 코드가 "PyErr_Clear()"를 호
+출해야 하는 유일한 때는 에러를 인터프리터에 전달하지 않고 스스로 완전
+히 처리하려고 하는 경우입니다 (아마 다른 것을 시도하거나, 아무것도 잘
+못되지 않은 척해서).
+
+모든 실패한 "malloc()" 호출은 예외로 전환되어야 합니다 --- "malloc()"(
+또는 "realloc()")의 직접 호출자는 스스로 "PyErr_NoMemory()"를 호출하고
+실패 표시기를 반환해야 합니다. 모든 객체 생성 함수(예를 들어,
+"PyLong_FromLong()")는 이미 이 작업을 수행하므로, 이 주의는 "malloc()"
+을 직접 호출하는 호출자에게만 해당합니다.
+
+또한 "PyArg_ParseTuple()"과 그 친구들의 중요한 예외를 제외하고, 정수
+상태를 반환하는 함수는 유닉스 시스템 호출처럼 일반적으로 성공 시 양수
+값이나 0을 반환하고, 실패 시 "-1"을 반환합니다.
+
+마지막으로, 에러 표시기를 반환할 때 (이미 만든 객체를 "Py_XDECREF()"나
+"Py_DECREF()"를 호출하여) 가비지를 정리하십시오!
+
+The choice of which exception to raise is entirely yours.  There are
+predeclared C objects corresponding to all built-in Python exceptions,
+such as "PyExc_ZeroDivisionError", which you can use directly. Of
+course, you should choose exceptions wisely --- don't use
+"PyExc_TypeError" to mean that a file couldn't be opened (that should
+probably be "PyExc_IOError"). If something's wrong with the argument
+list, the "PyArg_ParseTuple()" function usually raises
+"PyExc_TypeError".  If you have an argument whose value must be in a
+particular range or must satisfy other conditions, "PyExc_ValueError"
+is appropriate.
+
+모듈에 고유한 새 예외를 정의할 수도 있습니다. 이를 위해, 일반적으로 파
+일 시작 부분에 정적 객체 변수를 선언합니다:
+
+   static PyObject *SpamError;
+
+and initialize it in your module's initialization function
+("PyInit_spam()") with an exception object:
+
+   PyMODINIT_FUNC
+   PyInit_spam(void)
+   {
+       PyObject *m;
+
+       m = PyModule_Create(&spammodule);
+       if (m == NULL)
+           return NULL;
+
+       SpamError = PyErr_NewException("spam.error", NULL, NULL);
+       Py_XINCREF(SpamError);
+       if (PyModule_AddObject(m, "error", SpamError) < 0) {
+           Py_XDECREF(SpamError);
+           Py_CLEAR(SpamError);
+           Py_DECREF(m);
+           return NULL;
+       }
+
+       return m;
+   }
+
+Note that the Python name for the exception object is "spam.error".
+The "PyErr_NewException()" function may create a class with the base
+class being "Exception" (unless another class is passed in instead of
+"NULL"), described in 내장 예외.
+
+Note also that the "SpamError" variable retains a reference to the
+newly created exception class; this is intentional!  Since the
+exception could be removed from the module by external code, an owned
+reference to the class is needed to ensure that it will not be
+discarded, causing "SpamError" to become a dangling pointer. Should it
+become a dangling pointer, C code which raises the exception could
+cause a core dump or other unintended side effects.
+
+We discuss the use of "PyMODINIT_FUNC" as a function return type later
+in this sample.
+
+The "spam.error" exception can be raised in your extension module
+using a call to "PyErr_SetString()" as shown below:
+
+   static PyObject *
+   spam_system(PyObject *self, PyObject *args)
+   {
+       const char *command;
+       int sts;
+
+       if (!PyArg_ParseTuple(args, "s", &command))
+           return NULL;
+       sts = system(command);
+       if (sts < 0) {
+           PyErr_SetString(SpamError, "System command failed");
+           return NULL;
+       }
+       return PyLong_FromLong(sts);
+   }
+
+
+1.3. 예제로 돌아가기
+====================
+
+예제 함수로 돌아가서, 이제 여러분은 이 문장을 이해할 수 있어야 합니다:
+
+   if (!PyArg_ParseTuple(args, "s", &command))
+       return NULL;
+
+It returns "NULL" (the error indicator for functions returning object
+pointers) if an error is detected in the argument list, relying on the
+exception set by "PyArg_ParseTuple()".  Otherwise the string value of
+the argument has been copied to the local variable "command".  This is
+a pointer assignment and you are not supposed to modify the string to
+which it points (so in Standard C, the variable "command" should
+properly be declared as "const char *command").
+
+다음 문장은 유닉스 함수 "system()"을 호출인데, "PyArg_ParseTuple()"에
+서 얻은 문자열을 전달합니다:
+
+   sts = system(command);
+
+Our "spam.system()" function must return the value of "sts" as a
+Python object.  This is done using the function "PyLong_FromLong()".
+
+   return PyLong_FromLong(sts);
+
+이 경우, 정수 객체를 반환합니다. (예, 정수조차도 파이썬에서는 힙 상의
+객체입니다!)
+
+유용한 인자를 반환하지 않는 C 함수("void"를 반환하는 함수)가 있으면,
+해당 파이썬 함수는 "None"을 반환해야 합니다. 그렇게 하려면 이 관용구가
+필요합니다 ("Py_RETURN_NONE" 매크로로 구현됩니다):
+
+   Py_INCREF(Py_None);
+   return Py_None;
+
+"Py_None"은 특수 파이썬 객체 "None"의 C 이름입니다. 앞에서 보았듯이,
+대부분의 상황에서 "에러"를 뜻하는 "NULL" 포인터가 아니라 진짜 파이썬
+객체입니다.
+
+
+1.4. 모듈의 메서드 테이블과 초기화 함수
+=======================================
+
+I promised to show how "spam_system()" is called from Python programs.
+First, we need to list its name and address in a "method table":
+
+   static PyMethodDef SpamMethods[] = {
+       ...
+       {"system",  spam_system, METH_VARARGS,
+        "Execute a shell command."},
+       ...
+       {NULL, NULL, 0, NULL}        /* Sentinel */
+   };
+
+세 번째 항목 ("METH_VARARGS")에 유의하십시오. 이것은 인터프리터에게 C
+함수에 사용될 호출 규칙을 알려주는 플래그입니다. 일반적으로 항상
+"METH_VARARGS"나 "METH_VARARGS | METH_KEYWORDS"여야 합니다; "0" 값은
+더는 사용되지 않는 "PyArg_ParseTuple()" 변형이 사용됨을 의미합니다.
+
+"METH_VARARGS" 만 사용할 때, 함수는 파이썬 수준 매개 변수가
+"PyArg_ParseTuple()"을 통한 구문 분석에 허용되는 튜플로 전달될 것으로
+기대해야 합니다; 이 함수에 대한 자세한 정보는 아래에 제공됩니다.
+
+The "METH_KEYWORDS" bit may be set in the third field if keyword
+arguments should be passed to the function.  In this case, the C
+function should accept a third "PyObject *" parameter which will be a
+dictionary of keywords. Use "PyArg_ParseTupleAndKeywords()" to parse
+the arguments to such a function.
+
+메서드 테이블은 모듈 정의 구조체에서 참조되어야 합니다:
+
+   static struct PyModuleDef spammodule = {
+       PyModuleDef_HEAD_INIT,
+       "spam",   /* name of module */
+       spam_doc, /* module documentation, may be NULL */
+       -1,       /* size of per-interpreter state of the module,
+                    or -1 if the module keeps state in global variables. */
+       SpamMethods
+   };
+
+This structure, in turn, must be passed to the interpreter in the
+module's initialization function.  The initialization function must be
+named "PyInit_name()", where *name* is the name of the module, and
+should be the only non-"static" item defined in the module file:
+
+   PyMODINIT_FUNC
+   PyInit_spam(void)
+   {
+       return PyModule_Create(&spammodule);
+   }
+
+Note that PyMODINIT_FUNC declares the function as "PyObject *" return
+type, declares any special linkage declarations required by the
+platform, and for C++ declares the function as "extern "C"".
+
+When the Python program imports module "spam" for the first time,
+"PyInit_spam()" is called. (See below for comments about embedding
+Python.) It calls "PyModule_Create()", which returns a module object,
+and inserts built-in function objects into the newly created module
+based upon the table (an array of "PyMethodDef" structures) found in
+the module definition. "PyModule_Create()" returns a pointer to the
+module object that it creates.  It may abort with a fatal error for
+certain errors, or return "NULL" if the module could not be
+initialized satisfactorily. The init function must return the module
+object to its caller, so that it then gets inserted into
+"sys.modules".
+
+When embedding Python, the "PyInit_spam()" function is not called
+automatically unless there's an entry in the "PyImport_Inittab" table.
+To add the module to the initialization table, use
+"PyImport_AppendInittab()", optionally followed by an import of the
+module:
+
+   int
+   main(int argc, char *argv[])
+   {
+       wchar_t *program = Py_DecodeLocale(argv[0], NULL);
+       if (program == NULL) {
+           fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
+           exit(1);
+       }
+
+       /* Add a built-in module, before Py_Initialize */
+       if (PyImport_AppendInittab("spam", PyInit_spam) == -1) {
+           fprintf(stderr, "Error: could not extend in-built modules table\n");
+           exit(1);
+       }
+
+       /* Pass argv[0] to the Python interpreter */
+       Py_SetProgramName(program);
+
+       /* Initialize the Python interpreter.  Required.
+          If this step fails, it will be a fatal error. */
+       Py_Initialize();
+
+       /* Optionally import the module; alternatively,
+          import can be deferred until the embedded script
+          imports it. */
+       PyObject *pmodule = PyImport_ImportModule("spam");
+       if (!pmodule) {
+           PyErr_Print();
+           fprintf(stderr, "Error: could not import module 'spam'\n");
+       }
+
+       ...
+
+       PyMem_RawFree(program);
+       return 0;
+   }
+
+참고:
+
+  "sys.modules"에서 항목을 제거하거나 프로세스 내에서 컴파일된 모듈을
+  여러 인터프리터로 임포트 하면 (또는 "exec()"를 개입시키지 않고
+  "fork()"를 따르면) 일부 확장 모듈에 문제가 발생할 수 있습니다. 확장
+  모듈 작성자는 내부 데이터 구조를 초기화할 때 주의를 기울여야 합니다.
+
+더욱 실질적인 예제 모듈이 "Modules/xxmodule.c"로 파이썬 소스 배포판에
+포함되어 있습니다. 이 파일은 템플릿으로 사용되거나 단순히 예제로 읽을
+수 있습니다.
+
+참고:
+
+  "spam" 예제와 달리 "xxmodule"은 *다단계 초기화(multi-phase
+  initialization)*(파이썬 3.5의 새로운 기능)를 사용합니다. 여기서는
+  PyModuleDef 구조체가 "PyInit_spam"에서 반환되고, 모듈 생성은 임포트
+  절차에 맡겨집니다. 다단계 초기화에 대한 자세한 내용은 **PEP 489**를
+  참조하십시오.
+
+
+1.5. 컴파일과 링크
+==================
+
+새로운 확장을 사용하기 전에 해야 할 두 가지 작업이 더 있습니다: 컴파일
+과 파이썬 시스템과의 링크. 동적 로딩을 사용하면, 세부 사항은 시스템이
+사용하는 동적 로딩 스타일에 따라 달라질 수 있습니다; 확장 모듈을 빌드
+하는 것에 관한 장(C와 C++ 확장 빌드하기 장)과 윈도우 빌드에 대한 자세
+한 정보는 이에만 관련된 추가 정보(윈도우에서 C와 C++ 확장 빌드하기 장)
+를 참조하십시오.
+
+동적 로딩을 사용할 수 없거나, 모듈을 파이썬 인터프리터의 영구적인 부분
+으로 만들려면, 구성 설정을 변경하고 인터프리터를 다시 빌드해야 합니다.
+운 좋게도, 이것은 유닉스에서 매우 간단합니다: 압축을 푼 소스 배포의
+"Modules/" 디렉터리에 파일(예를 들어 "spammodule.c")을 놓고,
+"Modules/Setup.local" 파일에 여러분의 파일을 기술하는 한 줄을 추가하십
+시오:
+
+   spam spammodule.o
+
+그리고 최상위 디렉터리에서 **make**를 실행하여 인터프리터를 다시 빌드
+하십시오. "Modules/" 서브 디렉터리에서 **make**를 실행할 수도 있지만,
+먼저 '**make** Makefile'을 실행하여 "Makefile"을 다시 빌드해야 합니다.
+(이것은 "Setup" 파일을 변경할 때마다 필요합니다.)
+
+모듈에 링크할 추가 라이브러리가 필요하면, 이것도 구성 파일의 줄에 나열
+될 수 있습니다, 예를 들어:
+
+   spam spammodule.o -lX11
+
+
+1.6. C에서 파이썬 함수 호출하기
+===============================
+
+지금까지 파이썬에서 C 함수를 호출할 수 있도록 하는 데 집중했습니다. 그
+반대도 유용합니다: C에서 파이썬 함수 호출하기. 이것은 특히 "콜백" 함수
+를 지원하는 라이브러리의 경우에 해당합니다. C 인터페이스가 콜백을 사용
+하면, 동등한 파이썬은 종종 파이썬 프로그래머에게 콜백 메커니즘을 제공
+해야 할 필요가 있습니다; 구현은 C 콜백에서 파이썬 콜백 함수를 호출해야
+합니다. 다른 용도도 상상할 수 있습니다.
+
+다행히, 파이썬 인터프리터는 재귀적으로 쉽게 호출되며, 파이썬 함수를 호
+출하는 표준 인터페이스가 있습니다. (특정 문자열을 입력으로 파이썬 파서
+를 호출하는 방법에 대해서는 다루지 않겠습니다 --- 관심이 있다면, 파이
+썬 소스 코드에서 "Modules/main.c"의 "-c" 명령 줄 옵션 구현을 살펴보십
+시오.)
+
+파이썬 함수를 호출하기는 쉽습니다. 먼저, 파이썬 프로그램은 어떻게 든
+여러분에게 파이썬 함수 객체를 전달해야 합니다. 이를 위해 함수(또는 다
+른 인터페이스)를 제공해야 합니다. 이 함수가 호출될 때, 전역 변수(또는
+여러분이 보기에 적절한 곳 어디에나)에 파이썬 함수 객체에 대한 포인터를
+저장하십시오 ("Py_INCREF()"해야 하는 것에 주의하십시오!). 예를 들어,
+다음 함수는 모듈 정의의 일부일 수 있습니다:
+
+   static PyObject *my_callback = NULL;
+
+   static PyObject *
+   my_set_callback(PyObject *dummy, PyObject *args)
+   {
+       PyObject *result = NULL;
+       PyObject *temp;
+
+       if (PyArg_ParseTuple(args, "O:set_callback", &temp)) {
+           if (!PyCallable_Check(temp)) {
+               PyErr_SetString(PyExc_TypeError, "parameter must be callable");
+               return NULL;
+           }
+           Py_XINCREF(temp);         /* Add a reference to new callback */
+           Py_XDECREF(my_callback);  /* Dispose of previous callback */
+           my_callback = temp;       /* Remember new callback */
+           /* Boilerplate to return "None" */
+           Py_INCREF(Py_None);
+           result = Py_None;
+       }
+       return result;
+   }
+
+This function must be registered with the interpreter using the
+"METH_VARARGS" flag; this is described in section 모듈의 메서드 테이블
+과 초기화 함수.  The "PyArg_ParseTuple()" function and its arguments
+are documented in section 확장 함수에서 매개 변수 추출하기.
+
+매크로 "Py_XINCREF()"와 "Py_XDECREF()"는 객체의 참조 횟수를 증가/감소
+시키며 "NULL" 포인터가 있을 때 안전합니다 (그러나 이 문맥에서 *temp*는
+"NULL"이 아님에 유의하십시오). 섹션 참조 횟수에 이에 대한 자세한 정보
+가 있습니다.
+
+나중에, 함수를 호출할 때, C 함수 "PyObject_CallObject()"를 호출합니다.
+이 함수에는 두 개의 인자가 있는데, 모두 임의의 파이썬 객체에 대한 포인
+터입니다: 파이썬 함수와 인자 목록. 인자 목록은 항상 길이가 인자의 수인
+튜플 객체여야 합니다. 인자 없이 파이썬 함수를 호출하려면, "NULL"이나
+빈 튜플을 전달하십시오; 하나의 인자로 호출하려면, 단 항목 튜플을 전달
+하십시오. "Py_BuildValue()"는 포맷 문자열이 괄호 사이에 0개 이상의 포
+맷 코드로 구성되었을 때 튜플을 반환합니다. 예를 들면:
+
+   int arg;
+   PyObject *arglist;
+   PyObject *result;
+   ...
+   arg = 123;
+   ...
+   /* Time to call the callback */
+   arglist = Py_BuildValue("(i)", arg);
+   result = PyObject_CallObject(my_callback, arglist);
+   Py_DECREF(arglist);
+
+"PyObject_CallObject()"는 파이썬 객체 포인터를 반환합니다: 이것은 파이
+썬 함수의 반환 값입니다. "PyObject_CallObject()"는 인자와 관련하여 "참
+조 횟수 중립적"입니다. 이 예에서는 "PyObject_CallObject()" 호출 직후
+"Py_DECREF()"되는 인자 목록으로 사용할 새 튜플이 만들어졌습니다.
+
+"PyObject_CallObject()"의 반환 값은 "새것"입니다: 완전히 새로운 객체이
+거나 참조 횟수가 증가한 기존 객체입니다. 따라서, 전역 변수에 저장하려
+는 것이 아닌 한, 설사 (특히!) 그 값에 관심이 없더라도 결과를
+"Py_DECREF()"해야 합니다.
+
+그러나, 이 작업을 수행하기 전에 반환 값이 "NULL"이 아닌지 확인해야 합
+니다. 그렇다면, 파이썬 함수는 예외를 발생 시켜 종료한 것입니다.
+"PyObject_CallObject()"라는 C 코드가 파이썬에서 호출되었다면 이제 파이
+썬 호출자에게 에러 표시를 반환하여, 인터프리터가 스택 트레이스를 인쇄
+하거나 호출하는 파이썬 코드가 예외를 처리할 수 있도록 합니다. 이것이
+불가능하거나 바람직하지 않으면, "PyErr_Clear()"를 호출하여 예외를 지워
+야 합니다. 예를 들면:
+
+   if (result == NULL)
+       return NULL; /* Pass error back */
+   ...use result...
+   Py_DECREF(result);
+
+파이썬 콜백 함수에 대해 원하는 인터페이스에 따라,
+"PyObject_CallObject()"에 인자 목록을 제공해야 할 수도 있습니다. 때에
+따라 인자 목록은 콜백 함수를 지정한 같은 인터페이스를 통해 파이썬 프로
+그램에서 제공됩니다. 그런 다음 함수 객체와 같은 방식으로 저장하고 사용
+할 수 있습니다. 다른 경우에는, 인자 목록으로 전달할 새 튜플을 구성해야
+할 수도 있습니다. 이렇게 하는 가장 간단한 방법은 "Py_BuildValue()"를
+호출하는 것입니다. 예를 들어, 정수 이벤트 코드를 전달하려면, 다음 코드
+를 사용할 수 있습니다:
+
+   PyObject *arglist;
+   ...
+   arglist = Py_BuildValue("(l)", eventcode);
+   result = PyObject_CallObject(my_callback, arglist);
+   Py_DECREF(arglist);
+   if (result == NULL)
+       return NULL; /* Pass error back */
+   /* Here maybe use the result */
+   Py_DECREF(result);
+
+호출 직후, 에러 점검 전에 "Py_DECREF(arglist)"의 배치에 유의하십시오!
+또한 엄격하게 말하면 이 코드가 완전하지 않음에도 유의하십시오:
+"Py_BuildValue()"에 메모리가 부족할 수 있어서 확인해야 합니다.
+
+인자와 키워드 인자를 지원하는 "PyObject_Call()"을 사용하여 키워드 인자
+가 있는 함수를 호출할 수도 있습니다. 위의 예에서와같이,
+"Py_BuildValue()"를 사용하여 딕셔너리를 구성합니다.
+
+   PyObject *dict;
+   ...
+   dict = Py_BuildValue("{s:i}", "name", val);
+   result = PyObject_Call(my_callback, NULL, dict);
+   Py_DECREF(dict);
+   if (result == NULL)
+       return NULL; /* Pass error back */
+   /* Here maybe use the result */
+   Py_DECREF(result);
+
+
+1.7. 확장 함수에서 매개 변수 추출하기
+=====================================
+
+"PyArg_ParseTuple()" 함수는 다음과 같이 선언됩니다:
+
+   int PyArg_ParseTuple(PyObject *arg, const char *format, ...);
+
+*arg* 인자는 파이썬에서 C 함수로 전달되는 인자 목록이 포함된 튜플 객체
+여야 합니다. *format* 인자는 포맷 문자열이어야 하며, 문법은 파이썬/C
+API 레퍼런스 매뉴얼의 인자 구문 분석과 값 구축에 설명되어 있습니다. 나
+머지 인자는 포맷 문자열에 의해 형이 결정되는 변수의 주소여야 합니다.
+
+"PyArg_ParseTuple()"은 파이썬 인자가 요구되는 형인지 확인하지만, 호출
+에 전달된 C 변수 주소의 유효성을 확인할 수는 없습니다: 실수를 하면, 코
+드가 충돌하거나 적어도 메모리의 임의 비트를 덮어씁니다. 그러니 조심하
+십시오!
+
+호출자에게 제공되는 모든 파이썬 객체 참조는 *빌려온(borrowed)* 참조임
+에 유의하십시오; 참조 횟수를 줄이지 마십시오!
+
+몇 가지 예제 호출:
+
+   #define PY_SSIZE_T_CLEAN  /* Make "s#" use Py_ssize_t rather than int. */
+   #include <Python.h>
+
+   int ok;
+   int i, j;
+   long k, l;
+   const char *s;
+   Py_ssize_t size;
+
+   ok = PyArg_ParseTuple(args, ""); /* No arguments */
+       /* Python call: f() */
+
+   ok = PyArg_ParseTuple(args, "s", &s); /* A string */
+       /* Possible Python call: f('whoops!') */
+
+   ok = PyArg_ParseTuple(args, "lls", &k, &l, &s); /* Two longs and a string */
+       /* Possible Python call: f(1, 2, 'three') */
+
+   ok = PyArg_ParseTuple(args, "(ii)s#", &i, &j, &s, &size);
+       /* A pair of ints and a string, whose size is also returned */
+       /* Possible Python call: f((1, 2), 'three') */
+
+   {
+       const char *file;
+       const char *mode = "r";
+       int bufsize = 0;
+       ok = PyArg_ParseTuple(args, "s|si", &file, &mode, &bufsize);
+       /* A string, and optionally another string and an integer */
+       /* Possible Python calls:
+          f('spam')
+          f('spam', 'w')
+          f('spam', 'wb', 100000) */
+   }
+
+   {
+       int left, top, right, bottom, h, v;
+       ok = PyArg_ParseTuple(args, "((ii)(ii))(ii)",
+                &left, &top, &right, &bottom, &h, &v);
+       /* A rectangle and a point */
+       /* Possible Python call:
+          f(((0, 0), (400, 300)), (10, 10)) */
+   }
+
+   {
+       Py_complex c;
+       ok = PyArg_ParseTuple(args, "D:myfunction", &c);
+       /* a complex, also providing a function name for errors */
+       /* Possible Python call: myfunction(1+2j) */
+   }
+
+
+1.8. 확장 함수를 위한 키워드 매개 변수
+======================================
+
+"PyArg_ParseTupleAndKeywords()" 함수는 다음과 같이 선언됩니다:
+
+   int PyArg_ParseTupleAndKeywords(PyObject *arg, PyObject *kwdict,
+                                   const char *format, char *kwlist[], ...);
+
+*arg*와 *format* 매개 변수는 "PyArg_ParseTuple()" 함수와 동일합니다.
+*kwdict* 매개 변수는 파이썬 런타임에서 세 번째 매개 변수로 수신된 키워
+드 딕셔너리입니다. *kwlist* 매개 변수는 매개 변수를 식별하는 문자열의
+"NULL" 종료 목록입니다; 이름은 왼쪽에서 오른쪽으로 *format*의 형 정보
+와 일치합니다. 성공하면, "PyArg_ParseTupleAndKeywords()"는 참을 반환하
+고, 그렇지 않으면 거짓을 반환하고 적절한 예외를 발생시킵니다.
+
+참고:
+
+  키워드 인자를 사용할 때 중첩된 튜플을 구문분석할 수 없습니다!
+  *kwlist*에 없는 키워드 매개 변수가 전달되면 "TypeError"를 발생시킵니
+  다.
+
+다음은 Geoff Philbrick (philbrick@hks.com) 의 예제를 기반으로 한, 키워
+드를 사용하는 예제 모듈입니다:
+
+   #define PY_SSIZE_T_CLEAN  /* Make "s#" use Py_ssize_t rather than int. */
+   #include <Python.h>
+
+   static PyObject *
+   keywdarg_parrot(PyObject *self, PyObject *args, PyObject *keywds)
+   {
+       int voltage;
+       const char *state = "a stiff";
+       const char *action = "voom";
+       const char *type = "Norwegian Blue";
+
+       static char *kwlist[] = {"voltage", "state", "action", "type", NULL};
+
+       if (!PyArg_ParseTupleAndKeywords(args, keywds, "i|sss", kwlist,
+                                        &voltage, &state, &action, &type))
+           return NULL;
+
+       printf("-- This parrot wouldn't %s if you put %i Volts through it.\n",
+              action, voltage);
+       printf("-- Lovely plumage, the %s -- It's %s!\n", type, state);
+
+       Py_RETURN_NONE;
+   }
+
+   static PyMethodDef keywdarg_methods[] = {
+       /* The cast of the function is necessary since PyCFunction values
+        * only take two PyObject* parameters, and keywdarg_parrot() takes
+        * three.
+        */
+       {"parrot", (PyCFunction)(void(*)(void))keywdarg_parrot, METH_VARARGS | METH_KEYWORDS,
+        "Print a lovely skit to standard output."},
+       {NULL, NULL, 0, NULL}   /* sentinel */
+   };
+
+   static struct PyModuleDef keywdargmodule = {
+       PyModuleDef_HEAD_INIT,
+       "keywdarg",
+       NULL,
+       -1,
+       keywdarg_methods
+   };
+
+   PyMODINIT_FUNC
+   PyInit_keywdarg(void)
+   {
+       return PyModule_Create(&keywdargmodule);
+   }
+
+
+1.9. 임의의 값을 구축하기
+=========================
+
+이 함수는 "PyArg_ParseTuple()"의 반대입니다. 다음과 같이 선언됩니다:
+
+   PyObject *Py_BuildValue(const char *format, ...);
+
+"PyArg_ParseTuple()"에서 인식되는 것과 유사한 포맷 단위 집합을 인식하
+지만, 인자(함수의 출력이 아니라 입력입니다)는 포인터가 아니라 그냥 값
+이어야 합니다. 파이썬에서 호출한 C 함수에서 반환하기에 적합한 새 파이
+썬 객체를 반환합니다.
+
+"PyArg_ParseTuple()"과의 한 가지 차이점: 후자는 첫 번째 인자가 튜플이
+어야 하지만 (파이썬 인자 목록은 항상 내부적으로 튜플로 표현되기 때문입
+니다), "Py_BuildValue()"는 항상 튜플을 빌드하지는 않습니다. 포맷 문자
+열에 둘 이상의 포맷 단위가 포함된 경우에만 튜플을 빌드합니다. 포맷 문
+자열이 비어 있으면 "None"을 반환합니다; 정확히 하나의 포맷 단위를 포함
+하면, 그것이 무엇이건 해당 포맷 단위가 기술하는 객체를 반환합니다. 크
+기가 0이나 1인 튜플을 강제로 반환하도록 하려면, 포맷 문자열을 괄호로
+묶으십시오.
+
+예제 (왼쪽은 호출이고, 오른쪽은 결과 파이썬 값입니다):
+
+   Py_BuildValue("")                        None
+   Py_BuildValue("i", 123)                  123
+   Py_BuildValue("iii", 123, 456, 789)      (123, 456, 789)
+   Py_BuildValue("s", "hello")              'hello'
+   Py_BuildValue("y", "hello")              b'hello'
+   Py_BuildValue("ss", "hello", "world")    ('hello', 'world')
+   Py_BuildValue("s#", "hello", 4)          'hell'
+   Py_BuildValue("y#", "hello", 4)          b'hell'
+   Py_BuildValue("()")                      ()
+   Py_BuildValue("(i)", 123)                (123,)
+   Py_BuildValue("(ii)", 123, 456)          (123, 456)
+   Py_BuildValue("(i,i)", 123, 456)         (123, 456)
+   Py_BuildValue("[i,i]", 123, 456)         [123, 456]
+   Py_BuildValue("{s:i,s:i}",
+                 "abc", 123, "def", 456)    {'abc': 123, 'def': 456}
+   Py_BuildValue("((ii)(ii)) (ii)",
+                 1, 2, 3, 4, 5, 6)          (((1, 2), (3, 4)), (5, 6))
+
+
+1.10. 참조 횟수
+===============
+
+C나 C++ 와 같은 언어에서, 힙에서 메모리의 동적 할당과 할당 해제하는 것
+은 프로그래머가 담당합니다. C에서는, "malloc()"과 "free()" 함수를 사용
+하여 이 작업을 수행합니다. C++에서는, 연산자 "new"와 "delete"는 본질적
+으로 같은 의미로 사용되며 우리는 뒤따르는 논의를 C의 경우로 제한하겠습
+니다.
+
+Every block of memory allocated with "malloc()" should eventually be
+returned to the pool of available memory by exactly one call to
+"free()". It is important to call "free()" at the right time.  If a
+block's address is forgotten but "free()" is not called for it, the
+memory it occupies cannot be reused until the program terminates.
+This is called a *memory leak*.  On the other hand, if a program calls
+"free()" for a block and then continues to use the block, it creates a
+conflict with re-use of the block through another "malloc()" call.
+This is called *using freed memory*. It has the same bad consequences
+as referencing uninitialized data --- core dumps, wrong results,
+mysterious crashes.
+
+메모리 누수의 일반적인 원인은 코드를 통한 비정상적인 경로입니다. 예를
+들어, 함수는 메모리 블록을 할당하고, 어떤 계산을 한 다음, 블록을 다시
+해제할 수 있습니다. 이제 함수에 대한 요구 사항이 변경되어 에러 조건을
+감지하는 계산에 대한 검사를 추가하고 함수가 조기에 반환할 수 있도록 합
+니다. 이 조기 탈출을 수행할 때, 특히 나중에 코드에 추가될 때, 할당된
+메모리 블록을 해제하는 것을 잊어버리기 쉽습니다. 이러한 누수는 일단 만
+들어지면 종종 오랫동안 탐지되지 않습니다: 에러 탈출은 전체 호출의 작은
+부분에서만 이루어지며, 대부분의 최신 시스템에는 많은 가상 메모리가 있
+어서, 누수 하는 함수를 자주 사용하는 오래 실행되는 프로세스에서만 누수
+가 나타납니다. 따라서, 이런 종류의 에러를 코딩 규칙이나 전략을 통해 누
+수가 발생하지 않도록 하는 것이 중요합니다.
+
+파이썬은 "malloc()"과 "free()"를 많이 사용하기 때문에, 메모리 누수와
+해제된 메모리 사용을 피하는 전략이 필요합니다. 선택된 방법을 *참조 횟
+수 세기(reference counting)*라고 합니다. 원리는 간단합니다: 모든 객체
+에는 카운터를 포함합니다, 카운터는 객체에 대한 참조가 어딘가에 저장될
+때 증가하고, 참조가 삭제될 때 감소합니다. 카운터가 0에 도달하면, 객체
+에 대한 마지막 참조가 삭제된 것이고 객체가 해제됩니다.
+
+대체 전략을 *자동 가비지 수집(automatic garbage collection)*이라고 합
+니다. (때로는, 참조 횟수 세기도 가비지 수집 전략이라고 해서, 두 가지를
+구별하기 위해 "자동"을 붙였습니다.) 자동 가비지 수집의 가장 큰 장점은
+사용자가 "free()"를 명시적으로 호출할 필요가 없다는 것입니다. (또 다른
+주장된 이점은 속도나 메모리 사용량의 개선이지만 --- 이것은 견고한 사실
+이 아닙니다.) 단점은 C의 경우 참조 횟수 세기는 이식성 있게 구현할 수
+있지만 (함수 "malloc()"과 "free()"를 사용할 수 있는 한 --- 이는 C 표준
+이 보장합니다), 실제로 이식성 있는 자동 가비지 수집기가 없다는 것입니
+다. 언젠가 C를 위해 충분히 이식성 있는 자동 가비지 수집기를 사용할 수
+있을 것입니다. 그때까지, 우리는 참조 횟수와 함께 살아야 할 것입니다.
+
+파이썬은 전통적인 참조 횟수 세기 구현을 사용하지만, 참조 순환을 감지하
+는 순환 감지기도 제공합니다. 이를 통해 응용 프로그램은 직접적이거나 간
+접적인 순환 참조를  만드는 것(이것이 참조 횟수만 사용하여 구현된 가비
+지 수집의 약점입니다)에 대해 걱정하지 않아도 됩니다. 참조 순환은 (어쩌
+면 간접적으로) 자신에 대한 참조를 포함하는 객체로 구성되어서, 순환의
+각 객체는 0이 아닌 참조 횟수를 갖습니다. 일반적인 참조 횟수 세기 구현
+에서는 순환 자체에 대한 추가 참조가 없더라도 참조 순환의 객체에 속하는
+메모리나 순환에 속한 객체에서 참조된 메모리를 회수할 수 없습니다.
+
+The cycle detector is able to detect garbage cycles and can reclaim
+them. The "gc" module exposes a way to run the detector (the
+"collect()" function), as well as configuration interfaces and the
+ability to disable the detector at runtime.
+
+
+1.10.1. 파이썬에서 참조 횟수 세기
+---------------------------------
+
+참조 횟수의 증가와 감소를 처리하는 두 개의 매크로 "Py_INCREF(x)"와
+"Py_DECREF(x)"가 있습니다. "Py_DECREF()"는 횟수가 0에 도달하면 객체를
+해제하기도 합니다. 유연성을 위해, "free()"를 직접 호출하지 않습니다
+--- 대신, 객체의 *형 객체(type object)*에 있는 함수 포인터를 통해 호출
+합니다. 이 목적(및 기타)을 위해 모든 객체에는 해당 형 객체에 대한 포인
+터도 포함됩니다.
+
+이제 큰 질문이 남습니다: 언제 "Py_INCREF(x)"와 "Py_DECREF(x)"를 사용합
+니까? 먼저 몇 가지 용어를 소개하겠습니다. 아무도 객체를 "소유(owns)"하
+지 않습니다ㅣ 그러나, 객체에 대한 *참조를 소유(own a reference)*할 수
+있습니다. 객체의 참조 횟수는 이제 이 객체에 대한 참조를 소유한 수로 정
+의됩니다. 참조 소유자는 더는 참조가 필요하지 않을 때 "Py_DECREF()"를
+호출해야 합니다. 참조의 소유권을 양도할 수 있습니다. 소유한 참조를 처
+분하는 세 가지 방법이 있습니다: 전달, 저장 및 "Py_DECREF()" 호출. 소유
+한 참조를 처분하지 않으면 메모리 누수가 발생합니다.
+
+객체에 대한 참조를 *빌리는(borrow)* [2] 것도 가능합니다. 참조의 대여자
+(borrower)는 "Py_DECREF()"를 호출해서는 안 됩니다. 대여자는 빌린 소유
+자보다 더 오래 객체를 붙잡아서는 안 됩니다. 소유자가 처분한 후 빌린 참
+조를 사용하면 해제된 메모리를 사용할 위험이 있어서 절대 피해야 합니다
+[3].
+
+참조 소유에 비교할 때 빌리기의 이점은 코드를 통한 가능한 모든 경로에서
+참조를 처리할 필요가 없다는 것입니다 --- 즉, 빌려온 참조를 사용하면 조
+기 종료 시에 누수의 위험이 없습니다. 소유하는 것에 비해 빌리는 것의 단
+점은, 겉보기에는 올바른 코드지만, 빌려준 소유자가 실제로는 참조를 처분
+한 후에 빌린 참조가 사용될 수 있는 미묘한 상황이 있다는 것입니다.
+
+빌린 참조는 "Py_INCREF()"를 호출하여 소유한 참조로 변경할 수 있습니다.
+이는 참조를 빌려온 소유자의 상태에 영향을 미치지 않습니다 --- 새로운
+소유된 참조를 만들고, 완전한 소유자 책임을 부여합니다 (이전 소유자뿐만
+아니라, 새 소유자는 참조를 올바르게 처분해야 합니다).
+
+
+1.10.2. 소유권 규칙
+-------------------
+
+객체 참조가 함수 안팎으로 전달될 때마다, 소유권이 참조와 함께 전달되는
+지 그렇지 않은지는 함수 인터페이스 명세의 일부입니다.
+
+객체에 대한 참조를 반환하는 대부분의 함수는 참조와 함께 소유권을 전달
+합니다. 특히, "PyLong_FromLong()"이나 "Py_BuildValue()"와 같은 새 객체
+를 만드는 기능을 가진 모든 함수는 소유권을 수신자에게 전달합니다. 객체
+가 실제로 새 객체가 아니더라도, 여전히 해당 객체에 대한 새 참조의 소유
+권을 받습니다. 예를 들어, "PyLong_FromLong()"은 흔히 사용되는 값의 캐
+시를 유지하고 캐시 된 항목에 대한 참조를 반환할 수 있습니다.
+
+다른 객체에서 객체를 추출하는 많은 함수도 참조와 함께 소유권을 전달합
+니다, 예를 들어 "PyObject_GetAttrString()". 그러나 몇 가지 일반적인 루
+틴이 예외이기 때문에 그림이 명확하지 않습니다: "PyTuple_GetItem()",
+"PyList_GetItem()", "PyDict_GetItem()" 및 "PyDict_GetItemString()"은
+모두 튜플, 리스트 또는 딕셔너리에서 빌린 참조를 반환합니다.
+
+"PyImport_AddModule()" 함수도 실제는 반환하는 객체를 만들 수 있지만 빌
+린 참조를 반환합니다: 객체에 대한 소유한 참조가 "sys.modules"에 저장되
+어 있기 때문에 가능합니다.
+
+객체 참조를 다른 함수에 전달할 때, 일반적으로, 함수는 여러분으로부터
+참조를 빌립니다 --- 참조를 저장해야 하면, "Py_INCREF()"를 사용하여 독
+립 소유자가 됩니다. 이 규칙에는 두 가지 중요한 예외가 있습니다:
+"PyTuple_SetItem()"과 "PyList_SetItem()". 이 함수들은 전달된 항목에 대
+한 소유권을 취합니다 --- 설사 실패하더라도! ("PyDict_SetItem()"과 그
+친구들은 소유권을 취하지 않습니다 --- 이들은 "정상" 입니다.)
+
+C 함수가 파이썬에서 호출될 때, 호출자로부터 온 인자에 대한 참조를 빌립
+니다. 호출자는 객체에 대한 참조를 소유하기 때문에, 빌린 참조의 수명은
+함수가 반환될 때까지 보장됩니다. 이러한 빌린 참조를 저장하거나 전달해
+야 할 때만, "Py_INCREF()"를 호출하여 소유한 참조로 만들어야 합니다.
+
+파이썬에서 호출된 C 함수에서 반환된 객체 참조는 소유한 참조여야 합니다
+--- 소유권은 함수에서 호출자로 전달됩니다.
+
+
+1.10.3. 살얼음
+--------------
+
+겉보기에 무해한 빌린 참조의 사용이 문제를 일으킬 수 있는 몇 가지 상황
+이 있습니다. 이것들은 모두 참조의 소유자가 참조를 처분하도록 할 수 있
+는 인터프리터의 묵시적 호출과 관련이 있습니다.
+
+가장 먼저 알아야 할 가장 중요한 경우는 리스트 항목에 대한 참조를 빌리
+는 동안 관련이 없는 객체에서 "Py_DECREF()"를 사용하는 것입니다. 예를
+들어:
+
+   void
+   bug(PyObject *list)
+   {
+       PyObject *item = PyList_GetItem(list, 0);
+
+       PyList_SetItem(list, 1, PyLong_FromLong(0L));
+       PyObject_Print(item, stdout, 0); /* BUG! */
+   }
+
+이 함수는 먼저 "list[0]"에 대한 참조를 빌린 다음, "list[1]"을 값 "0"으
+로 바꾸고, 마지막으로 빌린 참조를 인쇄합니다. 무해해 보이지요? 하지만
+그렇지 않습니다!
+
+Let's follow the control flow into "PyList_SetItem()".  The list owns
+references to all its items, so when item 1 is replaced, it has to
+dispose of the original item 1.  Now let's suppose the original item 1
+was an instance of a user-defined class, and let's further suppose
+that the class defined a "__del__()" method.  If this class instance
+has a reference count of 1, disposing of it will call its "__del__()"
+method.
+
+Since it is written in Python, the "__del__()" method can execute
+arbitrary Python code.  Could it perhaps do something to invalidate
+the reference to "item" in "bug()"?  You bet!  Assuming that the list
+passed into "bug()" is accessible to the "__del__()" method, it could
+execute a statement to the effect of "del list[0]", and assuming this
+was the last reference to that object, it would free the memory
+associated with it, thereby invalidating "item".
+
+문제의 원인을 알고 나면, 해결 방법은 쉽습니다: 일시적으로 참조 횟수를
+늘리십시오. 올바른 버전의 함수는 다음과 같습니다:
+
+   void
+   no_bug(PyObject *list)
+   {
+       PyObject *item = PyList_GetItem(list, 0);
+
+       Py_INCREF(item);
+       PyList_SetItem(list, 1, PyLong_FromLong(0L));
+       PyObject_Print(item, stdout, 0);
+       Py_DECREF(item);
+   }
+
+This is a true story.  An older version of Python contained variants
+of this bug and someone spent a considerable amount of time in a C
+debugger to figure out why his "__del__()" methods would fail...
+
+빌린 참조에 문제가 있는 두 번째 경우는 스레드와 관련된 변형입니다. 일
+반적으로, 파이썬의 전체 객체 공간을 보호하는 전역 록이 있어서, 파이썬
+인터프리터의 여러 스레드는 다른 것들의 길에 끼어들 수 없습니다. 그러나
+, 매크로 "Py_BEGIN_ALLOW_THREADS"를 사용하여 이 록을 일시적으로 해제하
+고 "Py_END_ALLOW_THREADS"를 사용하여 다시 확보할 수 있습니다. 이는 블
+로킹 I/O 호출에서 흔한데, I/O가 완료되기를 기다리는 동안 다른 스레드가
+프로세서를 사용할 수 있도록 합니다. 분명히, 다음 함수는 이전 함수와 같
+은 문제가 있습니다:
+
+   void
+   bug(PyObject *list)
+   {
+       PyObject *item = PyList_GetItem(list, 0);
+       Py_BEGIN_ALLOW_THREADS
+       ...some blocking I/O call...
+       Py_END_ALLOW_THREADS
+       PyObject_Print(item, stdout, 0); /* BUG! */
+   }
+
+
+1.10.4. NULL 포인터
+-------------------
+
+일반적으로, 객체 참조를 인자로 취하는 함수는 "NULL" 포인터를 전달할 것
+으로 기대하지 않으며, 그렇게 하면 코어를 덤프합니다 (또는 이후의 코어
+덤프를 유발합니다). 객체 참조를 반환하는 함수는 일반적으로 예외가 발생
+했음을 나타내기 위해서만 "NULL"을 반환합니다. "NULL" 인자를 검사하지
+않는 이유는 함수들이 종종 자신이 받은 객체를 다른 함수에 전달하기 때문
+입니다 --- 각 함수가 "NULL"을 검사한다면, 중복 검사가 많이 발생하고 코
+드가 더 느리게 실행됩니다.
+
+"NULL"일 수 있는 포인터가 수신될 때 "소스"에서만 "NULL"을 검사하는 것
+이 좋습니다, 예를 들어, "malloc()"이나 예외를 발생시킬 수 있는 함수에
+서.
+
+매크로 "Py_INCREF()"와 "Py_DECREF()"는 "NULL" 포인터를 검사하지 않습니
+다 --- 하지만, 그들의 변형 "Py_XINCREF()"와 "Py_XDECREF()"는 확인합니
+다.
+
+특정 객체 형을 확인하기 위한 매크로("Pytype_Check()")는 "NULL" 포인터
+를 확인하지 않습니다 --- 다시, 여러 기대하는 형에 대해 객체를 검사하기
+위해 연속해서 이들을 여러 번 호출하는 코드가 많아서, 중복 검사가 생성
+됩니다. "NULL" 검사를 하는 변형은 없습니다.
+
+C 함수 호출 메커니즘은 C 함수에 전달된 인자 목록(예에서는 "args")이 절
+대 "NULL"이 아님을 보장합니다 --- 실제로는 항상 튜플임을 보장합니다
+[4].
+
+"NULL" 포인터를 파이썬 사용자에게 "빠져나가게" 만드는 것은 심각한 에러
+입니다.
+
+
+1.11. C++로 확장 작성하기
+=========================
+
+C++로 확장 모듈을 작성할 수 있습니다. 일부 제한 사항이 적용됩니다. 메
+인 프로그램(파이썬 인터프리터)이 C 컴파일러로 컴파일되고 링크되면, 생
+성자가 있는 전역이나 정적(static) 객체를 사용할 수 없습니다. 메인 프로
+그램이 C++ 컴파일러로 링크된 경우에는 문제가 되지 않습니다. 파이썬 인
+터프리터가 호출할 함수(특히, 모듈 초기화 함수)는 "extern "C""를 사용하
+여 선언해야 합니다. "extern "C" {...}"로 파이썬 헤더 파일을 묶을 필요
+는 없습니다 --- "__cplusplus" 기호가 정의되면 (모든 최신 C++ 컴파일러
+가 이 기호를 정의합니다) 이미 이 형식을 사용합니다.
+
+
+1.12. 확장 모듈을 위한 C API 제공하기
+=====================================
+
+많은 확장 모듈은 단지 파이썬에서 사용할 새로운 함수와 형을 제공하지만,
+때로 확장 모듈의 코드가 다른 확장 모듈에 유용할 수 있습니다. 예를 들어
+, 확장 모듈은 순서 없는 리스트처럼 작동하는 "컬렉션" 형을 구현할 수 있
+습니다. 표준 파이썬 리스트 형에 확장 모듈이 리스트를 만들고 조작할 수
+있게 하는 C API가 있는 것처럼, 이 새로운 컬렉션 형에는 다른 확장 모듈
+에서 직접 조작할 수 있는 C 함수 집합이 있어야 합니다.
+
+첫눈에 이것은 쉬운 것처럼 보입니다; 단지 함수를 작성하고 (물론
+"static"을 선언하지 않고), 적절한 헤더 파일을 제공하고, C API를 설명합
+니다. 사실 이것은 모든 확장 모듈이 항상 파이썬 인터프리터와 정적으로
+링크되어 있다면 작동합니다. 그러나 모듈을 공유 라이브러리로 사용하면,
+한 모듈에 정의된 기호가 다른 모듈에서 보이지 않을 수 있습니다. 가시성
+의 세부 사항은 운영 체제에 따라 다릅니다; 어떤 시스템은 파이썬 인터프
+리터와 모든 확장 모듈에 하나의 전역 이름 공간을 사용하는 반면 (예를 들
+어 윈도우), 다른 시스템은 모듈 링크 시점에 임포트 되는 기호의 목록을
+명시적으로 요구하거나 (AIX가 하나의 예입니다), 여러 전략 중 선택할 수
+있도록 합니다 (대부분의 유닉스). 또한 기호가 전역적으로 보이더라도, 호
+출하려는 함수를 가진 모듈이 아직 로드되지 않았을 수 있습니다!
+
+따라서 이식성에는 기호 가시성에 대해 가정하지 않을 것이 요구됩니다. 이
+것은 다른 확장 모듈과의 이름 충돌을 피하고자, 모듈의 초기화 함수를 제
+외한 확장 모듈의 모든 기호를 "static"으로 선언해야 함을 의미합니다 (섹
+션 모듈의 메서드 테이블과 초기화 함수에서 설명되듯이). 그리고 이는 다
+른 확장 모듈에서 액세스 *해야만* 하는 기호를 다른 방식으로 노출해야 함
+을 의미합니다.
+
+파이썬은 한 확장 모듈에서 다른 확장 모듈로 C 수준 정보(포인터)를 전달
+하는 특별한 메커니즘을 제공합니다: 캡슐(Capsule). 캡슐은 포인터
+("void*")를 저장하는 파이썬 데이터형입니다. 캡슐은 C API를 통해서만 만
+들고 액세스할 수 있지만, 다른 파이썬 객체처럼 전달할 수 있습니다. 특히
+, 확장 모듈의 이름 공간에서 이름에 대입할 수 있습니다. 다른 확장 모듈
+은 이 모듈을 임포트 해서, 이 이름의 값을 가져온 다음, 캡슐에서 포인터
+를 가져올 수 있습니다.
+
+확장 모듈의 C API를 노출하는 데 캡슐을 사용하는 방법에는 여러 가지가
+있습니다. 각 함수가 자신만의 캡슐을 얻거나, 모든 C API 포인터가 저장된
+배열의 주소를 캡슐로 게시할 수 있습니다. 그리고 포인터를 저장하고 꺼내
+는 다양한 작업은 코드를 제공하는 모듈과 클라이언트 모듈 간에 여러 방식
+으로 분산될 수 있습니다.
+
+어떤 방법을 선택하든, 캡슐 이름을 올바르게 지정하는 것이 중요합니다.
+"PyCapsule_New()" 함수는 name 매개 변수("const char*")를 취합니다;
+"NULL" name을 전달할 수는 있지만, 이름을 지정하도록 강력히 권고합니다.
+적절하게 이름 붙인 캡슐은 어느 정도의 실행 시간 형 안전성을 제공합니다
+; 하나의 이름 없는 캡슐을 다른 캡슐과 구별할 수 있는 적절한 방법은 없
+습니다.
+
+특히, C API를 공개하는 데 사용되는 캡슐에는 다음 규칙에 따라 이름을 지
+정해야 합니다:
+
+   modulename.attributename
+
+편의 함수 "PyCapsule_Import()"를 사용하면 캡슐을 통해 제공된 C API를
+쉽게 로드 할 수 있지만, 캡슐 이름이 이 규칙과 일치할 때만 그렇습니다.
+이 동작은 C API 사용자에게 자신이 로드 한 캡슐에 올바른 C API가 포함되
+어 있다는 확신을 줍니다.
+
+다음 예제는 대부분의 부담을 내보내는 모듈의 작성자에게 주는 방식을 보
+여주는데, 일반적으로 사용되는 라이브러리 모듈에 적합합니다. 캡슐의 값
+이 되는 "void" 포인터의 배열에 모든 C API 포인터(이 예에서는 하나뿐입
+니다!)를 저장합니다. 모듈에 해당하는 헤더 파일은 모듈을 임포트 하고 C
+API 포인터를 가져오는 매크로를 제공합니다; 클라이언트 모듈은 C API에
+액세스하기 전에 이 매크로를 호출하기만 하면 됩니다.
+
+The exporting module is a modification of the "spam" module from
+section 간단한 예. The function "spam.system()" does not call the C
+library function "system()" directly, but a function
+"PySpam_System()", which would of course do something more complicated
+in reality (such as adding "spam" to every command). This function
+"PySpam_System()" is also exported to other extension modules.
+
+The function "PySpam_System()" is a plain C function, declared
+"static" like everything else:
+
+   static int
+   PySpam_System(const char *command)
+   {
+       return system(command);
+   }
+
+The function "spam_system()" is modified in a trivial way:
+
+   static PyObject *
+   spam_system(PyObject *self, PyObject *args)
+   {
+       const char *command;
+       int sts;
+
+       if (!PyArg_ParseTuple(args, "s", &command))
+           return NULL;
+       sts = PySpam_System(command);
+       return PyLong_FromLong(sts);
+   }
+
+모듈의 시작 부분에서, 다음 줄 바로 다음에
+
+   #include <Python.h>
+
+다음 두 줄을 더 추가해야 합니다:
+
+   #define SPAM_MODULE
+   #include "spammodule.h"
+
+"#define"은 헤더 파일이 클라이언트 모듈이 아닌 내보내는 모듈에 포함됨
+을 알리는 데 사용됩니다. 마지막으로, 모듈의 초기화 함수는 C API 포인터
+배열을 초기화해야 합니다:
+
+   PyMODINIT_FUNC
+   PyInit_spam(void)
+   {
+       PyObject *m;
+       static void *PySpam_API[PySpam_API_pointers];
+       PyObject *c_api_object;
+
+       m = PyModule_Create(&spammodule);
+       if (m == NULL)
+           return NULL;
+
+       /* Initialize the C API pointer array */
+       PySpam_API[PySpam_System_NUM] = (void *)PySpam_System;
+
+       /* Create a Capsule containing the API pointer array's address */
+       c_api_object = PyCapsule_New((void *)PySpam_API, "spam._C_API", NULL);
+
+       if (PyModule_AddObject(m, "_C_API", c_api_object) < 0) {
+           Py_XDECREF(c_api_object);
+           Py_DECREF(m);
+           return NULL;
+       }
+
+       return m;
+   }
+
+Note that "PySpam_API" is declared "static"; otherwise the pointer
+array would disappear when "PyInit_spam()" terminates!
+
+작업 대부분은 헤더 파일 "spammodule.h"에 있으며, 다음과 같습니다:
+
+   #ifndef Py_SPAMMODULE_H
+   #define Py_SPAMMODULE_H
+   #ifdef __cplusplus
+   extern "C" {
+   #endif
+
+   /* Header file for spammodule */
+
+   /* C API functions */
+   #define PySpam_System_NUM 0
+   #define PySpam_System_RETURN int
+   #define PySpam_System_PROTO (const char *command)
+
+   /* Total number of C API pointers */
+   #define PySpam_API_pointers 1
+
+
+   #ifdef SPAM_MODULE
+   /* This section is used when compiling spammodule.c */
+
+   static PySpam_System_RETURN PySpam_System PySpam_System_PROTO;
+
+   #else
+   /* This section is used in modules that use spammodule's API */
+
+   static void **PySpam_API;
+
+   #define PySpam_System \
+    (*(PySpam_System_RETURN (*)PySpam_System_PROTO) PySpam_API[PySpam_System_NUM])
+
+   /* Return -1 on error, 0 on success.
+    * PyCapsule_Import will set an exception if there's an error.
+    */
+   static int
+   import_spam(void)
+   {
+       PySpam_API = (void **)PyCapsule_Import("spam._C_API", 0);
+       return (PySpam_API != NULL) ? 0 : -1;
+   }
+
+   #endif
+
+   #ifdef __cplusplus
+   }
+   #endif
+
+   #endif /* !defined(Py_SPAMMODULE_H) */
+
+All that a client module must do in order to have access to the
+function "PySpam_System()" is to call the function (or rather macro)
+"import_spam()" in its initialization function:
+
+   PyMODINIT_FUNC
+   PyInit_client(void)
+   {
+       PyObject *m;
+
+       m = PyModule_Create(&clientmodule);
+       if (m == NULL)
+           return NULL;
+       if (import_spam() < 0)
+           return NULL;
+       /* additional initialization can happen here */
+       return m;
+   }
+
+이 방법의 주요 단점은 파일 "spammodule.h"가 다소 복잡하다는 것입니다.
+그러나, 기본 구조는 내보내는 함수마다 같아서, 한 번만 학습하면 됩니다.
+
+마지막으로 캡슐은 추가 기능을 제공하며, 특히 캡슐에 저장된 포인터의 메
+모리 할당과 할당 해제에 유용합니다. 세부 사항은 파이썬/C API 레퍼런스
+매뉴얼의 캡슐 섹션과 캡슐 구현(파이썬 소스 코드 배포의
+"Include/pycapsule.h"와 "Objects/pycapsule.c" 파일)에 설명되어 있습니
+다.
+
+-[ 각주 ]-
+
+[1] 이 함수에 대한 인터페이스는 표준 모듈 "os"에 이미 존재합니다 ---
+    간단하고 단순한 예제로 선택되었습니다.
+
+[2] 참조 "빌리기(borrowing)" 은유는 완전히 올바르지 않습니다: 소유자는
+    여전히 참조 사본을 가지고 있습니다.
+
+[3] 참조 횟수가 1 이상인지 확인하는 것은 **작동하지 않습니다** --- 참
+    조 횟수 자체가 해제된 메모리에 있을 수 있어서 다른 객체에 재사용될
+    수 있습니다!
+
+[4] "오래된" 스타일 호출 규칙을 사용할 때 이러한 보장은 유지되지 않습
+    니다 --- 이것은 여전히 기존 코드에서 많이 발견됩니다.

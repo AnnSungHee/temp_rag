@@ -1,0 +1,308 @@
+개발 도구
+*********
+
+The modules described in this chapter help you write software.  For
+example, the "pydoc" module takes a module and generates documentation
+based on the module's contents.  The "doctest" and "unittest" modules
+contains frameworks for writing unit tests that automatically exercise
+code and verify that the expected output is produced.  **2to3** can
+translate Python 2.x source code into valid Python 3.x code.
+
+이 장에서 설명하는 모듈 목록은 다음과 같습니다:
+
+* "typing" --- 형 힌트 지원
+
+  * Relevant PEPs
+
+  * 형 에일리어스
+
+  * NewType
+
+  * Callable
+
+  * 제네릭
+
+  * 사용자 정의 제네릭 형
+
+  * "Any" 형
+
+  * 명목적 대 구조적 서브 타이핑
+
+  * 모듈 내용
+
+    * 특수 타이핑 프리미티브
+
+      * 특수형
+
+      * 특수 형태
+
+      * Building generic types
+
+      * 기타 특수 지시자
+
+    * Generic concrete collections
+
+      * Corresponding to built-in types
+
+      * Corresponding to types in "collections"
+
+      * Other concrete types
+
+    * Abstract Base Classes
+
+      * Corresponding to collections in "collections.abc"
+
+      * Corresponding to other types in "collections.abc"
+
+      * Asynchronous programming
+
+      * Context manager types
+
+    * 프로토콜
+
+    * 함수와 데코레이터
+
+    * 인트로스펙션 도우미
+
+    * 상수
+
+* "pydoc" --- Documentation generator and online help system
+
+* 파이썬 개발 모드
+
+* 파이썬 개발 모드의 효과
+
+* ResourceWarning 예
+
+* 잘못된 파일 기술자 에러 예
+
+* "doctest" --- Test interactive Python examples
+
+  * 간단한 사용법: 독스트링에 있는 예제 확인하기
+
+  * 간단한 사용법: 텍스트 파일에 있는 예제 확인하기
+
+  * 작동 방법
+
+    * 어떤 독스트링을 검사합니까?
+
+    * 독스트링 예제는 어떻게 인식됩니까?
+
+    * 실행 컨텍스트란 무엇입니까?
+
+    * 예외는 어떻게 됩니까?
+
+    * 옵션 플래그
+
+    * 지시자
+
+    * 경고
+
+  * 기본 API
+
+  * Unittest API
+
+  * 고급 API
+
+    * DocTest 객체
+
+    * Example 객체
+
+    * DocTestFinder 객체
+
+    * DocTestParser 객체
+
+    * DocTestRunner 객체
+
+    * OutputChecker 객체
+
+  * 디버깅
+
+  * 맺음말
+
+* "unittest" --- Unit testing framework
+
+  * 기본 예시
+
+  * 명령행 인터페이스
+
+    * 명령행 옵션
+
+  * 테스트 탐색(Discovery)
+
+  * 테스트 코드 구조 잡기
+
+  * 이전의 테스트 코드를 다시 사용하기
+
+  * 테스트 건너뛰기와 예상된 실패
+
+  * 부분 테스트(subtest)를 사용하여 테스트 반복 구별 짓기
+
+  * 클래스와 함수
+
+    * 테스트 케이스
+
+      * Deprecated aliases
+
+    * 테스트 분류
+
+    * 테스트를 로드하고 실행하기
+
+      * load_tests 프로토콜
+
+  * 클래스와 모듈 픽스쳐
+
+    * setUpClass 와 tearDownClass
+
+    * setUpModule 과 tearDownModule
+
+  * 시그널 처리하기
+
+* "unittest.mock" --- mock object library
+
+  * 간략 지침
+
+  * Mock 클래스
+
+    * 호출
+
+    * 어트리뷰트 삭제
+
+    * 모의 객체 이름과 이름 어트리뷰트
+
+    * 모의 객체를 어트리뷰트로 연결하기
+
+  * 패처
+
+    * patch
+
+    * patch.object
+
+    * patch.dict
+
+    * patch.multiple
+
+    * 패처 메서드: start와 stop
+
+    * 내장 패치
+
+    * TEST_PREFIX
+
+    * 패치 데코레이터 중첩하기
+
+    * 패치할 곳
+
+    * 디스크립터와 프락시 객체 패치하기
+
+  * MagicMock과 매직 메서드 지원
+
+    * 매직 메서드 모킹하기
+
+    * 매직 모의 객체
+
+  * 도우미
+
+    * sentinel
+
+    * DEFAULT
+
+    * call
+
+    * create_autospec
+
+    * ANY
+
+    * FILTER_DIR
+
+    * mock_open
+
+    * 자동 사양
+
+    * 실링 모의 객체 봉인하기
+
+* "unittest.mock" --- getting started
+
+  * 모의 객체 사용하기
+
+    * 메서드를 패치하는 모의 객체
+
+    * 객체의 메서드 호출을 위한 모의 객체
+
+    * 클래스 모킹하기
+
+    * 모의 객체 이름 붙이기
+
+    * 모든 호출 추적하기
+
+    * 반환 값과 어트리뷰트 설정하기
+
+    * 모의 객체로 예외 발생시키기
+
+    * 부작용 함수와 이터러블
+
+    * 비동기 이터레이터 모킹하기
+
+    * 비동기 컨텍스트 관리자 모킹하기
+
+    * 기존 객체에서 모의 객체 만들기
+
+  * 패치 데코레이터
+
+  * 추가 예
+
+    * 연쇄 호출 모킹하기
+
+    * 부분 모킹
+
+    * 제너레이터 메서드 모킹하기
+
+    * 모든 테스트 메서드에 같은 패치 적용하기
+
+    * 연결되지 않은 메서드 모킹하기
+
+    * 모의 객체로 여러 호출 확인하기
+
+    * 가변 인자에 대처하기
+
+    * 중첩 패치
+
+    * MagicMock으로 딕셔너리 모킹하기
+
+    * Mock 서브 클래스와 그 어트리뷰트
+
+    * patch.dict로 임포트를 모킹하기
+
+    * 호출 순서 추적과 덜 상세한 호출 어서션
+
+    * 더 복잡한 인자 일치
+
+* 2to3 --- Automated Python 2 to 3 code translation
+
+  * Using 2to3
+
+  * Fixers
+
+  * "lib2to3" --- 2to3's library
+
+* "test" --- Regression tests package for Python
+
+  * "test" 패키지를 위한 단위 테스트 작성하기
+
+  * 명령 줄 인터페이스를 사용하여 테스트 실행하기
+
+* "test.support" --- 파이썬 테스트 스위트용 유틸리티
+
+* "test.support.socket_helper" --- 소켓 테스트용 유틸리티
+
+* "test.support.script_helper" --- 파이썬 실행 테스트용 유틸리티
+
+* "test.support.bytecode_helper" --- 올바른 바이트 코드 생성 테스트를
+  위한 지원 도구
+
+* "test.support.threading_helper" --- threading 테스트용 유틸리티
+
+* "test.support.os_helper" --- os 테스트용 유틸리티
+
+* "test.support.import_helper" --- 임포트 테스트용 유틸리티
+
+* "test.support.warnings_helper" --- warnings 테스트용 유틸리티

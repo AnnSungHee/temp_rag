@@ -1,0 +1,56 @@
+코드 객체
+*********
+
+코드 객체는 CPython 구현의 저수준 세부 사항입니다. 각 객체는 아직 함수
+에 묶여 있지 않은 실행 가능한 코드 덩어리를 나타냅니다.
+
+type PyCodeObject
+
+   코드 객체를 설명하는 데 사용되는 객체의 C 구조체. 이 형의 필드는 언
+   제든지 변경될 수 있습니다.
+
+PyTypeObject PyCode_Type
+
+   This is an instance of "PyTypeObject" representing the Python
+   "code" type.
+
+int PyCode_Check(PyObject *co)
+
+   Return true if *co* is a "code" object.  This function always
+   succeeds.
+
+int PyCode_GetNumFree(PyCodeObject *co)
+
+   Return the number of free variables in *co*.
+
+PyCodeObject *PyCode_New(int argcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *freevars, PyObject *cellvars, PyObject *filename, PyObject *name, int firstlineno, PyObject *lnotab)
+    *반환값: 새 참조.*
+
+   Return a new code object.  If you need a dummy code object to
+   create a frame, use "PyCode_NewEmpty()" instead.  Calling
+   "PyCode_New()" directly can bind you to a precise Python version
+   since the definition of the bytecode changes often.
+
+PyCodeObject *PyCode_NewWithPosOnlyArgs(int argcount, int posonlyargcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *freevars, PyObject *cellvars, PyObject *filename, PyObject *name, int firstlineno, PyObject *lnotab)
+    *반환값: 새 참조.*
+
+   Similar to "PyCode_New()", but with an extra "posonlyargcount" for
+   positional-only arguments.
+
+   버전 3.8에 추가.
+
+PyCodeObject *PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno)
+    *반환값: 새 참조.*
+
+   Return a new empty code object with the specified filename,
+   function name, and first line number.  It is illegal to "exec()" or
+   "eval()" the resulting code object.
+
+int PyCode_Addr2Line(PyCodeObject *co, int byte_offset)
+
+   Return the line number of the instruction that occurs on or before
+   "byte_offset" and ends after it. If you just need the line number
+   of a frame, use "PyFrame_GetLineNumber()" instead.
+
+   For efficiently iterating over the line numbers in a code object,
+   use the API described in PEP 626.

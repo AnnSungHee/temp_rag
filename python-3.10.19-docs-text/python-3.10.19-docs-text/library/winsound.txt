@@ -1,0 +1,142 @@
+"winsound" --- Sound-playing interface for Windows
+**************************************************
+
+======================================================================
+
+"winsound" 모듈은 윈도우 플랫폼에서 제공하는 기본 소리 재생 장치에 대
+한 액세스를 제공합니다. 함수와 여러 상수를 포함합니다.
+
+winsound.Beep(frequency, duration)
+
+   PC 스피커로 신호음을 울립니다. *frequency* 매개 변수는 소리의 주파
+   수를 헤르츠 단위로 지정하며 37에서 32,767 범위에 있어야 합니다.
+   *duration* 매개 변수는 소리의 지속 시간을 밀리 초로 지정합니다. 시
+   스템이 스피커에서 신호음을 울리지 못하면, "RuntimeError"가 발생합니
+   다.
+
+winsound.PlaySound(sound, flags)
+
+   Call the underlying "PlaySound()" function from the Platform API.
+   The *sound* parameter may be a filename, a system sound alias,
+   audio data as a *bytes-like object*, or "None".  Its interpretation
+   depends on the value of *flags*, which can be a bitwise ORed
+   combination of the constants described below. If the *sound*
+   parameter is "None", any currently playing waveform sound is
+   stopped. If the system indicates an error, "RuntimeError" is
+   raised.
+
+winsound.MessageBeep(type=MB_OK)
+
+   Call the underlying "MessageBeep()" function from the Platform API.
+   This plays a sound as specified in the registry.  The *type*
+   argument specifies which sound to play; possible values are "-1",
+   "MB_ICONASTERISK", "MB_ICONEXCLAMATION", "MB_ICONHAND",
+   "MB_ICONQUESTION", and "MB_OK", all described below.  The value
+   "-1" produces a "simple beep"; this is the final fallback if a
+   sound cannot be played otherwise.  If the system indicates an
+   error, "RuntimeError" is raised.
+
+winsound.SND_FILENAME
+
+   *sound* 매개 변수는 WAV 파일의 이름입니다. "SND_ALIAS"와 함께 사용
+   하지 마십시오.
+
+winsound.SND_ALIAS
+
+   *sound* 매개 변수는 레지스트리의 소리 연결 이름입니다. 레지스트리에
+   그러한 이름이 없으면, "SND_NODEFAULT"도 함께 지정하지 않는 한 시스
+   템 기본 소리를 재생합니다. 기본 소리가 등록되어 있지 않으면,
+   "RuntimeError"를 일으킵니다. "SND_FILENAME"과 함께 사용하지 마십시
+   오.
+
+   모든 Win32 시스템은 적어도 다음을 지원합니다; 대부분 시스템은 더 많
+   은 것을 지원합니다:
+
+   +----------------------------+------------------------------------------+
+   | "PlaySound()" *이름*       | 해당 제어판 소리 이름                    |
+   |============================|==========================================|
+   | "'SystemAsterisk'"         | Asterisk                                 |
+   +----------------------------+------------------------------------------+
+   | "'SystemExclamation'"      | Exclamation                              |
+   +----------------------------+------------------------------------------+
+   | "'SystemExit'"             | Exit Windows                             |
+   +----------------------------+------------------------------------------+
+   | "'SystemHand'"             | Critical Stop                            |
+   +----------------------------+------------------------------------------+
+   | "'SystemQuestion'"         | Question                                 |
+   +----------------------------+------------------------------------------+
+
+   예를 들면:
+
+      import winsound
+      # Play Windows exit sound.
+      winsound.PlaySound("SystemExit", winsound.SND_ALIAS)
+
+      # Probably play Windows default sound, if any is registered (because
+      # "*" probably isn't the registered name of any sound).
+      winsound.PlaySound("*", winsound.SND_ALIAS)
+
+winsound.SND_LOOP
+
+   소리를 반복해서 재생합니다. 블로킹을 피하고자 "SND_ASYNC" 플래그도
+   사용해야 합니다. "SND_MEMORY"와 함께 사용할 수 없습니다.
+
+winsound.SND_MEMORY
+
+   "PlaySound()"에 대한 *sound* 매개 변수는 *바이트열류 객체*의 WAV 파
+   일의 메모리 이미지입니다.
+
+   참고:
+
+     이 모듈은 메모리 이미지를 비동기적으로 재생하는 것을 지원하지 않
+     으므로, 이 플래그와 "SND_ASYNC"의 조합은 "RuntimeError"를 발생시
+     킵니다.
+
+winsound.SND_PURGE
+
+   지정된 소리의 모든 인스턴스 재생을 중지합니다.
+
+   참고:
+
+     이 플래그는 최신 윈도우 플랫폼에서 지원되지 않습니다.
+
+winsound.SND_ASYNC
+
+   소리를 비동기적으로 재생할 수 있도록, 즉시 반환합니다.
+
+winsound.SND_NODEFAULT
+
+   지정된 소리를 찾을 수 없을 때, 시스템 기본 소리를 재생하지 않습니다
+   .
+
+winsound.SND_NOSTOP
+
+   현재 재생 중인 소리를 중단하지 않습니다.
+
+winsound.SND_NOWAIT
+
+   사운드 드라이버가 바쁘면 즉시 반환합니다.
+
+   참고:
+
+     이 플래그는 최신 윈도우 플랫폼에서 지원되지 않습니다.
+
+winsound.MB_ICONASTERISK
+
+   "SystemDefault" 소리를 재생합니다.
+
+winsound.MB_ICONEXCLAMATION
+
+   "SystemExclamation" 소리를 재생합니다.
+
+winsound.MB_ICONHAND
+
+   "SystemHand" 소리를 재생합니다.
+
+winsound.MB_ICONQUESTION
+
+   "SystemQuestion" 소리를 재생합니다.
+
+winsound.MB_OK
+
+   "SystemDefault" 소리를 재생합니다.

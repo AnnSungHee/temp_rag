@@ -1,0 +1,55 @@
+"urllib.error" --- Exception classes raised by urllib.request
+*************************************************************
+
+**소스 코드:** Lib/urllib/error.py
+
+======================================================================
+
+"urllib.error"모듈은 "urllib.request"에 의해 발생하는 예외에 대한 예외
+클래스를 정의합니다. 베이스 예외 클래스는 "URLError"입니다.
+
+"urllib.error"에 의해 다음과 같은 예외가 적절하게 발생합니다.
+
+exception urllib.error.URLError
+
+   처리기가 문제에 봉착하는 경우, 처리기는 해당 예외(또는 파생된 예외)
+   를 발생시킵니다. 이 예외는 "OSError"의 서브 클래스입니다.
+
+   reason
+
+      이 에러가 발생한 원인입니다. 메시지 문자열이거나 다른 예외 인스
+      턴스가 될 수 있습니다.
+
+   버전 3.3에서 변경: "URLError" has been made a subclass of "OSError"
+   instead of "IOError".
+
+exception urllib.error.HTTPError
+
+   "HTTPError"는 "URLError"의 서브 클래스로 예외 클래스이긴 하지만, 예
+   외가 아닌 파일류 반환 값("urlopen()"의 반환 값과 동일한 값)으로도
+   작동할 수 있습니다. 이 방법은 인증 요청 같은 독특한(exotic) HTTP 에
+   러를 처리할 때 유용합니다.
+
+   code
+
+      **RFC 2616**에 정의된 HTTP 상태 코드입니다. 이 숫자 값은
+      "http.server.BaseHTTPRequestHandler.responses"에서 찾을 수 있는
+      상태 코드 딕셔너리에 있는 값에 해당합니다.
+
+   reason
+
+      This is usually a string explaining the reason for this error.
+
+   headers
+
+      The HTTP response headers for the HTTP request that caused the
+      "HTTPError".
+
+      버전 3.4에 추가.
+
+exception urllib.error.ContentTooShortError(msg, content)
+
+   This exception is raised when the "urlretrieve()" function detects
+   that the amount of the downloaded data is less than the expected
+   amount (given by the *Content-Length* header).  The "content"
+   attribute stores the downloaded (and supposedly truncated) data.

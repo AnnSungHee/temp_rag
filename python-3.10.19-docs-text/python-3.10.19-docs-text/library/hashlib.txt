@@ -1,0 +1,706 @@
+"hashlib" --- Secure hashes and message digests
+***********************************************
+
+**소스 코드:** Lib/hashlib.py
+
+======================================================================
+
+This module implements a common interface to many different secure
+hash and message digest algorithms.  Included are the FIPS secure hash
+algorithms SHA1, SHA224, SHA256, SHA384, and SHA512 (defined in FIPS
+180-2) as well as RSA's MD5 algorithm (defined in internet **RFC
+1321**).  The terms "secure hash" and "message digest" are
+interchangeable.  Older algorithms were called message digests.  The
+modern term is secure hash.
+
+참고:
+
+  adler32나 crc32 해시 함수를 원한다면, "zlib" 모듈에 있습니다.
+
+경고:
+
+  Some algorithms have known hash collision weaknesses, refer to the
+  "See also" section at the end.
+
+
+해시 알고리즘
+=============
+
+There is one constructor method named for each type of *hash*.  All
+return a hash object with the same simple interface. For example: use
+"sha256()" to create a SHA-256 hash object. You can now feed this
+object with *bytes-like objects* (normally "bytes") using the
+"update()" method. At any point you can ask it for the *digest* of the
+concatenation of the data fed to it so far using the "digest()" or
+"hexdigest()" methods.
+
+참고:
+
+  For better multithreading performance, the Python *GIL* is released
+  for data larger than 2047 bytes at object creation or on update.
+
+참고:
+
+  Feeding string objects into "update()" is not supported, as hashes
+  work on bytes, not on characters.
+
+Constructors for hash algorithms that are always present in this
+module are "sha1()", "sha224()", "sha256()", "sha384()", "sha512()",
+"blake2b()", and "blake2s()". "md5()" is normally available as well,
+though it may be missing or blocked if you are using a rare "FIPS
+compliant" build of Python. Additional algorithms may also be
+available depending upon the OpenSSL library that Python uses on your
+platform. On most platforms the "sha3_224()", "sha3_256()",
+"sha3_384()", "sha3_512()", "shake_128()", "shake_256()" are also
+available.
+
+버전 3.6에 추가: SHA3 (Keccak) and SHAKE constructors "sha3_224()",
+"sha3_256()", "sha3_384()", "sha3_512()", "shake_128()",
+"shake_256()".
+
+버전 3.6에 추가: "blake2b()" and "blake2s()" were added.
+
+버전 3.9에서 변경: 모든 hashlib 생성자는 기본값이 "True"인 키워드 전용
+인자 *usedforsecurity*를 취합니다. 값이 거짓이면 제한된 환경에서 안전
+하지 않고 차단된 해싱 알고리즘 사용을 허락합니다. "False"는 해싱 알고
+리즘이 보안 문맥에서 사용되지 않음을 나타냅니다, 예를 들어 암호화가 아
+닌 단방향 압축 함수로.Hashlib now uses SHA3 and SHAKE from OpenSSL
+1.1.1 and newer.
+
+For example, to obtain the digest of the byte string "b'Nobody
+inspects the spammish repetition'":
+
+   >>> import hashlib
+   >>> m = hashlib.sha256()
+   >>> m.update(b"Nobody inspects")
+   >>> m.update(b" the spammish repetition")
+   >>> m.digest()
+   b'\x03\x1e\xdd}Ae\x15\x93\xc5\xfe\\\x00o\xa5u+7\xfd\xdf\xf7\xbcN\x84:\xa6\xaf\x0c\x95\x0fK\x94\x06'
+   >>> m.digest_size
+   32
+   >>> m.block_size
+   64
+
+더 압축하면:
+
+>>> hashlib.sha224(b"Nobody inspects the spammish repetition").hexdigest()
+'a4337bc45a8fc544c03f52dc550cd6e1e87021bc896588bd79e901e2'
+
+hashlib.new(name[, data], *, usedforsecurity=True)
+
+   Is a generic constructor that takes the string *name* of the
+   desired algorithm as its first parameter.  It also exists to allow
+   access to the above listed hashes as well as any other algorithms
+   that your OpenSSL library may offer.  The named constructors are
+   much faster than "new()" and should be preferred.
+
+Using "new()" with an algorithm provided by OpenSSL:
+
+>>> h = hashlib.new('sha256')
+>>> h.update(b"Nobody inspects the spammish repetition")
+>>> h.hexdigest()
+'031edd7d41651593c5fe5c006fa5752b37fddff7bc4e843aa6af0c950f4b9406'
+
+Hashlib provides the following constant attributes:
+
+hashlib.algorithms_guaranteed
+
+   모든 플랫폼에서 이 모듈이 지원하도록 보장된 해시 알고리즘의 이름을
+   포함하는 집합. 'md5'는 일부 업스트림 공급자가 이를 제외하는 이상한
+   "FIPS 호환" 파이썬 빌드를 제공하지만, 이 목록에 있음에 유의하십시오
+   .
+
+   버전 3.2에 추가.
+
+hashlib.algorithms_available
+
+   실행 중인 파이썬 인터프리터에서 사용 가능한 해시 알고리즘의 이름이
+   포함된 집합. 이 이름들은 "new()"에 전달될 때 인식됩니다.
+   "algorithms_guaranteed"는 항상 부분 집합입니다. 이 집합에서 같은 알
+   고리즘이 다른 이름으로 여러 번 나타날 수 있습니다 (OpenSSL 덕분입니
+   다).
+
+   버전 3.2에 추가.
+
+다음 값은 생성자가 반환한 해시 객체의 상수 어트리뷰트로 제공됩니다:
+
+hash.digest_size
+
+   결과 해시의 바이트 단위의 크기.
+
+hash.block_size
+
+   해시 알고리즘의 바이트 단위의 내부 블록 크기.
+
+해시 객체에는 다음과 같은 어트리뷰트가 있습니다:
+
+hash.name
+
+   이 해시의 규범적 이름, 항상 소문자이며 항상 이 유형의 다른 해시를
+   만들기 위한 "new()"에 대한 매개 변수로 적합합니다.
+
+   버전 3.4에서 변경: name 어트리뷰트는 처음부터 CPython에 존재했지만,
+   파이썬 3.4 이전에는 공식적으로 지정되지 않아서, 일부 플랫폼에는 존
+   재하지 않을 수 있습니다.
+
+해시 객체에는 다음과 같은 메서드가 있습니다:
+
+hash.update(data)
+
+   *바이트열류 객체*로 해시 객체를 갱신합니다. 반복되는 호출은 모든 인
+   자를 이어붙인 단일 호출과 동등합니다: "m.update(a); m.update(b)"는
+   "m.update(a+b)"와 동등합니다.
+
+   버전 3.1에서 변경: The Python GIL is released to allow other
+   threads to run while hash updates on data larger than 2047 bytes is
+   taking place when using hash algorithms supplied by OpenSSL.
+
+hash.digest()
+
+   지금까지 "update()" 메서드에 전달된 데이터의 요약을 반환합니다. 이
+   것은 "digest_size" 크기의 바이트열 객체이며 0에서 255까지의 전체 범
+   위에 있는 바이트를 포함할 수 있습니다.
+
+hash.hexdigest()
+
+   "digest()"와 유사하지만, 요약은 16진수 숫자만 포함하는 두 배 길이의
+   문자열 객체로 반환됩니다. 전자 메일이나 기타 바이너리가 아닌 환경에
+   서 값을 안전하게 교환하는 데 사용할 수 있습니다.
+
+hash.copy()
+
+   해시 객체의 사본("복제본")을 반환합니다. 이것은 공통된 초기 부분 문
+   자열을 공유하는 데이터의 요약을 효율적으로 계산하는 데 사용될 수 있
+   습니다.
+
+
+SHAKE 가변 길이 요약
+====================
+
+"shake_128()"과 "shake_256()" 알고리즘은 length_in_bits//2 (최대 128이
+나 256) 비트의 보안성으로 가변 길이 요약을 제공합니다. 따라서 digest
+메서드에는 길이(length)가 필요합니다. 최대 길이는 SHAKE 알고리즘에 의
+해 제한되지 않습니다.
+
+shake.digest(length)
+
+   Return the digest of the data passed to the "update()" method so
+   far. This is a bytes object of size *length* which may contain
+   bytes in the whole range from 0 to 255.
+
+shake.hexdigest(length)
+
+   "digest()"와 유사하지만, 요약은 16진수 숫자만 포함하는 두 배 길이의
+   문자열 객체로 반환됩니다. 전자 메일이나 기타 바이너리가 아닌 환경에
+   서 값을 안전하게 교환하는 데 사용할 수 있습니다.
+
+
+키 파생
+=======
+
+키 파생(key derivation)과 키 확장(key stretching) 알고리즘은 안전한 암
+호 해싱을 위해 설계되었습니다. "sha1(password)"와 같은 순진한 알고리즘
+은 무차별 대입 공격에 내성이 없습니다. 올바른 암호 해싱 함수는 조정할
+수 있고, 느리고, 솔트(salt)를 포함해야 합니다.
+
+hashlib.pbkdf2_hmac(hash_name, password, salt, iterations, dklen=None)
+
+   이 함수는 PKCS#5 암호 기반 키 파생 함수 2를 제공합니다. 의사 난수
+   함수로 HMAC을 사용합니다.
+
+   문자열 *hash_name*은 원하는 HMAC을 위한 해시 요약 알고리즘의 이름입
+   니다, 예를 들어 'sha1'이나 'sha256'. *password*와 *salt*는 바이트
+   버퍼로 해석됩니다. 응용 프로그램과 라이브러리는 *password*를 적당한
+   길이(예를 들어 1024)로 제한해야 합니다. *salt*는 적절한 소스(예를
+   들어 "os.urandom()")로부터 온 약 16이나 그 이상의 바이트여야 합니다
+   .
+
+   The number of *iterations* should be chosen based on the hash
+   algorithm and computing power. As of 2022, hundreds of thousands of
+   iterations of SHA-256 are suggested. For rationale as to why and
+   how to choose what is best for your application, read *Appendix
+   A.2.2* of NIST-SP-800-132. The answers on the stackexchange pbkdf2
+   iterations question explain in detail.
+
+   *dklen* is the length of the derived key. If *dklen* is "None" then
+   the digest size of the hash algorithm *hash_name* is used, e.g. 64
+   for SHA-512.
+
+   >>> from hashlib import pbkdf2_hmac
+   >>> our_app_iters = 500_000  # Application specific, read above.
+   >>> dk = pbkdf2_hmac('sha256', b'password', b'bad salt'*2, our_app_iters)
+   >>> dk.hex()
+   '15530bba69924174860db778f2c6f8104d3aaf9d26241840c8c4a641c8d000a9'
+
+   버전 3.4에 추가.
+
+   참고:
+
+     A fast implementation of *pbkdf2_hmac* is available with OpenSSL.
+     The Python implementation uses an inline version of "hmac". It is
+     about three times slower and doesn't release the GIL.
+
+   버전 3.10부터 폐지: Slow Python implementation of *pbkdf2_hmac* is
+   deprecated. In the future the function will only be available when
+   Python is compiled with OpenSSL.
+
+hashlib.scrypt(password, *, salt, n, r, p, maxmem=0, dklen=64)
+
+   이 함수는 **RFC 7914**에 정의된 대로 scrypt 암호 기반 키 파생 함수
+   를 제공합니다.
+
+   *password*와 *salt*는 *바이트열류 객체*여야 합니다. 응용 프로그램과
+   라이브러리는 *password*를 적당한 길이(예를 들어 1024)로 제한해야 합
+   니다. *salt*는 적절한 소스(예를 들어 "os.urandom()")로부터 온 약 16
+   이나 그 이상의 바이트여야 합니다.
+
+   *n* is the CPU/Memory cost factor, *r* the block size, *p*
+   parallelization factor and *maxmem* limits memory (OpenSSL 1.1.0
+   defaults to 32 MiB). *dklen* is the length of the derived key.
+
+   버전 3.6에 추가.
+
+
+BLAKE2
+======
+
+BLAKE2는 **RFC 7693**에 정의된 암호화 해시 함수로, 두 가지 방식으로 제
+공됩니다:
+
+* **BLAKE2b**, 64비트 플랫폼에 최적화되어 있으며 1에서 64바이트 사이의
+  모든 크기의 요약을 생성합니다,
+
+* **BLAKE2s**, 8비트에서 32비트 플랫폼에 최적화되어 있으며 1에서 32바
+  이트 사이의 모든 크기의 요약을 생성합니다.
+
+BLAKE2는 **키 모드(keyed mode)** (HMAC의 더 빠르고 간단한 대체), **솔
+트 해싱(salted hashing)**, **개인화(personalization)** 및 **트리 해싱
+(tree hashing)**을 지원합니다.
+
+이 모듈의 해시 객체는 표준 라이브러리의 "hashlib" 객체의 API를 따릅니
+다.
+
+
+해시 객체 만들기
+----------------
+
+생성자 함수를 호출하여 새 해시 객체를 만듭니다:
+
+hashlib.blake2b(data=b'', *, digest_size=64, key=b'', salt=b'', person=b'', fanout=1, depth=1, leaf_size=0, node_offset=0, node_depth=0, inner_size=0, last_node=False, usedforsecurity=True)
+
+hashlib.blake2s(data=b'', *, digest_size=32, key=b'', salt=b'', person=b'', fanout=1, depth=1, leaf_size=0, node_offset=0, node_depth=0, inner_size=0, last_node=False, usedforsecurity=True)
+
+이 함수는 BLAKE2b나 BLAKE2s를 계산하기위한 해당 해시 객체를 반환합니다
+. 선택적으로 다음과 같은 일반 매개 변수를 취합니다:
+
+* *data*: 해시 할 초기 데이터 청크, *바이트열류 객체*여야 합니다. 위치
+  인자로만 전달될 수 있습니다.
+
+* *digest_size*: 바이트 단위의 출력 요약 크기.
+
+* *key*: 키 해싱을 위한 키 (BLAKE2b의 경우 최대 64바이트, BLAKE2s의 경
+  우 최대 32바이트).
+
+* *salt*: 무작위 해싱을 위한 솔트 (BLAKE2b의 경우 최대 16바이트,
+  BLAKE2s의 경우 최대 8바이트).
+
+* *person*: 개인화 문자열 (BLAKE2b의 경우 최대 16바이트, BLAKE2s의 경
+  우 최대 8바이트).
+
+다음 표는 일반 매개 변수의 제한(바이트 단위)을 보여줍니다:
+
++---------+-------------+----------+-----------+-------------+
+| 해시    | digest_size | len(key) | len(salt) | len(person) |
+|=========|=============|==========|===========|=============|
+| BLAKE2b | 64          | 64       | 16        | 16          |
++---------+-------------+----------+-----------+-------------+
+| BLAKE2s | 32          | 32       | 8         | 8           |
++---------+-------------+----------+-----------+-------------+
+
+참고:
+
+  BLAKE2 명세는 솔트와 개인화 매개 변수에 대해 상수 길이를 정의하지만,
+  편의상, 이 구현에서는 지정된 길이까지 모든 크기의 바이트 문자열을 받
+  아들입니다. 매개 변수의 길이가 지정된 길이보다 작으면, 0으로 채워지
+  므로, 예를 들어 "b'salt'"와 "b'salt\x00'"은 같은 값입니다. (*key*의
+  경우에는 해당하지 않습니다.)
+
+이 크기는 아래 설명된 모듈 상수로 제공됩니다.
+
+생성자 함수는 다음 트리 해싱 매개 변수도 받아들입니다:
+
+* *fanout*: 팬아웃 (0에서 255, 무제한이면 0, 순차적 모드(sequential
+  mode)이면 1).
+
+* *depth*: 트리의 최대 깊이 (1에서 255, 무제한이면 255, 순차적 모드이
+  면 1).
+
+* *leaf_size*: 리프의 최대 바이트 길이 (0에서 "2**32-1", 무제한이거나
+  순차적 모드이면 0).
+
+* *node_offset*: 노드 오프셋 (BLAKE2b의 경우 0에서 "2**64-1", BLAKE2s
+  의 경우 0에서 "2**48-1", 첫 번째, 가장 왼쪽, 리프 또는 순차적 모드이
+  면 0).
+
+* *node_depth*: 노드 깊이 (0에서 255, 리프나 순차적 모드이면 0).
+
+* *inner_size*: 내부 요약 크기 (BLAKE2b의 경우 0에서 64, BLAKE2s의 경
+  우 0에서 32, 순차적 모드이면 0).
+
+* *last_node*: 처리된 노드가 마지막 노드인지를 나타내는 불리언 (순차적
+  모드이면 "False").
+
+   [그림: Explanation of tree mode parameters.][그림]
+
+See section 2.10 in BLAKE2 specification for comprehensive review of
+tree hashing.
+
+
+상수
+----
+
+blake2b.SALT_SIZE
+
+blake2s.SALT_SIZE
+
+솔트 길이 (생성자가 허용하는 최대 길이).
+
+blake2b.PERSON_SIZE
+
+blake2s.PERSON_SIZE
+
+개인화 문자열 길이 (생성자가 허용하는 최대 길이).
+
+blake2b.MAX_KEY_SIZE
+
+blake2s.MAX_KEY_SIZE
+
+최대 키 크기.
+
+blake2b.MAX_DIGEST_SIZE
+
+blake2s.MAX_DIGEST_SIZE
+
+해시 함수가 출력할 수 있는 최대 요약 크기.
+
+
+예
+--
+
+
+간단한 해싱
+~~~~~~~~~~~
+
+To calculate hash of some data, you should first construct a hash
+object by calling the appropriate constructor function ("blake2b()" or
+"blake2s()"), then update it with the data by calling "update()" on
+the object, and, finally, get the digest out of the object by calling
+"digest()" (or "hexdigest()" for hex-encoded string).
+
+>>> from hashlib import blake2b
+>>> h = blake2b()
+>>> h.update(b'Hello world')
+>>> h.hexdigest()
+'6ff843ba685842aa82031d3f53c48b66326df7639a63d128974c5c14f31a0f33343a8c65551134ed1ae0f2b0dd2bb495dc81039e3eeb0aa1bb0388bbeac29183'
+
+줄여서, 첫 번째 데이터 청크를 위치 인자로 생성자에 전달하여 직접 갱신
+할 수 있습니다:
+
+>>> from hashlib import blake2b
+>>> blake2b(b'Hello world').hexdigest()
+'6ff843ba685842aa82031d3f53c48b66326df7639a63d128974c5c14f31a0f33343a8c65551134ed1ae0f2b0dd2bb495dc81039e3eeb0aa1bb0388bbeac29183'
+
+해시를 반복적으로 갱신하는 데 필요한 만큼 "hash.update()"를 호출할 수
+있습니다:
+
+>>> from hashlib import blake2b
+>>> items = [b'Hello', b' ', b'world']
+>>> h = blake2b()
+>>> for item in items:
+...     h.update(item)
+>>> h.hexdigest()
+'6ff843ba685842aa82031d3f53c48b66326df7639a63d128974c5c14f31a0f33343a8c65551134ed1ae0f2b0dd2bb495dc81039e3eeb0aa1bb0388bbeac29183'
+
+
+다른 요약 크기 사용하기
+~~~~~~~~~~~~~~~~~~~~~~~
+
+BLAKE2는 BLAKE2b의 경우 최대 64바이트, BLAKE2s의 경우 최대 32바이트까
+지 요약 크기를 구성할 수 있습니다. 예를 들어, 출력 크기를 변경하지 않
+고 SHA-1을 BLAKE2b로 바꾸려면, BLAKE2b에 20바이트 요약을 생성하도록 지
+시할 수 있습니다:
+
+>>> from hashlib import blake2b
+>>> h = blake2b(digest_size=20)
+>>> h.update(b'Replacing SHA1 with the more secure function')
+>>> h.hexdigest()
+'d24f26cf8de66472d58d4e1b1774b4c9158b1f4c'
+>>> h.digest_size
+20
+>>> len(h.digest())
+20
+
+요약 크기가 다른 해시 객체의 출력은 완전히 다릅니다 (짧은 해시는 긴 해
+시의 접두사가 *아닙니다*); BLAKE2b와 BLAKE2s는 출력 길이가 같더라도 다
+른 출력을 생성합니다:
+
+>>> from hashlib import blake2b, blake2s
+>>> blake2b(digest_size=10).hexdigest()
+'6fa1d8fcfd719046d762'
+>>> blake2b(digest_size=11).hexdigest()
+'eb6ec15daf9546254f0809'
+>>> blake2s(digest_size=10).hexdigest()
+'1bf21a98c78a1c376ae9'
+>>> blake2s(digest_size=11).hexdigest()
+'567004bf96e4a25773ebf4'
+
+
+키 해싱
+~~~~~~~
+
+키 해싱(keyed hashing)은 해시 기반 메시지 인증 코드(HMAC - Hash-based
+message authentication code)을 더 빠르고 간단하게 대체하는 인증에 사용
+할 수 있습니다. BLAKE2는 BLAKE에서 상속된 비구별성
+(indifferentiability) 속성 덕분에 접두사-MAC 모드에서 안전하게 사용할
+수 있습니다.
+
+이 예는 키 "b'pseudorandom key'"로 메시지 "b'message data'"에 대한 (16
+진 인코딩된) 128비트 인증 코드를 얻는 방법을 보여줍니다:
+
+   >>> from hashlib import blake2b
+   >>> h = blake2b(key=b'pseudorandom key', digest_size=16)
+   >>> h.update(b'message data')
+   >>> h.hexdigest()
+   '3d363ff7401e02026f4a4687d4863ced'
+
+실용적인 예로, 웹 응용 프로그램은 사용자에게 전송된 쿠키에 대칭적으로
+서명한 후 나중에 변조되지 않았는지 확인할 수 있습니다:
+
+   >>> from hashlib import blake2b
+   >>> from hmac import compare_digest
+   >>>
+   >>> SECRET_KEY = b'pseudorandomly generated server secret key'
+   >>> AUTH_SIZE = 16
+   >>>
+   >>> def sign(cookie):
+   ...     h = blake2b(digest_size=AUTH_SIZE, key=SECRET_KEY)
+   ...     h.update(cookie)
+   ...     return h.hexdigest().encode('utf-8')
+   >>>
+   >>> def verify(cookie, sig):
+   ...     good_sig = sign(cookie)
+   ...     return compare_digest(good_sig, sig)
+   >>>
+   >>> cookie = b'user-alice'
+   >>> sig = sign(cookie)
+   >>> print("{0},{1}".format(cookie.decode('utf-8'), sig))
+   user-alice,b'43b3c982cf697e0c5ab22172d1ca7421'
+   >>> verify(cookie, sig)
+   True
+   >>> verify(b'user-bob', sig)
+   False
+   >>> verify(cookie, b'0102030405060708090a0b0c0d0e0f00')
+   False
+
+네이티브 키 해싱 모드가 있더라도, 물론 BLAKE2를 "hmac" 모듈을 사용하여
+HMAC 구성에 사용할 수 있습니다:
+
+   >>> import hmac, hashlib
+   >>> m = hmac.new(b'secret key', digestmod=hashlib.blake2s)
+   >>> m.update(b'message')
+   >>> m.hexdigest()
+   'e3c8102868d28b5ff85fc35dda07329970d1a01e273c37481326fe0c861c8142'
+
+
+무작위 해싱
+~~~~~~~~~~~
+
+*salt* 매개 변수를 설정하면 해시 함수에 무작위화를 도입할 수 있습니다.
+무작위 해싱은 디지털 서명에 사용된 해시 함수에 대한 충돌 공격
+(collision attacks)을 방지하는 데 유용합니다.
+
+   무작위 해싱은 한 당사자(메시지 준비자)가 두 번째 당사자(메시지 서명
+   자)가 서명할 메시지의 전부나 일부를 생성하는 상황을 위해 설계되었습
+   니다. 메시지 준비자가 암호화 해시 함수 충돌(즉, 같은 해시값을 생성
+   하는 두 메시지)을 찾을 수 있으면, 같은 해시값과 디지털 서명을 생성
+   하는 의미 있는 메시지 버전을 준비할 수 있지만, 결과는 다릅니다 (예
+   를 들어, 계정으로 $10 대신에 $1,000,000을 이체하는 행위). 암호화 해
+   시 함수는 주요 목표로 충돌 내성을 갖도록 설계되었지만, 현재 암호화
+   해시 함수 공격에 대한 집중으로 인해 주어진 암호화 해시 함수가 예상
+   보다 적은 충돌 내성을 제공할 수 있습니다. 무작위 해싱은 준비자가 디
+   지털 서명 생성 프로세스 동안 궁극적으로 같은 해시값을 산출하는 두
+   개 이상의 메시지를 생성할 가능성을 줄여서, 서명자에게 추가적인 보호
+   를 제공합니다 -- 설사 해시 함수의 충돌을 찾는 것이 실용적이더라도.
+   그러나, 무작위 해싱을 사용하면 메시지의 모든 부분을 서명자가 준비할
+   때 디지털 서명이 제공하는 보안의 양을 줄일 수 있습니다.
+
+   (NIST SP-800-106 "Randomized Hashing for Digital Signatures")
+
+BLAKE2에서 솔트는 각 압축 함수에 대한 입력이 아니라 초기화 중에 해시
+함수에 대한 일회성 입력으로 처리됩니다.
+
+경고:
+
+  *Salted hashing* (or just hashing) with BLAKE2 or any other general-
+  purpose cryptographic hash function, such as SHA-256, is not
+  suitable for hashing passwords.  See BLAKE2 FAQ for more
+  information.
+
+>>> import os
+>>> from hashlib import blake2b
+>>> msg = b'some message'
+>>> # Calculate the first hash with a random salt.
+>>> salt1 = os.urandom(blake2b.SALT_SIZE)
+>>> h1 = blake2b(salt=salt1)
+>>> h1.update(msg)
+>>> # Calculate the second hash with a different random salt.
+>>> salt2 = os.urandom(blake2b.SALT_SIZE)
+>>> h2 = blake2b(salt=salt2)
+>>> h2.update(msg)
+>>> # The digests are different.
+>>> h1.digest() != h2.digest()
+True
+
+
+개인화
+~~~~~~
+
+때로는 해시 함수가 다른 목적으로 같은 입력에 대해 다른 요약을 생성하도
+록 강제하는 것이 유용합니다. Skein 해시 함수의 저자를 인용합니다:
+
+   모든 응용 프로그램 설계자는 이렇게 하는 것을 진지하게 고려하도록 권
+   장합니다; 우리는 유사하거나 관련된 데이터에 대해 두 해시 계산이 수
+   행되었기 때문에, 프로토콜의 한 부분에서 계산된 해시가 완전히 다른
+   부분에서 사용될 수 있는 프로토콜을 많이 보았으며, 공격자는 응용 프
+   로그램이 해시 입력을 갖게 만들도록 강제할 수 있습니다. 프로토콜에
+   사용된 각 해시 함수를 개인화하면 이러한 유형의 공격이 중단됩니다.
+
+   (The Skein Hash Function Family, p. 21)
+
+BLAKE2는 바이트열을 *person* 인자에 전달하여 개인화할 수 있습니다:
+
+   >>> from hashlib import blake2b
+   >>> FILES_HASH_PERSON = b'MyApp Files Hash'
+   >>> BLOCK_HASH_PERSON = b'MyApp Block Hash'
+   >>> h = blake2b(digest_size=32, person=FILES_HASH_PERSON)
+   >>> h.update(b'the same content')
+   >>> h.hexdigest()
+   '20d9cd024d4fb086aae819a1432dd2466de12947831b75c5a30cf2676095d3b4'
+   >>> h = blake2b(digest_size=32, person=BLOCK_HASH_PERSON)
+   >>> h.update(b'the same content')
+   >>> h.hexdigest()
+   'cf68fb5761b9c44e7878bfb2c4c9aea52264a80b75005e65619778de59f383a3'
+
+키 모드와 함께 개인화를 사용하여, 한 키에서 다른 키들을 파생시킬 수도
+있습니다.
+
+>>> from hashlib import blake2s
+>>> from base64 import b64decode, b64encode
+>>> orig_key = b64decode(b'Rm5EPJai72qcK3RGBpW3vPNfZy5OZothY+kHY6h21KM=')
+>>> enc_key = blake2s(key=orig_key, person=b'kEncrypt').digest()
+>>> mac_key = blake2s(key=orig_key, person=b'kMAC').digest()
+>>> print(b64encode(enc_key).decode('utf-8'))
+rbPb15S/Z9t+agffno5wuhB77VbRi6F9Iv2qIxU7WHw=
+>>> print(b64encode(mac_key).decode('utf-8'))
+G9GtHFE1YluXY1zWPlYk1e/nWfu0WSEb0KRcjhDeP/o=
+
+
+트리 모드
+~~~~~~~~~
+
+다음은 두 개의 리프 노드를 갖는 최소 트리를 해싱하는 예입니다:
+
+     10
+    /  \
+   00  01
+
+이 예는 64바이트 내부 요약을 사용하고, 32바이트 최종 요약을 반환합니다
+:
+
+   >>> from hashlib import blake2b
+   >>>
+   >>> FANOUT = 2
+   >>> DEPTH = 2
+   >>> LEAF_SIZE = 4096
+   >>> INNER_SIZE = 64
+   >>>
+   >>> buf = bytearray(6000)
+   >>>
+   >>> # Left leaf
+   ... h00 = blake2b(buf[0:LEAF_SIZE], fanout=FANOUT, depth=DEPTH,
+   ...               leaf_size=LEAF_SIZE, inner_size=INNER_SIZE,
+   ...               node_offset=0, node_depth=0, last_node=False)
+   >>> # Right leaf
+   ... h01 = blake2b(buf[LEAF_SIZE:], fanout=FANOUT, depth=DEPTH,
+   ...               leaf_size=LEAF_SIZE, inner_size=INNER_SIZE,
+   ...               node_offset=1, node_depth=0, last_node=True)
+   >>> # Root node
+   ... h10 = blake2b(digest_size=32, fanout=FANOUT, depth=DEPTH,
+   ...               leaf_size=LEAF_SIZE, inner_size=INNER_SIZE,
+   ...               node_offset=0, node_depth=1, last_node=True)
+   >>> h10.update(h00.digest())
+   >>> h10.update(h01.digest())
+   >>> h10.hexdigest()
+   '3ad2a9b37c6070e374c7a8c508fe20ca86b6ed54e286e93a0318e95e881db5aa'
+
+
+크레딧
+------
+
+BLAKE2는 *Jean-Philippe Aumasson*, *Luca Henzen*, *Willi Meier* 및
+*Raphael C.-W. Phan*이 만든 SHA-3 파이널리스트 BLAKE를 기반으로 *Jean-
+Philippe Aumasson*, *Samuel Neves*, *Zooko Wilcox-O'Hearn* 및
+*Christian Winnerlein*이 설계했습니다.
+
+*Daniel J.  Bernstein*이 설계한 ChaCha 암호(cipher)의 핵심 알고리즘을
+사용합니다.
+
+표준 라이브러리 구현은 pyblake2 모듈에 기반합니다. 이것은 *Samuel
+Neves*가 작성한 C 구현을 기반으로 *Dmitry Chestnykh*가 작성했습니다.
+이 설명서는 pyblake2에서 복사했으며 *Dmitry Chestnykh*가 작성했습니다.
+
+C 코드는 *Christian Heimes*가 파이썬 용으로 부분적으로 재작성했습니다.
+
+다음 공개 도메인 기부는 C 해시 함수 구현, 확장 코드 및 이 설명서 모두
+에 적용됩니다:
+
+   법률에 따라 가능한 범위 내에서, 저자(들)는 이 소프트웨어에 대한 모
+   든 저작권과 관련되고 둘러싼 권리를 전 세계 공개 도메인에 기부했습니
+   다. 이 소프트웨어는 보증 없이 배포됩니다.
+
+   이 소프트웨어와 함께 CC0 Public Domain Dedication의 사본을 받았어야
+   합니다. 그렇지 않으면,
+   https://creativecommons.org/publicdomain/zero/1.0/ 을 참조하십시오.
+
+다음과 같은 사람들은 Creative Commons Public Domain Dedication 1.0
+Universal에 따라 개발을 돕거나 프로젝트와 공개 도메인에 변경에 기여했
+습니다:
+
+* *Alexandr Sokolovskiy*
+
+더 보기:
+
+  모듈 "hmac"
+     해시를 사용하여 메시지 인증 코드를 생성하는 모듈.
+
+  모듈 "base64"
+     바이너리가 아닌 환경을 위해 바이너리 해시를 인코딩하는 다른 방법.
+
+  https://blake2.net
+     공식 BLAKE2 웹 사이트.
+
+  https://csrc.nist.gov/csrc/media/publications/fips/180/2/archive/20
+  02-08-01/documents/fips180-2.pdf
+     The FIPS 180-2 publication on Secure Hash Algorithms.
+
+  https://en.wikipedia.org/wiki/Cryptographic_hash_function#Cryptogra
+  phic_hash_algorithms
+     어떤 알고리즘에 알려진 문제가 있고 그것이 사용에 어떤 의미가 있는
+     지에 대한 정보가 포함된 위키피디아 기사.
+
+  https://www.ietf.org/rfc/rfc8018.txt
+     PKCS #5: Password-Based Cryptography Specification Version 2.1
+
+  https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication8
+  00-132.pdf
+     NIST Recommendation for Password-Based Key Derivation.

@@ -1,0 +1,54 @@
+"rlcompleter" --- Completion function for GNU readline
+******************************************************
+
+**소스 코드:** Lib/rlcompleter.py
+
+======================================================================
+
+The "rlcompleter" module defines a completion function suitable for
+the "readline" module by completing valid Python identifiers and
+keywords.
+
+When this module is imported on a Unix platform with the "readline"
+module available, an instance of the "Completer" class is
+automatically created and its "complete()" method is set as the
+"readline" completer.
+
+예제:
+
+   >>> import rlcompleter
+   >>> import readline
+   >>> readline.parse_and_bind("tab: complete")
+   >>> readline. <TAB PRESSED>
+   readline.__doc__          readline.get_line_buffer(  readline.read_init_file(
+   readline.__file__         readline.insert_text(      readline.set_completer(
+   readline.__name__         readline.parse_and_bind(
+   >>> readline.
+
+The "rlcompleter" module is designed for use with Python's interactive
+mode.  Unless Python is run with the "-S" option, the module is
+automatically imported and configured (see Readline 구성).
+
+"readline"이 없는 플랫폼에서, 이 모듈이 정의하는 "Completer" 클래스는
+여전히 사용자 정의 목적에 사용될 수 있습니다.
+
+
+Completer Objects
+=================
+
+Completer 객체는 다음과 같은 메서드를 가집니다:
+
+Completer.complete(text, state)
+
+   Return the *state*th completion for *text*.
+
+   마침표("'.'")가 포함되지 않은 *text*로 호출되면, "__main__",
+   "builtins" 및 키워드("keyword" 모듈에서 정의한 대로)에 현재 정의된
+   이름으로 완성됩니다.
+
+   If called for a dotted name, it will try to evaluate anything
+   without obvious side-effects (functions will not be evaluated, but
+   it can generate calls to "__getattr__()") up to the last part, and
+   find matches for the rest via the "dir()" function.  Any exception
+   raised during the evaluation of the expression is caught, silenced
+   and "None" is returned.

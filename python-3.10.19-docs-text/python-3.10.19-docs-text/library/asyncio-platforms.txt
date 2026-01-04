@@ -1,0 +1,87 @@
+플랫폼 지원
+***********
+
+"asyncio" 모듈은 이식성이 있도록 설계되었지만, 플랫폼의 하부 아키텍처
+와 기능으로 인해 일부 플랫폼에는 미묘한 차이점과 제약이 있습니다.
+
+
+모든 플랫폼
+===========
+
+* "loop.add_reader()"와 "loop.add_writer()"는 파일 I/O를 감시하는데 사
+  용할 수 없습니다.
+
+
+윈도우
+======
+
+**소스 코드:** Lib/asyncio/proactor_events.py,
+Lib/asyncio/windows_events.py, Lib/asyncio/windows_utils.py
+
+======================================================================
+
+버전 3.8에서 변경: 윈도우에서, "ProactorEventLoop"는 이제 기본 이벤트
+루프입니다.
+
+윈도우의 모든 이벤트 루프는 다음 메서드를 지원하지 않습니다:
+
+* "loop.create_unix_connection()" and "loop.create_unix_server()" are
+  not supported. The "socket.AF_UNIX" socket family is specific to
+  Unix.
+
+* "loop.add_signal_handler()"와 "loop.remove_signal_handler()"는 지원
+  되지 않습니다.
+
+"SelectorEventLoop"에는 다음과 같은 제약이 있습니다:
+
+* "SelectSelector"는 소켓 이벤트를 기다리는 데 사용됩니다: 소켓을 지원
+  하며 512개의 소켓으로 제한됩니다.
+
+* "loop.add_reader()"와 "loop.add_writer()"는 소켓 핸들만 받아들입니다
+  (예를 들어, 파이프 파일 기술자는 지원되지 않습니다).
+
+* 파이프는 지원되지 않으므로, "loop.connect_read_pipe()"와
+  "loop.connect_write_pipe()" 메서드는 구현되지 않습니다.
+
+* 서브 프로세스는 지원되지 않습니다, 즉, "loop.subprocess_exec()" 와
+  "loop.subprocess_shell()" 메서드가 구현되지 않습니다.
+
+"ProactorEventLoop"에는 다음과 같은 제약이 있습니다:
+
+* "loop.add_reader()"와 "loop.add_writer()" 메서드는 지원되지 않습니다
+  .
+
+The resolution of the monotonic clock on Windows is usually around
+15.6 msec.  The best resolution is 0.5 msec. The resolution depends on
+the hardware (availability of HPET) and on the Windows configuration.
+
+
+윈도우에서의 서브 프로세스 지원
+-------------------------------
+
+윈도우에서, 기본 이벤트 루프 "ProactorEventLoop"는 서브 프로세스를 지
+원하지만, "SelectorEventLoop"는 그렇지 않습니다.
+
+"ProactorEventLoop"가 자식 프로세스를 관찰하는 다른 메커니즘을 가지고
+있으므로, "policy.set_child_watcher()" 함수도 지원되지 않습니다.
+
+
+macOS
+=====
+
+최신 macOS 버전은 완전하게 지원됩니다.
+
+-[ macOS <= 10.8 ]-
+
+macOS 10.6, 10.7 및 10.8에서, 기본 이벤트 루프는
+"selectors.KqueueSelector"를 사용하는데, 이 버전에서는 문자 장치를 지
+원하지 않습니다. 이러한 이전 버전의 macOS에서 문자 장치를 지원하려면,
+"SelectorEventLoop"가 "SelectSelector" 나 "PollSelector"를 사용하도록
+수동으로 구성할 수 있습니다. 예:
+
+   import asyncio
+   import selectors
+
+   selector = selectors.SelectSelector()
+   loop = asyncio.SelectorEventLoop(selector)
+   asyncio.set_event_loop(loop)

@@ -1,0 +1,380 @@
+11. 표준 라이브러리 둘러보기 --- 2부
+************************************
+
+이 두 번째 둘러보기는 전문 프로그래밍 요구 사항을 지원하는 고급 모듈을
+다루고 있습니다. 이러한 모듈은 작은 스크립트에서는 거의 사용되지 않습
+니다.
+
+
+11.1. 출력 포매팅
+=================
+
+"reprlib" 모듈은 크거나 깊게 중첩된 컨테이너의 축약 된 디스플레이를 위
+해 커스터마이즈된 "repr()" 의 버전을 제공합니다:
+
+   >>> import reprlib
+   >>> reprlib.repr(set('supercalifragilisticexpialidocious'))
+   "{'a', 'c', 'd', 'e', 'f', 'g', ...}"
+
+"pprint" 모듈은 인터프리터가 읽을 수 있는 방식으로 내장 객체나 사용자
+정의 객체를 인쇄하는 것을 보다 정교하게 제어할 수 있게 합니다. 결과가
+한 줄보다 길면 "예쁜 프린터"가 줄 바꿈과 들여쓰기를 추가하여 데이터 구
+조를 보다 명확하게 나타냅니다:
+
+   >>> import pprint
+   >>> t = [[[['black', 'cyan'], 'white', ['green', 'red']], [['magenta',
+   ...     'yellow'], 'blue']]]
+   ...
+   >>> pprint.pprint(t, width=30)
+   [[[['black', 'cyan'],
+      'white',
+      ['green', 'red']],
+     [['magenta', 'yellow'],
+      'blue']]]
+
+"textwrap" 모듈은 텍스트의 문단을 주어진 화면 너비에 맞게 포맷합니다:
+
+   >>> import textwrap
+   >>> doc = """The wrap() method is just like fill() except that it returns
+   ... a list of strings instead of one big string with newlines to separate
+   ... the wrapped lines."""
+   ...
+   >>> print(textwrap.fill(doc, width=40))
+   The wrap() method is just like fill()
+   except that it returns a list of strings
+   instead of one big string with newlines
+   to separate the wrapped lines.
+
+"locale" 모듈은 문화권 특정 데이터 포맷의 데이터베이스에 액세스합니다.
+locale의 format 함수의 grouping 어트리뷰트는 그룹 구분 기호로 숫자를
+포매팅하는 직접적인 방법을 제공합니다:
+
+   >>> import locale
+   >>> locale.setlocale(locale.LC_ALL, 'English_United States.1252')
+   'English_United States.1252'
+   >>> conv = locale.localeconv()          # get a mapping of conventions
+   >>> x = 1234567.8
+   >>> locale.format("%d", x, grouping=True)
+   '1,234,567'
+   >>> locale.format_string("%s%.*f", (conv['currency_symbol'],
+   ...                      conv['frac_digits'], x), grouping=True)
+   '$1,234,567.80'
+
+
+11.2. 템플릿
+============
+
+"string" 모듈은 다재다능한 "Template" 클래스를 포함하고 있는데, 최종
+사용자가 편집하기에 적절한 단순한 문법을 갖고 있습니다. 따라서 사용자
+는 응용 프로그램을 변경하지 않고도 응용 프로그램을 커스터마이즈할 수
+있습니다.
+
+형식은 "$" 와 유효한 파이썬 식별자 (영숫자와 밑줄)로 만들어진 자리표시
+자 이름을 사용합니다. 중괄호를 사용하여 자리표시자를 둘러싸면 공백없이
+영숫자가 뒤따르도록 할 수 있습니다. "$$" 을 쓰면 하나의 이스케이프 된
+"$" 를 만듭니다:
+
+   >>> from string import Template
+   >>> t = Template('${village}folk send $$10 to $cause.')
+   >>> t.substitute(village='Nottingham', cause='the ditch fund')
+   'Nottinghamfolk send $10 to the ditch fund.'
+
+"substitute()" 메서드는 자리표시자가 딕셔너리나 키워드 인자로 제공되지
+않을 때 "KeyError" 를 일으킵니다. 메일 병합 스타일 응용 프로그램의 경
+우 사용자가 제공한 데이터가 불완전할 수 있으며 "safe_substitute()" 메
+서드가 더 적절할 수 있습니다. 데이터가 누락 된 경우 자리표시자를 변경
+하지 않습니다:
+
+   >>> t = Template('Return the $item to $owner.')
+   >>> d = dict(item='unladen swallow')
+   >>> t.substitute(d)
+   Traceback (most recent call last):
+     ...
+   KeyError: 'owner'
+   >>> t.safe_substitute(d)
+   'Return the unladen swallow to $owner.'
+
+Template 서브 클래스는 사용자 정의 구분자를 지정할 수 있습니다. 예를
+들어 사진 브라우저를 위한 일괄 이름 바꾸기 유틸리티는 현재 날짜, 이미
+지 시퀀스 번호 또는 파일 형식과 같은 자리표시자에 백분율 기호를 사용하
+도록 선택할 수 있습니다:
+
+   >>> import time, os.path
+   >>> photofiles = ['img_1074.jpg', 'img_1076.jpg', 'img_1077.jpg']
+   >>> class BatchRename(Template):
+   ...     delimiter = '%'
+   ...
+   >>> fmt = input('Enter rename style (%d-date %n-seqnum %f-format):  ')
+   Enter rename style (%d-date %n-seqnum %f-format):  Ashley_%n%f
+
+   >>> t = BatchRename(fmt)
+   >>> date = time.strftime('%d%b%y')
+   >>> for i, filename in enumerate(photofiles):
+   ...     base, ext = os.path.splitext(filename)
+   ...     newname = t.substitute(d=date, n=i, f=ext)
+   ...     print('{0} --> {1}'.format(filename, newname))
+
+   img_1074.jpg --> Ashley_0.jpg
+   img_1076.jpg --> Ashley_1.jpg
+   img_1077.jpg --> Ashley_2.jpg
+
+템플릿의 또 다른 응용은 다중 출력 형식의 세부 사항에서 프로그램 논리를
+분리하는 것입니다. 이렇게 하면 XML 파일, 일반 텍스트 보고서 및 HTML 웹
+보고서에 대한 커스텀 템플릿을 치환할 수 있습니다.
+
+
+11.3. 바이너리 데이터 레코드 배치 작업
+======================================
+
+"struct" 모듈은 가변 길이 바이너리 레코드 형식으로 작업하기 위한
+"pack()" 과 "unpack()" 함수를 제공합니다. 다음 예제는 "zipfile" 모듈을
+사용하지 않고 ZIP 파일의 헤더 정보를 루핑하는 법을 보여줍니다. 팩 코드
+""H"" 와 ""I"" 는 각각 2바이트와 4바이트의 부호 없는 숫자를 나타냅니다
+. ""<"" 는 표준 크기이면서 리틀 엔디안 바이트 순서를 가짐을 나타냅니다
+:
+
+   import struct
+
+   with open('myfile.zip', 'rb') as f:
+       data = f.read()
+
+   start = 0
+   for i in range(3):                      # show the first 3 file headers
+       start += 14
+       fields = struct.unpack('<IIIHH', data[start:start+16])
+       crc32, comp_size, uncomp_size, filenamesize, extra_size = fields
+
+       start += 16
+       filename = data[start:start+filenamesize]
+       start += filenamesize
+       extra = data[start:start+extra_size]
+       print(filename, hex(crc32), comp_size, uncomp_size)
+
+       start += extra_size + comp_size     # skip to the next header
+
+
+11.4. 다중 스레딩
+=================
+
+스레딩은 차례로 종속되지 않는 작업을 분리하는 기술입니다. 스레드는 다
+른 작업이 백그라운드에서 실행되는 동안 사용자 입력을 받는 응용 프로그
+램의 응답을 향상하는 데 사용할 수 있습니다. 관련된 사용 사례는 다른 스
+레드의 계산과 병렬로 I/O를 실행하는 경우입니다.
+
+다음 코드는 메인 프로그램이 계속 실행되는 동안 고수준 "threading" 모듈
+이 백그라운드에서 작업을 어떻게 수행할 수 있는지 보여줍니다:
+
+   import threading, zipfile
+
+   class AsyncZip(threading.Thread):
+       def __init__(self, infile, outfile):
+           threading.Thread.__init__(self)
+           self.infile = infile
+           self.outfile = outfile
+
+       def run(self):
+           f = zipfile.ZipFile(self.outfile, 'w', zipfile.ZIP_DEFLATED)
+           f.write(self.infile)
+           f.close()
+           print('Finished background zip of:', self.infile)
+
+   background = AsyncZip('mydata.txt', 'myarchive.zip')
+   background.start()
+   print('The main program continues to run in foreground.')
+
+   background.join()    # Wait for the background task to finish
+   print('Main program waited until background was done.')
+
+다중 스레드 응용 프로그램의 가장 큰 문제점은 데이터 또는 다른 자원을
+공유하는 스레드를 조정하는 것입니다. 이를 위해 threading 모듈은 록, 이
+벤트, 조건 변수 및 세마포어를 비롯한 많은 수의 동기화 기본 요소를 제공
+합니다.
+
+이러한 도구는 강력하지만, 사소한 설계 오류로 인해 재현하기 어려운 문제
+가 발생할 수 있습니다. 따라서, 작업 조정에 대한 선호되는 접근 방식은
+자원에 대한 모든 액세스를 단일 스레드에 집중시킨 다음 "queue" 모듈을
+사용하여 해당 스레드에 다른 스레드의 요청을 제공하는 것입니다. 스레드
+간 통신 및 조정을 위한 "Queue" 객체를 사용하는 응용 프로그램은 설계하
+기 쉽고, 읽기 쉽고, 신뢰성이 높습니다.
+
+
+11.5. 로깅
+==========
+
+"logging" 모듈은 완전한 기능을 갖춘 유연한 로깅 시스템을 제공합니다.
+가장 단순한 경우, 로그 메시지는 파일이나 "sys.stderr" 로 보내집니다:
+
+   import logging
+   logging.debug('Debugging information')
+   logging.info('Informational message')
+   logging.warning('Warning:config file %s not found', 'server.conf')
+   logging.error('Error occurred')
+   logging.critical('Critical error -- shutting down')
+
+그러면 다음과 같은 결과가 출력됩니다:
+
+   WARNING:root:Warning:config file server.conf not found
+   ERROR:root:Error occurred
+   CRITICAL:root:Critical error -- shutting down
+
+기본적으로 정보 및 디버깅 메시지는 표시되지 않고 출력은 표준 에러로 보
+내집니다. 다른 출력 옵션에는 전자 메일, 데이터 그램, 소켓 또는 HTTP 서
+버를 통한 메시지 라우팅이 포함됩니다. 새로운 필터는 메시지 우선순위에
+따라 다른 라우팅을 선택할 수 있습니다: "DEBUG", "INFO", "WARNING",
+"ERROR" , 그리고 "CRITICAL".
+
+로깅 시스템은 파이썬에서 직접 구성하거나, 응용 프로그램을 변경하지 않
+고 사용자 정의 로깅을 위해 사용자가 편집할 수 있는 설정 파일에서 로드
+할 수 있습니다.
+
+
+11.6. 약한 참조
+===============
+
+파이썬은 자동 메모리 관리 (대부분 객체에 대한 참조 횟수 추적 및 순환을
+제거하기 위한 *가비지 수거*)를 수행합니다. 메모리는 마지막 참조가 제거
+된 직후에 해제됩니다.
+
+이 접근법은 대부분의 응용 프로그램에서 잘 작동하지만, 때로는 다른 것들
+에 의해 사용되는 동안에만 객체를 추적해야 할 필요가 있습니다. 불행하게
+도, 단지 그것들을 추적하는 것만으로도 그들을 영구적으로 만드는 참조를
+만듭니다. "weakref" 모듈은 참조를 만들지 않고 객체를 추적할 수 있는 도
+구를 제공합니다. 객체가 더 필요하지 않으면 weakref 테이블에서 객체가
+자동으로 제거되고 weakref 객체에 대한 콜백이 트리거됩니다. 일반적인 응
+용에는 만드는 데 비용이 많이 드는 개체 캐싱이 포함됩니다:
+
+   >>> import weakref, gc
+   >>> class A:
+   ...     def __init__(self, value):
+   ...         self.value = value
+   ...     def __repr__(self):
+   ...         return str(self.value)
+   ...
+   >>> a = A(10)                   # create a reference
+   >>> d = weakref.WeakValueDictionary()
+   >>> d['primary'] = a            # does not create a reference
+   >>> d['primary']                # fetch the object if it is still alive
+   10
+   >>> del a                       # remove the one reference
+   >>> gc.collect()                # run garbage collection right away
+   0
+   >>> d['primary']                # entry was automatically removed
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+       d['primary']                # entry was automatically removed
+     File "C:/python310/lib/weakref.py", line 46, in __getitem__
+       o = self.data[key]()
+   KeyError: 'primary'
+
+
+11.7. 리스트 작업 도구
+======================
+
+내장 리스트 형으로 많은 데이터 구조 요구를 충족시킬 수 있습니다. 그러
+나 때로는 다른 성능 상충 관계가 있는 대안적 구현이 필요할 수도 있습니
+다.
+
+The "array" module provides an "array()" object that is like a list
+that stores only homogeneous data and stores it more compactly.  The
+following example shows an array of numbers stored as two byte
+unsigned binary numbers (typecode ""H"") rather than the usual 16
+bytes per entry for regular lists of Python int objects:
+
+   >>> from array import array
+   >>> a = array('H', [4000, 10, 700, 22222])
+   >>> sum(a)
+   26932
+   >>> a[1:3]
+   array('H', [10, 700])
+
+The "collections" module provides a "deque()" object that is like a
+list with faster appends and pops from the left side but slower
+lookups in the middle. These objects are well suited for implementing
+queues and breadth first tree searches:
+
+   >>> from collections import deque
+   >>> d = deque(["task1", "task2", "task3"])
+   >>> d.append("task4")
+   >>> print("Handling", d.popleft())
+   Handling task1
+
+   unsearched = deque([starting_node])
+   def breadth_first_search(unsearched):
+       node = unsearched.popleft()
+       for m in gen_moves(node):
+           if is_goal(m):
+               return m
+           unsearched.append(m)
+
+대안적 리스트 구현 외에도 라이브러리는 정렬된 리스트를 조작하는 함수들
+이 있는 "bisect" 모듈과 같은 다른 도구를 제공합니다:
+
+   >>> import bisect
+   >>> scores = [(100, 'perl'), (200, 'tcl'), (400, 'lua'), (500, 'python')]
+   >>> bisect.insort(scores, (300, 'ruby'))
+   >>> scores
+   [(100, 'perl'), (200, 'tcl'), (300, 'ruby'), (400, 'lua'), (500, 'python')]
+
+"heapq" 모듈은 일반 리스트를 기반으로 힙을 구현하는 함수를 제공합니다.
+가장 값이 작은 항목은 항상 위치 0에 유지됩니다. 이것은 가장 작은 요소
+에 반복적으로 액세스하지만, 전체 목록 정렬을 실행하지 않으려는 응용에
+유용합니다:
+
+   >>> from heapq import heapify, heappop, heappush
+   >>> data = [1, 3, 5, 7, 9, 2, 4, 6, 8, 0]
+   >>> heapify(data)                      # rearrange the list into heap order
+   >>> heappush(data, -5)                 # add a new entry
+   >>> [heappop(data) for i in range(3)]  # fetch the three smallest entries
+   [-5, 0, 1]
+
+
+11.8. Decimal Floating Point Arithmetic
+=======================================
+
+The "decimal" module offers a "Decimal" datatype for decimal floating
+point arithmetic.  Compared to the built-in "float" implementation of
+binary floating point, the class is especially helpful for
+
+* 정확한 10진수 표현이 필요한 금융 응용 및 기타 용도,
+
+* 정밀도 제어,
+
+* 법적 또는 규제 요구 사항을 충족하는 반올림 제어,
+
+* 유효숫자 추적, 또는
+
+* 사용자가 결과가 손으로 계산한 것과 일치 할 것으로 기대하는 응용.
+
+예를 들어, 70센트 전화 요금에 대해 5% 세금을 계산하면, 십진 부동 소수
+점 및 이진 부동 소수점에 다른 결과가 나타납니다. 결과를 가장 가까운 센
+트로 반올림하면 차이가 드러납니다:
+
+   >>> from decimal import *
+   >>> round(Decimal('0.70') * Decimal('1.05'), 2)
+   Decimal('0.74')
+   >>> round(.70 * 1.05, 2)
+   0.73
+
+"Decimal" 결과는 끝에 붙는 0을 유지하며, 두 개의 유효숫자를 가진 피승
+수로부터 네 자리의 유효숫자를 자동으로 추론합니다. Decimal은 손으로 한
+수학을 재현하고 이진 부동 소수점이 십진수를 정확하게 표현할 수 없을 때
+발생할 수 있는 문제를 피합니다.
+
+정확한 표현은 "Decimal" 클래스가 이진 부동 소수점에 적합하지 않은 모듈
+로 계산과 동등성 검사를 수행할 수 있도록 합니다:
+
+   >>> Decimal('1.00') % Decimal('.10')
+   Decimal('0.00')
+   >>> 1.00 % 0.10
+   0.09999999999999995
+
+   >>> sum([Decimal('0.1')]*10) == Decimal('1.0')
+   True
+   >>> sum([0.1]*10) == 1.0
+   False
+
+"decimal" 모듈은 필요한 만큼의 정밀도로 산술을 제공합니다:
+
+   >>> getcontext().prec = 36
+   >>> Decimal(1) / Decimal(7)
+   Decimal('0.142857142857142857142857142857142857')

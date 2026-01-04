@@ -1,0 +1,71 @@
+모듈 임포트 하기
+****************
+
+이 장에서 설명하는 모듈은 다른 파이썬 모듈을 임포트하는 새로운 방법과
+임포트 절차를 사용자 정의하기 위한 훅을 제공합니다.
+
+이 장에서 설명하는 모듈의 전체 목록은 다음과 같습니다:
+
+* "zipimport" --- Import modules from Zip archives
+
+  * zipimporter 객체
+
+  * 예제
+
+* "pkgutil" --- Package extension utility
+
+* "modulefinder" --- Find modules used by a script
+
+  * "ModuleFinder"의 사용 예
+
+* "runpy" --- Locating and executing Python modules
+
+* "importlib" --- "import"의 구현
+
+  * 소개
+
+  * 함수
+
+  * "importlib.abc" -- import와 관련된 추상 베이스 클래스
+
+  * "importlib.resources" -- Resources
+
+  * "importlib.machinery" -- 임포터와 경로 훅
+
+  * "importlib.util" -- 임포터를 위한 유틸리티 코드
+
+  * 예
+
+    * 프로그래밍 방식으로 임포트 하기
+
+    * 모듈을 임포트 할 수 있는지 확인하기
+
+    * 소스 파일을 직접 임포트 하기
+
+    * Implementing lazy imports
+
+    * 임포터 설정하기
+
+    * "importlib.import_module()" 근사하기
+
+* Using "importlib.metadata"
+
+  * 개요
+
+  * 기능적 API
+
+    * 진입 지점
+
+    * 배포 메타데이터
+
+    * 배포 버전
+
+    * 배포 파일
+
+    * 배포 요구 사항
+
+    * Package distributions
+
+  * 배포
+
+  * 검색 알고리즘 확장하기

@@ -1,0 +1,170 @@
+시퀀스 프로토콜
+***************
+
+int PySequence_Check(PyObject *o)
+    * Part of the Stable ABI.*
+
+   Return "1" if the object provides the sequence protocol, and "0"
+   otherwise. Note that it returns "1" for Python classes with a
+   "__getitem__()" method, unless they are "dict" subclasses, since in
+   general it is impossible to determine what type of keys the class
+   supports.  This function always succeeds.
+
+Py_ssize_t PySequence_Size(PyObject *o)
+Py_ssize_t PySequence_Length(PyObject *o)
+    * Part of the Stable ABI.*
+
+   성공 시 시퀀스 *o*의 객체 수를 반환하고, 실패하면 "-1"을 반환합니다
+   . 이것은 파이썬 표현식 "len(o)"와 동등합니다.
+
+PyObject *PySequence_Concat(PyObject *o1, PyObject *o2)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   성공 시 *o1*와 *o2*의 이어붙이기를 반환하고, 실패하면 "NULL"을 반환
+   합니다. 이것은 파이썬 표현식 "o1 + o2"와 동등합니다.
+
+PyObject *PySequence_Repeat(PyObject *o, Py_ssize_t count)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   시퀸스 객체 *o*를 *count* 번 반복한 결과를 반환하거나, 실패 시
+   "NULL"을 반환합니다. 이것은 파이썬 표현식 "o * count"와 동등합니다.
+
+PyObject *PySequence_InPlaceConcat(PyObject *o1, PyObject *o2)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   성공 시 *o1*와 *o2*의 이어붙이기를 반환하고, 실패하면 "NULL"을 반환
+   합니다. 이 연산은 *o1*가 지원하면 *제자리에서(in-place)* 수행됩니다
+   . 이것은 파이썬 표현식 "o1 += o2"와 동등합니다.
+
+PyObject *PySequence_InPlaceRepeat(PyObject *o, Py_ssize_t count)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   시퀸스 객체 *o*를 *count* 번 반복한 결과를 반환하거나, 실패 시
+   "NULL"을 반환합니다. 이 연산은 *o*가 지원하면 *제자리에서(in-
+   place)* 수행됩니다. 이것은 파이썬 표현식 "o *= count"와 동등합니다.
+
+PyObject *PySequence_GetItem(PyObject *o, Py_ssize_t i)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *o*의 *i* 번째 요소를 반환하거나, 실패하면 "NULL"을 반환합니다. 이
+   것은 파이썬 표현식 "o[i]"와 동등합니다.
+
+PyObject *PySequence_GetSlice(PyObject *o, Py_ssize_t i1, Py_ssize_t i2)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   시퀀스 객체 *o*의 *i1*와 *i2* 사이의 슬라이스를 반환하거나, 실패하
+   면 "NULL"을 반환합니다. 이것은 파이썬 표현식 "o[i1:i2]"와 동등합니
+   다.
+
+int PySequence_SetItem(PyObject *o, Py_ssize_t i, PyObject *v)
+    * Part of the Stable ABI.*
+
+   객체 *v*를 *o*의 *i* 번째 요소에 대입합니다. 실패하면 예외를 발생시
+   키고 "-1"을 반환합니다; 성공하면 "0"을 반환합니다. 이것은 파이썬 문
+   장 "o[i] = v"와 동등합니다. 이 함수는 *v*에 대한 참조를 훔치지 *않
+   습니다*.
+
+   *v*가 "NULL"이면, 요소가 삭제되지만, 이 기능은
+   "PySequence_DelItem()" 사용을 위해 폐지되었습니다.
+
+int PySequence_DelItem(PyObject *o, Py_ssize_t i)
+    * Part of the Stable ABI.*
+
+   *o* 객체의 *i* 번째 요소를 삭제합니다. 실패하면 "-1"을 반환합니다.
+   이것은 파이썬 문장 "del o[i]"와 동등합니다.
+
+int PySequence_SetSlice(PyObject *o, Py_ssize_t i1, Py_ssize_t i2, PyObject *v)
+    * Part of the Stable ABI.*
+
+   시퀀스 객체 *v*를 시퀀스 객체 *o*의 *i1*에서 *i2* 사이의 슬라이스에
+   대입합니다. 이것은 파이썬 문장 "o[i1:i2] = v"와 동등합니다.
+
+int PySequence_DelSlice(PyObject *o, Py_ssize_t i1, Py_ssize_t i2)
+    * Part of the Stable ABI.*
+
+   시퀀스 객체 *o*의 *i1*에서 *i2* 사이의 슬라이스를 삭제합니다. 실패
+   하면 "-1"을 반환합니다. 이것은 파이썬 문장 "del o[i1:i2]"와 동등합
+   니다.
+
+Py_ssize_t PySequence_Count(PyObject *o, PyObject *value)
+    * Part of the Stable ABI.*
+
+   *o*에 있는 *value*의 수를 반환합니다. 즉, "o[key] == value"를 만족
+   하는 key의 수를 반환합니다. 실패하면 "-1"을 반환합니다. 이것은 파이
+   썬 표현식 "o.count(value)"와 동등합니다.
+
+int PySequence_Contains(PyObject *o, PyObject *value)
+    * Part of the Stable ABI.*
+
+   *o*에 *value*가 있는지 확인합니다. *o*의 항목 중 하나가 *value*와
+   같으면 "1"을 반환하고, 그렇지 않으면 "0"을 반환합니다. 에러 시 "-1"
+   을 반환합니다. 이는 파이썬 표현식 "value in o"와 동등합니다.
+
+Py_ssize_t PySequence_Index(PyObject *o, PyObject *value)
+    * Part of the Stable ABI.*
+
+   "o[i] == value"을 만족하는 첫 번째 인덱스 *i*를 반환합니다. 에러 시
+   "-1"을 반환합니다. 이것은 파이썬 표현식 "o.index(value)"와 동등합니
+   다.
+
+PyObject *PySequence_List(PyObject *o)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   시퀀스나 이터러블 *o*와 같은 내용을 가진 리스트 객체를 반환하거나,
+   실패하면 "NULL"을 반환합니다. 반환된 리스트는 새로운 것으로 보장됩
+   니다. 이것은 파이썬 표현식 "list(o)"와 동등합니다.
+
+PyObject *PySequence_Tuple(PyObject *o)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   시퀀스나 이터러블 *o*와 같은 내용을 가진 튜플 객체를 반환하거나, 실
+   패하면 "NULL"을 반환합니다. *o*가 튜플이면, 새로운 참조가 반환되고,
+   그렇지 않으면 튜플이 적절한 내용으로 만들어집니다. 이것은 파이썬 표
+   현식 "tuple(o)"와 동등합니다.
+
+PyObject *PySequence_Fast(PyObject *o, const char *m)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   시퀀스나 이터러블 *o*를 다른 "PySequence_Fast*" 계열 함수에서 사용
+   할 수 있는 객체로 반환합니다. 객체가 시퀀스나 이터러블이 아니면 *m*
+   을 메시지 텍스트로 사용하여 "TypeError"를 발생시킵니다. 실패 시
+   "NULL"을 반환합니다.
+
+   "PySequence_Fast*" 함수는 *o*가 "PyTupleObject"나 "PyListObject"라
+   고 가정하고 *o*의 데이터 필드에 직접 액세스하기 때문에 이렇게 이름
+   붙였습니다.
+
+   CPython 구현 세부 사항으로, *o*가 이미 시퀀스나 리스트면, 반환됩니
+   다.
+
+Py_ssize_t PySequence_Fast_GET_SIZE(PyObject *o)
+
+   *o*의 길이를 반환하는데, *o*가 "PySequence_Fast()"에 의해 반환되었
+   고, *o*가 "NULL"이 아니라고 가정합니다. 크기는 *o*에 대해
+   "PySequence_Size()"를 호출하여 얻을 수도 있지만,
+   "PySequence_Fast_GET_SIZE()"는 *o*가 리스트나 튜플이라고 가정할 수
+   있으므로 더 빠릅니다.
+
+PyObject *PySequence_Fast_GET_ITEM(PyObject *o, Py_ssize_t i)
+    *반환값: 빌린 참조.*
+
+   *o*의 *i* 번째 요소를 반환하는데, *o*가 "PySequence_Fast()"에 의해
+   반환되었고, *o*가 "NULL"이 아니며, *i*가 경계 내에 있다고 가정합니
+   다.
+
+PyObject **PySequence_Fast_ITEMS(PyObject *o)
+
+   PyObject 포인터의 하부 배열을 반환합니다. *o*가 "PySequence_Fast()"
+   에 의해 반환되었고, *o*가 "NULL"이 아니라고 가정합니다.
+
+   리스트의 크기가 변경되면, 재할당이 항목 배열을 재배치할 수 있음에
+   유의하십시오. 따라서, 시퀀스가 변경될 수 없는 문맥에서만 하부 배열
+   포인터를 사용하십시오.
+
+PyObject *PySequence_ITEM(PyObject *o, Py_ssize_t i)
+    *반환값: 새 참조.*
+
+   *o*의 *i* 번째 요소를 반환하거나, 실패하면 "NULL"을 반환합니다.
+   "PySequence_GetItem()"의 빠른 형식이지만, *o*에 대해
+   "PySequence_Check()"가 참인지 검사하지 않고, 음수 인덱스를 조정하지
+   않습니다.

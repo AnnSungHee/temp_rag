@@ -1,0 +1,457 @@
+"types" --- Dynamic type creation and names for built-in types
+**************************************************************
+
+**소스 코드:** Lib/types.py
+
+======================================================================
+
+이 모듈은 새로운 형의 동적 생성을 지원하는 유틸리티 함수를 정의합니다.
+
+표준 파이썬 인터프리터가 사용하지만, "int"나 "str"처럼 내장으로 노출되
+지 않는 일부 객체 형의 이름도 정의합니다.
+
+마지막으로, 내장되기에 충분히 기본적이지 않은 몇 가지 추가 형 관련 유
+틸리티 클래스와 함수를 제공합니다.
+
+
+동적 형 생성
+============
+
+types.new_class(name, bases=(), kwds=None, exec_body=None)
+
+   적절한 메타 클래스를 사용하여 동적으로 클래스 객체를 만듭니다.
+
+   처음 세 개의 인자는 클래스 정의 헤더를 구성하는 요소들입니다: 클래
+   스 이름, 베이스 클래스 (순서대로), 키워드 인자 (가령 "metaclass").
+
+   *exec_body* 인자는 새로 만들어진 클래스 이름 공간을 채우는 데 사용
+   되는 콜백입니다. 클래스 이름 공간을 유일한 인자로 받아들이고 클래스
+   내용으로 이름 공간을 직접 갱신해야 합니다. 콜백이 제공되지 않으면,
+   "lambda ns: None"를 전달하는 것과 같은 효과가 있습니다.
+
+   버전 3.3에 추가.
+
+types.prepare_class(name, bases=(), kwds=None)
+
+   적절한 메타 클래스를 계산하고 클래스 이름 공간을 만듭니다.
+
+   인자는 클래스 정의 헤더를 구성하는 요소들입니다: 클래스 이름, 베이
+   스 클래스 (순서대로) 및 키워드 인자 (가령 "metaclass").
+
+   반환 값은 3-튜플입니다: "metaclass, namespace, kwds"
+
+   *metaclass*는 적절한 메타 클래스이고, *namespace*는 준비된 클래스
+   이름 공간이며 *kwds*는 "'metaclass'" 항목이 제거된 전달된 *kwds* 인
+   자의 갱신된 사본입니다. *kwds* 인자가 전달되지 않으면, 빈 딕셔너리
+   가 됩니다.
+
+   버전 3.3에 추가.
+
+   버전 3.6에서 변경: 반환된 튜플의 "namespace" 요소의 기본값이 변경되
+   었습니다. 이제 메타 클래스에 "__prepare__" 메서드가 없으면 삽입 순
+   서 보존 맵핑이 사용됩니다.
+
+더 보기:
+
+  메타 클래스
+     이 함수들이 지원하는 클래스 생성 절차에 대한 자세한 내용
+
+  **PEP 3115** - 파이썬 3000의 메타 클래스
+     "__prepare__" 이름 공간 훅을 도입했습니다
+
+types.resolve_bases(bases)
+
+   **PEP 560**의 명세에 따라 MRO 항목을 동적으로 결정합니다.
+
+   This function looks for items in *bases* that are not instances of
+   "type", and returns a tuple where each such object that has an
+   "__mro_entries__" method is replaced with an unpacked result of
+   calling this method.  If a *bases* item is an instance of "type",
+   or it doesn't have an "__mro_entries__" method, then it is included
+   in the return tuple unchanged.
+
+   버전 3.7에 추가.
+
+더 보기: **PEP 560** - typing 모듈과 제네릭 형에 대한 코어 지원
+
+
+표준 인터프리터 형
+==================
+
+이 모듈은 파이썬 인터프리터를 구현하는 데 필요한 많은 형의 이름을 제공
+합니다. "listiterator" 형과 같이 처리 중에 우연히 발생하는 일부 형은
+의도적으로 포함하지 않았습니다.
+
+이러한 이름의 일반적인 용도는 "isinstance()"나 "issubclass()" 검사입니
+다.
+
+이러한 형을 인스턴스 화할 때는 서명이 파이썬 버전마다 다를 수 있음에
+유의해야 합니다.
+
+다음과 같은 형들에 대해 표준 이름이 정의됩니다:
+
+types.NoneType
+
+   The type of "None".
+
+   버전 3.10에 추가.
+
+types.FunctionType
+types.LambdaType
+
+   사용자 정의 함수와 "lambda" 표현식이 만든 함수의 형.
+
+   인자 "code"로 감사 이벤트 "function.__new__"를 발생시킵니다.
+
+   감사 이벤트는 함수 객체의 직접 인스턴스 화에서만 발생하며, 일반 컴
+   파일에서는 발생하지 않습니다.
+
+types.GeneratorType
+
+   제너레이터 함수가 만든, *제너레이터*-이터레이터 객체의 형.
+
+types.CoroutineType
+
+   "async def" 함수가 만든 *코루틴* 객체의 형.
+
+   버전 3.5에 추가.
+
+types.AsyncGeneratorType
+
+   비동기 제너레이터 함수가 만든, *비동기 제너레이터*-이터레이터 객체
+   의 형.
+
+   버전 3.6에 추가.
+
+class types.CodeType(**kwargs)
+
+   The type for code objects such as returned by "compile()".
+
+   인자 "code", "filename", "name", "argcount", "posonlyargcount",
+   "kwonlyargcount", "nlocals", "stacksize", "flags"로 감사 이벤트
+   "code.__new__"를 발생시킵니다.
+
+   감사된 인자는 초기화자가 요구하는 이름이나 위치와 일치하지 않을 수
+   있음에 유의하십시오. 감사 이벤트는 코드 객체의 직접 인스턴스 화에서
+   만 발생하며, 일반 컴파일에서는 발생하지 않습니다.
+
+   replace(**kwargs)
+
+      Return a copy of the code object with new values for the
+      specified fields.
+
+      버전 3.8에 추가.
+
+types.CellType
+
+   The type for cell objects: such objects are used as containers for
+   a function's free variables.
+
+   버전 3.8에 추가.
+
+types.MethodType
+
+   사용자 정의 클래스 인스턴스의 메서드 형.
+
+types.BuiltinFunctionType
+types.BuiltinMethodType
+
+   "len()"이나 "sys.exit()" 와 같은 내장 함수와 내장 클래스의 메서드의
+   형. (여기서, "내장"이라는 용어는 "C로 작성된"을 의미합니다.)
+
+types.WrapperDescriptorType
+
+   "object.__init__()"나 "object.__lt__()"와 같은, 일부 내장 데이터형
+   과 베이스 클래스의 메서드의 형.
+
+   버전 3.7에 추가.
+
+types.MethodWrapperType
+
+   일부 내장 데이터형과 베이스 클래스의 *연결된(bound)* 메서드의 형.
+   예를 들어 "object().__str__"의 형입니다.
+
+   버전 3.7에 추가.
+
+types.NotImplementedType
+
+   The type of "NotImplemented".
+
+   버전 3.10에 추가.
+
+types.MethodDescriptorType
+
+   "str.join()"과 같은 일부 내장 데이터형의 메서드의 형.
+
+   버전 3.7에 추가.
+
+types.ClassMethodDescriptorType
+
+   "dict.__dict__['fromkeys']"와 같은 일부 내장 데이터형의 *연결되지
+   않은(unbound)* 클래스 메서드의 형.
+
+   버전 3.7에 추가.
+
+class types.ModuleType(name, doc=None)
+
+   *모듈*의 형. 생성자는 만들 모듈의 이름과 선택적으로 *독스트링*을 취
+   합니다.
+
+   참고:
+
+     Use "importlib.util.module_from_spec()" to create a new module if
+     you wish to set the various import-controlled attributes.
+
+   __doc__
+
+      The *docstring* of the module. Defaults to "None".
+
+   __loader__
+
+      The *loader* which loaded the module. Defaults to "None".
+
+      This attribute is to match
+      "importlib.machinery.ModuleSpec.loader" as stored in the
+      "__spec__" object.
+
+      참고:
+
+        A future version of Python may stop setting this attribute by
+        default. To guard against this potential change, preferably
+        read from the "__spec__" attribute instead or use
+        "getattr(module, "__loader__", None)" if you explicitly need
+        to use this attribute.
+
+      버전 3.4에서 변경: Defaults to "None". Previously the attribute
+      was optional.
+
+   __name__
+
+      The name of the module. Expected to match
+      "importlib.machinery.ModuleSpec.name".
+
+   __package__
+
+      Which *package* a module belongs to. If the module is top-level
+      (i.e. not a part of any specific package) then the attribute
+      should be set to "''", else it should be set to the name of the
+      package (which can be "__name__" if the module is a package
+      itself). Defaults to "None".
+
+      This attribute is to match
+      "importlib.machinery.ModuleSpec.parent" as stored in the
+      "__spec__" object.
+
+      참고:
+
+        A future version of Python may stop setting this attribute by
+        default. To guard against this potential change, preferably
+        read from the "__spec__" attribute instead or use
+        "getattr(module, "__package__", None)" if you explicitly need
+        to use this attribute.
+
+      버전 3.4에서 변경: Defaults to "None". Previously the attribute
+      was optional.
+
+   __spec__
+
+      A record of the module's import-system-related state. Expected
+      to be an instance of "importlib.machinery.ModuleSpec".
+
+      버전 3.4에 추가.
+
+types.EllipsisType
+
+   The type of "Ellipsis".
+
+   버전 3.10에 추가.
+
+class types.GenericAlias(t_origin, t_args)
+
+   "list[int]"와 같은 매개 변수화된 제네릭의 형입니다.
+
+   "t_origin"은 "list", "tuple" 또는 "dict"와 같이 매개 변수화되지 않
+   은 제네릭 클래스여야 합니다. "t_args"는 "t_origin"을 매개 변수화하
+   는 형의 "tuple"(길이 1일 수 있습니다)이어야 합니다:
+
+      >>> from types import GenericAlias
+
+      >>> list[int] == GenericAlias(list, (int,))
+      True
+      >>> dict[str, int] == GenericAlias(dict, (str, int))
+      True
+
+   버전 3.9에 추가.
+
+   버전 3.9.2에서 변경: 이 형은 이제 서브 클래싱 할 수 있습니다.
+
+class types.UnionType
+
+   The type of union type expressions.
+
+   버전 3.10에 추가.
+
+class types.TracebackType(tb_next, tb_frame, tb_lasti, tb_lineno)
+
+   The type of traceback objects such as found in "sys.exc_info()[2]".
+
+   사용 가능한 어트리뷰트와 연산에 대한 세부 사항 및 동적으로 트레이스
+   백을 만드는 것에 대한 지침은 언어 레퍼런스를 참조하십시오.
+
+types.FrameType
+
+   The type of frame objects such as found in "tb.tb_frame" if "tb" is
+   a traceback object.
+
+   See the language reference for details of the available attributes
+   and operations.
+
+types.GetSetDescriptorType
+
+   The type of objects defined in extension modules with
+   "PyGetSetDef", such as "FrameType.f_locals" or
+   "array.array.typecode".  This type is used as descriptor for object
+   attributes; it has the same purpose as the "property" type, but for
+   classes defined in extension modules.
+
+types.MemberDescriptorType
+
+   "datetime.timedelta.days"와 같은, "PyMemberDef"가 있는 확장 모듈에
+   서 정의된 객체의 형. 이 형은 표준 변환 함수를 사용하는 간단한 C 데
+   이터 멤버의 디스크립터로 사용됩니다; "property" 형과 같은 목적을 갖
+   지만, 확장 모듈에 정의된 클래스를 위한 것입니다.
+
+   **CPython 구현 상세:** 파이썬의 다른 구현에서, 이 형은
+   "GetSetDescriptorType"과 같을 수 있습니다.
+
+class types.MappingProxyType(mapping)
+
+   매핑의 읽기 전용 프락시. 매핑 항목에 대한 동적 뷰를 제공하는데, 매
+   핑이 변경될 때 뷰가 이러한 변경 사항을 반영함을 의미합니다.
+
+   버전 3.3에 추가.
+
+   버전 3.9에서 변경: **PEP 584**의 새 병합 ("|") 연산자를 지원하도록
+   갱신되었습니다. 단순히 하부 매핑에 위임합니다.
+
+   key in proxy
+
+      하부 매핑에 키 *key*가 있으면 "True"를, 그렇지 않으면 "False"를
+      반환합니다.
+
+   proxy[key]
+
+      키 *key*를 사용하여 하부 매핑의 항목을 반환합니다. *key*가 하부
+      매핑에 없으면 "KeyError"를 발생시킵니다.
+
+   iter(proxy)
+
+      하부 매핑의 키에 대한 이터레이터를 반환합니다. 이것은
+      "iter(proxy.keys())"의 줄임 표현입니다.
+
+   len(proxy)
+
+      하부 매핑의 항목 수를 반환합니다.
+
+   copy()
+
+      하부 매핑의 얕은 사본을 반환합니다.
+
+   get(key[, default])
+
+      *key*가 하부 매핑에 있으면 *key*의 값을, 그렇지 않으면 *default*
+      를 반환합니다. *default*를 지정하지 않으면, 기본적으로 "None"으
+      로 설정되므로, 이 메서드는 절대 "KeyError"를 발생시키지 않습니다
+      .
+
+   items()
+
+      하부 매핑의 항목(items)("(key, value)" 쌍)의 새 뷰를 반환합니다.
+
+   keys()
+
+      하부 매핑의 키(keys)의 새로운 뷰를 반환합니다.
+
+   values()
+
+      하부 매핑의 값(values)의 새 뷰를 반환합니다.
+
+   reversed(proxy)
+
+      하부 매핑의 키(keys)에 대한 역 이터레이터를 반환합니다.
+
+      버전 3.9에 추가.
+
+
+추가 유틸리티 클래스와 함수
+===========================
+
+class types.SimpleNamespace
+
+   이름 공간에 대한 어트리뷰트 액세스와 의미 있는 repr을 제공하는 간단
+   한 "object" 서브 클래스.
+
+   Unlike "object", with "SimpleNamespace" you can add and remove
+   attributes.  If a "SimpleNamespace" object is initialized with
+   keyword arguments, those are directly added to the underlying
+   namespace.
+
+   형은 다음 코드와 대략 동등합니다:
+
+      class SimpleNamespace:
+          def __init__(self, /, **kwargs):
+              self.__dict__.update(kwargs)
+
+          def __repr__(self):
+              items = (f"{k}={v!r}" for k, v in self.__dict__.items())
+              return "{}({})".format(type(self).__name__, ", ".join(items))
+
+          def __eq__(self, other):
+              if isinstance(self, SimpleNamespace) and isinstance(other, SimpleNamespace):
+                 return self.__dict__ == other.__dict__
+              return NotImplemented
+
+   "SimpleNamespace"는 "class NS: pass"의 대체품으로 유용할 수 있습니
+   다. 하지만, 구조화된 레코드형에는 "namedtuple()"을 대신 사용하십시
+   오.
+
+   버전 3.3에 추가.
+
+   버전 3.9에서 변경: repr의 어트리뷰트 순서가 알파벳순에서 삽입 순으
+   로 변경되었습니다 ("dict"처럼).
+
+types.DynamicClassAttribute(fget=None, fset=None, fdel=None, doc=None)
+
+   클래스의 어트리뷰트 액세스를 __getattr__ 로 보냅니다.
+
+   디스크립터이며, 인스턴스와 클래스를 통해 액세스할 때 다르게 작동하
+   는 어트리뷰트를 정의하는 데 사용됩니다. 인스턴스 액세스는 정상적으
+   로 유지되지만, 클래스를 통한 어트리뷰트 액세스는 클래스의
+   __getattr__ 메서드로 보냅니다; 이는 AttributeError를 발생 시켜 수행
+   됩니다.
+
+   이를 통해 인스턴스에서 활성화된 프로퍼티를 가짐과 동시에, 클래스에
+   서 같은 이름을 가진 가상 어트리뷰트를 가질 수 있습니다 (예제는
+   "enum.Enum"을 참조하십시오).
+
+   버전 3.4에 추가.
+
+
+코루틴 유틸리티 함수
+====================
+
+types.coroutine(gen_func)
+
+   이 함수는 *제너레이터* 함수를 제너레이터 기반 코루틴을 반환하는 *코
+   루틴 함수*로 변환합니다. 제너레이터 기반 코루틴은 여전히 *제너레이
+   터 이터레이터*이지만, *코루틴* 객체로도 간주하며 *어웨이터블*입니다
+   . 그러나, 반드시 "__await__()" 메서드를 구현할 필요는 없습니다.
+
+   *gen_func*가 제너레이터 함수면 제자리(in-place)에서 수정됩니다.
+
+   *gen_func*가 제너레이터 함수가 아니면, 래핑 됩니다.
+   "collections.abc.Generator"의 인스턴스를 반환하면, 인스턴스는 *어웨
+   이터블* 프락시 객체로 래핑 됩니다. 다른 모든 형의 객체는 그대로 반
+   환됩니다.
+
+   버전 3.5에 추가.

@@ -1,0 +1,1036 @@
+"ipaddress" --- IPv4/IPv6 manipulation library
+**********************************************
+
+**소스 코드:** Lib/ipaddress.py
+
+======================================================================
+
+"ipaddress"는 IPv4와 IPv6 주소와 네트워크를 만들고, 조작하고, 연산하는
+기능을 제공합니다.
+
+이 모듈의 함수와 클래스를 사용하면 두 호스트가 같은 서브 네트에 있는지
+확인하기, 특정 서브 네트의 모든 호스트를 이터레이트 하기, 문자열이 유
+효한 IP 주소나 네트워크를 나타내는지 검사하기 등 IP 주소와 관련된 다양
+한 작업을 간단하게 처리할 수 있습니다.
+
+이것은 전체 모듈 API 레퍼런스입니다 - 개요와 소개는 ipaddress 모듈에
+대한 소개를 참조하십시오.
+
+버전 3.3에 추가.
+
+
+편의 팩토리 함수
+================
+
+"ipaddress" 모듈은 IP 주소, 네트워크 및 인터페이스를 편리하게 만드는
+팩토리 함수를 제공합니다:
+
+ipaddress.ip_address(address)
+
+   인자로 전달된 IP 주소에 따라 "IPv4Address" 나 "IPv6Address" 객체를
+   반환합니다. IPv4나 IPv6 주소가 제공될 수 있습니다; "2**32" 보다 작
+   은 정수는 기본적으로 IPv4로 간주합니다. *address*가 유효한 IPv4나
+   IPv6 주소를 나타내지 않으면 "ValueError"가 발생합니다.
+
+   >>> ipaddress.ip_address('192.168.0.1')
+   IPv4Address('192.168.0.1')
+   >>> ipaddress.ip_address('2001:db8::')
+   IPv6Address('2001:db8::')
+
+ipaddress.ip_network(address, strict=True)
+
+   인자로 전달된 IP 주소에 따라 "IPv4Network" 나 "IPv6Network" 객체를
+   반환합니다. *address*는 IP 네트워크를 나타내는 문자열이나 정수입니
+   다. IPv4나 IPv6 네트워크가 제공될 수 있습니다; "2**32" 보다 작은 정
+   수는 기본적으로 IPv4로 간주합니다. *strict*는 "IPv4Network" 나
+   "IPv6Network" 생성자로 전달됩니다. *address*가 유효한 IPv4나 IPv6
+   주소를 나타내지 않거나, 네트워크에 호스트 비트가 설정되어있으면
+   "ValueError"가 발생합니다.
+
+   >>> ipaddress.ip_network('192.168.0.0/28')
+   IPv4Network('192.168.0.0/28')
+
+ipaddress.ip_interface(address)
+
+   인자로 전달된 IP 주소에 따라 "IPv4Interface" 나 "IPv6Interface" 객
+   체를 반환합니다. *address*는 IP 주소를 나타내는 문자열이나 정수입니
+   다. IPv4나 IPv6 주소가 제공될 수 있습니다. "2**32" 보다 작은 정수는
+   기본적으로 IPv4로 간주합니다. *address*가 유효한 IPv4나 IPv6 주소를
+   나타내지 않으면 "ValueError"가 발생합니다.
+
+이러한 편의 함수들의 한 가지 단점은 IPv4와 IPv6 형식을 모두 처리해야
+한다는 것이, 함수가 IPv4나 IPv6 형식 중 어느 것을 의도하는지 알 수 없
+기 때문에, 에러 메시지가 정확한 에러에 대한 정보를 최소한으로만 제공한
+다는 것을 의미한다는 것입니다. 적절한 버전 별 클래스 생성자를 직접 호
+출하여 더 자세한 에러 보고를 얻을 수 있습니다.
+
+
+IP 주소
+=======
+
+
+주소 객체
+---------
+
+"IPv4Address"와 "IPv6Address" 객체는 많은 공통 어트리뷰트를 공유합니다
+. IPv6 주소에만 의미가 있는 일부 어트리뷰트는 두 IP 버전을 모두 올바르
+게 처리하는 코드를 더 쉽게 작성할 수 있도록 "IPv4Address" 객체에 의해
+구현됩니다. 주소 객체는 *해시 가능*해서, 딕셔너리에서 키로 사용할 수
+있습니다.
+
+class ipaddress.IPv4Address(address)
+
+   IPv4 주소를 구성합니다. *address*가 유효한 IPv4 주소가 아니면
+   "AddressValueError" 가 발생합니다.
+
+   다음은 유효한 IPv4 주소를 구성합니다:
+
+   1. 점으로 구분된, 0--255 범위의 4개의 십진 정수로 구성되는 십진 점
+      표기법의 문자열 (예를 들어 "192.168.0.1"). 각 정수는 주소의 옥텟
+      (바이트)을 나타냅니다. 8진수 표기법과의 혼동을 방지하기 위해 선
+      행 0은 허용되지 않습니다.
+
+   2. 32비트에 맞는 정수.
+
+   3. 길이가 4인 "bytes" 객체에 채워진 정수 (가장 유효한 옥텟이 먼저
+      옵니다).
+
+   >>> ipaddress.IPv4Address('192.168.0.1')
+   IPv4Address('192.168.0.1')
+   >>> ipaddress.IPv4Address(3232235521)
+   IPv4Address('192.168.0.1')
+   >>> ipaddress.IPv4Address(b'\xC0\xA8\x00\x01')
+   IPv4Address('192.168.0.1')
+
+   버전 3.8에서 변경: Leading zeros are tolerated, even in ambiguous
+   cases that look like octal notation.
+
+   버전 3.10에서 변경: Leading zeros are no longer tolerated and are
+   treated as an error. IPv4 address strings are now parsed as strict
+   as glibc "inet_pton()".
+
+   버전 3.9.5에서 변경: The above change was also included in Python
+   3.9 starting with version 3.9.5.
+
+   버전 3.8.12에서 변경: The above change was also included in Python
+   3.8 starting with version 3.8.12.
+
+   version
+
+      적절한 버전 번호: IPv4의 경우 "4", IPv6의 경우 "6".
+
+   max_prefixlen
+
+      이 버전에 대한 주소 표현의 총 비트 수: IPv4의 경우 "32", IPv6의
+      경우 "128".
+
+      접두사는 주소가 네트워크의 일부인지를 판별하기 위해 비교되는 주
+      소의 선행 비트 수를 정의합니다.
+
+   compressed
+
+   exploded
+
+      점으로 구분된 십진 표기법의 문자열 표현. 선행 0은 표현에 포함되
+      지 않습니다.
+
+      IPv4는 옥텟이 0으로 설정된 주소에 대한 약식 표기법을 정의하지 않
+      기 때문에, 이 두 어트리뷰트는 IPv4 주소의 경우 항상 "str(addr)"
+      과 같습니다. 이러한 어트리뷰트를 노출하면 IPv4와 IPv6 주소를 모
+      두 처리할 수 있는 디스플레이 코드를 더 쉽게 작성할 수 있습니다.
+
+   packed
+
+      이 주소의 바이너리 표현 - 적절한 길이의 "bytes" 객체 (가장 유효
+      한 옥텟이 먼저 옵니다). IPv4의 경우 4바이트, IPv6의 경우 16바이
+      트입니다.
+
+   reverse_pointer
+
+      IP 주소에 대한 역 DNS PTR 레코드의 이름, 예를 들어:
+
+         >>> ipaddress.ip_address("127.0.0.1").reverse_pointer
+         '1.0.0.127.in-addr.arpa'
+         >>> ipaddress.ip_address("2001:db8::1").reverse_pointer
+         '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa'
+
+      이 이름은 결정된(resolved) 호스트명 자체가 아니라 PTR 조회를 수
+      행하는 데 사용할 수 있는 이름입니다.
+
+      버전 3.5에 추가.
+
+   is_multicast
+
+      주소가 멀티캐스트용으로 예약되었으면 "True". **RFC 3171**(IPv4의
+      경우)이나 **RFC 2373**(IPv6의 경우)을 참조하십시오.
+
+   is_private
+
+      다음을 제외하고 iana-ipv4-special-registry(IPv4의 경우)나 iana-
+      ipv6-special-registry(IPv6의 경우)에 의해 주소가 전역적으로 도달
+      할 수 없도록 정의되었으면 "True":
+
+      * "is_private" is "False" for the shared address space
+        ("100.64.0.0/10")
+
+      * For IPv4-mapped IPv6-addresses the "is_private" value is
+        determined by the semantics of the underlying IPv4 addresses
+        and the following condition holds (see
+        "IPv6Address.ipv4_mapped"):
+
+           address.is_private == address.ipv4_mapped.is_private
+
+      "is_private" has value opposite to "is_global", except for the
+      shared address space ("100.64.0.0/10" range) where they are both
+      "False".
+
+      버전 3.10.15에서 변경: Fixed some false positives and false
+      negatives.
+
+      * "192.0.0.0/24" is considered private with the exception of
+        "192.0.0.9/32" and "192.0.0.10/32" (previously: only the
+        "192.0.0.0/29" sub-range was considered private).
+
+      * "64:ff9b:1::/48" is considered private.
+
+      * "2002::/16" is considered private.
+
+      * There are exceptions within "2001::/23" (otherwise considered
+        private): "2001:1::1/128", "2001:1::2/128", "2001:3::/32",
+        "2001:4:112::/48", "2001:20::/28", "2001:30::/28". The
+        exceptions are not considered private.
+
+   is_global
+
+      다음을 제외하고 iana-ipv4-special-registry(IPv4의 경우)나 iana-
+      ipv6-special-registry(IPv6의 경우)에 의해 주소가 전역적으로 도달
+      할 수 있도록 정의되었으면 "True":
+
+      For IPv4-mapped IPv6-addresses the "is_private" value is
+      determined by the semantics of the underlying IPv4 addresses and
+      the following condition holds (see "IPv6Address.ipv4_mapped"):
+
+         address.is_global == address.ipv4_mapped.is_global
+
+      "is_global" has value opposite to "is_private", except for the
+      shared address space ("100.64.0.0/10" range) where they are both
+      "False".
+
+      버전 3.4에 추가.
+
+      버전 3.10.15에서 변경: Fixed some false positives and false
+      negatives, see "is_private" for details.
+
+   is_unspecified
+
+      주소가 지정되지 않았으면 "True". **RFC 5735**(IPv4의 경우)나
+      **RFC 2373**(IPv6의 경우)을 참조하십시오.
+
+   is_reserved
+
+      주소가 그 외에 IETF 예약되었으면 "True".
+
+   is_loopback
+
+      이것이 루프 백 주소이면 "True". **RFC 3330**(IPv4의 경우)이나
+      **RFC 2373**(IPv6의 경우)을 참조하십시오.
+
+   is_link_local
+
+      주소가 링크 로컬 사용을 위해 예약되었으면 "True". **RFC 3927**을
+      참조하십시오.
+
+IPv4Address.__format__(fmt)
+
+   명시적 포맷 문자열로 제어되는 IP 주소의 문자열 표현을 반환합니다.
+   *fmt*는 다음 중 하나일 수 있습니다: "str()"과 동등한 기본 옵션인
+   "'s'", 0으로 채워진 이진수 문자열을 위한 "'b'", 대문자나 소문자 16
+   진수 표현을 위한 "'X'"나 "'x'", 또는 IPv4 주소의 경우 "'b'"와 IPv6
+   의 경우 "'x'"와 동등한 "'n'". 이진수와 16진수 표현의 경우, 형식 지
+   정자 "'#'"과 그룹화 옵션 "'_'"를 사용할 수 있습니다. "__format__"은
+   "format", "str.format" 및 f-문자열에서 사용됩니다.
+
+   >>> format(ipaddress.IPv4Address('192.168.0.1'))
+   '192.168.0.1'
+   >>> '{:#b}'.format(ipaddress.IPv4Address('192.168.0.1'))
+   '0b11000000101010000000000000000001'
+   >>> f'{ipaddress.IPv6Address("2001:db8::1000"):s}'
+   '2001:db8::1000'
+   >>> format(ipaddress.IPv6Address('2001:db8::1000'), '_X')
+   '2001_0DB8_0000_0000_0000_0000_0000_1000'
+   >>> '{:#_n}'.format(ipaddress.IPv6Address('2001:db8::1000'))
+   '0x2001_0db8_0000_0000_0000_0000_0000_1000'
+
+   버전 3.9에 추가.
+
+class ipaddress.IPv6Address(address)
+
+   IPv6 주소를 구성합니다. *address*가 유효한 IPv6 주소가 아니면
+   "AddressValueError" 가 발생합니다.
+
+   다음은 유효한 IPv6 주소를 구성합니다:
+
+   1. 4개의 16진수로 구성된 그룹 8개로 구성된 문자열, 각 그룹은 16비트
+      를 나타냅니다. 그룹은 콜론으로 구분됩니다. 이것은 *펼쳐진
+      (exploded)* (longhand) 표기법을 기술합니다. 문자열은 다양한 방법
+      으로 *압축될(compressed)* (약식 표기법) 수도 있습니다. 자세한 내
+      용은 **RFC 4291**을 참조하십시오. 예를 들어,
+      ""0000:0000:0000:0000:0000:0abc:0007:0def""는 ""::abc:7:def""로
+      압축될 수 있습니다.
+
+      선택적으로, 문자열은 접미사 "%scope_id"로 표시되는 스코프 존
+      (scope zone) ID를 가질 수도 있습니다. 존재하면, 스코프 ID는 비어
+      있지 않아야 하며, "%"를 포함할 수 없습니다. 자세한 내용은 **RFC
+      4007**을 참조하십시오. 예를 들어, "fe80::1234%1"는 노드의 첫 번
+      째 링크에서 주소 "fe80::1234"를 식별할 수 있습니다.
+
+   2. 128비트에 맞는 정수.
+
+   3. 길이가 16인 "bytes" 객체에 채워진 정수, 빅 엔디안.
+
+   >>> ipaddress.IPv6Address('2001:db8::1000')
+   IPv6Address('2001:db8::1000')
+   >>> ipaddress.IPv6Address('ff02::5678%1')
+   IPv6Address('ff02::5678%1')
+
+   compressed
+
+   주소 표현의 짧은 형식, 그룹에서 선행 0을 생략하고 0으로만 구성된 그
+   룹의 가장 긴 시퀀스를 하나의 빈 그룹으로 축소됩니다.
+
+   이것은 IPv6 주소에 대해 "str(addr)"가 반환하는 값이기도 합니다.
+
+   exploded
+
+   주소 표현의 긴 형식, 모든 선행 0과 완전히 0으로 구성된 그룹이 포함
+   됩니다.
+
+   다음 어트리뷰트와 메서드에 대해서는, "IPv4Address" 클래스의 해당 설
+   명서를 참조하십시오:
+
+   packed
+
+   reverse_pointer
+
+   version
+
+   max_prefixlen
+
+   is_multicast
+
+   is_private
+
+   is_global
+
+   is_unspecified
+
+   is_reserved
+
+   is_loopback
+
+   is_link_local
+
+      버전 3.4에 추가: is_global
+
+   is_site_local
+
+      주소가 사이트 로컬 사용을 위해 예약되었으면 "True". 사이트 로컬
+      주소 공간은 **RFC 3879**에서 폐지되었음에 유의하십시오.
+      "is_private"를 사용하여 이 주소가 **RFC 4193**에 의해 정의된 고
+      유한 로컬 주소 공간에 있는지 검사하십시오.
+
+   ipv4_mapped
+
+      IPv4에 매핑된 주소("::FFFF/96"으로 시작합니다)로 표시되는 주소의
+      경우, 이 프로퍼티는 내장 IPv4 주소를 보고합니다. 다른 주소의 경
+      우, 이 프로퍼티는 "None"이 됩니다.
+
+   scope_id
+
+      **RFC 4007**에서 정의된 스코프 지정된 주소의 경우, 이 프로퍼티는
+      주소가 속한 주소 스코프의 특정 존(zone)을 문자열로 식별합니다.
+      스코프 존이 지정되지 않았으면, 이 프로퍼티는 "None"입니다.
+
+   sixtofour
+
+      **RFC 3056**에서 정의한 6to4 주소("2002::/16"으로 시작합니다)인
+      것으로 보이는 주소의 경우, 이 프로퍼티는 내장 IPv4 주소를 보고합
+      니다. 다른 주소의 경우, 이 프로퍼티는 "None"이 됩니다.
+
+   teredo
+
+      **RFC 4380**에서 정의한 Teredo 주소("2001::/32"로 시작합니다)인
+      것으로 보이는 주소의 경우, 이 프로퍼티는 내장 "(server, client)"
+      IP 주소 쌍을 보고합니다. 다른 주소의 경우, 이 프로퍼티는 "None"
+      이 됩니다.
+
+IPv6Address.__format__(fmt)
+
+   "IPv4Address" 의 해당 메서드 설명서를 참조하십시오.
+
+   버전 3.9에 추가.
+
+
+문자열과 정수로의 변환
+----------------------
+
+socket 모듈과 같은 네트워킹 인터페이스와 상호 운용하려면, 주소를 문자
+열이나 정수로 변환해야 합니다. 이것은 "str()"과 "int()" 내장 함수를 사
+용하여 처리됩니다:
+
+   >>> str(ipaddress.IPv4Address('192.168.0.1'))
+   '192.168.0.1'
+   >>> int(ipaddress.IPv4Address('192.168.0.1'))
+   3232235521
+   >>> str(ipaddress.IPv6Address('::1'))
+   '::1'
+   >>> int(ipaddress.IPv6Address('::1'))
+   1
+
+IPv6 스코프 지정된 주소는 스코프 존 ID 없이 정수로 변환됨에 유의하십시
+오.
+
+
+연산자
+------
+
+주소 객체는 일부 연산자를 지원합니다. 달리 명시하지 않는 한, 연산자는
+호환 가능한 객체 간에만 적용할 수 있습니다 (즉 IPv4와 IPv4, IPv6와
+IPv6).
+
+
+비교 연산자
+~~~~~~~~~~~
+
+주소 객체는 일반적인 비교 연산자 집합으로 비교할 수 있습니다. 다른 스
+코프 존(scope zone) ID를 가진 같은 IPv6 주소는 같지 않습니다. 몇 가지
+예:
+
+   >>> IPv4Address('127.0.0.2') > IPv4Address('127.0.0.1')
+   True
+   >>> IPv4Address('127.0.0.2') == IPv4Address('127.0.0.1')
+   False
+   >>> IPv4Address('127.0.0.2') != IPv4Address('127.0.0.1')
+   True
+   >>> IPv6Address('fe80::1234') == IPv6Address('fe80::1234%1')
+   False
+   >>> IPv6Address('fe80::1234%1') != IPv6Address('fe80::1234%2')
+   True
+
+
+산술 연산자
+~~~~~~~~~~~
+
+주소 객체에 정수를 더하거나 뺄 수 있습니다. 몇 가지 예:
+
+   >>> IPv4Address('127.0.0.2') + 3
+   IPv4Address('127.0.0.5')
+   >>> IPv4Address('127.0.0.2') - 3
+   IPv4Address('126.255.255.255')
+   >>> IPv4Address('255.255.255.255') + 1
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   ipaddress.AddressValueError: 4294967296 (>= 2**32) is not permitted as an IPv4 address
+
+
+IP 네트워크 정의
+================
+
+"IPv4Network" 와 "IPv6Network" 객체는 IP 네트워크 정의를 정의하고 검사
+하기 위한 메커니즘을 제공합니다. 네트워크 정의는 *마스크(mask)*와 *네
+트워크 주소(network address)*로 구성되며, 마스크로 마스크 (바이너리
+AND) 될 때 네트워크 주소와 같은 IP 주소 범위를 정의합니다. 예를 들어,,
+마스크 "255.255.255.0"과 네트워크 주소 "192.168.1.0"으로 구성된 네트워
+크 정의는 "192.168.1.0"에서 "192.168.1.255"까지의 IP 주소로 구성됩니다
+.
+
+
+접두사, 네트 마스크 및 호스트 마스크
+------------------------------------
+
+IP 네트워크 마스크를 지정하는 몇 가지 동등한 방법이 있습니다. *접두사
+(prefix)* "/<nbits>"는 네트워크 마스크에 설정된 상위 비트 수를 나타내
+는 표기법입니다. *네트 마스크(net mask)*는 몇 개의 상위 비트가 설정된
+IP 주소입니다. 따라서 접두사 "/24"는 IPv4에서 네트 마스크
+"255.255.255.0", 또는 IPv6에서 "ffff:ff00::"와 동등합니다. 또한 *호스
+트 마스크(host mask)*는 *네트 마스크(net mask)*의 논리적 역전이며, 때
+로 네트워크 마스크를 나타내기 위해 (예를 들어 Cisco 접근 제어 목록에서
+) 사용됩니다. IPv4에서 "/24"에 해당하는 호스트 마스크는 "0.0.0.255"입
+니다.
+
+
+네트워크 객체
+-------------
+
+주소 객체가 구현하는 모든 어트리뷰트는 네트워크 객체도 구현합니다. 또
+한, 네트워크 객체는 추가 어트리뷰트를 구현합니다. 이 모든 것은
+"IPv4Network" 와 "IPv6Network" 사이에서 공통이라서, 중복을 피하고자
+"IPv4Network" 에 대해서만 설명됩니다. 네트워크 객체는 *해시 가능*해서
+딕셔너리에서 키로 사용할 수 있습니다.
+
+class ipaddress.IPv4Network(address, strict=True)
+
+   IPv4 네트워크 정의를 구성합니다. *address*는 다음 중 하나일 수 있습
+   니다:
+
+   1. IP 주소와 선택적 마스크로 구성되고, 슬래시("/")로 구분된 문자열.
+      IP 주소는 네트워크 주소이며, 마스크는 *접두사*를 뜻하는 단일 숫
+      자이거나 IPv4 주소의 문자열 표현일 수 있습니다. 후자의 경우, 마
+      스크는 0이 아닌 필드로 시작하면 *네트 마스크*로, 또는 0으로 시작
+      하면 *호스트 마스크*로 해석되는데, *네트 마스크*로 취급되는 모든
+      0인 마스크만 유일한 예외입니다. 마스크가 제공되지 않으면, "/32"
+      로 간주합니다.
+
+      예를 들어, 다음 *address* 명세는 동등합니다: "192.168.1.0/24",
+      "192.168.1.0/255.255.255.0" 및 "192.168.1.0/0.0.0.255".
+
+   2. 32비트에 맞는 정수. 이는 네트워크 주소가 *address*이고 마스크가
+      "/32"인 단일 주소 네트워크와 동등합니다.
+
+   3. 길이가 4인 "bytes" 객체에 채워진 정수, 빅 엔디안. 해석은 정수
+      *address*와 유사합니다.
+
+   4. 주소 기술과 네트 마스크의 2-튜플. 주소 기술은 문자열, 32비트 정
+      수, 길이 4인 바이트열에 채워진 정수 또는 기존 IPv4Address 객체입
+      니다; 그리고 네트 마스크는 접두사 길이를 나타내는 정수(예를 들어
+      "24")나 접두사 마스크를 나타내는 문자열(예를 들어
+      "255.255.255.0")입니다.
+
+   *address*가 유효한 IPv4 주소가 아니면 "AddressValueError" 가 발생합
+   니다. 마스크가 IPv4 주소에 유효하지 않으면 "NetmaskValueError" 가
+   발생합니다.
+
+   *strict*가 "True"이고 제공된 address에 호스트 비트가 설정되면,
+   "ValueError"가 발생합니다. 그렇지 않으면, 적절한 네트워크 주소를 결
+   정하기 위해 호스트 비트가 마스크 되어 제거됩니다.
+
+   달리 명시되지 않는 한, 다른 네트워크/주소 객체를 받아들이는 모든 네
+   트워크 메서드는 인자의 IP 버전이 "self"와 호환되지 않으면
+   "TypeError"를 발생시킵니다.
+
+   버전 3.5에서 변경: *address* 생성자 매개 변수에 대해 2-튜플 형식을
+   추가했습니다.
+
+   version
+
+   max_prefixlen
+
+      "IPv4Address" 의 해당 어트리뷰트 설명서를 참조하십시오.
+
+   is_multicast
+
+   is_private
+
+   is_unspecified
+
+   is_reserved
+
+   is_loopback
+
+   is_link_local
+
+      이 어트리뷰트들은 네트워크 주소와 브로드 캐스트 주소 모두에 대해
+      참이면 네트워크 전체에 대해 참입니다.
+
+   network_address
+
+      네트워크의 네트워크 주소. 네트워크 주소와 접두사 길이는 네트워크
+      를 고유하게 정의합니다.
+
+   broadcast_address
+
+      네트워크의 브로드 캐스트 주소. 브로드 캐스트 주소로 전송된 패킷
+      은 네트워크의 모든 호스트가 수신해야 합니다.
+
+   hostmask
+
+      "IPv4Address" 객체로 제공되는 호스트 마스크.
+
+   netmask
+
+      "IPv4Address" 객체로 제공되는 네트 마스크.
+
+   with_prefixlen
+
+   compressed
+
+   exploded
+
+      접두사 표기법의 마스크를 갖는 네트워크의 문자열 표현.
+
+      "with_prefixlen"과 "compressed"는 항상 "str(network)"와 같습니다
+      . "exploded"는 펼쳐진 형식의 네트워크 주소를 사용합니다.
+
+   with_netmask
+
+      네트 마스크 표기법의 마스크를 갖는 네트워크의 문자열 표현.
+
+   with_hostmask
+
+      호스트 마스크 표기법의 마스크를 갖는 네트워크의 문자열 표현.
+
+   num_addresses
+
+      네트워크의 총 주소 수.
+
+   prefixlen
+
+      네트워크 접두사 길이, 비트 단위.
+
+   hosts()
+
+      네트워크에서 사용 가능한 호스트에 대한 이터레이터를 반환합니다.
+      사용 가능한 호스트는 네트워크 주소 자체와 네트워크 브로드 캐스트
+      주소를 제외하고, 네트워크에 속하는 IP 주소입니다. 마스크 길이가
+      31인 네트워크의 경우, 네트워크 주소와 네트워크 브로드 캐스트 주
+      소도 결과에 포함됩니다. 마스크가 32인 네트워크는 단일 호스트 주
+      소가 포함된 리스트를 반환합니다.
+
+      >>> list(ip_network('192.0.2.0/29').hosts())  
+      [IPv4Address('192.0.2.1'), IPv4Address('192.0.2.2'),
+       IPv4Address('192.0.2.3'), IPv4Address('192.0.2.4'),
+       IPv4Address('192.0.2.5'), IPv4Address('192.0.2.6')]
+      >>> list(ip_network('192.0.2.0/31').hosts())
+      [IPv4Address('192.0.2.0'), IPv4Address('192.0.2.1')]
+      >>> list(ip_network('192.0.2.1/32').hosts())
+      [IPv4Address('192.0.2.1')]
+
+   overlaps(other)
+
+      이 네트워크가 *other*에 부분적으로나 전체적으로 포함되어 있거나
+      *other*가 이 네트워크에 완전히 포함되면 "True".
+
+   address_exclude(network)
+
+      지정된 *network*를 이 네트워크에서 제거하여 만들어지는 네트워크
+      정의를 계산합니다. 네트워크 객체의 이터레이터를 반환합니다. 이
+      네트워크에 *network*가 완전히 포함되지 않으면 "ValueError"가 발
+      생합니다.
+
+      >>> n1 = ip_network('192.0.2.0/28')
+      >>> n2 = ip_network('192.0.2.1/32')
+      >>> list(n1.address_exclude(n2))  
+      [IPv4Network('192.0.2.8/29'), IPv4Network('192.0.2.4/30'),
+       IPv4Network('192.0.2.2/31'), IPv4Network('192.0.2.0/32')]
+
+   subnets(prefixlen_diff=1, new_prefix=None)
+
+      인자 값에 따라, 현재 네트워크 정의를 만들기 위해 참여하는 서브
+      네트들. *prefixlen_diff*는 우리의 접두사 길이를 늘여야 하는 양입
+      니다. *new_prefix*는 서브 네트의 원하는 새 접두사입니다; 우리의
+      접두사보다 커야 합니다. *prefixlen_diff*와 *new_prefix* 중 하나
+      만 설정해야 합니다. 네트워크 객체의 이터레이터를 반환합니다.
+
+      >>> list(ip_network('192.0.2.0/24').subnets())
+      [IPv4Network('192.0.2.0/25'), IPv4Network('192.0.2.128/25')]
+      >>> list(ip_network('192.0.2.0/24').subnets(prefixlen_diff=2))  
+      [IPv4Network('192.0.2.0/26'), IPv4Network('192.0.2.64/26'),
+       IPv4Network('192.0.2.128/26'), IPv4Network('192.0.2.192/26')]
+      >>> list(ip_network('192.0.2.0/24').subnets(new_prefix=26))  
+      [IPv4Network('192.0.2.0/26'), IPv4Network('192.0.2.64/26'),
+       IPv4Network('192.0.2.128/26'), IPv4Network('192.0.2.192/26')]
+      >>> list(ip_network('192.0.2.0/24').subnets(new_prefix=23))
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+          raise ValueError('new prefix must be longer')
+      ValueError: new prefix must be longer
+      >>> list(ip_network('192.0.2.0/24').subnets(new_prefix=25))
+      [IPv4Network('192.0.2.0/25'), IPv4Network('192.0.2.128/25')]
+
+   supernet(prefixlen_diff=1, new_prefix=None)
+
+      인자 값에 따라, 이 네트워크 정의를 포함하는 슈퍼 네트.
+      *prefixlen_diff*는 우리의 접두사 길이를 줄여야 하는 양입니다.
+      *new_prefix*는 슈퍼 네트의 원하는 새 접두사입니다; 우리의 접두사
+      보다 작아야 합니다. *prefixlen_diff*와 *new_prefix* 중 하나만 설
+      정해야 합니다. 단일 네트워크 객체를 반환합니다.
+
+      >>> ip_network('192.0.2.0/24').supernet()
+      IPv4Network('192.0.2.0/23')
+      >>> ip_network('192.0.2.0/24').supernet(prefixlen_diff=2)
+      IPv4Network('192.0.0.0/22')
+      >>> ip_network('192.0.2.0/24').supernet(new_prefix=20)
+      IPv4Network('192.0.0.0/20')
+
+   subnet_of(other)
+
+      이 네트워크가 *other*의 서브 네트이면 "True"를 반환합니다.
+
+      >>> a = ip_network('192.168.1.0/24')
+      >>> b = ip_network('192.168.1.128/30')
+      >>> b.subnet_of(a)
+      True
+
+      버전 3.7에 추가.
+
+   supernet_of(other)
+
+      이 네트워크가 *other*의 슈퍼 네트이면 "True"를 반환합니다.
+
+      >>> a = ip_network('192.168.1.0/24')
+      >>> b = ip_network('192.168.1.128/30')
+      >>> a.supernet_of(b)
+      True
+
+      버전 3.7에 추가.
+
+   compare_networks(other)
+
+      이 네트워크를 *other*와 비교합니다. 이 비교에서는 네트워크 주소
+      만 고려됩니다; 호스트 비트는 고려하지 않습니다. "-1", "0" 또는
+      "1"을 반환합니다.
+
+      >>> ip_network('192.0.2.1/32').compare_networks(ip_network('192.0.2.2/32'))
+      -1
+      >>> ip_network('192.0.2.1/32').compare_networks(ip_network('192.0.2.0/32'))
+      1
+      >>> ip_network('192.0.2.1/32').compare_networks(ip_network('192.0.2.1/32'))
+      0
+
+      버전 3.7부터 폐지: "<", "==" 및 ">"와 같은 순서와 비교 알고리즘
+      을 사용합니다.
+
+class ipaddress.IPv6Network(address, strict=True)
+
+   IPv6 네트워크 정의를 구성합니다. *address*는 다음 중 하나일 수 있습
+   니다:
+
+   1. IP 주소와 선택적 접두사 길이로 구성되고 슬래시("/")로 구분된 문
+      자열. IP 주소는 네트워크 주소이며, 접두사 길이는 단일 숫자인 *접
+      두사*여야 합니다. 접두사 길이가 제공되지 않으면, "/128"로 간주합
+      니다.
+
+      현재 확장된 네트 마스크는 지원되지 않음에 유의하십시오.
+      "2001:db00::0/24"는 유효한 인자이지만 "2001:db00::0/ffff:ff00::"
+      는 아니라는 뜻입니다.
+
+   2. 128비트에 맞는 정수. 이는 네트워크 주소가 *address*이고 마스크가
+      "/128"인 단일 주소 네트워크와 동등합니다.
+
+   3. 길이가 16인 "bytes" 객체에 채워진 정수, 빅 엔디안. 해석은 정수
+      *address*와 유사합니다.
+
+   4. 주소 기술과 네트 마스크의 2-튜플. 여기서 주소 기술은 문자열, 128
+      비트 정수, 길이 16인 바이트열에 채워진 정수 또는 기존
+      IPv6Address 객체입니다; 네트 마스크는 접두사 길이를 나타내는 정
+      수입니다.
+
+   *address*가 유효한 IPv6 주소가 아니면 "AddressValueError" 가 발생합
+   니다. 마스크가 IPv6 주소에 유효하지 않으면 "NetmaskValueError" 가
+   발생합니다.
+
+   *strict*가 "True"이고 제공된 address에 호스트 비트가 설정되면,
+   "ValueError"가 발생합니다. 그렇지 않으면, 적절한 네트워크 주소를 결
+   정하기 위해 호스트 비트가 마스크 되어 제거됩니다.
+
+   버전 3.5에서 변경: *address* 생성자 매개 변수에 대해 2-튜플 형식을
+   추가했습니다.
+
+   version
+
+   max_prefixlen
+
+   is_multicast
+
+   is_private
+
+   is_unspecified
+
+   is_reserved
+
+   is_loopback
+
+   is_link_local
+
+   network_address
+
+   broadcast_address
+
+   hostmask
+
+   netmask
+
+   with_prefixlen
+
+   compressed
+
+   exploded
+
+   with_netmask
+
+   with_hostmask
+
+   num_addresses
+
+   prefixlen
+
+   hosts()
+
+      네트워크에서 사용 가능한 호스트에 대한 이터레이터를 반환합니다.
+      사용 가능한 호스트는 서브 네트 라우터 애니 캐스트 주소를 제외하
+      고 네트워크에 속하는 모든 IP 주소입니다. 마스크 길이가 127인 네
+      트워크의 경우, 서브 네트 라우터 애니 캐스트 주소도 결과에 포함됩
+      니다. 마스크가 128인 네트워크는 단일 호스트 주소가 포함된 리스트
+      를 반환합니다.
+
+   overlaps(other)
+
+   address_exclude(network)
+
+   subnets(prefixlen_diff=1, new_prefix=None)
+
+   supernet(prefixlen_diff=1, new_prefix=None)
+
+   subnet_of(other)
+
+   supernet_of(other)
+
+   compare_networks(other)
+
+      "IPv4Network" 의 해당 어트리뷰트 설명서를 참조하십시오.
+
+   is_site_local
+
+      이 어트리뷰트는 네트워크 주소와 브로드 캐스트 주소 모두에 대해
+      참이면 네트워크 전체에 대해 참입니다.
+
+
+연산자
+------
+
+네트워크 객체는 일부 연산자를 지원합니다. 달리 명시하지 않는 한, 연산
+자는 호환 가능한 객체 간에만 적용할 수 있습니다 (즉 IPv4와 IPv4, IPv6
+와 IPv6).
+
+
+논리 연산자
+~~~~~~~~~~~
+
+네트워크 객체는 일반적인 논리 연산자 집합으로 비교할 수 있습니다. 네트
+워크 객체는 먼저 네트워크 주소로 정렬된 다음, 네트 마스크로 정렬됩니다
+.
+
+
+이터레이션
+~~~~~~~~~~
+
+네트워크에 속하는 모든 주소를 나열하기 위해 네트워크 객체를 이터레이트
+할 수 있습니다. 이터레이션의 경우, 사용 불가능한 호스트를 포함하여 *모
+든* 호스트가 반환됩니다 (사용 가능한 호스트의 경우는 "hosts()" 메서드
+를 사용하십시오). 예:
+
+   >>> for addr in IPv4Network('192.0.2.0/28'):
+   ...     addr
+   ...
+   IPv4Address('192.0.2.0')
+   IPv4Address('192.0.2.1')
+   IPv4Address('192.0.2.2')
+   IPv4Address('192.0.2.3')
+   IPv4Address('192.0.2.4')
+   IPv4Address('192.0.2.5')
+   IPv4Address('192.0.2.6')
+   IPv4Address('192.0.2.7')
+   IPv4Address('192.0.2.8')
+   IPv4Address('192.0.2.9')
+   IPv4Address('192.0.2.10')
+   IPv4Address('192.0.2.11')
+   IPv4Address('192.0.2.12')
+   IPv4Address('192.0.2.13')
+   IPv4Address('192.0.2.14')
+   IPv4Address('192.0.2.15')
+
+
+주소 컨테이너로서의 네트워크
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+네트워크 객체는 주소의 컨테이너 역할을 할 수 있습니다. 몇 가지 예:
+
+   >>> IPv4Network('192.0.2.0/28')[0]
+   IPv4Address('192.0.2.0')
+   >>> IPv4Network('192.0.2.0/28')[15]
+   IPv4Address('192.0.2.15')
+   >>> IPv4Address('192.0.2.6') in IPv4Network('192.0.2.0/28')
+   True
+   >>> IPv4Address('192.0.3.6') in IPv4Network('192.0.2.0/28')
+   False
+
+
+인터페이스 객체
+===============
+
+인터페이스 객체는 *해시 가능*해서 딕셔너리에서 키로 사용할 수 있습니다
+.
+
+class ipaddress.IPv4Interface(address)
+
+   IPv4 인터페이스를 구성합니다. *address*의 의미는 임의의 호스트 주소
+   가 항상 허용된다는 점을 제외하고는 "IPv4Network" 의 생성자와 같습니
+   다.
+
+   "IPv4Interface"는 "IPv4Address" 의 서브 클래스이기 때문에, 그 클래
+   스의 모든 어트리뷰트를 상속합니다. 또한, 다음과 같은 어트리뷰트를
+   사용할 수 있습니다:
+
+   ip
+
+      네트워크 정보가 없는 주소 ("IPv4Address").
+
+      >>> interface = IPv4Interface('192.0.2.5/24')
+      >>> interface.ip
+      IPv4Address('192.0.2.5')
+
+   network
+
+      이 인터페이스가 속한 네트워크 ("IPv4Network").
+
+      >>> interface = IPv4Interface('192.0.2.5/24')
+      >>> interface.network
+      IPv4Network('192.0.2.0/24')
+
+   with_prefixlen
+
+      접두사 표기법의 마스크를 갖는 인터페이스의 문자열 표현.
+
+      >>> interface = IPv4Interface('192.0.2.5/24')
+      >>> interface.with_prefixlen
+      '192.0.2.5/24'
+
+   with_netmask
+
+      네트워크를 네트 마스크로 사용하는 인터페이스의 문자열 표현.
+
+      >>> interface = IPv4Interface('192.0.2.5/24')
+      >>> interface.with_netmask
+      '192.0.2.5/255.255.255.0'
+
+   with_hostmask
+
+      네트워크를 호스트 마스크로 사용하는 인터페이스의 문자열 표현.
+
+      >>> interface = IPv4Interface('192.0.2.5/24')
+      >>> interface.with_hostmask
+      '192.0.2.5/0.0.0.255'
+
+class ipaddress.IPv6Interface(address)
+
+   IPv6 인터페이스를 구성합니다. *address*의 의미는 임의의 호스트 주소
+   가 항상 허용된다는 점을 제외하고는 "IPv6Network" 의 생성자와 같습니
+   다.
+
+   "IPv6Interface"는 "IPv6Address" 의 서브 클래스이기 때문에, 그 클래
+   스의 모든 어트리뷰트를 상속합니다. 또한, 다음과 같은 어트리뷰트를
+   사용할 수 있습니다:
+
+   ip
+
+   network
+
+   with_prefixlen
+
+   with_netmask
+
+   with_hostmask
+
+      "IPv4Interface" 의 해당 어트리뷰트 설명서를 참조하십시오.
+
+
+연산자
+------
+
+인터페이스 객체는 일부 연산자를 지원합니다. 달리 명시하지 않는 한, 연
+산자는 호환 가능한 객체 간에만 적용할 수 있습니다 (즉 IPv4와 IPv4,
+IPv6와 IPv6).
+
+
+논리 연산자
+~~~~~~~~~~~
+
+인터페이스 객체는 일반적인 논리 연산자 집합으로 비교할 수 있습니다.
+
+동등 비교("=="과 "!=")의 경우, 같다고 비교되려면 IP 주소와 네트워크가
+같아야 합니다. 인터페이스는 주소나 네트워크 객체와 같다고 비교되지 않
+습니다.
+
+순서("<", ">" 등)의 경우 규칙이 다릅니다. 같은 IP 버전의 인터페이스와
+주소 객체를 비교할 수 있으며, 주소 객체는 항상 인터페이스 객체보다 앞
+에 정렬됩니다. 두 개의 인터페이스 객체는 먼저 네트워크로 비교되고, 같
+으면  IP 주소로 비교됩니다.
+
+
+다른 모듈 수준 함수
+===================
+
+이 모듈은 다음과 같은 모듈 수준 함수도 제공합니다:
+
+ipaddress.v4_int_to_packed(address)
+
+   네트워크 (빅 엔디안) 순서로 채워진 길이 4인 바이트열로 주소를 표현
+   합니다. *address*는 IPv4 IP 주소의 정수 표현입니다. 정수가 음수이거
+   나 너무 커서 IPv4 IP 주소가 될 수 없으면 "ValueError"가 발생합니다.
+
+   >>> ipaddress.ip_address(3221225985)
+   IPv4Address('192.0.2.1')
+   >>> ipaddress.v4_int_to_packed(3221225985)
+   b'\xc0\x00\x02\x01'
+
+ipaddress.v6_int_to_packed(address)
+
+   네트워크 (빅 엔디안) 순서로 채워진 길이 16인 바이트열로 주소를 나타
+   냅니다. *address*는 IPv6 IP 주소의 정수 표현입니다. 정수가 음수이거
+   나 너무 커서 IPv6 IP 주소가 될 수 없으면 "ValueError"가 발생합니다.
+
+ipaddress.summarize_address_range(first, last)
+
+   첫 번째와 마지막 IP 주소가 주어진 요약된 네트워크 범위의 이터레이터
+   를 반환합니다. *first*는 범위의 첫 번째 "IPv4Address" 나
+   "IPv6Address" 이고 *last*는 범위의 마지막 "IPv4Address" 나
+   "IPv6Address"입니다. *first*나 *last*가 IP 주소가 아니거나, 같은 버
+   전이 아니면 "TypeError"가 발생합니다. *last*가 *first*보다 크지 않
+   거나 *first* 주소 버전이 4나 6이 아니면 "ValueError"가 발생합니다.
+
+   >>> [ipaddr for ipaddr in ipaddress.summarize_address_range(
+   ...    ipaddress.IPv4Address('192.0.2.0'),
+   ...    ipaddress.IPv4Address('192.0.2.130'))]
+   [IPv4Network('192.0.2.0/25'), IPv4Network('192.0.2.128/31'), IPv4Network('192.0.2.130/32')]
+
+ipaddress.collapse_addresses(addresses)
+
+   Return an iterator of the collapsed "IPv4Network" or "IPv6Network"
+   objects.  *addresses* is an iterator of "IPv4Network" or
+   "IPv6Network" objects.  A "TypeError" is raised if *addresses*
+   contains mixed version objects.
+
+   >>> [ipaddr for ipaddr in
+   ... ipaddress.collapse_addresses([ipaddress.IPv4Network('192.0.2.0/25'),
+   ... ipaddress.IPv4Network('192.0.2.128/25')])]
+   [IPv4Network('192.0.2.0/24')]
+
+ipaddress.get_mixed_type_key(obj)
+
+   네트워크와 주소를 정렬하기에 적합한 키를 반환합니다. 주소와 네트워
+   크 객체는 기본적으로 정렬할 수 없습니다; 이들은 근본적으로 달라서,
+   다음과 같은 표현은:
+
+      IPv4Address('192.0.2.0') <= IPv4Network('192.0.2.0/24')
+
+   doesn't make sense.  There are some times however, where you may
+   wish to have "ipaddress" sort these anyway.  If you need to do
+   this, you can use this function as the *key* argument to
+   "sorted()".
+
+   *obj*는 네트워크나 주소 객체입니다.
+
+
+맞춤 예외
+=========
+
+클래스 생성자의 더욱 구체적인 에러 보고를 지원하기 위해, 모듈은 다음
+예외를 정의합니다:
+
+exception ipaddress.AddressValueError(ValueError)
+
+   주소와 관련된 모든 값 에러.
+
+exception ipaddress.NetmaskValueError(ValueError)
+
+   네트 마스크와 관련된 모든 값 에러.

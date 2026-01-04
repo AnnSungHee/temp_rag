@@ -1,0 +1,447 @@
+"email.headerregistry": Custom Header Objects
+*********************************************
+
+**소스 코드:** Lib/email/headerregistry.py
+
+======================================================================
+
+버전 3.6에 추가: [1]
+
+헤더는 "str"의 사용자 정의된 서브 클래스로 표현됩니다. 주어진 헤더를
+표현하는 데 사용되는 특정 클래스는 헤더가 만들어질 때 "policy"의
+"header_factory"에 의해 결정됩니다. 이 섹션에서는 **RFC 5322** 호환 전
+자 우편 메시지를 처리하기 위해 email 패키지가 구현한 특정
+"header_factory"에 관해 설명합니다. 다양한 헤더 유형에 대해 사용자 정
+의된 헤더 객체를 제공할 뿐만 아니라, 응용 프로그램에서 고유한 사용자
+정의 헤더 유형을 추가할 수 있는 확장 메커니즘을 제공합니다.
+
+"EmailPolicy"에서 파생된 정책 객체를 사용할 때, 모든 헤더는
+"HeaderRegistry"가 생성하며 마지막 베이스 클래스로 "BaseHeader"를 갖습
+니다. 각 헤더 클래스에는 헤더 유형에 따라 결정되는 추가 베이스 클래스
+가 있습니다. 예를 들어, 많은 헤더에는 다른 베이스 클래스로
+"UnstructuredHeader" 클래스를 갖습니다. 헤더의 특수화된 두 번째 클래스
+는 "HeaderRegistry"에 저장된 검색 테이블을 사용하여 헤더의 이름으로 결
+정됩니다. 이 모든 것은 일반적인 응용 프로그램에 대해 투명하게 관리되지
+만, 더욱 복잡한 응용 프로그램에서 사용할 수 있도록 기본 동작을 수정하
+기 위한 인터페이스가 제공됩니다.
+
+아래 섹션은 먼저 헤더 베이스 클래스와 그들의 어트리뷰트를, 그다음으로
+"HeaderRegistry"의 동작을 수정하기 위한 API를, 그리고 마지막으로 구조
+화된 헤더에서 구문 분석된 데이터를 나타내는 데 사용되는 지원 클래스에
+를 설명합니다.
+
+class email.headerregistry.BaseHeader(name, value)
+
+   *name*과 *value*는 "header_factory" 호출에서 "BaseHeader"로 전달됩
+   니다. 헤더 객체의 문자열 값은 유니코드로 완전히 디코딩된 *value*입
+   니다.
+
+   이 베이스 클래스는 다음과 같은 읽기 전용 프로퍼티를 정의합니다:
+
+   name
+
+      헤더 이름(':' 앞의 필드 부분). 이것은 정확히 "header_factory" 호
+      출에 전달된 *name*에 대한 값입니다; 즉, 대소 문자가 유지됩니다.
+
+   defects
+
+      구문 분석 중 발견된 RFC 준수 문제를 보고하는 "HeaderDefect" 인스
+      턴스 튜플. email 패키지는 규정 준수 문제 감지에 대해 완전해지려
+      고 합니다. 보고될 수 있는 결함 유형에 대한 설명은 "errors" 모듈
+      을 참조하십시오.
+
+   max_count
+
+      같은 "name"을 가질 수 있는 이 유형의 최대 헤더 수. "None" 값은
+      무제한을 의미합니다. 이 어트리뷰트의 "BaseHeader" 값은 "None"입
+      니다; 특수화된 헤더 클래스가 필요할 때 이 값을 재정의할 것으로
+      기대됩니다.
+
+   "BaseHeader"는 또한 email 라이브러리 코드에 의해 호출되고 일반적으
+   로 응용 프로그램이 호출해서는 안 되는 다음 메서드를 제공합니다:
+
+   fold(*, policy)
+
+      *policy*에 따라 헤더를 올바르게 접는 데 필요한 "linesep" 문자를
+      포함하는 문자열을 반환합니다. 헤더는 임의의 바이너리 데이터를 포
+      함할 수 없어서, "8bit"의 "cte_type"은 마치 "7bit"인 것처럼 처리
+      됩니다. "utf8"이 "False"이면, 비 ASCII 데이터는 **RFC 2047**로
+      인코딩됩니다.
+
+   "BaseHeader" 자체는 헤더 객체를 만드는 데 사용할 수 없습니다. 헤더
+   객체를 생성하기 위해 각 특수화된 헤더가 협력하는 프로토콜을 정의합
+   니다. 특히 "BaseHeader"는 특수화된 클래스가 "parse"라는
+   "classmethod()"를 제공할 것을 요구합니다. 이 메서드는 다음과 같이
+   호출됩니다:
+
+      parse(string, kwds)
+
+   "kwds"는 하나의 미리 초기화된 키 "defects"를 포함하는 딕셔너리입니
+   다. "defects"는 빈 리스트입니다. parse 메서드는 감지된 결함을 이 리
+   스트에 추가해야 합니다. 반환될 때, "kwds" 딕셔너리는 *반드시* 적어
+   도 키 "decoded"와 "defects"에 대한 값을 포함해야 합니다. "decoded"
+   는 헤더의 문자열 값이어야 합니다 (즉, 유니코드로 완전히 디코딩된 헤
+   더 값). parse 메서드는 *string*이 콘텐츠 전송 인코딩된 파트를 포함
+   할 수 있다고 가정해야 하지만, 인코딩되지 않은 헤더 값을 구문 분석할
+   수 있도록 모든 유효한 유니코드 문자도 올바르게 처리해야 합니다.
+
+   "BaseHeader"의 "__new__"는 헤더 인스턴스를 만들고, "init" 메서드를
+   호출합니다. 특수화된 클래스가 "BaseHeader" 자체에서 제공하는 것 이
+   상의 추가 어트리뷰트를 설정하려면 "init" 메서드 만 제공하면 됩니다.
+   이러한 "init" 메서드는 다음과 같아야 합니다:
+
+      def init(self, /, *args, **kw):
+          self._myattr = kw.pop('myattr')
+          super().init(*args, **kw)
+
+   즉, 특수화된 클래스가 "kwds" 딕셔너리에 추가하는 것은 제거해야 하고
+   처리해야 하며, "kw"(및 "args")의 나머지 내용은 "BaseHeader" "init"
+   메서드로 전달됩니다.
+
+class email.headerregistry.UnstructuredHeader
+
+   "구조화되지 않은" 헤더는 **RFC 5322**의 기본 헤더 유형입니다. 지정
+   된 문법이 없는 헤더는 구조화되지 않은 것으로 취급됩니다. 구조화되지
+   않은 헤더의 전형적인 예는 *Subject* 헤더입니다.
+
+   **RFC 5322**에서, 구조화되지 않은 헤더는 ASCII 문자 집합에서 임의의
+   텍스트를 나열합니다. 그러나 **RFC 2047**은 비 ASCII 텍스트를 헤더
+   값 내에서 ASCII 문자로 인코딩하기 위한 **RFC 5322** 호환 메커니즘을
+   가지고 있습니다. 인코딩된 단어를 포함하는 *value*가 생성자에 전달되
+   면, "UnstructuredHeader" 구문 분석기는 구조화되지 않은 텍스트의
+   **RFC 2047** 규칙에 따라 인코딩된 단어를 유니코드로 변환합니다. 구
+   문 분석기는 휴리스틱을 사용하여 특정 비 호환 인코딩된 단어를 디코딩
+   하려고 시도합니다. 인코딩된 단어나 인코딩되지 않는 텍스트 내의 유효
+   하지 않은 문자와 같은 문제에 대한 결함뿐만 아니라 이럴 때 결함을 등
+   록합니다.
+
+   이 헤더 유형은 추가 어트리뷰트를 제공하지 않습니다.
+
+class email.headerregistry.DateHeader
+
+   **RFC 5322**는 전자 우편 헤더 내의 날짜에 대해 매우 구체적인 형식을
+   지정합니다. "DateHeader" 구문 분석기는 이 날짜 형식을 인식할 뿐만
+   아니라, "야생"에서 발견되는 다양한 변종 형식을 인식합니다.
+
+   이 헤더 유형은 다음과 같은 추가 어트리뷰트를 제공합니다:
+
+   datetime
+
+      헤더 값이 한 양식이나 다른 양식의 유효한 날짜로 인식될 수 있으면
+      , 이 어트리뷰트는 해당 날짜를 나타내는 "datetime" 인스턴스가 포
+      함됩니다. 입력 날짜의 시간대가 "-0000"으로 지정되면 (UTC이지만
+      소스 시간대에 대한 정보는 포함하지 않음을 나타냅니다),
+      "datetime"은 나이브 "datetime"이 됩니다. 특정 시간대 오프셋이 발
+      견되면 ("+0000"을 포함합니다), "datetime"에는
+      "datetime.timezone"을 사용하여 시간대 오프셋을 기록하는 어웨어
+      "datetime"이 포함됩니다.
+
+   헤더의 "decoded" 값은 **RFC 5322** 규칙에 따라 "datetime"을 포매팅
+   해서 결정됩니다; 즉, 다음과 같이 설정됩니다:
+
+      email.utils.format_datetime(self.datetime)
+
+   "DateHeader"를 만들 때, *value*는 "datetime" 인스턴스일 수 있습니다
+   . 이것은, 예를 들어, 다음 코드가 유효하고 기대하는 것을 수행함을 뜻
+   합니다:
+
+      msg['Date'] = datetime(2011, 7, 15, 21)
+
+   이것은 나이브 "datetime"이므로 UTC 타임스탬프로 해석되며 결괏값의
+   시간대는 "-0000"입니다. "utils" 모듈의 "localtime()" 함수를 사용하
+   는 것이 훨씬 더 유용합니다:
+
+      msg['Date'] = utils.localtime()
+
+   이 예에서는 현재 시간대 오프셋을 사용하여 날짜 헤더를 현재 시간과
+   날짜로 설정합니다.
+
+class email.headerregistry.AddressHeader
+
+   주소 헤더는 가장 복잡한 구조화된 헤더 유형 중 하나입니다.
+   "AddressHeader" 클래스는 모든 주소 헤더에 대한 범용 인터페이스를 제
+   공합니다.
+
+   이 헤더 유형은 다음과 같은 추가 어트리뷰트를 제공합니다:
+
+   groups
+
+      헤더 값에서 찾은 주소와 그룹을 인코딩하는 "Group" 객체의 튜플.
+      그룹 일부가 아닌 주소는 이 목록에서 "display_name"이 "None"인 단
+      일 주소 "Groups"로 표현됩니다.
+
+   addresses
+
+      헤더 값의 모든 개별 주소를 인코딩하는 "Address" 객체의 튜플. 헤
+      더 값이 그룹을 포함하면, 그룹의 개별 주소가 값에서 그룹이 발생하
+      는 지점에서 목록에 포함됩니다 (즉, 주소 목록은 1차원 목록으로 "
+      평평하게" 만들어집니다).
+
+   The "decoded" value of the header will have all encoded words
+   decoded to unicode.  "idna" encoded domain names are also decoded
+   to unicode.  The "decoded" value is set by "join"ing the "str"
+   value of the elements of the "groups" attribute with "', '".
+
+   "Address"와 "Group" 객체의 목록을 임의 조합한 목록을 주소 헤더의 값
+   을 설정하는 데 사용할 수 있습니다. "display_name"이 "None"인
+   "Group" 객체는 단일 주소로 해석되므로, 소스 헤더의 "groups" 어트리
+   뷰트에서 얻은 목록을 사용하여 주소 목록을 그룹과 함께 그대로 복사할
+   수 있습니다.
+
+class email.headerregistry.SingleAddressHeader
+
+   하나의 추가 어트리뷰트를 추가하는 "AddressHeader"의 서브 클래스:
+
+   address
+
+      헤더 값으로 인코딩된 단일 주소. 헤더 값에 실제로 둘 이상의 주소
+      가 포함될 때 (기본 "policy"에서 RFC 위반입니다), 이 어트리뷰트에
+      액세스하면 "ValueError"가 발생합니다.
+
+위의 많은 클래스에는 "Unique" 변형도 있습니다 (예를 들어,
+"UniqueUnstructuredHeader"). 유일한 차이점은 "Unique" 변형에서
+"max_count"가 1로 설정되어 있다는 것입니다.
+
+class email.headerregistry.MIMEVersionHeader
+
+   *MIME-Version* 헤더에는 실제로 하나의 유효한 값만 있으며, 이는
+   "1.0"입니다. 미래에 안전하기 위해, 이 헤더 클래스는 다른 유효한 버
+   전 번호를 지원합니다. 버전 번호가 **RFC 2045**에 따라 유효한 값을
+   가지면, 헤더 객체는 다음 어트리뷰트에 "None"이 아닌 값을 갖습니다:
+
+   version
+
+      공백 및/또는 주석이 제거된 문자열 버전 번호.
+
+   major
+
+      정수 주 버전 번호
+
+   minor
+
+      정수 부 버전 번호
+
+class email.headerregistry.ParameterizedMIMEHeader
+
+   MIME 헤더는 모두 접두사 'Content-'로 시작합니다. 각 특정 헤더에는
+   해당 헤더의 클래스에 설명된 특정 값이 있습니다. 일부는 공통 형식을
+   가진 보조 파라미터 목록을 취할 수도 있습니다. 이 클래스는 파라미터
+   를 취하는 모든 MIME 헤더의 베이스로 사용됩니다.
+
+   params
+
+      파라미터 이름을 파라미터값으로 매핑하는 딕셔너리.
+
+class email.headerregistry.ContentTypeHeader
+
+   *Content-Type* 헤더를 처리하는 "ParameterizedMIMEHeader" 클래스.
+
+   content_type
+
+      "maintype/subtype" 형식의 콘텐츠 유형 문자열.
+
+   maintype
+
+   subtype
+
+class email.headerregistry.ContentDispositionHeader
+
+   *Content-Disposition* 헤더를 처리하는 "ParameterizedMIMEHeader" 클
+   래스.
+
+   content_disposition
+
+      "inline"과 "attachment"가 일반적으로 사용되는 유일하게 유효한 값
+      입니다.
+
+class email.headerregistry.ContentTransferEncoding
+
+   *Content-Transfer-Encoding* 헤더를 처리합니다.
+
+   cte
+
+      유효한 값은 "7bit", "8bit", "base64" 및 "quoted-printable"입니다
+      . 자세한 정보는 **RFC 2045**를 참조하십시오.
+
+class email.headerregistry.HeaderRegistry(base_class=BaseHeader, default_class=UnstructuredHeader, use_default_map=True)
+
+   This is the factory used by "EmailPolicy" by default.
+   "HeaderRegistry" builds the class used to create a header instance
+   dynamically, using *base_class* and a specialized class retrieved
+   from a registry that it holds.  When a given header name does not
+   appear in the registry, the class specified by *default_class* is
+   used as the specialized class.  When *use_default_map* is "True"
+   (the default), the standard mapping of header names to classes is
+   copied in to the registry during initialization.  *base_class* is
+   always the last class in the generated class's "__bases__" list.
+
+   기본 매핑은 다음과 같습니다:
+
+      subject:
+         UniqueUnstructuredHeader
+
+      date:
+         UniqueDateHeader
+
+      resent-date:
+         DateHeader
+
+      orig-date:
+         UniqueDateHeader
+
+      sender:
+         UniqueSingleAddressHeader
+
+      resent-sender:
+         SingleAddressHeader
+
+      to:
+         UniqueAddressHeader
+
+      resent-to:
+         AddressHeader
+
+      cc:
+         UniqueAddressHeader
+
+      resent-cc:
+         AddressHeader
+
+      bcc:
+         UniqueAddressHeader
+
+      resent-bcc:
+         AddressHeader
+
+      from:
+         UniqueAddressHeader
+
+      resent-from:
+         AddressHeader
+
+      reply-to:
+         UniqueAddressHeader
+
+      mime-version:
+         MIMEVersionHeader
+
+      content-type:
+         ContentTypeHeader
+
+      content-disposition:
+         ContentDispositionHeader
+
+      content-transfer-encoding:
+         ContentTransferEncodingHeader
+
+      message-id:
+         MessageIDHeader
+
+   "HeaderRegistry"에는 다음과 같은 메서드가 있습니다:
+
+   map_to_type(self, name, cls)
+
+      *name*은 매핑할 헤더의 이름입니다. 등록소에서 소문자로 변환됩니
+      다. *cls*는 *name*과 일치하는 헤더를 인스턴스 화하는 데 사용되는
+      클래스를 만들기 위해 *base_class*와 함께 사용되는 특수 클래스입
+      니다.
+
+   __getitem__(name)
+
+      *name* 헤더 생성을 처리할 클래스를 구성하고 반환합니다.
+
+   __call__(name, value)
+
+      등록소에서 *name*과 연관된 특수화된 헤더를 꺼내고 (등록소에
+      *name*이 없으면 *default_class*를 사용해서), *base_class*와 결합
+      하여 클래스를 생성하고, 생성된 클래스의 생성자를 같은 인자 목록
+      을 전달해서 호출한 후, 마지막으로 이렇게 만들어진 클래스 인스턴
+      스를 반환합니다.
+
+다음 클래스는 구조화된 헤더에서 구문 분석된 데이터를 나타내는 데 사용
+되는 클래스이며 일반적으로 응용 프로그램에서 특정 헤더에 지정할 구조화
+된 값을 대입하는 데 사용할 수 있습니다.
+
+class email.headerregistry.Address(display_name='', username='', domain='', addr_spec=None)
+
+   전자 우편 주소를 나타내는 데 사용되는 클래스. 주소의 일반적인 형식
+   은 다음과 같습니다:
+
+      [display_name] <username@domain>
+
+   또는:
+
+      username@domain
+
+   여기서 각 부분은 **RFC 5322**에 명시된 특정 문법 규칙을 준수해야 합
+   니다.
+
+   편의상 *username*과 *domain* 대신 *addr_spec*을 지정할 수 있으며,
+   이 경우 *addr_spec*에서 *username*과 *domain*이 구문 분석됩니다.
+   *addr_spec*은 올바르게 RFC 인용된 문자열(quoted string)이어야 합니
+   다; 그렇지 않으면 "Address"는 에러를 발생시킵니다. 유니코드 문자는
+   허용되며 직렬화될 때 적절하게 인코딩됩니다. 그러나, RFC에 따라, 주
+   소의 사용자 이름 부분에는 유니코드가 허용되지 *않습니다*.
+
+   display_name
+
+      모든 인용(quoting)이 제거된 주소의 표시 이름 부분 (있다면). 주소
+      에 표시 이름이 없으면, 이 어트리뷰트는 빈 문자열입니다.
+
+   username
+
+      모든 인용(quoting)이 제거된 주소의 "username" 부분.
+
+   domain
+
+      주소의 "domain" 부분.
+
+   addr_spec
+
+      주소의 "username@domain" 부분, 단순 주소(위의 두 번째 형식)로 사
+      용하기 위해 올바르게 인용(quoted)됩니다. 이 어트리뷰트는 불변입
+      니다.
+
+   __str__()
+
+      객체의 "str" 값은 **RFC 5322** 규칙에 따라 인용된(quoted) 주소이
+      지만, ASCII가 아닌 문자의 콘텐츠 전송 인코딩(Content Transfer
+      Encoding)은 없습니다.
+
+   SMTP(**RFC 5321**)를 지원하기 위해, "Address"는 한가지 특별한 경우
+   를 처리합니다: "username"과 "domain"이 모두 빈 문자열(또는 "None")
+   이면, "Address"의 문자열 값은 "<>"입니다.
+
+class email.headerregistry.Group(display_name=None, addresses=None)
+
+   주소 그룹을 표현하는 데 사용되는 클래스. 주소 그룹의 일반적인 형식
+   은 다음과 같습니다:
+
+      display_name: [address-list];
+
+   그룹과 단일 주소의 혼합으로 구성된 주소 목록 처리의 편의를 위해,
+   *display_name*을 "None"으로 설정하고 단일 주소 목록을 *addresses*로
+   제공하여, "Group"을 그룹의 일부가 아닌 단일 주소를 나타내는 데 사용
+   할 수도 있습니다.
+
+   display_name
+
+      그룹의 "display_name". "None"이고 "addresses"에 정확히 하나의
+      "Address"가 있으면, "Group"은 그룹에 속하지 않은 단일 주소를 나
+      타냅니다.
+
+   addresses
+
+      그룹에 있는 주소를 나타내는 "Address" 객체의 비어있을 수 있는 튜
+      플.
+
+   __str__()
+
+      "Group"의 "str" 값은 **RFC 5322**에 따라 포맷되지만, ASCII가 아
+      닌 문자의 콘텐츠 전송 인코딩(Content Transfer Encoding)은 없습니
+      다. "display_name"이 None이고 "addresses" 목록에 단일 "Address"
+      가 있으면 "str" 값은 해당 단일 "Address"의 "str"과 같습니다.
+
+-[ 각주 ]-
+
+[1] 원래 3.3에서 *잠정적 모듈*로 추가되었습니다.

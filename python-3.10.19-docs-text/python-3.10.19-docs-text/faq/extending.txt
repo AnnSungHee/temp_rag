@@ -1,0 +1,268 @@
+확장/내장 FAQ
+*************
+
+
+C로 나만의 함수를 만들 수 있습니까?
+===================================
+
+그렇습니다. 함수, 변수, 예외 및 심지어 새로운 형을 포함하는 내장 모듈
+을 C로 만들 수 있습니다. 파이썬 인터프리터 확장 및 내장 문서에 설명되
+어 있습니다.
+
+대부분의 중급이나 고급 파이썬 서적에서도 이 주제를 다룰 것입니다.
+
+
+C++로 나만의 함수를 만들 수 있습니까?
+=====================================
+
+그렇습니다, C++에 있는 C 호환성 기능을 사용합니다. 파이썬 인클루드
+(include) 파일 주위에 "extern "C" { ... }"를 배치하고 파이썬 인터프리
+터가 호출할 각 함수 앞에 "extern "C""를 배치하십시오. 생성자를 가진 전
+역이나 정적(static) C++ 객체는 대개 좋은 생각이 아닙니다.
+
+
+C를 쓰는 것은 어렵습니다; 대안이 있습니까?
+==========================================
+
+수행하려는 작업에 따라, 여러분 만의 C 확장을 작성하는 여러 가지 대안이
+있습니다.
+
+Cython and its relative Pyrex are compilers that accept a slightly
+modified form of Python and generate the corresponding C code.  Cython
+and Pyrex make it possible to write an extension without having to
+learn Python's C API.
+
+If you need to interface to some C or C++ library for which no Python
+extension currently exists, you can try wrapping the library's data
+types and functions with a tool such as SWIG.  SIP, CXX Boost, or
+Weave are also alternatives for wrapping C++ libraries.
+
+
+C에서 임의의 파이썬 문장을 어떻게 실행할 수 있습니까?
+=====================================================
+
+이를 수행하는 최상위 수준 함수는 "PyRun_SimpleString()"이며, 이는 모듈
+"__main__"의 컨텍스트에서 실행될 단일 문자열 인자를 취하고 성공하면
+"0"을 반환하고 ("SyntaxError"를 포함하는) 예외가 발생하면 "-1"을 반환
+합니다. 더 많은 제어를 원하면, "PyRun_String()"을 사용하십시오;
+"Python/pythonrun.c"에 있는 "PyRun_SimpleString()" 소스를 참조하십시오
+.
+
+
+C에서 임의의 파이썬 표현식을 어떻게 평가할 수 있습니까?
+=======================================================
+
+이전 질문에서 나온 "PyRun_String()" 함수를 start 기호 "Py_eval_input"
+을 사용하여 호출하십시오; 표현식을 구문 분석하고, 평가하고 값을 반환합
+니다.
+
+
+파이썬 객체에서 C값을 어떻게 추출합니까?
+========================================
+
+That depends on the object's type.  If it's a tuple, "PyTuple_Size()"
+returns its length and "PyTuple_GetItem()" returns the item at a
+specified index.  Lists have similar functions, "PyListSize()" and
+"PyList_GetItem()".
+
+For bytes, "PyBytes_Size()" returns its length and
+"PyBytes_AsStringAndSize()" provides a pointer to its value and its
+length.  Note that Python bytes objects may contain null bytes so C's
+"strlen()" should not be used.
+
+객체의 형을 검사하려면, 먼저 "NULL"이 아닌지 확인한 다음
+"PyBytes_Check()", "PyTuple_Check()", "PyList_Check()" 등을 사용하십시
+오.
+
+소위 '추상' 인터페이스가 제공하는 파이썬 객체에 대한 고수준 API도 있습
+니다 -- 자세한 내용은 "Include/abstract.h"를 읽으십시오.
+"PySequence_Length()", "PySequence_GetItem()" 등과 같은 호출로 모든 종
+류의 파이썬 시퀀스와 인터페이스 할 수 있을 뿐만 아니라 숫자
+("PyNumber_Index()" 등)와 PyMapping API의 매핑과 같은 다른 많은 유용한
+프로토콜을 지원합니다.
+
+
+Py_BuildValue()를 사용하여 임의 길이의 튜플을 만드는 방법은 무엇입니까?
+=======================================================================
+
+그럴 수 없습니다. 대신 "PyTuple_Pack()"을 사용하십시오.
+
+
+C에서 객체의 메서드를 어떻게 호출합니까?
+========================================
+
+"PyObject_CallMethod()" 함수는 객체의 임의의 메서드를 호출하는 데 사용
+할 수 있습니다. 매개 변수는 객체, 호출할 메서드의 이름,
+"Py_BuildValue()"에 사용되는 것과 같은 포맷 문자열 및 인자 값입니다:
+
+   PyObject *
+   PyObject_CallMethod(PyObject *object, const char *method_name,
+                       const char *arg_format, ...);
+
+메서드가 있는 모든 객체에서 작동합니다 -- 내장이나 사용자 정의 모두 작
+동합니다. 반환 값을 "Py_DECREF()"할 책임은 여러분에게 있습니다.
+
+예를 들어, 인자 10, 0으로 파일 객체의 "seek" 메서드를 호출하려면 (파일
+객체 포인터가 "f"라고 가정합니다):
+
+   res = PyObject_CallMethod(f, "seek", "(ii)", 10, 0);
+   if (res == NULL) {
+           ... an exception occurred ...
+   }
+   else {
+           Py_DECREF(res);
+   }
+
+"PyObject_CallObject()"는 *항상* 인자 목록에 대한 튜플을 원하므로, 인
+자 없이 함수를 호출하려면, format으로 "()"를 전달하고, 하나의 인자로
+함수를 호출하려면, 인자를 괄호로 묶습니다, 예를 들어 "(i)".
+
+
+PyErr_Print()의 출력(또는 stdout/stderr로 인쇄되는 모든 것)을 어떻게 잡습니까?
+==============================================================================
+
+파이썬 코드에서, "write()" 메서드를 지원하는 객체를 정의하십시오. 이
+객체를 "sys.stdout"과 "sys.stderr"에 대입하십시오. print_error를 호출
+하거나 표준 트레이스백 메커니즘이 작동하도록 두십시오. 그러면 출력은
+여러분의 "write()" 메서드가 보내는 곳으로 갑니다.
+
+이렇게 하는 가장 쉬운 방법은 "io.StringIO" 클래스를 사용하는 것입니다:
+
+   >>> import io, sys
+   >>> sys.stdout = io.StringIO()
+   >>> print('foo')
+   >>> print('hello world!')
+   >>> sys.stderr.write(sys.stdout.getvalue())
+   foo
+   hello world!
+
+같은 작업을 수행하는 사용자 정의 객체는 다음과 같습니다:
+
+   >>> import io, sys
+   >>> class StdoutCatcher(io.TextIOBase):
+   ...     def __init__(self):
+   ...         self.data = []
+   ...     def write(self, stuff):
+   ...         self.data.append(stuff)
+   ...
+   >>> import sys
+   >>> sys.stdout = StdoutCatcher()
+   >>> print('foo')
+   >>> print('hello world!')
+   >>> sys.stderr.write(''.join(sys.stdout.data))
+   foo
+   hello world!
+
+
+C에서 파이썬으로 작성된 모듈에 어떻게 액세스합니까?
+===================================================
+
+다음과 같이 모듈 객체에 대한 포인터를 얻을 수 있습니다:
+
+   module = PyImport_ImportModule("<modulename>");
+
+모듈을 아직 임포트 하지 않았으면 (즉, "sys.modules"에 아직 없으면), 이
+것은 모듈을 초기화합니다; 그렇지 않으면 단순히
+"sys.modules["<modulename>"]"의 값을 반환합니다. 이것은 모듈을 어떤 이
+름 공간에도 넣지 않음에 유의하십시오 -- 단지 초기화되도록 하고
+"sys.modules"에 저장되도록 합니다.
+
+그런 다음, 다음과 같이 모듈의 어트리뷰트(즉 모듈에 정의된 모든 이름)에
+액세스할 수 있습니다:
+
+   attr = PyObject_GetAttrString(module, "<attrname>");
+
+모듈에 있는 변수에 대입하기 위해 "PyObject_SetAttrString()"을 호출하는
+것도 작동합니다.
+
+
+파이썬에서 C++ 객체에 어떻게 인터페이스 합니까?
+===============================================
+
+요구 사항에 따라 여러 가지 접근 방식이 있습니다. 이 작업을 수동으로 수
+행하려면, "확장 및 내장" 문서를 읽는 것으로 시작하십시오. 파이썬 런타
+임 시스템의 경우 C와 C++ 사이에는 큰 차이가 없다는 것을 상기하십시오
+-- 따라서 C 구조체 (포인터) 형을 중심으로 새로운 파이썬 형을 작성하는
+전략이 C++ 객체에도 적용됩니다.
+
+C++ 라이브러리의 경우, C를 쓰는 것은 어렵습니다; 대안이 있습니까?를 참
+조하십시오.
+
+
+Setup 파일을 사용하여 모듈을 추가했는데 make가 실패합니다; 왜 그렇습니까?
+=========================================================================
+
+Setup은 개행으로 끝나야 하며, 개행이 없으면 빌드 프로세스가 실패합니다
+. (이 문제를 해결하려면 지저분한 셸 스크립트 해킹이 필요하며, 이 버그
+는 너무 사소해서 그런 노력을 들일만 한 가치가 없는 것 같습니다.)
+
+
+확장을 어떻게 디버깅합니까?
+===========================
+
+동적으로 로드된 확장에 GDB를 사용할 때, 확장이 로드될 때까지 확장에 중
+단점을 설정할 수 없습니다.
+
+".gdbinit" 파일에서 (또는 대화식으로) 다음 명령을 추가하십시오:
+
+   br _PyImport_LoadDynamicModule
+
+그런 다음, GDB를 실행할 때:
+
+   $ gdb /local/bin/python
+   gdb) run myscript.py
+   gdb) continue # repeat until your extension is loaded
+   gdb) finish   # so that your extension is loaded
+   gdb) br myfunction.c:50
+   gdb) continue
+
+
+리눅스 시스템에서 파이썬 모듈을 컴파일하고 싶지만, 일부 파일이 없습니다. 왜 그렇습니까?
+=======================================================================================
+
+Most packaged versions of Python don't include the
+"/usr/lib/python2.*x*/config/" directory, which contains various files
+required for compiling Python extensions.
+
+For Red Hat, install the python-devel RPM to get the necessary files.
+
+For Debian, run "apt-get install python-dev".
+
+
+"잘못된 입력"과 "불완전한 입력"을 어떻게 구별할 수 있습니까?
+============================================================
+
+때로 파이썬 대화식 인터프리터의 동작을 흉내 내고 싶을 때가 있습니다.
+이것은 입력이 불완전할 때 (예를 들어, "if" 문의 시작을 입력했거나 괄호
+나 삼중 문자열 따옴표를 닫지 않았을 때) 계속 프롬프트를 표시하지만, 입
+력이 유효하지 않으면 즉시 문법 에러 메시지를 표시합니다.
+
+파이썬에서는 "codeop" 모듈을 사용할 수 있습니다. 이 모듈은 구문 분석기
+의 동작을 충분히 근사합니다. 예를 들어, IDLE은 이것을 사용합니다.
+
+C에서 이렇게 하는 가장 쉬운 방법은 "PyRun_InteractiveLoop()"를 호출하
+고 (아마 별도의 스레드에서), 파이썬 인터프리터가 입력을 처리하도록 하
+는 것입니다. "PyOS_ReadlineFunctionPointer()" 가 여러분의 사용자 정의
+입력 함수를 가리 키도록 설정할 수도 있습니다. 자세한 힌트는
+"Modules/readline.c"와 "Parser/myreadline.c"를 참조하십시오.
+
+
+정의되지 않은 g++ 기호 __builtin_new나 __pure_virtual을 어떻게 찾을 수 있습니까?
+================================================================================
+
+g++ 확장 모듈을 동적으로 로드하려면, 파이썬을 다시 컴파일하고, g++를
+사용하여 다시 링크하고 (파이썬 Modules Makefile에서 LINKCC를 변경하십
+시오), g++를 사용하여 여러분의 확장 모듈을 링크해야 합니다 (예를 들어,
+"g++ -shared -o mymodule.so mymodule.o").
+
+
+일부 메서드는 C로 구현되고 그 밖의 것은 파이썬으로 구현된 (예를 들어 상속을 통해) 객체 클래스를 만들 수 있습니까?
+=================================================================================================================
+
+그렇습니다, "int", "list", "dict" 등과 같은 내장 클래스를 상속할 수 있
+습니다.
+
+Boost 파이썬 라이브러리(BPL,
+https://www.boost.org/libs/python/doc/index.html)는 C++에서 이를 수행
+하는 방법을 제공합니다 (즉, BPL을 사용하여 C++로 작성된 확장 클래스를
+상속할 수 있습니다).

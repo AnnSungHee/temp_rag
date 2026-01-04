@@ -1,0 +1,252 @@
+"queue" --- A synchronized queue class
+**************************************
+
+**소스 코드:** Lib/queue.py
+
+======================================================================
+
+"queue" 모듈은 다중 생산자, 다중 소비자 큐를 구현합니다. 정보가 여러
+스레드 간에 안전하게 교환되어야 할 때 스레드 프로그래밍에서 특히 유용
+합니다. 이 모듈의 "Queue" 클래스는 필요한 모든 로킹 개념을 구현합니다.
+
+모듈은 항목을 꺼내는 순서 만 다른 3가지 유형의 큐를 구현합니다. FIFO (
+선입선출, first-in, first-out) 큐에서는, 추가된 첫 번째 작업이 처음으
+로 꺼내지는 작업입니다. LIFO (후입선출, last-in, first-out) 큐에서는,
+가장 최근에 추가된 항목이 처음으로 꺼내지는 항목입니다 (스택처럼 작동
+합니다). 우선순위(priority) 큐에서는, 항목이 정렬된 상태로 유지되고
+("heapq" 모듈을 사용합니다) 가장 낮은 값을 갖는 항목이 먼저 꺼내집니다
+.
+
+내부적으로, 이러한 3가지 유형의 큐는 록을 사용하여 경쟁 스레드를 일시
+적으로 블록합니다; 그러나, 스레드 내에서의 재진입을 처리하도록 설계되
+지는 않았습니다.
+
+또한, 이 모듈은 "간단한" FIFO (선입선출, first-in, first-out) 큐 유형
+인 "SimpleQueue"를 구현합니다. 이 특정 구현은 작은 기능을 포기하는 대
+신 추가 보장을 제공합니다.
+
+"queue" 모듈은 다음 클래스와 예외를 정의합니다:
+
+class queue.Queue(maxsize=0)
+
+   FIFO (선입선출, first-in, first-out) 큐의 생성자. *maxsize*는 큐에
+   배치할 수 있는 항목 수에 대한 상한을 설정하는 정수입니다. 일단, 이
+   크기에 도달하면, 큐 항목이 소비될 때까지 삽입이 블록 됩니다.
+   *maxsize*가 0보다 작거나 같으면, 큐 크기는 무한합니다.
+
+class queue.LifoQueue(maxsize=0)
+
+   LIFO (후임선출, last-in, first-out) 큐의 생성자. *maxsize*는 큐에
+   배치할 수 있는 항목 수에 대한 상한을 설정하는 정수입니다. 일단, 이
+   크기에 도달하면, 큐 항목이 소비될 때까지 삽입이 블록 됩니다.
+   *maxsize*가 0보다 작거나 같으면, 큐 크기는 무한합니다.
+
+class queue.PriorityQueue(maxsize=0)
+
+   우선순위 큐의 생성자. *maxsize*는 큐에 배치할 수 있는 항목 수에 대
+   한 상한을 설정하는 정수입니다. 일단, 이 크기에 도달하면, 큐 항목이
+   소비될 때까지 삽입이 블록 됩니다. *maxsize*가 0보다 작거나 같으면,
+   큐 크기는 무한합니다.
+
+   가장 낮은 값을 갖는 항목이 먼저 꺼내집니다 (가장 낮은 값을 갖는 항
+   목은 "min(entries)" 에 의해 반환될 항목입니다). 항목의 전형적인 패
+   턴은 "(priority_number, data)" 형식의 튜플입니다.
+
+   *data* 요소를 비교할 수 없으면, 데이터는 데이터 항목을 무시하고 우
+   선순위 숫자만 비교하는 클래스로 감쌀 수 있습니다:
+
+      from dataclasses import dataclass, field
+      from typing import Any
+
+      @dataclass(order=True)
+      class PrioritizedItem:
+          priority: int
+          item: Any=field(compare=False)
+
+class queue.SimpleQueue
+
+   상한 없는 FIFO (선입선출, first-in, first-out) 큐의 생성자. 단순 큐
+   에는 작업 추적과 같은 고급 기능이 없습니다.
+
+   버전 3.7에 추가.
+
+exception queue.Empty
+
+   비 블로킹 "get()"(또는 "get_nowait()")이 비어있는 "Queue" 객체에 호
+   출될 때 발생하는 예외.
+
+exception queue.Full
+
+   비 블로킹 "put()"(또는 "put_nowait()")이 가득 찬 "Queue" 객체에 호
+   출될 때 발생하는 예외.
+
+
+큐 객체
+=======
+
+큐 객체("Queue", "LifoQueue" 또는 "PriorityQueue")는 아래에 설명된 공
+용 메서드를 제공합니다.
+
+Queue.qsize()
+
+   큐의 대략의 크기를 돌려줍니다. 주의하십시오, qsize() > 0 은 후속
+   get()이 블록 되지 않는다는 것을 보장하지 않으며, qsize() < maxsize
+   도 put()이 블록 되지 않는다고 보장하지 않습니다.
+
+Queue.empty()
+
+   큐가 비어 있으면 "True"를, 그렇지 않으면 "False"를 반환합니다.
+   empty()가 "True"를 반환하면, put()에 대한 후속 호출이 블록 되지 않
+   는다고 보장하는 것은 아닙니다. 마찬가지로 empty()가 "False"를 반환
+   하면, get()에 대한 후속 호출이 블록 되지 않는다고 보장하는 것은 아
+   닙니다.
+
+Queue.full()
+
+   큐가 가득 차면 "True"를, 그렇지 않으면 "False"를 반환합니다. full()
+   이 "True"를 반환하면, get()에 대한 후속 호출이 블록 되지 않는다고
+   보장하는 것은 아닙니다. 마찬가지로 full()이 "False"를 반환하면,
+   put()에 대한 후속 호출이 블록 되지 않는다고 보장하는 것은 아닙니다.
+
+Queue.put(item, block=True, timeout=None)
+
+   큐에 *item*을 넣습니다. 선택적 인자 *block*이 참이고 *timeout*이
+   "None"(기본값)이면, 사용 가능한 슬롯이 확보될 때까지 필요하면 블록
+   합니다. *timeout*이 양수면, 최대 *timeout* 초 동안 블록하고 그 시간
+   내에 사용 가능한 슬롯이 없으면 "Full" 예외가 발생합니다. 그렇지 않
+   으면 (*block*이 거짓), 빈 슬롯이 즉시 사용할 수 있으면 큐에 항목을
+   넣고, 그렇지 않으면 "Full" 예외를 발생시킵니다 (이때 *timeout*은 무
+   시됩니다).
+
+Queue.put_nowait(item)
+
+   "put(item, block=False)"와 동등합니다.
+
+Queue.get(block=True, timeout=None)
+
+   큐에서 항목을 제거하고 반환합니다. 선택적 인자 *block*이 참이고
+   *timeout*이 "None"(기본값)이면, 항목이 사용 가능할 때까지 필요하면
+   블록합니다. *timeout*이 양수면, 최대 *timeout* 초 동안 블록하고 그
+   시간 내에 사용 가능한 항목이 없으면 "Empty" 예외가 발생합니다. 그렇
+   지 않으면 (*block*이 거짓), 즉시 사용할 수 있는 항목이 있으면 반환
+   하고, 그렇지 않으면 "Empty" 예외를 발생시킵니다 (이때 *timeout*은
+   무시됩니다).
+
+   POSIX 시스템에서 3.0 이전에서, 윈도우의 모든 버전에서, *block*이 참
+   이고 *timeout*이 "None"이면, 이 연산은 하부 록에 대한 중단되지 않는
+   (uninterruptible) 대기로 들어갑니다. 이는 어떤 예외도 발생할 수 없
+   음을 뜻하고, 특히 SIGINT가 "KeyboardInterrupt"를 일으키지 않습니다.
+
+Queue.get_nowait()
+
+   "get(False)"와 동등합니다.
+
+큐에 넣은 작업이 데몬 소비자 스레드에 의해 완전히 처리되었는지를 추적
+하는 것을 지원하는 두 가지 메서드가 제공됩니다.
+
+Queue.task_done()
+
+   앞서 큐에 넣은 작업이 완료되었음을 나타냅니다. 큐 소비자 스레드에서
+   사용됩니다. 작업을 꺼내는 데 사용되는 "get()"마다, 후속
+   "task_done()" 호출은 작업에 대한 처리가 완료되었음을 큐에 알려줍니
+   다.
+
+   "join()"이 현재 블로킹 중이면, 모든 항목이 처리되면 (큐로 "put()"
+   된 모든 항목에 대해 "task_done()" 호출이 수신되었음을 뜻합니다) 재
+   개됩니다.
+
+   큐에 있는 항목보다 더 많이 호출되면 "ValueError"를 발생시킵니다.
+
+Queue.join()
+
+   큐의 모든 항목을 꺼내서 처리할 때까지 블록합니다.
+
+   완료되지 않은 작업 카운트는 항목이 큐에 추가될 때마다 올라갑니다.
+   소비자 스레드가 "task_done()"을 호출해서 항목을 꺼내고 작업이 모두
+   완료되었음을 나타낼 때마다 카운트가 내려갑니다. 완료되지 않은 작업
+   카운트가 0으로 떨어지면, "join()"이 블록 해제됩니다.
+
+큐에 포함된 작업이 완료될 때까지 대기하는 방법의 예:
+
+   import threading
+   import queue
+
+   q = queue.Queue()
+
+   def worker():
+       while True:
+           item = q.get()
+           print(f'Working on {item}')
+           print(f'Finished {item}')
+           q.task_done()
+
+   # Turn-on the worker thread.
+   threading.Thread(target=worker, daemon=True).start()
+
+   # Send thirty task requests to the worker.
+   for item in range(30):
+       q.put(item)
+
+   # Block until all tasks are done.
+   q.join()
+   print('All work completed')
+
+
+SimpleQueue 객체
+================
+
+"SimpleQueue" 객체는 아래에서 설명하는 공용 메서드를 제공합니다.
+
+SimpleQueue.qsize()
+
+   큐의 대략의 크기를 돌려줍니다.  주의하십시오, qsize() > 0 은 후속
+   get()이 블록 되지 않는다는 것을 보장하지 않습니다.
+
+SimpleQueue.empty()
+
+   큐가 비어 있으면 "True"를, 그렇지 않으면 "False"를 반환합니다.
+   empty()가 "False"를 반환하면, get()에 대한 후속 호출이 블록 되지 않
+   는다는 것을 보장하지는 않습니다.
+
+SimpleQueue.put(item, block=True, timeout=None)
+
+   *item*을 큐에 넣습니다. 이 메서드는 결코 블록하지 않고 항상 성공합
+   니다 (메모리 할당 실패와 같은 잠재적 저수준 에러 제외). 선택적 인자
+   *block*과 *timeout*은 무시되고 "Queue.put()"과의 호환성을 위해서만
+   제공됩니다.
+
+   **CPython 구현 상세:** This method has a C implementation which is
+   reentrant.  That is, a "put()" or "get()" call can be interrupted
+   by another "put()" call in the same thread without deadlocking or
+   corrupting internal state inside the queue.  This makes it
+   appropriate for use in destructors such as "__del__" methods or
+   "weakref" callbacks.
+
+SimpleQueue.put_nowait(item)
+
+   "put(item, block=False)"과 동등합니다, "Queue.put_nowait()"와의 호
+   환성을 위해 제공됩니다.
+
+SimpleQueue.get(block=True, timeout=None)
+
+   큐에서 항목을 제거하고 반환합니다. 선택적 인자 *block*이 참이고
+   *timeout*이 "None"(기본값)이면, 항목이 사용 가능할 때까지 필요하면
+   블록합니다. *timeout*이 양수면, 최대 *timeout* 초 동안 블록하고 그
+   시간 내에 사용 가능한 항목이 없으면 "Empty" 예외가 발생합니다. 그렇
+   지 않으면 (*block*이 거짓), 즉시 사용할 수 있는 항목이 있으면 반환
+   하고, 그렇지 않으면 "Empty" 예외를 발생시킵니다 (이때 *timeout*은
+   무시됩니다).
+
+SimpleQueue.get_nowait()
+
+   "get(False)"와 동등합니다.
+
+더 보기:
+
+  "multiprocessing.Queue" 클래스
+     (다중 스레드 대신) 다중 프로세스 문맥에서 사용하기 위한 큐 클래스
+     .
+
+  "collections.deque"는 록을 필요로하지 않고 인덱싱을 지원하는 빠른 원
+  자적 "append()"와 "popleft()" 연산을 제공하는 크기 제한 없는 큐의 대
+  체 구현입니다.

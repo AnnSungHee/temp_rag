@@ -1,0 +1,116 @@
+인터넷 데이터 처리
+******************
+
+이 장에서는 인터넷에서 일반적으로 사용되는 데이터 형식 처리를 지원하는
+모듈에 관해 설명합니다.
+
+* "email" --- An email and MIME handling package
+
+  * "email.message": Representing an email message
+
+  * "email.parser": Parsing email messages
+
+    * FeedParser API
+
+    * Parser API
+
+    * 추가 사항
+
+  * "email.generator": Generating MIME documents
+
+  * "email.policy": Policy Objects
+
+  * "email.errors": Exception and Defect classes
+
+  * "email.headerregistry": Custom Header Objects
+
+  * "email.contentmanager": Managing MIME Content
+
+    * 콘텐츠 관리자 인스턴스
+
+  * "email": 예제
+
+  * "email.message.Message": "compat32" API를 사용하여 이메일 메시지
+    표현하기
+
+  * "email.mime": Creating email and MIME objects from scratch
+
+  * "email.header": Internationalized headers
+
+  * "email.charset": Representing character sets
+
+  * "email.encoders": Encoders
+
+  * "email.utils": Miscellaneous utilities
+
+  * "email.iterators": Iterators
+
+* "json" --- JSON encoder and decoder
+
+  * 기본 사용법
+
+  * 인코더와 디코더
+
+  * 예외
+
+  * 표준 준수와 상호 운용성
+
+    * 문자 인코딩
+
+    * 무한대와 NaN 숫자 값
+
+    * 오브젝트 내에서 반복된 이름
+
+    * 오브젝트나 배열이 아닌 최상윗값
+
+    * 구현 제약 사항
+
+  * 명령 줄 인터페이스
+
+    * 명령 줄 옵션
+
+* "mailbox" --- Manipulate mailboxes in various formats
+
+  * "Mailbox" objects
+
+    * "Maildir"
+
+    * "mbox"
+
+    * "MH"
+
+    * "Babyl"
+
+    * "MMDF"
+
+  * "Message" objects
+
+    * "MaildirMessage"
+
+    * "mboxMessage"
+
+    * "MHMessage"
+
+    * "BabylMessage"
+
+    * "MMDFMessage"
+
+  * 예외
+
+  * 예
+
+* "mimetypes" --- Map filenames to MIME types
+
+  * MimeTypes 객체
+
+* "base64" --- Base16, Base32, Base64, Base85 Data Encodings
+
+  * Security Considerations
+
+* "binhex" --- Encode and decode binhex4 files
+
+  * Notes
+
+* "binascii" --- Convert between binary and ASCII
+
+* "quopri" --- Encode and decode MIME quoted-printable data

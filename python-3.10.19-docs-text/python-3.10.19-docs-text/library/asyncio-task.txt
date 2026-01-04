@@ -1,0 +1,1020 @@
+코루틴과 태스크
+***************
+
+이 절에서는 코루틴과 태스크로 작업하기 위한 고급 asyncio API에 관해 설
+명합니다.
+
+* 코루틴
+
+* 어웨이터블
+
+* Running an asyncio Program
+
+* 태스크 만들기
+
+* 잠자기
+
+* 동시에 태스크 실행하기
+
+* 취소로부터 보호하기
+
+* 시간제한
+
+* 대기 프리미티브
+
+* 스레드에서 실행하기
+
+* 다른 스레드에서 예약하기
+
+* 인트로스펙션
+
+* Task 객체
+
+* Generator-based Coroutines
+
+
+코루틴
+======
+
+**소스 코드:** Lib/asyncio/coroutines.py
+
+======================================================================
+
+async/await 문법으로 선언된 *코루틴*은 asyncio 응용 프로그램을 작성하
+는 기본 방법입니다. 예를 들어, 다음 코드 조각은 "hello"를 인쇄하고, 1
+초 동안 기다린 다음, "world"를 인쇄합니다:
+
+   >>> import asyncio
+
+   >>> async def main():
+   ...     print('hello')
+   ...     await asyncio.sleep(1)
+   ...     print('world')
+
+   >>> asyncio.run(main())
+   hello
+   world
+
+단지 코루틴을 호출하는 것으로 실행되도록 예약하는 것은 아닙니다:
+
+   >>> main()
+   <coroutine object main at 0x1053bb7c8>
+
+To actually run a coroutine, asyncio provides three main mechanisms:
+
+* 최상위 진입점 "main()" 함수를 실행하는 "asyncio.run()" 함수 (위의 예
+  를 보세요.)
+
+* 코루틴을 기다리기. 다음 코드 조각은 1초를 기다린 후 "hello"를 인쇄한
+  다음 *또* 2초를 기다린 후 "world"를 인쇄합니다:
+
+     import asyncio
+     import time
+
+     async def say_after(delay, what):
+         await asyncio.sleep(delay)
+         print(what)
+
+     async def main():
+         print(f"started at {time.strftime('%X')}")
+
+         await say_after(1, 'hello')
+         await say_after(2, 'world')
+
+         print(f"finished at {time.strftime('%X')}")
+
+     asyncio.run(main())
+
+  예상 출력:
+
+     started at 17:13:52
+     hello
+     world
+     finished at 17:13:55
+
+* 코루틴을 asyncio "태스크"로 동시에 실행하는 "asyncio.create_task()"
+  함수.
+
+  위의 예를 수정해서 두 개의 "say_after" 코루틴을 *동시에* 실행해 봅시
+  다:
+
+     async def main():
+         task1 = asyncio.create_task(
+             say_after(1, 'hello'))
+
+         task2 = asyncio.create_task(
+             say_after(2, 'world'))
+
+         print(f"started at {time.strftime('%X')}")
+
+         # Wait until both tasks are completed (should take
+         # around 2 seconds.)
+         await task1
+         await task2
+
+         print(f"finished at {time.strftime('%X')}")
+
+  예상 출력은 이제 코드 조각이 이전보다 1초 빠르게 실행되었음을 보여줍
+  니다:
+
+     started at 17:14:32
+     hello
+     world
+     finished at 17:14:34
+
+
+어웨이터블
+==========
+
+우리는 객체가 "await" 표현식에서 사용될 수 있을 때 **어웨이터블** 객체
+라고 말합니다. 많은 asyncio API는 어웨이터블을 받아들이도록 설계되었습
+니다.
+
+*어웨이터블* 객체에는 세 가지 주요 유형이 있습니다: **코루틴**, **태스
+크** 및 **퓨처**.
+
+-[ 코루틴 ]-
+
+파이썬 코루틴은 *어웨이터블*이므로 다른 코루틴에서 기다릴 수 있습니다:
+
+   import asyncio
+
+   async def nested():
+       return 42
+
+   async def main():
+       # Nothing happens if we just call "nested()".
+       # A coroutine object is created but not awaited,
+       # so it *won't run at all*.
+       nested()
+
+       # Let's do it differently now and await it:
+       print(await nested())  # will print "42".
+
+   asyncio.run(main())
+
+중요:
+
+  이 설명서에서 "코루틴" 이라는 용어는 두 가지 밀접한 관련 개념에 사용
+  될 수 있습니다:
+
+  * *코루틴 함수*: "async def" 함수;
+
+  * *코루틴 객체*: *코루틴 함수*를 호출하여 반환된 객체.
+
+asyncio also supports legacy generator-based coroutines.
+
+-[ 태스크 ]-
+
+*태스크*는 코루틴을 *동시에* 예약하는 데 사용됩니다.
+
+코루틴이 "asyncio.create_task()"와 같은 함수를 사용하여 *태스크*로 싸
+일 때 코루틴은 곧 실행되도록 자동으로 예약됩니다:
+
+   import asyncio
+
+   async def nested():
+       return 42
+
+   async def main():
+       # Schedule nested() to run soon concurrently
+       # with "main()".
+       task = asyncio.create_task(nested())
+
+       # "task" can now be used to cancel "nested()", or
+       # can simply be awaited to wait until it is complete:
+       await task
+
+   asyncio.run(main())
+
+-[ 퓨처 ]-
+
+"Future"는 비동기 연산의 **최종 결과**를 나타내는 특별한 **저수준** 어
+웨이터블 객체입니다.
+
+Future 객체를 *기다릴* 때, 그것은 코루틴이 Future가 다른 곳에서 해결될
+때까지 기다릴 것을 뜻합니다.
+
+콜백 기반 코드를 async/await와 함께 사용하려면 asyncio의 Future 객체가
+필요합니다.
+
+일반적으로 응용 프로그램 수준 코드에서 Future 객체를 만들 **필요는 없
+습니다**.
+
+때때로 라이브러리와 일부 asyncio API에 의해 노출되는 Future 객체를 기
+다릴 수 있습니다:
+
+   async def main():
+       await function_that_returns_a_future_object()
+
+       # this is also valid:
+       await asyncio.gather(
+           function_that_returns_a_future_object(),
+           some_python_coroutine()
+       )
+
+Future 객체를 반환하는 저수준 함수의 좋은 예는
+"loop.run_in_executor()"입니다.
+
+
+Running an asyncio Program
+==========================
+
+asyncio.run(coro, *, debug=False)
+
+   Execute the *coroutine* *coro* and return the result.
+
+   This function runs the passed coroutine, taking care of managing
+   the asyncio event loop, *finalizing asynchronous generators*, and
+   closing the threadpool.
+
+   This function cannot be called when another asyncio event loop is
+   running in the same thread.
+
+   If *debug* is "True", the event loop will be run in debug mode.
+
+   This function always creates a new event loop and closes it at the
+   end.  It should be used as a main entry point for asyncio programs,
+   and should ideally only be called once.
+
+   예:
+
+      async def main():
+          await asyncio.sleep(1)
+          print('hello')
+
+      asyncio.run(main())
+
+   버전 3.7에 추가.
+
+   버전 3.9에서 변경: Updated to use
+   "loop.shutdown_default_executor()".
+
+   참고:
+
+     The source code for "asyncio.run()" can be found in
+     Lib/asyncio/runners.py.
+
+
+태스크 만들기
+=============
+
+**소스 코드:** Lib/asyncio/tasks.py
+
+======================================================================
+
+asyncio.create_task(coro, *, name=None)
+
+   *coro* 코루틴을 "Task"로 감싸고 실행을 예약합니다. Task 객체를 반환
+   합니다.
+
+   *name*이 "None"이 아니면, "Task.set_name()"을 사용하여 태스크의 이
+   름으로 설정됩니다.
+
+   "get_running_loop()"에 의해 반환된 루프에서 태스크가 실행되고, 현재
+   스레드에 실행 중인 루프가 없으면 "RuntimeError"가 발생합니다.
+
+   중요:
+
+     Save a reference to the result of this function, to avoid a task
+     disappearing mid-execution. The event loop only keeps weak
+     references to tasks. A task that isn't referenced elsewhere may
+     get garbage collected at any time, even before it's done. For
+     reliable "fire-and-forget" background tasks, gather them in a
+     collection:
+
+        background_tasks = set()
+
+        for i in range(10):
+            task = asyncio.create_task(some_coro(param=i))
+
+            # Add task to the set. This creates a strong reference.
+            background_tasks.add(task)
+
+            # To prevent keeping references to finished tasks forever,
+            # make each task remove its own reference from the set after
+            # completion:
+            task.add_done_callback(background_tasks.discard)
+
+   버전 3.7에 추가.
+
+   버전 3.8에서 변경: *name* 매개 변수가 추가되었습니다.
+
+
+잠자기
+======
+
+coroutine asyncio.sleep(delay, result=None)
+
+   *delay* 초 동안 블록합니다.
+
+   *result*가 제공되면, 코루틴이 완료될 때 호출자에게 반환됩니다.
+
+   "sleep()"은 항상 현재 태스크를 일시 중단해서 다른 태스크를 실행할
+   수 있도록 합니다.
+
+   Setting the delay to 0 provides an optimized path to allow other
+   tasks to run. This can be used by long-running functions to avoid
+   blocking the event loop for the full duration of the function call.
+
+   Deprecated since version 3.8, removed in version 3.10: The "loop"
+   parameter.  This function has been implicitly getting the current
+   running loop since 3.7.  See What's New in 3.10's Removed section
+   for more information.
+
+   5초 동안 현재 날짜를 매초 표시하는 코루틴의 예:
+
+      import asyncio
+      import datetime
+
+      async def display_date():
+          loop = asyncio.get_running_loop()
+          end_time = loop.time() + 5.0
+          while True:
+              print(datetime.datetime.now())
+              if (loop.time() + 1.0) >= end_time:
+                  break
+              await asyncio.sleep(1)
+
+      asyncio.run(display_date())
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+
+동시에 태스크 실행하기
+======================
+
+awaitable asyncio.gather(*aws, return_exceptions=False)
+
+   *aws* 시퀀스에 있는 어웨이터블 객체를 *동시에* 실행합니다.
+
+   *aws*에 있는 어웨이터블이 코루틴이면 자동으로 태스크로 예약됩니다.
+
+   모든 어웨이터블이 성공적으로 완료되면, 결과는 반환된 값들이 합쳐진
+   리스트입니다. 결괏값의 순서는 *aws*에 있는 어웨이터블의 순서와 일치
+   합니다.
+
+   *return_exceptions*가 "False"(기본값)면, 첫 번째 발생한 예외가
+   "gather()"를 기다리는 태스크로 즉시 전파됩니다. *aws* 시퀀스의 다른
+   어웨이터블은 **취소되지 않고** 계속 실행됩니다.
+
+   *return_exceptions*가 "True"면, 예외는 성공적인 결과처럼 처리되고,
+   결과 리스트에 집계됩니다.
+
+   "gather()"가 *취소되면*, 모든 제출된 (아직 완료되지 않은) 어웨이터
+   블도 *취소됩니다*.
+
+   *aws* 시퀀스의 Task나 Future가 *취소되면*, 그것이 "CancelledError"
+   를 일으킨 것처럼 처리됩니다 -- 이때 "gather()" 호출은 취소되지 **않
+   습니다**. 이것은 제출된 태스크/퓨처 하나를 취소하는 것이 다른 태스
+   크/퓨처를 취소하게 되는 것을 막기 위한 것입니다.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+   예:
+
+      import asyncio
+
+      async def factorial(name, number):
+          f = 1
+          for i in range(2, number + 1):
+              print(f"Task {name}: Compute factorial({number}), currently i={i}...")
+              await asyncio.sleep(1)
+              f *= i
+          print(f"Task {name}: factorial({number}) = {f}")
+          return f
+
+      async def main():
+          # Schedule three calls *concurrently*:
+          L = await asyncio.gather(
+              factorial("A", 2),
+              factorial("B", 3),
+              factorial("C", 4),
+          )
+          print(L)
+
+      asyncio.run(main())
+
+      # Expected output:
+      #
+      #     Task A: Compute factorial(2), currently i=2...
+      #     Task B: Compute factorial(3), currently i=2...
+      #     Task C: Compute factorial(4), currently i=2...
+      #     Task A: factorial(2) = 2
+      #     Task B: Compute factorial(3), currently i=3...
+      #     Task C: Compute factorial(4), currently i=3...
+      #     Task B: factorial(3) = 6
+      #     Task C: Compute factorial(4), currently i=4...
+      #     Task C: factorial(4) = 24
+      #     [2, 6, 24]
+
+   참고:
+
+     If *return_exceptions* is False, cancelling gather() after it has
+     been marked done won't cancel any submitted awaitables. For
+     instance, gather can be marked done after propagating an
+     exception to the caller, therefore, calling "gather.cancel()"
+     after catching an exception (raised by one of the awaitables)
+     from gather won't cancel any other awaitables.
+
+   버전 3.7에서 변경: *gather* 자체가 취소되면, *return_exceptions*와
+   관계없이 취소가 전파됩니다.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+   버전 3.10부터 폐지: Deprecation warning is emitted if no positional
+   arguments are provided or not all positional arguments are Future-
+   like objects and there is no running event loop.
+
+
+취소로부터 보호하기
+===================
+
+awaitable asyncio.shield(aw)
+
+   어웨이터블 객체를 "취소"로부터 보호합니다.
+
+   *aw*가 코루틴이면 자동으로 태스크로 예약됩니다.
+
+   다음 문장:
+
+      task = asyncio.create_task(something())
+      res = await shield(task)
+
+   은 다음과 동등합니다:
+
+      res = await something()
+
+   *단*, 그것을 포함하는 코루틴이 취소되면, "something()"에서 실행 중
+   인 태스크는 취소되지 않는다는 것만 예외입니다. "something()"의 관점
+   에서는, 취소가 일어나지 않았습니다. 호출자는 여전히 취소되었고,
+   "await" 표현식은 여전히 "CancelledError"를 발생시킵니다.
+
+   "something()"가 다른 수단(즉, 그 안에서 스스로)에 의해 취소되면,
+   "shield()"도 취소됩니다.
+
+   취소를 완전히 무시하려면(권장되지 않습니다), 다음과 같이 "shield()"
+   함수를 try/except 절과 결합해야 합니다:
+
+      task = asyncio.create_task(something())
+      try:
+          res = await shield(task)
+      except CancelledError:
+          res = None
+
+   중요:
+
+     Save a reference to tasks passed to this function, to avoid a
+     task disappearing mid-execution. The event loop only keeps weak
+     references to tasks. A task that isn't referenced elsewhere may
+     get garbage collected at any time, even before it's done.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+   버전 3.10부터 폐지: Deprecation warning is emitted if *aw* is not
+   Future-like object and there is no running event loop.
+
+
+시간제한
+========
+
+coroutine asyncio.wait_for(aw, timeout)
+
+   *aw* 어웨이터블이 제한된 시간 내에 완료될 때까지 기다립니다.
+
+   *aw*가 코루틴이면 자동으로 태스크로 예약됩니다.
+
+   *timeout*은 "None" 또는 대기할 float 나 int 초 수입니다. *timeout*
+   이 "None"이면 퓨처가 완료될 때까지 블록합니다.
+
+   If a timeout occurs, it cancels the task and raises
+   "asyncio.TimeoutError".
+
+   태스크 "취소"를 피하려면, "shield()"로 감싸십시오.
+
+   이 함수는 퓨처가 실제로 취소될 때까지 대기하므로, 총 대기 시간이
+   *timeout*을 초과할 수 있습니다. 취소하는 동안 예외가 발생하면, 전파
+   됩니다.
+
+   대기가 취소되면, 퓨처 *aw*도 취소됩니다.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+   예:
+
+      async def eternity():
+          # Sleep for one hour
+          await asyncio.sleep(3600)
+          print('yay!')
+
+      async def main():
+          # Wait for at most 1 second
+          try:
+              await asyncio.wait_for(eternity(), timeout=1.0)
+          except asyncio.TimeoutError:
+              print('timeout!')
+
+      asyncio.run(main())
+
+      # Expected output:
+      #
+      #     timeout!
+
+   버전 3.7에서 변경: When *aw* is cancelled due to a timeout,
+   "wait_for" waits for *aw* to be cancelled.  Previously, it raised
+   "asyncio.TimeoutError" immediately.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+
+대기 프리미티브
+===============
+
+coroutine asyncio.wait(aws, *, timeout=None, return_when=ALL_COMPLETED)
+
+   Run awaitable objects in the *aws* iterable concurrently and block
+   until the condition specified by *return_when*.
+
+   *aws* 이터러블은 비어있을 수 없습니다.
+
+   두 집합의 태스크/퓨처를 반환합니다: "(done, pending)".
+
+   사용법:
+
+      done, pending = await asyncio.wait(aws)
+
+   *timeout*(float나 int)을 지정하면, 반환하기 전에 대기할 최대 시간(
+   초)을 제어할 수 있습니다.
+
+   Note that this function does not raise "asyncio.TimeoutError".
+   Futures or Tasks that aren't done when the timeout occurs are
+   simply returned in the second set.
+
+   *return_when*는 이 함수가 언제 반환해야 하는지 나타냅니다. 다음 상
+   수 중 하나여야 합니다:
+
+   +-------------------------------+------------------------------------------+
+   | 상수                          | 설명                                     |
+   |===============================|==========================================|
+   | "FIRST_COMPLETED"             | 퓨처가 하나라도 끝나거나 취소될 때 함수  |
+   |                               | 가 반환됩니다.                           |
+   +-------------------------------+------------------------------------------+
+   | "FIRST_EXCEPTION"             | The function will return when any future |
+   |                               | finishes by raising an exception.  If no |
+   |                               | future raises an exception then it is    |
+   |                               | equivalent to "ALL_COMPLETED".           |
+   +-------------------------------+------------------------------------------+
+   | "ALL_COMPLETED"               | 모든 퓨처가 끝나거나 취소되면 함수가 반  |
+   |                               | 환됩니다.                                |
+   +-------------------------------+------------------------------------------+
+
+   "wait_for()"와 달리, "wait()"는 시간 초과가 발생할 때 퓨처를 취소하
+   지 않습니다.
+
+   버전 3.8부터 폐지: If any awaitable in *aws* is a coroutine, it is
+   automatically scheduled as a Task.  Passing coroutines objects to
+   "wait()" directly is deprecated as it leads to confusing behavior.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+   참고:
+
+     "wait()" schedules coroutines as Tasks automatically and later
+     returns those implicitly created Task objects in "(done,
+     pending)" sets.  Therefore the following code won't work as
+     expected:
+
+        async def foo():
+            return 42
+
+        coro = foo()
+        done, pending = await asyncio.wait({coro})
+
+        if coro in done:
+            # This branch will never be run!
+
+     Here is how the above snippet can be fixed:
+
+        async def foo():
+            return 42
+
+        task = asyncio.create_task(foo())
+        done, pending = await asyncio.wait({task})
+
+        if task in done:
+            # Everything will work as expected now.
+
+   Deprecated since version 3.8, will be removed in version 3.11:
+   Passing coroutine objects to "wait()" directly is deprecated.
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+asyncio.as_completed(aws, *, timeout=None)
+
+   Run awaitable objects in the *aws* iterable concurrently.  Return
+   an iterator of coroutines. Each coroutine returned can be awaited
+   to get the earliest next result from the iterable of the remaining
+   awaitables.
+
+   Raises "asyncio.TimeoutError" if the timeout occurs before all
+   Futures are done.
+
+   예:
+
+      for coro in as_completed(aws):
+          earliest_result = await coro
+          # ...
+
+   버전 3.10에서 변경: *loop* 매개 변수를 제거했습니다.
+
+   버전 3.10부터 폐지: Deprecation warning is emitted if not all
+   awaitable objects in the *aws* iterable are Future-like objects and
+   there is no running event loop.
+
+
+스레드에서 실행하기
+===================
+
+coroutine asyncio.to_thread(func, /, *args, **kwargs)
+
+   별도의 스레드에서 *func* 함수를 비동기적으로 실행합니다.
+
+   이 함수에 제공된 모든 *args 와 **kwargs 는 *func*로 직접 전달됩니다
+   . 또한, 현재 "contextvars.Context"가 전파되어, 이벤트 루프 스레드의
+   컨텍스트 변수가 별도의 스레드에서 액세스 될 수 있습니다.
+
+   *func*의 최종 결과를 얻기 위해 어웨이트 할 수 있는 코루틴을 반환합
+   니다.
+
+   This coroutine function is primarily intended to be used for
+   executing IO-bound functions/methods that would otherwise block the
+   event loop if they were ran in the main thread. For example:
+
+      def blocking_io():
+          print(f"start blocking_io at {time.strftime('%X')}")
+          # Note that time.sleep() can be replaced with any blocking
+          # IO-bound operation, such as file operations.
+          time.sleep(1)
+          print(f"blocking_io complete at {time.strftime('%X')}")
+
+      async def main():
+          print(f"started main at {time.strftime('%X')}")
+
+          await asyncio.gather(
+              asyncio.to_thread(blocking_io),
+              asyncio.sleep(1))
+
+          print(f"finished main at {time.strftime('%X')}")
+
+
+      asyncio.run(main())
+
+      # Expected output:
+      #
+      # started main at 19:50:53
+      # start blocking_io at 19:50:53
+      # blocking_io complete at 19:50:54
+      # finished main at 19:50:54
+
+   코루틴에서 "blocking_io()"를 직접 호출하면 그동안 이벤트 루프가 블
+   록 되어 추가 1초의 실행 시간이 발생합니다. 대신,
+   "asyncio.to_thread()"를 사용하면, 이벤트 루프를 블록하지 않고 별도
+   의 스레드에서 실행할 수 있습니다.
+
+   참고:
+
+     *GIL*로 인해, "asyncio.to_thread()"는 일반적으로 IO 병목 함수를
+     비 블로킹으로 만드는 데만 사용할 수 있습니다. 그러나, GIL을 반납
+     하는 확장 모듈이나 GIL이 없는 대체 파이썬 구현의 경우,
+     "asyncio.to_thread()"를 CPU 병목 함수에도 사용할 수 있습니다.
+
+   버전 3.9에 추가.
+
+
+다른 스레드에서 예약하기
+========================
+
+asyncio.run_coroutine_threadsafe(coro, loop)
+
+   주어진 이벤트 루프에 코루틴을 제출합니다. 스레드 안전합니다.
+
+   다른 OS 스레드에서 결과를 기다리는 "concurrent.futures.Future"를 반
+   환합니다.
+
+   이 함수는 이벤트 루프가 실행 중인 스레드가 아닌, 다른 OS 스레드에서
+   호출하기 위한 것입니다. 예:
+
+      # Create a coroutine
+      coro = asyncio.sleep(1, result=3)
+
+      # Submit the coroutine to a given loop
+      future = asyncio.run_coroutine_threadsafe(coro, loop)
+
+      # Wait for the result with an optional timeout argument
+      assert future.result(timeout) == 3
+
+   코루틴에서 예외가 발생하면, 반환된 Future에 통지됩니다. 또한, 이벤
+   트 루프에서 태스크를 취소하는 데 사용할 수 있습니다:
+
+      try:
+          result = future.result(timeout)
+      except concurrent.futures.TimeoutError:
+          print('The coroutine took too long, cancelling the task...')
+          future.cancel()
+      except Exception as exc:
+          print(f'The coroutine raised an exception: {exc!r}')
+      else:
+          print(f'The coroutine returned: {result!r}')
+
+   설명서의 동시성과 다중 스레드 절을 참조하십시오.
+
+   다른 asyncio 함수와 달리, 이 함수는 *loop* 인자가 명시적으로 전달되
+   어야 합니다.
+
+   버전 3.5.1에 추가.
+
+
+인트로스펙션
+============
+
+asyncio.current_task(loop=None)
+
+   현재 실행 중인 "Task" 인스턴스를 반환하거나 태스크가 실행되고 있지
+   않으면 "None"을 반환합니다.
+
+   *loop*가 "None"이면, 현재 루프를 가져오는 데 "get_running_loop()"가
+   사용됩니다.
+
+   버전 3.7에 추가.
+
+asyncio.all_tasks(loop=None)
+
+   루프에 의해 실행되는 아직 완료되지 않은 "Task" 객체 집합을 반환합니
+   다.
+
+   *loop*가 "None"이면, 현재 루프를 가져오는 데 "get_running_loop()"가
+   사용됩니다.
+
+   버전 3.7에 추가.
+
+
+Task 객체
+=========
+
+class asyncio.Task(coro, *, loop=None, name=None)
+
+   파이썬 코루틴을 실행하는 "퓨처류" 객체입니다. 스레드 안전하지 않습
+   니다.
+
+   태스크는 이벤트 루프에서 코루틴을 실행하는 데 사용됩니다. 만약 코루
+   틴이 Future를 기다리고 있다면, 태스크는 코루틴의 실행을 일시 중지하
+   고 Future의 완료를 기다립니다. 퓨처가 *완료*되면, 감싸진 코루틴의
+   실행이 다시 시작됩니다.
+
+   이벤트 루프는 협업 스케줄링을 사용합니다: 이벤트 루프는 한 번에 하
+   나의 Task를 실행합니다. Task가 Future의 완료를 기다리는 동안, 이벤
+   트 루프는 다른 태스크, 콜백을 실행하거나 IO 연산을 수행합니다.
+
+   테스크를 만들려면 고수준 "asyncio.create_task()" 함수를 사용하거나,
+   저수준 "loop.create_task()" 나 "ensure_future()" 함수를 사용하십시
+   오. 태스크의 인스턴스를 직접 만드는 것은 권장되지 않습니다.
+
+   실행 중인 Task를 취소하려면 "cancel()" 메서드를 사용하십시오. 이를
+   호출하면 태스크가 감싼 코루틴으로 "CancelledError" 예외를 던집니다.
+   코루틴이 취소 중에 Future 객체를 기다리고 있으면, Future 객체가 취
+   소됩니다.
+
+   "cancelled()"는 태스크가 취소되었는지 확인하는 데 사용할 수 있습니
+   다. 이 메서드는 감싼 코루틴이 "CancelledError" 예외를 억제하지 않고
+   실제로 취소되었으면 "True"를 반환합니다.
+
+   "asyncio.Task"는 "Future.set_result()"와 "Future.set_exception()"을
+   제외한 모든 API를 "Future"에서 상속받습니다.
+
+   Tasks support the "contextvars" module.  When a Task is created it
+   copies the current context and later runs its coroutine in the
+   copied context.
+
+   버전 3.7에서 변경: "contextvars" 모듈에 대한 지원이 추가되었습니다.
+
+   버전 3.8에서 변경: *name* 매개 변수가 추가되었습니다.
+
+   버전 3.10부터 폐지: Deprecation warning is emitted if *loop* is not
+   specified and there is no running event loop.
+
+   cancel(msg=None)
+
+      Task 취소를 요청합니다.
+
+      This arranges for a "CancelledError" exception to be thrown into
+      the wrapped coroutine on the next cycle of the event loop.
+
+      The coroutine then has a chance to clean up or even deny the
+      request by suppressing the exception with a "try" ... ...
+      "except CancelledError" ... "finally" block. Therefore, unlike
+      "Future.cancel()", "Task.cancel()" does not guarantee that the
+      Task will be cancelled, although suppressing cancellation
+      completely is not common and is actively discouraged.
+
+      버전 3.9에서 변경: *msg* 매개 변수가 추가되었습니다.
+
+      다음 예는 코루틴이 취소 요청을 가로채는 방법을 보여줍니다:
+
+         async def cancel_me():
+             print('cancel_me(): before sleep')
+
+             try:
+                 # Wait for 1 hour
+                 await asyncio.sleep(3600)
+             except asyncio.CancelledError:
+                 print('cancel_me(): cancel sleep')
+                 raise
+             finally:
+                 print('cancel_me(): after sleep')
+
+         async def main():
+             # Create a "cancel_me" Task
+             task = asyncio.create_task(cancel_me())
+
+             # Wait for 1 second
+             await asyncio.sleep(1)
+
+             task.cancel()
+             try:
+                 await task
+             except asyncio.CancelledError:
+                 print("main(): cancel_me is cancelled now")
+
+         asyncio.run(main())
+
+         # Expected output:
+         #
+         #     cancel_me(): before sleep
+         #     cancel_me(): cancel sleep
+         #     cancel_me(): after sleep
+         #     main(): cancel_me is cancelled now
+
+   cancelled()
+
+      Task가 *취소(cancelled)*되었으면 "True"를 반환합니다.
+
+      Task는 "cancel()"로 취소가 요청되고 감싼 코루틴이 자신에게 전달
+      된 "CancelledError" 예외를 확산할 때 *최소(cancelled)*됩니다.
+
+   done()
+
+      Task가 *완료(done)*되었으면 "True"를 반환합니다.
+
+      감싼 코루틴이 값을 반환하거나 예외를 일으키거나, Task가 취소되면
+      Task는 *완료(done)*됩니다.
+
+   result()
+
+      Task의 결과를 반환합니다.
+
+      Task가 *완료(done)*되었으면 감싼 코루틴의 결과가 반환됩니다 (또
+      는 코루틴이 예외를 발생시켰으면 해당 예외가 다시 발생합니다).
+
+      태스크가 *취소(cancelled)*되었으면, 이 메서드는 "CancelledError"
+      예외를 발생시킵니다.
+
+      If the Task's result isn't yet available, this method raises a
+      "InvalidStateError" exception.
+
+   exception()
+
+      Task의 예외를 반환합니다.
+
+      감싼 코루틴이 예외를 발생시키면, 그 예외가 반환됩니다. 감싼 코루
+      틴이 정상적으로 반환되면, 이 메서드는 "None"을 반환합니다.
+
+      태스크가 *취소(cancelled)*되었으면, 이 메서드는 "CancelledError"
+      예외를 발생시킵니다.
+
+      태스크가 아직 *완료(done)*되지 않았으면, 이 메서드는
+      "InvalidStateError" 예외를 발생시킵니다.
+
+   add_done_callback(callback, *, context=None)
+
+      태스크가 *완료(done)*될 때 실행할 콜백을 추가합니다.
+
+      이 메서드는 저수준 콜백 기반 코드에서만 사용해야 합니다.
+
+      자세한 내용은 "Future.add_done_callback()" 설명서를 참조하십시오
+      .
+
+   remove_done_callback(callback)
+
+      콜백 목록에서 *callback*을 제거합니다.
+
+      이 메서드는 저수준 콜백 기반 코드에서만 사용해야 합니다.
+
+      자세한 내용은 "Future.remove_done_callback()" 설명서를 참조하십
+      시오.
+
+   get_stack(*, limit=None)
+
+      이 Task의 스택 프레임 리스트를 돌려줍니다.
+
+      감싼 코루틴이 완료되지 않았으면, 일시 정지된 곳의 스택을 반환합
+      니다. 코루틴이 성공적으로 완료되었거나 취소되었으면 빈 리스트가
+      반환됩니다. 코루틴이 예외로 종료되었으면, 이것은 트레이스백 프레
+      임의 리스트를 반환합니다.
+
+      프레임은 항상 가장 오래된 것부터 순서대로 정렬됩니다.
+
+      일시 정지된 코루틴에서는 하나의 스택 프레임만 반환됩니다.
+
+      선택적 *limit* 인자는 반환할 최대 프레임 수를 설정합니다; 기본적
+      으로 사용 가능한 모든 프레임이 반환됩니다. 반환되는 리스트의 순
+      서는 스택과 트레이스백 중 어느 것이 반환되는지에 따라 다릅니다:
+      스택은 최신 프레임이 반환되지만, 트레이스백은 가장 오래된 프레임
+      이 반환됩니다. (이는 traceback 모듈의 동작과 일치합니다.)
+
+   print_stack(*, limit=None, file=None)
+
+      이 Task의 스택이나 트레이스백을 인쇄합니다.
+
+      이것은 "get_stack()"으로 얻은 프레임에 대해 traceback 모듈과 유
+      사한 출력을 생성합니다.
+
+      *limit* 인자는 "get_stack()"에 직접 전달됩니다.
+
+      *file* 인자는 출력이 기록되는 I/O 스트림입니다; 기본적으로 출력
+      은 "sys.stdout"에 기록됩니다.
+
+   get_coro()
+
+      "Task"로 싸인 코루틴 객체를 반환합니다.
+
+      버전 3.8에 추가.
+
+   get_name()
+
+      Task의 이름을 반환합니다.
+
+      Task에 명시적으로 이름이 지정되지 않으면, 기본 asyncio Task 구현
+      은 인스턴스화 중에 기본 이름을 생성합니다.
+
+      버전 3.8에 추가.
+
+   set_name(value)
+
+      Task의 이름을 설정합니다.
+
+      *value* 인자는 모든 객체가 될 수 있으며, 문자열로 변환됩니다.
+
+      기본 Task 구현에서, 이름은 태스크 객체의 "repr()" 출력에 표시됩
+      니다.
+
+      버전 3.8에 추가.
+
+
+Generator-based Coroutines
+==========================
+
+참고:
+
+  Support for generator-based coroutines is **deprecated** and is
+  removed in Python 3.11.
+
+Generator-based coroutines predate async/await syntax.  They are
+Python generators that use "yield from" expressions to await on
+Futures and other coroutines.
+
+Generator-based coroutines should be decorated with
+"@asyncio.coroutine", although this is not enforced.
+
+@asyncio.coroutine
+
+   Decorator to mark generator-based coroutines.
+
+   This decorator enables legacy generator-based coroutines to be
+   compatible with async/await code:
+
+      @asyncio.coroutine
+      def old_style_coroutine():
+          yield from asyncio.sleep(1)
+
+      async def main():
+          await old_style_coroutine()
+
+   This decorator should not be used for "async def" coroutines.
+
+   Deprecated since version 3.8, will be removed in version 3.11: Use
+   "async def" instead.
+
+asyncio.iscoroutine(obj)
+
+   Return "True" if *obj* is a coroutine object.
+
+   This method is different from "inspect.iscoroutine()" because it
+   returns "True" for generator-based coroutines.
+
+asyncio.iscoroutinefunction(func)
+
+   Return "True" if *func* is a coroutine function.
+
+   This method is different from "inspect.iscoroutinefunction()"
+   because it returns "True" for generator-based coroutine functions
+   decorated with "@coroutine".

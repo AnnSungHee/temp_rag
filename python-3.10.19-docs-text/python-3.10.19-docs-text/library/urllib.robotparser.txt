@@ -1,0 +1,88 @@
+"urllib.robotparser" ---  Parser for robots.txt
+***********************************************
+
+**소스 코드:** Lib/urllib/robotparser.py
+
+======================================================================
+
+이 모듈은 클래스 하나 "RobotFileParser"를 제공하는데, 특정 사용자 에이
+전트가 "robots.txt" 파일을 게시한 웹 사이트에서 URL을 가져올 수 있는지
+에 대한 질문에 대답합니다. "robots.txt" 파일의 구조에 대한 자세한 내용
+은 http://www.robotstxt.org/orig.html 을 참조하십시오.
+
+class urllib.robotparser.RobotFileParser(url='')
+
+   이 클래스는 *url*에 있는 "robots.txt" 파일을 읽고, 구문 분석하고,
+   그에 대한 질문에 대답하는 메서드를 제공합니다.
+
+   set_url(url)
+
+      "robots.txt" 파일을 가리키는 URL을 설정합니다.
+
+   read()
+
+      "robots.txt" URL을 읽어서 구문 분석기에 넘깁니다.
+
+   parse(lines)
+
+      lines 인자를 구문 분석합니다.
+
+   can_fetch(useragent, url)
+
+      구문 분석된 "robots.txt" 파일에 포함된 규칙에 따라, *useragent*
+      가 *url*를 가져올 수 있으면 "True"를 반환합니다.
+
+   mtime()
+
+      "robots.txt" 파일을 마지막으로 가져온 시간을 반환합니다. 이것은
+      새 "robots.txt" 파일을 주기적으로 확인해야 하는 장기 실행 웹 스
+      파이더에 유용합니다.
+
+   modified()
+
+      "robots.txt" 파일을 마지막으로 가져온 시간을 현재 시각으로 설정
+      합니다.
+
+   crawl_delay(useragent)
+
+      "robots.txt"에서 해당 *useragent*에 대한 "Crawl-delay" 파라미터
+      의 값을 반환합니다. 해당 파라미터가 없거나, 지정된 *useragent*에
+      적용되지 않거나, 이 파라미터에 대한 "robots.txt" 항목이 잘못된
+      구문이면 "None"을 반환합니다.
+
+      버전 3.6에 추가.
+
+   request_rate(useragent)
+
+      "robots.txt"에서 "Request-rate" 파라미터의 내용을 *네임드 튜플*
+      "RequestRate(requests, seconds)"로 반환합니다. 해당 파라미터가
+      없거나, 지정된 *useragent*에 적용되지 않거나, 이 파라미터에 대한
+      "robots.txt" 항목이 잘못된 구문이면 "None"을 반환합니다.
+
+      버전 3.6에 추가.
+
+   site_maps()
+
+      "robots.txt"에서 "Sitemap" 매개 변수의 내용을 "list()" 형식으로
+      반환합니다. 해당 매개 변수가 없거나 "robots.txt"의 이 매개 변수
+      항목이 잘못된 문법이면 "None"을 반환합니다.
+
+      버전 3.8에 추가.
+
+다음 예제는 "RobotFileParser" 클래스의 기본 사용을 보여줍니다:
+
+   >>> import urllib.robotparser
+   >>> rp = urllib.robotparser.RobotFileParser()
+   >>> rp.set_url("http://www.musi-cal.com/robots.txt")
+   >>> rp.read()
+   >>> rrate = rp.request_rate("*")
+   >>> rrate.requests
+   3
+   >>> rrate.seconds
+   20
+   >>> rp.crawl_delay("*")
+   6
+   >>> rp.can_fetch("*", "http://www.musi-cal.com/cgi-bin/search?city=San+Francisco")
+   False
+   >>> rp.can_fetch("*", "http://www.musi-cal.com/")
+   True

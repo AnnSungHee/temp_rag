@@ -1,0 +1,68 @@
+Floating Point Objects
+**********************
+
+type PyFloatObject
+
+   This subtype of "PyObject" represents a Python floating point
+   object.
+
+PyTypeObject PyFloat_Type
+    * Part of the Stable ABI.*
+
+   This instance of "PyTypeObject" represents the Python floating
+   point type.  This is the same object as "float" in the Python
+   layer.
+
+int PyFloat_Check(PyObject *p)
+
+   인자가 "PyFloatObject" 나 "PyFloatObject"의 서브 형이면 참을 반환합
+   니다. 이 함수는 항상 성공합니다.
+
+int PyFloat_CheckExact(PyObject *p)
+
+   인자가 "PyFloatObject"이지만 "PyFloatObject"의 서브 형은 아니면 참
+   을 반환합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyFloat_FromString(PyObject *str)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *str*의 문자열 값을 기반으로 "PyFloatObject" 객체를 만들거나, 실패
+   하면 "NULL".
+
+PyObject *PyFloat_FromDouble(double v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *v*로부터 "PyFloatObject" 객체를 만들거나, 실패하면 "NULL".
+
+double PyFloat_AsDouble(PyObject *pyfloat)
+    * Part of the Stable ABI.*
+
+   Return a C "double" representation of the contents of *pyfloat*.
+   If *pyfloat* is not a Python floating point object but has a
+   "__float__()" method, this method will first be called to convert
+   *pyfloat* into a float. If "__float__()" is not defined then it
+   falls back to "__index__()". This method returns "-1.0" upon
+   failure, so one should call "PyErr_Occurred()" to check for errors.
+
+   버전 3.8에서 변경: Use "__index__()" if available.
+
+double PyFloat_AS_DOUBLE(PyObject *pyfloat)
+
+   에러 검사 없이 *pyfloat* 의 내용의 C "double" 표현을 반환합니다.
+
+PyObject *PyFloat_GetInfo(void)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   float의 정밀도, 최솟값, 최댓값에 관한 정보를 포함한 structseq 인스
+   턴스를 돌려줍니다. 헤더 파일 "float.h"를 감싸는 얇은 래퍼입니다.
+
+double PyFloat_GetMax()
+    * Part of the Stable ABI.*
+
+   최대 표현 가능한 유한 float *DBL_MAX*를 C "double"로 반환합니다.
+
+double PyFloat_GetMin()
+    * Part of the Stable ABI.*
+
+   최소 정규화된(normalized) 양의 float *DBL_MIN*를 C "double"로 반환
+   합니다.

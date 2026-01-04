@@ -1,0 +1,1339 @@
+"logging" --- Logging facility for Python
+*****************************************
+
+**소스 코드:** Lib/logging/__init__.py
+
+
+Important
+^^^^^^^^^
+
+이 페이지는 API 레퍼런스 정보를 담고 있습니다. 자습서 정보 및 고급 주
+제에 대한 설명은 다음을 참조하십시오.
+
+* 기초 자습서
+
+* 고급 자습서
+
+* 로깅 요리책
+
+======================================================================
+
+이 모듈은 응용 프로그램과 라이브러리를 위한 유연한 이벤트 로깅 시스템
+을 구현하는 함수와 클래스를 정의합니다.
+
+표준 라이브러리 모듈로 로깅 API를 제공하는 것의 주요 이점은, 모든 파이
+썬 모듈이 로깅에 참여할 수 있어서, 응용 프로그램 로그에 여러분 자신의
+메시지를 제삼자 모듈의 메시지와 통합할 수 있다는 것입니다.
+
+The simplest example:
+
+   >>> import logging
+   >>> logging.warning('Watch out!')
+   WARNING:root:Watch out!
+
+이 모듈은 많은 기능과 유연성을 제공합니다. 로깅에 익숙하지 않다면, 감
+을 잡는 가장 좋은 방법은 자습서를 보는 것입니다 (**위와 오른쪽에 있는
+링크를 참조하세요**).
+
+The basic classes defined by the module, together with their
+functions, are listed below.
+
+* 로거는 응용 프로그램 코드가 직접 사용하는 인터페이스를 노출합니다.
+
+* 처리기는 (로거가 만든) 로그 레코드를 적절한 목적지로 보냅니다.
+
+* 필터는 출력할 로그 레코드를 결정하기 위한 더 세분된 기능을 제공합니
+  다.
+
+* 포매터는 최종 출력에서 로그 레코드의 배치를 지정합니다.
+
+
+Logger 객체
+===========
+
+로거에는 다음과 같은 어트리뷰트와 메서드가 있습니다. 로거는 *결코* 직
+접 인스턴스를 만드는 일 없이, 항상 모듈 수준의 함수
+"logging.getLogger(name)" 를 거치는 것에 주의하십시오. 같은 이름(name)
+으로 "getLogger()" 를 여러 번 호출해도 항상 같은 로거 객체에 대한 참조
+를 돌려줍니다.
+
+The "name" is potentially a period-separated hierarchical value, like
+"foo.bar.baz" (though it could also be just plain "foo", for example).
+Loggers that are further down in the hierarchical list are children of
+loggers higher up in the list.  For example, given a logger with a
+name of "foo", loggers with names of "foo.bar", "foo.bar.baz", and
+"foo.bam" are all descendants of "foo".  The logger name hierarchy is
+analogous to the Python package hierarchy, and identical to it if you
+organise your loggers on a per-module basis using the recommended
+construction "logging.getLogger(__name__)".  That's because in a
+module, "__name__" is the module's name in the Python package
+namespace.
+
+class logging.Logger
+
+   propagate
+
+      이 어트리뷰트가 참으로 평가되면, 이 로거에 로그 된 이벤트는 이
+      로거에 연결된 처리기뿐 아니라 상위 계층 (조상) 로거의 처리기로
+      전달됩니다. 메시지는 조상 로거의 처리기에 직접 전달됩니다 - 조상
+      로거의 수준이나 필터는 고려하지 않습니다.
+
+      이 값이 거짓으로 평가되면, 로깅 메시지가 조상 로거의 처리기로 전
+      달되지 않습니다.
+
+      Spelling it out with an example: If the propagate attribute of
+      the logger named "A.B.C" evaluates to true, any event logged to
+      "A.B.C" via a method call such as
+      "logging.getLogger('A.B.C').error(...)" will [subject to passing
+      that logger's level and filter settings] be passed in turn to
+      any handlers attached to loggers named "A.B", "A" and the root
+      logger, after first being passed to any handlers attached to
+      "A.B.C". If any logger in the chain "A.B.C", "A.B", "A" has its
+      "propagate" attribute set to false, then that is the last logger
+      whose handlers are offered the event to handle, and propagation
+      stops at that point.
+
+      생성자는 이 어트리뷰트를 "True" 로 설정합니다.
+
+      참고:
+
+        로거 *와* 하나 이상의 조상에 처리기를 중복해서 연결하면, 같은
+        레코드를 여러 번 출력할 수 있습니다. 일반적으로, 하나 이상의
+        로거에 처리기를 붙일 필요는 없습니다. 로거 계층에서 가장 높은
+        적절한 로거에 처리기를 연결하면, propagate 설정이 "True" 로 남
+        아있는 모든 자식 로거들이 로그 하는 모든 이벤트를 보게 됩니다.
+        일반적인 시나리오는 루트 로거에만 처리기를 연결하고, 전파가 나
+        머지를 처리하도록 하는 것입니다.
+
+   setLevel(level)
+
+      이 로거의 수준 경계를 *level* 로 설정합니다. *level* 보다 덜 심
+      각한 로깅 메시지는 무시됩니다; 심각도 *level* 이상의 로깅 메시지
+      는, 처리기 수준이 *level* 보다 높은 심각도 수준으로 설정되지 않
+      는 한, 이 로거에 연결된 처리기가 출력합니다.
+
+      로거가 만들어질 때, 수준은 "NOTSET" (로거가 루트 로거 일 때는 모
+      든 메시지를 처리하게 하고, 로거가 루트 로거가 아니면 모든 메시지
+      를 부모에게 위임하도록 합니다) 으로 설정됩니다. 루트 로거는 수준
+      "WARNING"으로 만들어짐에 유의하세요.
+
+      '부모에게 위임'이라는 말은, 로거 수준이 NOTSET 인 경우, NOTSET
+      이외의 수준을 갖는 조상이 발견되거나 루트에 도달할 때까지 조상
+      로거 체인을 탐색함을 의미합니다.
+
+      NOTSET 이외의 수준을 갖는 조상이 발견되면, 그 조상의 수준을 조상
+      검색이 시작된 로거의 유효 수준으로 간주하여, 로깅 이벤트를 처리
+      할지를 결정하는 데 사용됩니다.
+
+      루트에 도달하면, 그리고 루트가 NOTSET 수준을 갖고 있으면, 모든
+      메시지가 처리됩니다. 그렇지 않으면 루트 수준이 유효 수준으로 사
+      용됩니다.
+
+      수준의 목록은 로깅 수준를 보세요.
+
+      버전 3.2에서 변경: *level* 매개 변수는 이제 "INFO"와 같은 정수
+      상수 대신 'INFO'와 같은 수준의 문자열 표현을 허용합니다. 그러나
+      수준은 내부적으로 정수로 저장되며, "getEffectiveLevel()" 및
+      "isEnabledFor()"와 같은 메서드는 정수를 반환하거나 정수가 전달되
+      기를 기대합니다.
+
+   isEnabledFor(level)
+
+      심각도 *level* 의 메시지가 이 로거에서 처리될지를 알려줍니다. 이
+      메서드는 먼저 "logging.disable(level)" 에 의해 설정된 모듈 수준
+      의 수준을 확인한 다음, "getEffectiveLevel()"로 확인되는 로거의
+      유효 수준을 검사합니다.
+
+   getEffectiveLevel()
+
+      이 로거의 유효 수준을 알려줍니다. "setLevel()" 을 사용하여
+      "NOTSET" 이외의 값이 설정되면, 그 값이 반환됩니다. 그렇지 않으면
+      , "NOTSET" 이외의 값이 발견될 때까지 루트를 향해 계층 구조를 탐
+      색하고, 그 값이 반환됩니다. 반환되는 값은 정수이며, 일반적으로
+      "logging.DEBUG", "logging.INFO" 등 중 하나입니다.
+
+   getChild(suffix)
+
+      접미사에 의해 결정되는, 이 로거의 자손 로거를 반환합니다. 그러므
+      로, "logging.getLogger('abc').getChild('def.ghi')" 는
+      "logging.getLogger('abc.def.ghi')" 와 같은 로거를 반환합니다. 이
+      것은 편의 메서드인데, 부모 로거가 리터럴 문자열이 아닌 이름(가령
+      "__name__")을 사용하여 명명될 때 유용합니다.
+
+      버전 3.2에 추가.
+
+   debug(msg, *args, **kwargs)
+
+      이 로거에 수준 "DEBUG" 메시지를 로그 합니다. *msg* 는 메시지 포
+      맷 문자열이고, *args* 는 문자열 포매팅 연산자를 사용하여 *msg*
+      에 병합되는 인자입니다. (이는 포맷 문자열에 키워드를 사용하고,
+      인자로 하나의 딕셔너리를 전달할 수 있음을 의미합니다.) *args*가
+      제공되지 않으면 *msg*에 % 포매팅 연산이 수행되지 않습니다.
+
+      *kwargs* 에서 검사되는 네 개의 키워드 인자가 있습니다:
+      *exc_info*, *stack_info*, *stacklevel* 및 *extra*.
+
+      *exc_info* 가 거짓으로 평가되지 않으면, 로깅 메시지에 예외 정보
+      가 추가됩니다. 예외 튜플 ("sys.exc_info()" 에 의해 반환되는 형식
+      ) 또는 예외 인스턴스가 제공되면 사용됩니다; 그렇지 않으면 예외
+      정보를 얻기 위해 "sys.exc_info()" 를 호출합니다.
+
+      두 번째 선택적 키워드 인자는 *stack_info* 이며, 기본값은 "False"
+      입니다. 참이면, 실제 로깅 호출을 포함하는 스택 정보가 로깅 메시
+      지에 추가됩니다. 이것은 *exc_info* 를 지정할 때 표시되는 것과 같
+      은 스택 정보가 아닙니다: 전자(*stack_info*)는 스택의 맨 아래에서
+      현재 스레드의 로깅 호출까지의 스택 프레임이며, 후자(*exc_info*)
+      는 예외가 일어난 후에 예외 처리기를 찾으면서 되감은 스택 프레임
+      에 대한 정보입니다.
+
+      *exc_info* 와는 독립적으로 *stack_info* 를 지정할 수 있습니다.
+      예를 들어 예외가 발생하지 않은 경우에도 코드의 특정 지점에 어떻
+      게 도달했는지 보여줄 수 있습니다. 스택 프레임은 다음과 같은 헤더
+      행 다음에 인쇄됩니다:
+
+         Stack (most recent call last):
+
+      예외 프레임을 표시할 때 사용되는 "Traceback (most recent call
+      last):" 을 흉내 내고 있습니다.
+
+      세 번째 선택적 키워드 인자는 *stacklevel*이며, 기본값은 "1"입니
+      다. 1보다 크면, 로깅 이벤트용으로 만들어진 "LogRecord"에 설정된
+      줄 번호와 함수 이름을 계산할 때 해당 수의 스택 프레임을 건너뜁니
+      다. 기록된 함수 이름, 파일명 및 줄 번호가 도우미 함수/메서드에
+      대한 정보가 아니라 호출자의 정보가 되도록, 로깅 도우미에서 사용
+      할 수 있습니다. 이 매개 변수의 이름은 "warnings" 모듈에 있는 비
+      슷한 것과 같도록 맞췄습니다.
+
+      The fourth keyword argument is *extra* which can be used to pass
+      a dictionary which is used to populate the __dict__ of the
+      "LogRecord" created for the logging event with user-defined
+      attributes. These custom attributes can then be used as you
+      like. For example, they could be incorporated into logged
+      messages. For example:
+
+         FORMAT = '%(asctime)s %(clientip)-15s %(user)-8s %(message)s'
+         logging.basicConfig(format=FORMAT)
+         d = {'clientip': '192.168.0.1', 'user': 'fbloggs'}
+         logger = logging.getLogger('tcpserver')
+         logger.warning('Protocol problem: %s', 'connection reset', extra=d)
+
+      는 이렇게 인쇄할 것입니다
+
+         2006-02-08 22:20:02,165 192.168.0.1 fbloggs  Protocol problem: connection reset
+
+      *extra* 에 전달된 딕셔너리의 키가, 로깅 시스템에서 사용하는 키와
+      충돌해서는 안 됩니다. (어떤 키가 로깅 시스템에 의해 사용되는지에
+      대한 더 많은 정보는 LogRecord 어트리뷰트에 있는 절을 보십시오.)
+
+      로그 된 메시지에서 이러한 어트리뷰트를 사용하려면 몇 가지 주의를
+      기울여야 합니다. 위의 예에서, 예를 들어, "Formatter" 에 설정한
+      포맷 문자열은 "LogRecord"의 어트리뷰트 딕셔너리에 'clientip' 과
+      'user' 가 있을 것으로 기대하고 있습니다. 이것들이 없는 경우 문자
+      열 포매팅 예외가 발생하기 때문에 메시지가 기록되지 않습니다. 따
+      라서 이 경우, 항상 이 키를 포함하는 *extra* 딕셔너리를 전달해야
+      합니다.
+
+      성가신 일입니다만, 이 기능은 여러 문맥에서 같은 코드가 실행되고
+      관심 있는 조건들(가령 원격 클라이언트 IP 주소와 인증된 사용자 이
+      름)이 문맥에 따라 발생하는 다중 스레드 서버와 같은 특수한 상황을
+      위한 것입니다. 이런 상황에서는, 특수한 "Formatter" 가 특정한
+      "Handler"와 함께 사용될 가능성이 큽니다.
+
+      If no handler is attached to this logger (or any of its
+      ancestors, taking into account the relevant "Logger.propagate"
+      attributes), the message will be sent to the handler set on
+      "lastResort".
+
+      버전 3.2에서 변경: *stack_info* 매개 변수가 추가되었습니다.
+
+      버전 3.5에서 변경: *exc_info* 매개 변수는 이제 예외 인스턴스를
+      받아들입니다.
+
+      버전 3.8에서 변경: *stacklevel* 매개 변수가 추가되었습니다.
+
+   info(msg, *args, **kwargs)
+
+      이 로거에 수준 "INFO" 메시지를 로그 합니다. 인자는 "debug()"처럼
+      해석됩니다.
+
+   warning(msg, *args, **kwargs)
+
+      이 로거에 수준 "WARNING" 메시지를 로그 합니다. 인자는 "debug()"
+      처럼 해석됩니다.
+
+      참고:
+
+        기능적으로 "warning" 와 같은, 구식의 "warn" 메서드가 있습니다.
+        "warn" 은 폐지되었으므로 사용하지 마십시오 - 대신 "warning" 을
+        사용하십시오.
+
+   error(msg, *args, **kwargs)
+
+      이 로거에 수준 "ERROR" 메시지를 로그 합니다. 인자는 "debug()"처
+      럼 해석됩니다.
+
+   critical(msg, *args, **kwargs)
+
+      이 로거에 수준 "CRITICAL" 메시지를 로그 합니다. 인자는 "debug()"
+      처럼 해석됩니다.
+
+   log(level, msg, *args, **kwargs)
+
+      이 로거에 정수 수준 *level* 로 메시지를 로그 합니다. 다른 인자는
+      "debug()"처럼 해석됩니다.
+
+   exception(msg, *args, **kwargs)
+
+      이 로거에 수준 "ERROR" 메시지를 로그 합니다. 인자는 "debug()"처
+      럼 해석됩니다. 예외 정보가 로깅 메시지에 추가됩니다. 이 메서드는
+      예외 처리기에서만 호출해야 합니다.
+
+   addFilter(filter)
+
+      지정된 필터 *filter* 를 이 로거에 추가합니다.
+
+   removeFilter(filter)
+
+      이 로거에서 지정된 필터 *filter* 를 제거합니다.
+
+   filter(record)
+
+      이 로거의 필터를 레코드(record)에 적용하고 레코드가 처리 대상이
+      면 "True"를 반환합니다. 필터 중 어느 하나가 거짓 값을 반환할 때
+      까지 필터는 차례로 참조됩니다. 그중 아무것도 거짓 값을 반환하지
+      않으면 레코드가 처리됩니다 (처리기로 전달됩니다). 어느 하나가 거
+      짓 값을 반환하면, 더 이상의 레코드 처리는 이루어지지 않습니다.
+
+   addHandler(hdlr)
+
+      지정된 처리기 *hdlr* 를 이 로거에 추가합니다.
+
+   removeHandler(hdlr)
+
+      이 로거에서 지정된 처리기 *hdlr* 을 제거합니다.
+
+   findCaller(stack_info=False, stacklevel=1)
+
+      호출자의 소스 파일 이름과 행 번호를 찾습니다. 파일 이름, 행 번호
+      , 함수 이름 및 스택 정보를 4-요소 튜플로 반환합니다. 스택 정보는
+      *stack_info* 가 "True" 가 아니면 "None" 으로 반환됩니다.
+
+      *stacklevel* 매개 변수는 "debug()"과 기타 API를 호출하는 코드에
+      서 전달됩니다. 1보다 크면, 반환되는 값을 결정하기 전에 초과분만
+      큼 스택 프레임을 건너뜁니다. 일반적으로 도무미/래퍼 코드에서 로
+      깅 API를 호출할 때 유용한데, 이벤트 로그의 정보가 도우미/래퍼 코
+      드가 아니라 호출자 코드를 참조하도록 합니다.
+
+   handle(record)
+
+      이 로거와 그 조상(거짓 값의 *propagate* 가 발견될 때까지)과 연관
+      된 모든 처리기에 레코드를 전달하여 레코드를 처리합니다. 이 메서
+      드는 로컬에서 만든 레코드뿐만 아니라 소켓에서 받아서 언피클된 레
+      코드를 처리하는 데 사용됩니다. "filter()" 를 사용하여 로거 수준
+      필터링을 적용합니다.
+
+   makeRecord(name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None)
+
+      이 메서드는 특수한 "LogRecord" 인스턴스를 만들기 위해 서브 클래
+      스에서 재정의할 수 있는 팩토리 메서드입니다.
+
+   hasHandlers()
+
+      이 로거에 처리기가 구성되어 있는지 확인합니다. 이 로거의 처리기
+      와 로거 계층의 부모를 찾습니다. 처리기가 발견되면 "True" 를 반환
+      하고, 그렇지 않으면 "False" 를 반환합니다. 이 메서드는
+      'propagate' 어트리뷰트가 거짓으로 설정된 로거가 발견될 때 계층
+      구조 검색을 중지합니다 - 그 로거가 처리기가 있는지 검사하는 마지
+      막 로거가 됩니다.
+
+      버전 3.2에 추가.
+
+   버전 3.7에서 변경: 이제 로거는 피클 되고 언피클 될 수 있습니다.
+
+
+로깅 수준
+=========
+
+로깅 수준의 숫자 값은 다음 표에 나와 있습니다. 여러분 자신의 수준을 정
+의하고, 미리 정의된 수준과 상대적인 특정 값을 갖도록 하려는 경우 필요
+합니다. 같은 숫자 값을 가진 수준을 정의하면 미리 정의된 값을 덮어씁니
+다; 미리 정의된 이름이 유실됩니다.
+
++----------------+-----------------+
+| 수준           | 숫자 값         |
+|================|=================|
+| "CRITICAL"     | 50              |
++----------------+-----------------+
+| "ERROR"        | 40              |
++----------------+-----------------+
+| "WARNING"      | 30              |
++----------------+-----------------+
+| "INFO"         | 20              |
++----------------+-----------------+
+| "DEBUG"        | 10              |
++----------------+-----------------+
+| "NOTSET"       | 0               |
++----------------+-----------------+
+
+
+Handler 객체
+============
+
+Handlers have the following attributes and methods. Note that
+"Handler" is never instantiated directly; this class acts as a base
+for more useful subclasses. However, the "__init__()" method in
+subclasses needs to call "Handler.__init__()".
+
+class logging.Handler
+
+   __init__(level=NOTSET)
+
+      수준을 설정하고, 필터 목록을 빈 리스트로 설정하고, I/O 메커니즘
+      에 대한 액세스를 직렬화하기 위해 ("createLock()" 을 사용하여) 록
+      을 생성함으로써 "Handler" 인스턴스를 초기화합니다.
+
+   createLock()
+
+      스레드 안전하지 않은 하부 I/O 기능에 대한 액세스를 직렬화하는 데
+      사용할 수 있는 스레드 록을 초기화합니다.
+
+   acquire()
+
+      "createLock()" 로 생성된 스레드 록을 확보합니다.
+
+   release()
+
+      "acquire()"로 확보한 스레드 록을 반납합니다.
+
+   setLevel(level)
+
+      이 처리기의 수준 경계를 *level* 로 설정합니다. *level* 보다 덜
+      심각한 로깅 메시지는 무시됩니다. 처리기가 만들어질 때, 수준은
+      "NOTSET" (모든 메시지가 처리되게 합니다) 으로 설정됩니다.
+
+      수준의 목록은 로깅 수준를 보세요.
+
+      버전 3.2에서 변경: *level* 매개 변수는 이제 "INFO"와 같은 정수
+      상수 대신 'INFO'와 같은 수준 문자열 표현을 허용합니다.
+
+   setFormatter(fmt)
+
+      Sets the "Formatter" for this handler to *fmt*.
+
+   addFilter(filter)
+
+      지정된 필터 *filter* 를 이 처리기에 추가합니다.
+
+   removeFilter(filter)
+
+      이 처리기에서 지정된 필터 *filter* 를 제거합니다.
+
+   filter(record)
+
+      이 처리기의 필터를 레코드에 적용하고 레코드가 처리 대상이면
+      "True"를 반환합니다. 필터 중 어느 하나가 거짓 값을 반환할 때까지
+      필터는 차례로 확인됩니다. 그중 아무것도 거짓 값을 반환하지 않으
+      면 레코드가 출력됩니다. 어느 하나가 거짓 값을 반환하면 처리기는
+      레코드를 출력하지 않습니다.
+
+   flush()
+
+      모든 로그 출력이 플러시 되었음을 확실히 합니다. 이 버전은 아무것
+      도 하지 않으며, 서브 클래스에 의해 구현됩니다.
+
+   close()
+
+      Tidy up any resources used by the handler. This version does no
+      output but removes the handler from an internal list of handlers
+      which is closed when "shutdown()" is called. Subclasses should
+      ensure that this gets called from overridden "close()" methods.
+
+   handle(record)
+
+      처리기에 추가된 필터에 따라 조건부로, 지정된 로깅 레코드를 출력
+      합니다. 레코드의 실제 출력을 I/O 스레드 록의 확보/해제로 둘러쌉
+      니다.
+
+   handleError(record)
+
+      This method should be called from handlers when an exception is
+      encountered during an "emit()" call. If the module-level
+      attribute "raiseExceptions" is "False", exceptions get silently
+      ignored. This is what is mostly wanted for a logging system -
+      most users will not care about errors in the logging system,
+      they are more interested in application errors. You could,
+      however, replace this with a custom handler if you wish. The
+      specified record is the one which was being processed when the
+      exception occurred. (The default value of "raiseExceptions" is
+      "True", as that is more useful during development).
+
+   format(record)
+
+      레코드를 포맷합니다 - 포매터가 설정된 경우 사용합니다. 그렇지 않
+      으면 모듈의 기본 포매터를 사용합니다.
+
+   emit(record)
+
+      지정된 로깅 레코드를 실제로 로그 하는 데 필요한 작업을 수행합니
+      다. 이 버전은 서브 클래스에 의해 구현될 것으로 보고
+      "NotImplementedError"를 발생시킵니다.
+
+      경고:
+
+        This method is called after a handler-level lock is acquired,
+        which is released after this method returns. When you override
+        this method, note that you should be careful when calling
+        anything that invokes other parts of the logging API which
+        might do locking, because that might result in a deadlock.
+        Specifically:
+
+        * Logging configuration APIs acquire the module-level lock,
+          and then individual handler-level locks as those handlers
+          are configured.
+
+        * Many logging APIs lock the module-level lock. If such an API
+          is called from this method, it could cause a deadlock if a
+          configuration call is made on another thread, because that
+          thread will try to acquire the module-level lock *before*
+          the handler-level lock, whereas this thread tries to acquire
+          the module-level lock *after* the handler-level lock
+          (because in this method, the handler-level lock has already
+          been acquired).
+
+표준으로 포함된 처리기 목록은 "logging.handlers" 를 참조하십시오.
+
+
+Formatter 객체
+==============
+
+"Formatter" objects have the following attributes and methods. They
+are responsible for converting a "LogRecord" to (usually) a string
+which can be interpreted by either a human or an external system. The
+base "Formatter" allows a formatting string to be specified. If none
+is supplied, the default value of "'%(message)s'" is used, which just
+includes the message in the logging call. To have additional items of
+information in the formatted output (such as a timestamp), keep
+reading.
+
+A Formatter can be initialized with a format string which makes use of
+knowledge of the "LogRecord" attributes - such as the default value
+mentioned above making use of the fact that the user's message and
+arguments are pre-formatted into a "LogRecord"'s *message* attribute.
+This format string contains standard Python %-style mapping keys. See
+section printf 스타일 문자열 포매팅 for more information on string
+formatting.
+
+The useful mapping keys in a "LogRecord" are given in the section on
+LogRecord 어트리뷰트.
+
+class logging.Formatter(fmt=None, datefmt=None, style='%', validate=True, *, defaults=None)
+
+   Returns a new instance of the "Formatter" class.  The instance is
+   initialized with a format string for the message as a whole, as
+   well as a format string for the date/time portion of a message.  If
+   no *fmt* is specified, "'%(message)s'" is used.  If no *datefmt* is
+   specified, a format is used which is described in the
+   "formatTime()" documentation.
+
+   The *style* parameter can be one of '%', '{' or '$' and determines
+   how the format string will be merged with its data: using one of
+   %-formatting, "str.format()" or "string.Template". This only
+   applies to the format string *fmt* (e.g. "'%(message)s'" or
+   "{message}"), not to the actual log messages passed to
+   "Logger.debug" etc; see 응용 프로그램 전체에서 특정 포맷 스타일 사
+   용하기 for more information on using {- and $-formatting for log
+   messages.
+
+   The *defaults* parameter can be a dictionary with default values to
+   use in custom fields. For example: "logging.Formatter('%(ip)s
+   %(message)s', defaults={"ip": None})"
+
+   버전 3.2에서 변경: The *style* parameter was added.
+
+   버전 3.8에서 변경: The *validate* parameter was added. Incorrect or
+   mismatched style and fmt will raise a "ValueError". For example:
+   "logging.Formatter('%(asctime)s - %(message)s', style='{')".
+
+   버전 3.10에서 변경: The *defaults* parameter was added.
+
+   format(record)
+
+      레코드의 어트리뷰트 딕셔너리가 문자열 포매팅 연산의 피연산자로
+      사용됩니다. 결과 문자열을 반환합니다. 딕셔너리를 포맷하기 전에
+      몇 가지 준비 단계가 수행됩니다. 레코드의 *message* 어트리뷰트를
+      *msg* % *args* 를 사용하여 계산합니다. 포매팅 문자열에
+      "'(asctime)'" 이 들어 있으면, "formatTime()" 이 호출되어 이벤트
+      시간을 포매팅합니다. 예외 정보가 있는 경우, "formatException()"
+      을 사용하여 포매팅 되고 메시지에 덧붙입니다. 포맷된 예외 정보는
+      *exc_text* 어트리뷰트에 캐시 됩니다. 예외 정보를 피클 해서 네트
+      워크를 통해 전송할 수 있으므로 유용합니다만, 예외 정보의 포매팅
+      을 사용자 정의하는 "Formatter" 서브 클래스가 두 개 이상 있는 경
+      우 주의해야 합니다. 이 경우, 한 포매터가 포매팅을 완료한 후
+      (*exc_text* 어트리뷰트를 "None"으로 설정하여) 캐시 된 값을 지워
+      서 그 이벤트를 처리하는 다음 포매터가 캐시 된 값을 사용하지 않고
+      , 새로 계산할 수 있도록 해야 합니다.
+
+      스택 정보가 있는 경우, 예외 정보 뒤에 덧붙입니다. 필요할 경우
+      "formatStack()" 을 사용하여 변환합니다.
+
+   formatTime(record, datefmt=None)
+
+      이 메서드는 포맷된 시간을 사용하려는 포매터에 의해 "format()"에
+      서 호출되어야 합니다. 이 메서드는 특정 요구 사항을 제공하기 위해
+      포매터에서 재정의될 수 있지만, 기본 동작은 다음과 같습니다:
+      *datefmt*(문자열)이 지정된 경우, "time.strftime()" 를 사용하여
+      레코드 생성 시간을 포매팅합니다. 그렇지 않으면 '%Y-%m-%d
+      %H:%M:%S,uuu' 포맷이 사용됩니다. 여기서 uuu 부분은 밀리 초 값이
+      고, 다른 문자들은 "time.strftime()" 설명서를 따릅니다. 이 포맷의
+      표현된 시간의 예는 "2003-01-23 00:29:50,411" 입니다. 결과 문자열
+      이 반환됩니다.
+
+      이 함수는 사용자가 구성할 수 있는 함수를 사용하여 생성 시간을 튜
+      플로 변환합니다. 기본적으로 "time.localtime()" 이 사용됩니다; 특
+      정 포매터 인스턴스에서 이를 변경하려면, "converter" 어트리뷰트를
+      "time.localtime()" 또는 "time.gmtime()" 과 같은 서명을 가진 함수
+      로 설정하십시오. 모든 포매터를 변경하려면, 예를 들어 모든 로깅
+      시간을 GMT로 표시하려면, "Formatter" 클래스의 "converter" 어트리
+      뷰트를 설정하십시오.
+
+      버전 3.3에서 변경: 예전에는, 기본 포맷이 다음과 같이 하드 코딩되
+      었습니다: "2010-09-06 22:38:15,292". 쉼표 앞에 있는 부분은
+      strptime 포맷 문자열("'%Y-%m-%d %H:%M:%S'")이며, 쉼표 뒤의 부분
+      은 밀리 초 값입니다. strptime에 밀리 초 포맷 표시자가 없으므로,
+      밀리 초 값은 다른 포맷 문자열 "'%s,%03d'" 을 사용하여 추가됩니다
+      --- 이 두 포맷 문자열 모두 이 메서드에 하드 코드 되었습니다. 이
+      변경으로, 이 문자열들은 클래스 수준 어트리뷰트로 정의되었고, 원
+      하는 경우 인스턴스 수준에서 재정의할 수 있습니다. 어트리뷰트 이
+      름은 "default_time_format"(strptime 포맷 문자열)과
+      "default_msec_format"(밀리 초 값 추가용)입니다.
+
+      버전 3.9에서 변경: "default_msec_format"은 "None"일 수 있습니다.
+
+   formatException(exc_info)
+
+      지정된 예외 정보("sys.exc_info()" 에 의해 반환되는 표준 예외 튜
+      플)를 문자열로 포맷합니다. 이 기본 구현은
+      "traceback.print_exception()"을 사용합니다. 결과 문자열이 반환됩
+      니다.
+
+   formatStack(stack_info)
+
+      지정된 스택 정보("traceback.print_stack()" 에 의해 반환된 문자열
+      이지만 마지막 줄 바꿈이 제거됩니다)을 문자열로 포맷합니다. 이 기
+      본 구현은 입력 값을 그대로 반환합니다.
+
+class logging.BufferingFormatter(linefmt=None)
+
+   A base formatter class suitable for subclassing when you want to
+   format a number of records. You can pass a "Formatter" instance
+   which you want to use to format each line (that corresponds to a
+   single record). If not specified, the default formatter (which just
+   outputs the event message) is used as the line formatter.
+
+   formatHeader(records)
+
+      Return a header for a list of *records*. The base implementation
+      just returns the empty string. You will need to override this
+      method if you want specific behaviour, e.g. to show the count of
+      records, a title or a separator line.
+
+   formatFooter(records)
+
+      Return a footer for a list of *records*. The base implementation
+      just returns the empty string. You will need to override this
+      method if you want specific behaviour, e.g. to show the count of
+      records or a separator line.
+
+   format(records)
+
+      Return formatted text for a list of *records*. The base
+      implementation just returns the empty string if there are no
+      records; otherwise, it returns the concatenation of the header,
+      each record formatted with the line formatter, and the footer.
+
+
+Filter 객체
+===========
+
+"Filter" 는 수준을 통해 제공되는 것보다 더 정교한 필터링을 위해
+"Handler" 와 "Logger" 에 의해 사용될 수 있습니다. 베이스 필터 클래스는
+로거 계층 구조의 특정 지점 아래에 있는 이벤트만 허용합니다. 예를 들어
+'A.B'로 초기화된 필터는, 로거 'A.B', 'A.B.C', 'A.B.C.D', 'A.B.D' 등이
+로그 한 이벤트를 허용하지만, 'A.BB', 'B.A.B' 등은 허용하지 않습니다.
+빈 문자열을 사용하면 모든 이벤트를 통과시킵니다.
+
+class logging.Filter(name='')
+
+   "Filter" 클래스의 인스턴스를 반환합니다. *name* 을 제공하면, 필터를
+   통과하도록 허용할 로거(그 자식들도 포함합니다)의 이름을 지정합니다.
+   *name* 이 빈 문자열이면, 모든 이벤트를 허용합니다.
+
+   filter(record)
+
+      Is the specified record to be logged? Returns zero for no,
+      nonzero for yes. If deemed appropriate, the record may be
+      modified in-place by this method.
+
+처리기에 연결된 필터는 이벤트를 처리기가 출력하기 전에 호출되는 반면,
+로거에 연결된 필터는 이벤트가 로깅될 때마다 ("debug()", "info()" 등)
+처리기로 이벤트를 보내기 전에 호출됩니다. 이는 자손 로거가 만든 이벤트
+들은, 같은 필터가 자손들에게도 적용되지 않는 한, 로거의 필터 설정으로
+필터링 되지 않는다는 것을 뜻합니다.
+
+실제로 "Filter" 의 서브 클래스를 만들 필요는 없습니다: 같은 의미가 있
+는 "filter" 메서드를 가진 인스턴스는 무엇이건 전달할 수 있습니다.
+
+버전 3.2에서 변경: 특수한 "Filter" 클래스를 만들거나 "filter" 메서드를
+가진 다른 클래스를 사용할 필요가 없습니다: 함수(또는 다른 콜러블)를 필
+터로 사용할 수 있습니다. 필터링 로직은 필터 객체가 "filter" 어트리뷰트
+를 가졌는지 확인합니다: 만약 있다면 "Filter" 라고 가정하고 "filter()"
+메서드를 호출합니다. 그렇지 않으면 콜러블이라고 가정하고 레코드를 단일
+매개 변수로 호출합니다. 반환된 값은 "filter()" 가 반환하는 값과 같은
+의미를 지녀야 합니다.
+
+필터는 수준보다 정교한 기준에 따라 레코드를 필터링하는 데 주로 사용되
+지만, 필터가 연결되는 처리기나 로거에서 처리되는 모든 레코드를 볼 수
+있습니다: 이 특성은, 특정 로거나 처리기가 얼마나 많은 레코드를 처리하
+는지 센다거나, 처리 중인 "LogRecord"에 어트리뷰트를 추가, 변경, 삭제하
+려고 할 때 유용합니다. 당연히, LogRecord를 변경하는 것은 주의를 필요로
+하는 일이지만, 로그에 문맥 정보를 주입하는 것을 허용합니다 (문맥 정보
+전달에 필터 사용하기를 보세요).
+
+
+LogRecord 객체
+==============
+
+"LogRecord" 인스턴스는 뭔가 로깅 될 때마다 "Logger" 에 의해 자동으로
+생성되며, "makeLogRecord()"를 통해 수동으로 생성될 수 있습니다 (예를
+들어, 네트워크에서 수신된 피클 된 이벤트의 경우).
+
+class logging.LogRecord(name, level, pathname, lineno, msg, args, exc_info, func=None, sinfo=None)
+
+   로그 되는 이벤트와 관련된 모든 정보를 담고 있습니다.
+
+   주요 정보는 *msg*와 *args* 로 전달되며, "msg % args" 를 사용하여 병
+   합되어 레코드의 "message" 어트리뷰트를 만듭니다.
+
+   매개변수:
+      * **name** (*str*) -- 이 "LogRecord"가 나타내는 이벤트를 로그 하
+        는데 사용된 로거의 이름. "LogRecord"의 로거 이름은 다른 (조상)
+        로거에 연결된 처리기가 출력하더라도 항상 이 값을 갖게됨에 유의
+        하십시오.
+
+      * **level** (*int*) -- 로깅 이벤트의 숫자 수준 (가령 "10"은
+        "DEBUG", "20"은 "INFO" 등). 이 값은 LogRecord의 *두* 어트리뷰
+        트로 변환됩니다: 숫자 값을 위한 "levelno" 와 해당 수준 이름을
+        위한 "levelname".
+
+      * **pathname** (*str*) -- 로깅 호출이 발생한 소스 파일의 전체 문
+        자열 경로.
+
+      * **lineno** (*int*) -- 로깅 호출이 발생한 소스 파일의 행 번호.
+
+      * **msg** (*typing.Any*) -- 이벤트 설명 메시지. 변수 데이터를 위
+        한 자리 표시자가 있는 %-포맷 문자열이거나, 임의의 객체일 수 있
+        습니다 (임의의 객체를 메시지로 사용하기를 참조하세요).
+
+      * **args** (*tuple | dict**[**str**, **typing.Any**]*) -- 이벤트
+        설명을 얻기 위해 *msg* 인자에 병합할 변수 데이터.
+
+      * **exc_info** (*tuple**[**type**[**BaseException**]**,
+        **BaseException**, **types.TracebackType**] **| None*) -- 현재
+        의 예외 정보를 가지는 예외 튜플로, "sys.exc_info()"가 반환하는
+        값. 예외 정보가 없는 경우는 "None".
+
+      * **func** (*str | None*) -- 로깅 호출을 호출한 함수 또는 메서드
+        의 이름.
+
+      * **sinfo** (*str | None*) -- 현재 스레드에서 스택의 바닥부터 로
+        깅 호출까지의 스택 정보를 나타내는 텍스트 문자열.
+
+   getMessage()
+
+      사용자가 제공 한 인자를 메시지와 병합한 후, 이 "LogRecord" 인스
+      턴스에 대한 메시지를 반환합니다. 로깅 호출에 제공된 사용자 제공
+      메시지 인자가 문자열이 아닌 경우, "str()" 이 호출되어 문자열로
+      변환됩니다. 이렇게 해서 사용자 정의 클래스를 메시지로 사용할 수
+      있도록 하는데, 그 클래스의 "__str__" 메서드는 사용할 실제 포맷
+      문자열을 반환 할 수 있습니다.
+
+   버전 3.2에서 변경: 레코드를 생성하는 데 사용되는 팩토리를 제공함으
+   로써, "LogRecord"의 생성을 더 구성할 수 있게 만들었습니다. 팩토리는
+   "getLogRecordFactory()"와 "setLogRecordFactory()" (팩토리의 서명은
+   이곳을 참조하십시오) 를 사용하여 설정할 수 있습니다.
+
+   이 기능은 "LogRecord" 생성 시에 여러분 자신의 값을 주입하는데 사용
+   할 수 있습니다. 다음과 같은 패턴을 사용할 수 있습니다:
+
+      old_factory = logging.getLogRecordFactory()
+
+      def record_factory(*args, **kwargs):
+          record = old_factory(*args, **kwargs)
+          record.custom_attribute = 0xdecafbad
+          return record
+
+      logging.setLogRecordFactory(record_factory)
+
+   이 패턴을 사용하면 여러 팩토리를 체인으로 묶을 수 있으며, 서로의 어
+   트리뷰트를 덮어쓰거나 위에 나열된 표준 어트리뷰트를 실수로 덮어쓰지
+   않는 한 놀랄만한 일이 일어나지는 않아야 합니다.
+
+
+LogRecord 어트리뷰트
+====================
+
+LogRecord에는 많은 어트리뷰트가 있으며, 대부분 어트리뷰트는 생성자의
+매개 변수에서 옵니다. (LogRecord 생성자 매개 변수와 LogRecord 어트리뷰
+트의 이름이 항상 정확하게 일치하는 것은 아닙니다.) 이러한 어트리뷰트를
+사용하여 레코드의 데이터를 포맷 문자열로 병합 할 수 있습니다. 다음 표
+는 어트리뷰트 이름, 의미와 해당 자리 표시자를 %-스타일 포맷 문자열로 (
+알파벳 순서로) 나열합니다.
+
+{}-포매팅("str.format()")을 사용한다면, "{attrname}" 을 포맷 문자열의
+자리 표시자로 사용할 수 있습니다. $-포매팅("string.Template")을 사용하
+고 있다면, "${attrname}" 형식을 사용하십시오. 두 경우 모두, 물론,
+"attrname" 을 사용하려는 실제 어트리뷰트 이름으로 대체하십시오.
+
+In the case of {}-formatting, you can specify formatting flags by
+placing them after the attribute name, separated from it with a colon.
+For example: a placeholder of "{msecs:03d}" would format a millisecond
+value of "4" as "004". Refer to the "str.format()" documentation for
+full details on the options available to you.
+
++------------------+---------------------------+-------------------------------------------------+
+| 어트리뷰트 이름  | 포맷                      | 설명                                            |
+|==================|===========================|=================================================|
+| args             | 직접 포맷할 필요는 없습니 | "message" 를 생성하기 위해 "msg" 에 병합되는 인 |
+|                  | 다.                       | 자의 튜플. 또는 (인자가 하나뿐이고 딕셔너리일   |
+|                  |                           | 때) 병합을 위해 값이 사용되는 딕셔너리.         |
++------------------+---------------------------+-------------------------------------------------+
+| asctime          | "%(asctime)s"             | 사람이 읽을 수 있는, "LogRecord" 가 생성된 시간 |
+|                  |                           | . 기본적으로 '2003-07-08 16:49:45,896' 형식입니 |
+|                  |                           | 다 (쉼표 뒤의 숫자는 밀리 초 부분입 니다).      |
++------------------+---------------------------+-------------------------------------------------+
+| created          | "%(created)f"             | Time when the "LogRecord" was created (as       |
+|                  |                           | returned by "time.time()").                     |
++------------------+---------------------------+-------------------------------------------------+
+| exc_info         | 직접 포맷할 필요는 없습니 | 예외 튜플 ("sys.exc_info" 에서 제공) 또는, 예외 |
+|                  | 다.                       | 가 발생하지 않았다면, "None".                   |
++------------------+---------------------------+-------------------------------------------------+
+| filename         | "%(filename)s"            | "pathname" 의 파일명 부분.                      |
++------------------+---------------------------+-------------------------------------------------+
+| funcName         | "%(funcName)s"            | 로깅 호출을 포함하는 함수의 이름.               |
++------------------+---------------------------+-------------------------------------------------+
+| levelname        | "%(levelname)s"           | 메시지의 텍스트 로깅 수준 ("'DEBUG'", "'INFO'", |
+|                  |                           | "'WARNING'", "'ERROR'", "'CRITICAL'").          |
++------------------+---------------------------+-------------------------------------------------+
+| levelno          | "%(levelno)s"             | 메시지의 숫자 로깅 수준 ("DEBUG", "INFO",       |
+|                  |                           | "WARNING", "ERROR", "CRITICAL").                |
++------------------+---------------------------+-------------------------------------------------+
+| lineno           | "%(lineno)d"              | 로깅 호출이 일어난 소스 행 번호 (사용 가능한 경 |
+|                  |                           | 우).                                            |
++------------------+---------------------------+-------------------------------------------------+
+| message          | "%(message)s"             | 로그 된 메시지. "msg % args" 로 계산됩니다.     |
+|                  |                           | "Formatter.format()" 이 호 출 될 때 설정됩니다. |
++------------------+---------------------------+-------------------------------------------------+
+| module           | "%(module)s"              | 모듈 ("filename" 의 이름 부분).                 |
++------------------+---------------------------+-------------------------------------------------+
+| msecs            | "%(msecs)d"               | "LogRecord" 가 생성된 시간의 밀리 초 부분.      |
++------------------+---------------------------+-------------------------------------------------+
+| msg              | 직접 포맷할 필요는 없습니 | 원래 로깅 호출에서 전달된 포맷 문자열. "args"   |
+|                  | 다.                       | 와 병합하여 "message" 를 만듭니다. 또는 임의의  |
+|                  |                           | 객체 (임의의 객체를 메시지로 사용하기 를 보세요 |
+|                  |                           | ).                                              |
++------------------+---------------------------+-------------------------------------------------+
+| name             | "%(name)s"                | 로깅 호출에 사용된 로거의 이름.                 |
++------------------+---------------------------+-------------------------------------------------+
+| pathname         | "%(pathname)s"            | 로깅 호출이 일어난 소스 파일의 전체 경로명 (사  |
+|                  |                           | 용 가능한 경우).                                |
++------------------+---------------------------+-------------------------------------------------+
+| process          | "%(process)d"             | 프로세스 ID (사용 가능한 경우).                 |
++------------------+---------------------------+-------------------------------------------------+
+| processName      | "%(processName)s"         | 프로세스 이름 (사용 가능한 경우).               |
++------------------+---------------------------+-------------------------------------------------+
+| relativeCreated  | "%(relativeCreated)d"     | logging 모듈이 로드된 시간을 기준으로 LogRecord |
+|                  |                           | 가 생성된 시간 (밀리 초 ).                      |
++------------------+---------------------------+-------------------------------------------------+
+| stack_info       | 직접 포맷할 필요는 없습니 | 현재 스레드의 스택 바닥에서 이 레코드를 생성한  |
+|                  | 다.                       | 로깅 호출의 스택 프레임 까지의 스택 프레임 정보 |
+|                  |                           | (사용 가능한 경우).                             |
++------------------+---------------------------+-------------------------------------------------+
+| thread           | "%(thread)d"              | 스레드 ID (사용 가능한 경우).                   |
++------------------+---------------------------+-------------------------------------------------+
+| threadName       | "%(threadName)s"          | 스레드 이름 (사용 가능한 경우).                 |
++------------------+---------------------------+-------------------------------------------------+
+
+버전 3.1에서 변경: *processName* 이 추가되었습니다.
+
+
+LoggerAdapter 객체
+==================
+
+"LoggerAdapter" 인스턴스는 문맥 정보를 로깅 호출에 편리하게 전달하는
+데 사용됩니다. 사용 예는, 로그 출력에 문맥 정보 추가 섹션을 참조하십시
+오.
+
+class logging.LoggerAdapter(logger, extra)
+
+   Returns an instance of "LoggerAdapter" initialized with an
+   underlying "Logger" instance and a dict-like object.
+
+   process(msg, kwargs)
+
+      문맥 정보를 삽입하기 위해 로깅 호출에 전달된 메시지 와 키워드 인
+      자를 수정합니다. 이 구현은 생성자에 *extra* 로 전달된 객체를 가
+      져와서 'extra' 키를 사용하여 *kwargs* 에 추가합니다. 반환 값은
+      전달된 인자의 (수정된) 버전을 담은 (*msg*, *kwargs*) 튜플입니다.
+
+위의 것에 더해, "LoggerAdapter" 는 다음과 같은 "Logger" 의 메서드를 지
+원합니다: "debug()", "info()", "warning()", "error()", "exception()",
+"critical()", "log()", "isEnabledFor()", "getEffectiveLevel()",
+"setLevel()", "hasHandlers()". 이 메서드들은 "Logger" 에 있는 것과 똑
+같은 서명을 가지므로, 두 형의 인스턴스를 바꿔쓸 수 있습니다.
+
+버전 3.2에서 변경: "isEnabledFor()", "getEffectiveLevel()",
+"setLevel()" 그리고 "hasHandlers()" 메서드가 "LoggerAdapter" 에 추가되
+었습니다. 이 메서드는 하부 로거로 위임합니다.
+
+버전 3.6에서 변경: Attribute "manager" and method "_log()" were added,
+which delegate to the underlying logger and allow adapters to be
+nested.
+
+
+스레드 안전성
+=============
+
+로깅 모듈은 클라이언트가 특별한 주의를 기울이지 않아도 스레드 안전하도
+록 만들어졌습니다. 이렇게 하려고 threading 록을 사용합니다; 모듈의 공
+유 데이터에 대한 액세스를 직렬화하는 록이 하나 있고, 각 처리기 또한 하
+부 I/O에 대한 액세스를 직렬화하는 록을 만듭니다.
+
+"signal" 모듈을 사용하여 비동기 시그널 처리기를 구현한다면, 그 처리기
+내에서는 logging을 사용할 수 없을 수도 있습니다. 이는 "threading" 모듈
+의 록 구현이 언제나 재진입할 수 있지는 않아서 그러한 시그널 처리기에서
+호출할 수 없기 때문입니다.
+
+
+모듈 수준 함수
+==============
+
+위에서 설명한 클래스 외에도 많은 모듈 수준 함수가 있습니다.
+
+logging.getLogger(name=None)
+
+   Return a logger with the specified name or, if name is "None",
+   return a logger which is the root logger of the hierarchy. If
+   specified, the name is typically a dot-separated hierarchical name
+   like *'a'*, *'a.b'* or *'a.b.c.d'*. Choice of these names is
+   entirely up to the developer who is using logging.
+
+   같은 이름으로 이 함수를 여러 번 호출하면 모두 같은 로거 인스턴스를
+   반환합니다. 이것은 응용 프로그램의 다른 부분 간에 로거 인스턴스를
+   전달할 필요가 없다는 것을 뜻합니다.
+
+logging.getLoggerClass()
+
+   표준 "Logger" 클래스를 반환하거나, "setLoggerClass()" 에 전달된 마
+   지막 클래스를 반환합니다. 이 함수는 새 클래스 정의 내에서 호출하여,
+   사용자 정의 "Logger" 클래스를 설치할 때 다른 코드가 이미 적용한 사
+   용자 정의를 취소하지 않도록 할 수 있습니다. 예를 들면:
+
+      class MyLogger(logging.getLoggerClass()):
+          # ... override behaviour here
+
+logging.getLogRecordFactory()
+
+   "LogRecord" 를 생성하는 데 사용되는 콜러블을 반환합니다.
+
+   버전 3.2에 추가: 이 함수는 "setLogRecordFactory()"와 함께 제공되어,
+   개발자가 로깅 이벤트를 나타내는 "LogRecord" 가 만들어지는 방법을 더
+   욱 잘 제어 할 수 있도록 합니다.
+
+   팩토리가 어떻게 호출되는지에 대한 더 자세한 정보는
+   "setLogRecordFactory()"를 보세요.
+
+logging.debug(msg, *args, **kwargs)
+
+   Logs a message with level "DEBUG" on the root logger. The *msg* is
+   the message format string, and the *args* are the arguments which
+   are merged into *msg* using the string formatting operator. (Note
+   that this means that you can use keywords in the format string,
+   together with a single dictionary argument.)
+
+   There are three keyword arguments in *kwargs* which are inspected:
+   *exc_info* which, if it does not evaluate as false, causes
+   exception information to be added to the logging message. If an
+   exception tuple (in the format returned by "sys.exc_info()") or an
+   exception instance is provided, it is used; otherwise,
+   "sys.exc_info()" is called to get the exception information.
+
+   두 번째 선택적 키워드 인자는 *stack_info* 이며, 기본값은 "False" 입
+   니다. 참이면, 실제 로깅 호출을 포함하는 스택 정보가 로깅 메시지에
+   추가됩니다. 이것은 *exc_info* 를 지정할 때 표시되는 것과 같은 스택
+   정보가 아닙니다: 전자(*stack_info*)는 스택의 맨 아래에서 현재 스레
+   드의 로깅 호출까지의 스택 프레임이며, 후자(*exc_info*)는 예외가 일
+   어난 후에 예외 처리기를 찾으면서 되감은 스택 프레임에 대한 정보입니
+   다.
+
+   *exc_info* 와는 독립적으로 *stack_info* 를 지정할 수 있습니다. 예를
+   들어 예외가 발생하지 않은 경우에도 코드의 특정 지점에 어떻게 도달했
+   는지 보여줄 수 있습니다. 스택 프레임은 다음과 같은 헤더 행 다음에
+   인쇄됩니다:
+
+      Stack (most recent call last):
+
+   예외 프레임을 표시할 때 사용되는 "Traceback (most recent call
+   last):" 을 흉내 내고 있습니다.
+
+   The third optional keyword argument is *extra* which can be used to
+   pass a dictionary which is used to populate the __dict__ of the
+   LogRecord created for the logging event with user-defined
+   attributes. These custom attributes can then be used as you like.
+   For example, they could be incorporated into logged messages. For
+   example:
+
+      FORMAT = '%(asctime)s %(clientip)-15s %(user)-8s %(message)s'
+      logging.basicConfig(format=FORMAT)
+      d = {'clientip': '192.168.0.1', 'user': 'fbloggs'}
+      logging.warning('Protocol problem: %s', 'connection reset', extra=d)
+
+   would print something like:
+
+      2006-02-08 22:20:02,165 192.168.0.1 fbloggs  Protocol problem: connection reset
+
+   The keys in the dictionary passed in *extra* should not clash with
+   the keys used by the logging system. (See the "Formatter"
+   documentation for more information on which keys are used by the
+   logging system.)
+
+   If you choose to use these attributes in logged messages, you need
+   to exercise some care. In the above example, for instance, the
+   "Formatter" has been set up with a format string which expects
+   'clientip' and 'user' in the attribute dictionary of the LogRecord.
+   If these are missing, the message will not be logged because a
+   string formatting exception will occur. So in this case, you always
+   need to pass the *extra* dictionary with these keys.
+
+   성가신 일입니다만, 이 기능은 여러 문맥에서 같은 코드가 실행되고 관
+   심 있는 조건들(가령 원격 클라이언트 IP 주소와 인증된 사용자 이름)이
+   문맥에 따라 발생하는 다중 스레드 서버와 같은 특수한 상황을 위한 것
+   입니다. 이런 상황에서는, 특수한 "Formatter" 가 특정한 "Handler"와
+   함께 사용될 가능성이 큽니다.
+
+   This function (as well as "info()", "warning()", "error()" and
+   "critical()") will call "basicConfig()" if the root logger doesn't
+   have any handler attached.
+
+   버전 3.2에서 변경: *stack_info* 매개 변수가 추가되었습니다.
+
+logging.info(msg, *args, **kwargs)
+
+   Logs a message with level "INFO" on the root logger. The arguments
+   are interpreted as for "debug()".
+
+logging.warning(msg, *args, **kwargs)
+
+   Logs a message with level "WARNING" on the root logger. The
+   arguments are interpreted as for "debug()".
+
+   참고:
+
+     기능적으로 "warning" 와 같은, 구식의 "warn" 함수가 있습니다.
+     "warn" 은 폐지되었으므로 사용하지 마십시오 - 대신 "warning" 을 사
+     용하십시오.
+
+logging.error(msg, *args, **kwargs)
+
+   Logs a message with level "ERROR" on the root logger. The arguments
+   are interpreted as for "debug()".
+
+logging.critical(msg, *args, **kwargs)
+
+   Logs a message with level "CRITICAL" on the root logger. The
+   arguments are interpreted as for "debug()".
+
+logging.exception(msg, *args, **kwargs)
+
+   Logs a message with level "ERROR" on the root logger. The arguments
+   are interpreted as for "debug()". Exception info is added to the
+   logging message. This function should only be called from an
+   exception handler.
+
+logging.log(level, msg, *args, **kwargs)
+
+   Logs a message with level *level* on the root logger. The other
+   arguments are interpreted as for "debug()".
+
+logging.disable(level=CRITICAL)
+
+   모든 로거의 수준을 *level* 로 오버라이드합니다. 로거 자체 수준보다
+   우선합니다. 전체 응용 프로그램에서 로깅 출력을 일시적으로 억제해야
+   할 필요가 생길 때 이 함수가 유용합니다. 그 효과는 심각도 *level* 및
+   그 밑의 모든 로깅 호출을 무효화시킵니다. 따라서 INFO 값으로 호출하
+   면 모든 INFO 및 DEBUG 이벤트는 삭제되지만, WARNING 이상의 심각도는
+   로거의 유효 수준에 따라 처리됩니다.
+   "logging.disable(logging.NOTSET)" 이 호출되면, 이 오버라이딩 수준을
+   실질적으로 제거하므로, 로깅 출력은 다시 개별 로거의 유효 수준에 따
+   르게 됩니다.
+
+   "CRITICAL" 보다 더 높은 사용자 정의 로깅 수준을 정의했다면 (권장하
+   지 않습니다), *level* 매개 변수의 기본값에 의존할 수 없고 적절한 값
+   을 명시적으로 제공해야 합니다.
+
+   버전 3.7에서 변경: *level* 매개 변수의 기본값은 수준 "CRITICAL" 입
+   니다. 이 변경 사항에 대한 자세한 내용은 bpo-28524를 참조하십시오.
+
+logging.addLevelName(level, levelName)
+
+   내부 딕셔너리에 수준 *level* 을 텍스트 *levelName* 과 연결합니다.
+   이 딕셔너리는 숫자 수준을 텍스트 표현으로 매핑하는데 (예를 들어,
+   "Formatter" 가 메시지를 포매팅할 때) 사용됩니다. 이 기능을 사용해서
+   여러분 자신의 수준을 정의할 수도 있습니다. 제약 조건은, 사용되는 모
+   든 수준이 이 함수를 사용하여 등록되어야 하고, 수준은 양의 정수이어
+   야 하며, 심각도가 높아질수록 값이 커져야 한다는 것입니다.
+
+   참고:
+
+     자신만의 수준을 정의할 생각이라면 사용자 정의 수준 섹션을 보십시
+     오.
+
+logging.getLevelName(level)
+
+   로깅 수준 *level* 의 텍스트 표현을 반환합니다.
+
+   *level*이 미리 정의된 수준 "CRITICAL", "ERROR", "WARNING", "INFO"
+   또는 "DEBUG" 중 하나면 해당 문자열을 얻게 됩니다. "addLevelName()"
+   을 사용하여 수준과 이름을 연관 지었다면, *level* 과 연결된 이름이
+   반환됩니다. 정의된 수준 중 하나에 해당하는 숫자 값이 전달되면, 해당
+   문자열 표현이 반환됩니다.
+
+   *level* 매개 변수는 'INFO' 와 같은 수준의 문자열 표현도 받아들입니
+   다. 이럴 때, 이 함수는 해당 수준의 숫자 값을 반환합니다.
+
+   일치하는 숫자나 문자열 값이 전달되지 않으면, 문자열 'Level %s' %
+   level 이 반환됩니다.
+
+   참고:
+
+     수준은 (로깅 로직에서 비교해야 하므로) 내부적으로 정수입니다. 이
+     함수는 정수 수준과 "%(levelname)s" 포맷 지정자(LogRecord 어트리뷰
+     트를 보세요)로 포맷된 로그 출력에 표시된 이름 간의 변환에 사용됩
+     니다.
+
+   버전 3.4에서 변경: 3.4 이전의 파이썬 버전에서, 이 함수로 텍스트 수
+   준을 전달할 수 있고, 해당 수준의 숫자 값을 반환합니다. 이 문서로 만
+   들어지지 않은 동작은 실수로 간주하여, 파이썬 3.4에서 제거되었습니다
+   . 하지만 이전 버전과의 호환성을 유지하기 위해 3.4.2에서 복원되었습
+   니다.
+
+logging.makeLogRecord(attrdict)
+
+   어트리뷰트가 *attrdict* 로 정의된 새로운 "LogRecord" 인스턴스를 만
+   들어서 반환합니다. 이 함수는 피클 된 "LogRecord" 어트리뷰트 딕셔너
+   리를 소켓으로 보내고, 수신 단에서 "LogRecord" 인스턴스로 재구성할
+   때 유용합니다.
+
+logging.basicConfig(**kwargs)
+
+   기본 "Formatter"로 "StreamHandler" 를 생성하고 루트 로거에 추가하여
+   로깅 시스템의 기본 구성을 수행합니다. 함수 "debug()", "info()",
+   "warning()", "error()" 그리고 "critical()"은 루트 로거에 처리기가
+   정의되어 있지 않으면 자동으로 "basicConfig()"를 호출합니다.
+
+   이 함수는 루트 로거에 이미 처리기가 구성되어있는 경우, 키워드 인자
+   *force*가 "True"로 설정되지 않는 한, 아무 작업도 수행하지 않습니다.
+
+   참고:
+
+     이 함수는 다른 스레드가 시작되기 전에 메인 스레드에서 호출되어야
+     합니다. 2.7.1과 3.2 이전의 파이썬 버전에서, 이 함수를 여러 스레드
+     에서 호출하면, (드문 경우지만) 처리기가 두 번 이상 루트 로거에 추
+     가되어, 로그에 메시지가 중복되는 것과 같은 예기치 않은 결과가 발
+     생할 수 있습니다.
+
+   다음 키워드 인자가 지원됩니다.
+
+   +----------------+-----------------------------------------------+
+   | 포맷           | 설명                                          |
+   |================|===============================================|
+   | *filename*     | "StreamHandler" 대신 지정된 파일명을 사용해   |
+   |                | "FileHandler"를 만들도 록 지정합니다.         |
+   +----------------+-----------------------------------------------+
+   | *filemode*     | *filename* 이 지정되었으면, 이 모드 로 파일을 |
+   |                | 엽니다. 기본값은 "'a'" 입니다.                |
+   +----------------+-----------------------------------------------+
+   | *format*       | 처리기에 지정된 포맷 문자열을 사용합니다. 기  |
+   |                | 본값은 콜론으로 구분된 어트리뷰트             |
+   |                | "levelname", "name" 및 "message" 입니다.      |
+   +----------------+-----------------------------------------------+
+   | *datefmt*      | "time.strftime()" 에서 허용하는 방식대로 지정 |
+   |                | 된 날짜/시간 포맷을 사 용합니다.              |
+   +----------------+-----------------------------------------------+
+   | *style*        | *format* 을 지정하면, 포맷 문자열에 이 스타일 |
+   |                | 을 사용합니다. "'%'", "'{'", "'$'" 중 하나인  |
+   |                | 데 각각 printf 스타일, "str.format()",        |
+   |                | "string.Template" 에 대응됩니다. 기본값은     |
+   |                | "'%'" 입니다.                                 |
+   +----------------+-----------------------------------------------+
+   | *level*        | 루트 로거의 수준을 지정된 수준 으로 설정합니  |
+   |                | 다.                                           |
+   +----------------+-----------------------------------------------+
+   | *stream*       | "StreamHandler"의 초기화에 지정된 스트림을 사 |
+   |                | 용합니다. 이 인자는 *filename* 과 호환되지 않 |
+   |                | 습니다 - 둘 다 있으면 "ValueError" 가 발생 합 |
+   |                | 니다.                                         |
+   +----------------+-----------------------------------------------+
+   | *handlers*     | 지정된 경우, 루트 로거에 추가할 이미 만들어진 |
+   |                | 처리기의 이터러블이어 야 합니다. 아직 포매터  |
+   |                | 세트가 없는 처리기에는 이 함수에서 만들어진   |
+   |                | 기본 포매터가 지정됩니다. 이 인자는           |
+   |                | *filename* 또는 *stream* 과 호 환되지 않습니  |
+   |                | 다 - 둘 다 있으면 "ValueError" 가 발생합니다. |
+   +----------------+-----------------------------------------------+
+   | *force*        | 이 키워드 인자가 참으로 지정되면, 루트 로거에 |
+   |                | 연결된 기존 처리기는 다른 인자에 지정된 대로  |
+   |                | 구성을 수행하기 전에 모두 제거되고 닫힙니다 . |
+   +----------------+-----------------------------------------------+
+   | *encoding*     | 이 키워드 인자가 *filename*과 함께 지정되면,  |
+   |                | 그 값이 "FileHandler" 가 만들어질 때 사용되어 |
+   |                | , 결국 출력 파일을 열 때 사용됩니다.          |
+   +----------------+-----------------------------------------------+
+   | *errors*       | 이 키워드 인자가 *filename*과 함께 지정되면,  |
+   |                | 그 값이 "FileHandler" 가 만들어질 때 사용되어 |
+   |                | , 결국 출력 파일을 열 때 사용됩니다. 지정하   |
+   |                | 지 않으면, 'backslashreplace' 값이 사용됩니다 |
+   |                | . "None"이 지정되면, "open()"에 그대로 전달되 |
+   |                | 는데, 이는 'errors'를 전달한 것처럼 처리된 다 |
+   |                | 는 것에 유의하십시오.                         |
+   +----------------+-----------------------------------------------+
+
+   버전 3.2에서 변경: *style* 인자가 추가되었습니다.
+
+   버전 3.3에서 변경: *handlers* 인자가 추가되었습니다. 호환되지 않는
+   인자(예를 들어, *handlers* 를 *stream* 이나 *filename* 과 함께 쓰거
+   나, *stream* 을 *filename* 과 함께 쓰는 경우)가 있는 상황을 파악하
+   기 위한 검사가 추가되었습니다.
+
+   버전 3.8에서 변경: *force* 인자가 추가되었습니다.
+
+   버전 3.9에서 변경: *encoding*과 *errors* 인자가 추가되었습니다.
+
+logging.shutdown()
+
+   로깅 시스템에 모든 처리기를 플러시하고 닫아서 순차적인 종료를 수행
+   하도록 알립니다. 응용 프로그램 종료 시 호출되어야 하고, 이 호출 후
+   에는 로깅 시스템을 더는 사용하지 않아야 합니다.
+
+   logging 모듈이 임포트 될 때, 이 함수를 종료 처리기("atexit"를 참조
+   하십시오)로 등록하므로, 일반적으로 수동으로 수행할 필요가 없습니다.
+
+logging.setLoggerClass(klass)
+
+   Tells the logging system to use the class *klass* when
+   instantiating a logger. The class should define "__init__()" such
+   that only a name argument is required, and the "__init__()" should
+   call "Logger.__init__()". This function is typically called before
+   any loggers are instantiated by applications which need to use
+   custom logger behavior. After this call, as at any other time, do
+   not instantiate loggers directly using the subclass: continue to
+   use the "logging.getLogger()" API to get your loggers.
+
+logging.setLogRecordFactory(factory)
+
+   "LogRecord" 를 만드는데 사용되는 콜러블을 설정합니다.
+
+   매개변수:
+      **factory** -- 로그 레코드의 인스턴스를 만드는데 사용되는 팩토리
+      콜러블.
+
+   버전 3.2에 추가: 이 함수는 "getLogRecordFactory()"와 함께 제공되어,
+   개발자가 로깅 이벤트를 나타내는 "LogRecord" 가 만들어지는 방법을 더
+   욱 잘 제어 할 수 있도록 합니다.
+
+   팩토리의 서명은 다음과 같습니다:
+
+   "factory(name, level, fn, lno, msg, args, exc_info, func=None,
+   sinfo=None, **kwargs)"
+
+      name:
+         로거 이름.
+
+      level:
+         로깅 수준 (숫자).
+
+      fn:
+         로깅 호출이 이루어진 파일의 전체 경로명.
+
+      lno:
+         로깅 호출이 이루어진 파일의 행 번호.
+
+      msg:
+         로깅 메시지
+
+      args:
+         로깅 메시지에 대한 인자.
+
+      exc_info:
+         예외 튜플 또는 "None".
+
+      func:
+         로깅 호출을 호출한 함수 또는 메서드의 이름
+
+      sinfo:
+         "traceback.print_stack()" 가 제공하는 것과 같은 스택 트레이스
+         백. 호출 계층 구조를 보여줍니다.
+
+      kwargs:
+         추가 키워드 인자.
+
+
+모듈 수준 어트리뷰트
+====================
+
+logging.lastResort
+
+   "최후 수단 처리기" 는 이 어트리뷰트를 통해 제공됩니다. 이것은
+   "WARNING" 수준으로 "sys.stderr" 에 쓰는 "StreamHandler" 이고, 로깅
+   구성이 없을 때 로깅 이벤트를 처리하는 데 사용됩니다. 최종 결과는
+   "sys.stderr" 에 메시지를 출력하기만 하는 것입니다. 이것이 예전의
+   "no handlers could be found for logger XYZ" 라는 에러 메시지를 대체
+   합니다. 어떤 이유로 이전 동작이 필요하면 "lastResort" 를 "None" 으
+   로 설정할 수 있습니다.
+
+   버전 3.2에 추가.
+
+
+warnings 모듈과의 통합
+======================
+
+"captureWarnings()" 함수는 "logging"을 "warnings" 모듈과 통합하는데 사
+용될 수 있습니다.
+
+logging.captureWarnings(capture)
+
+   이 함수는 logging 이 경고를 캡처하는 것을 켜고 끄는 데 사용됩니다.
+
+   *capture* 가 "True" 면, "warnings" 모듈에 의해 발행된 경고는 로깅
+   시스템으로 리디렉션됩니다. 특히, 경고는 "warnings.formatwarning()"
+   을 사용하여 포맷되고, 결과 문자열을 "'py.warnings'" 라는 이름의 로
+   거에 심각도 "WARNING"으로 로그 합니다.
+
+   *capture* 가 "False" 면, 로깅 시스템으로의 경고 리디렉션은 멈추고,
+   경고는 원래 목적지(즉, "captureWarnings(True)" 가 호출되기 전에 적
+   용되던 곳)로 리디렉션됩니다.
+
+더 보기:
+
+  모듈 "logging.config"
+     logging 모듈용 구성 API.
+
+  모듈 "logging.handlers"
+     logging 모듈에 포함된 유용한 처리기.
+
+  **PEP 282** - 로깅 시스템
+     파이썬 표준 라이브러리에 포함하기 위해 이 기능을 설명한 제안.
+
+  원본 파이썬 로깅 패키지
+     "logging" 패키지의 원래 소스입니다. 이 사이트에서 제공되는 패키지
+     버전은 표준 라이브러리에 "logging" 패키지를 포함하지 않는 파이썬
+     1.5.2, 2.1.x 및 2.2.x에서 사용하기에 적합합니다.

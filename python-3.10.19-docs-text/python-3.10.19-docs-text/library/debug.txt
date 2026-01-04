@@ -1,0 +1,104 @@
+디버깅과 프로파일링
+*******************
+
+이 라이브러리들은 파이썬 개발을 돕습니다: 디버거를 사용하면 코드를 단
+계별로 실행하고, 스택 프레임을 분석하고, 중단 점을 설정할 수 있으며,
+프로파일러는 코드를 실행하고, 프로그램의 병목 지점을 식별할 수 있도록
+실행 시간을 자세하게 분석합니다. 감사 이벤트는 이것이 없다면 침입적인
+디버깅이나 패치가 필요한 실행 시간 동작에 대한 가시성을 제공합니다.
+
+* 감사 이벤트 표
+
+* "bdb" --- Debugger framework
+
+* "faulthandler" --- Dump the Python traceback
+
+  * 트레이스백 덤프하기
+
+  * 결함 처리기 상태
+
+  * 시간 초과 후에 트레이스백 덤프하기
+
+  * 사용자 시그널에 트레이스백 덤프하기
+
+  * 파일 기술자 관련 문제
+
+  * 예제
+
+* "pdb" --- 파이썬 디버거
+
+  * 디버거 명령들
+
+* 파이썬 프로파일러
+
+  * 프로파일러 소개
+
+  * 즉석 사용자 설명서
+
+  * "profile"과 "cProfile" 모듈 레퍼런스
+
+  * "Stats" 클래스
+
+  * 결정론적 프로파일링이란 무엇입니까?
+
+  * 한계
+
+  * 보정
+
+  * 사용자 정의 타이머 사용하기
+
+* "timeit" --- Measure execution time of small code snippets
+
+  * 기본 예제
+
+  * 파이썬 인터페이스
+
+  * 명령 줄 인터페이스
+
+  * 예제
+
+* "trace" --- Trace or track Python statement execution
+
+  * 명령 줄 사용법
+
+    * 주요 옵션
+
+    * 수정자
+
+    * 필터
+
+  * 프로그래밍 인터페이스
+
+* "tracemalloc" --- Trace memory allocations
+
+  * 예
+
+    * 상위 10개 표시
+
+    * 차이 계산
+
+    * 메모리 블록의 트레이스백 얻기
+
+    * 예쁜 탑(top)
+
+      * 모든 추적한 메모리 블록의 현재 및 최대 크기를 기록
+
+  * API
+
+    * 함수
+
+    * DomainFilter
+
+    * Filter
+
+    * Frame
+
+    * Snapshot
+
+    * Statistic
+
+    * StatisticDiff
+
+    * Trace
+
+    * Traceback

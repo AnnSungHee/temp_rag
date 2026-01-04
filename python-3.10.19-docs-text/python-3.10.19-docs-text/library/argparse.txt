@@ -1,0 +1,2107 @@
+"argparse" --- Parser for command-line options, arguments and sub-commands
+**************************************************************************
+
+버전 3.2에 추가.
+
+**소스 코드:** Lib/argparse.py
+
+======================================================================
+
+
+자습서
+^^^^^^
+
+이 페이지는 API 레퍼런스 정보를 담고 있습니다. 파이썬 명령행 파싱에 대
+한 더 친절한 소개를 원하시면, argparse 자습서 를 보십시오.
+
+The "argparse" module makes it easy to write user-friendly command-
+line interfaces. The program defines what arguments it requires, and
+"argparse" will figure out how to parse those out of "sys.argv".  The
+"argparse" module also automatically generates help and usage messages
+and issues errors when users give the program invalid arguments.
+
+
+Example
+=======
+
+The following code is a Python program that takes a list of integers
+and produces either the sum or the max:
+
+   import argparse
+
+   parser = argparse.ArgumentParser(description='Process some integers.')
+   parser.add_argument('integers', metavar='N', type=int, nargs='+',
+                       help='an integer for the accumulator')
+   parser.add_argument('--sum', dest='accumulate', action='store_const',
+                       const=sum, default=max,
+                       help='sum the integers (default: find the max)')
+
+   args = parser.parse_args()
+   print(args.accumulate(args.integers))
+
+Assuming the Python code above is saved into a file called "prog.py",
+it can be run at the command line and provides useful help messages:
+
+   $ python prog.py -h
+   usage: prog.py [-h] [--sum] N [N ...]
+
+   Process some integers.
+
+   positional arguments:
+    N           an integer for the accumulator
+
+   options:
+    -h, --help  show this help message and exit
+    --sum       sum the integers (default: find the max)
+
+When run with the appropriate arguments, it prints either the sum or
+the max of the command-line integers:
+
+   $ python prog.py 1 2 3 4
+   4
+
+   $ python prog.py 1 2 3 4 --sum
+   10
+
+If invalid arguments are passed in, it will issue an error:
+
+   $ python prog.py a b c
+   usage: prog.py [-h] [--sum] N [N ...]
+   prog.py: error: argument N: invalid int value: 'a'
+
+The following sections walk you through this example.
+
+
+Creating a parser
+-----------------
+
+The first step in using the "argparse" is creating an "ArgumentParser"
+object:
+
+   >>> parser = argparse.ArgumentParser(description='Process some integers.')
+
+The "ArgumentParser" object will hold all the information necessary to
+parse the command line into Python data types.
+
+
+Adding arguments
+----------------
+
+Filling an "ArgumentParser" with information about program arguments
+is done by making calls to the "add_argument()" method. Generally,
+these calls tell the "ArgumentParser" how to take the strings on the
+command line and turn them into objects.  This information is stored
+and used when "parse_args()" is called. For example:
+
+   >>> parser.add_argument('integers', metavar='N', type=int, nargs='+',
+   ...                     help='an integer for the accumulator')
+   >>> parser.add_argument('--sum', dest='accumulate', action='store_const',
+   ...                     const=sum, default=max,
+   ...                     help='sum the integers (default: find the max)')
+
+Later, calling "parse_args()" will return an object with two
+attributes, "integers" and "accumulate".  The "integers" attribute
+will be a list of one or more ints, and the "accumulate" attribute
+will be either the "sum()" function, if "--sum" was specified at the
+command line, or the "max()" function if it was not.
+
+
+Parsing arguments
+-----------------
+
+"ArgumentParser" parses arguments through the "parse_args()" method.
+This will inspect the command line, convert each argument to the
+appropriate type and then invoke the appropriate action. In most
+cases, this means a simple "Namespace" object will be built up from
+attributes parsed out of the command line:
+
+   >>> parser.parse_args(['--sum', '7', '-1', '42'])
+   Namespace(accumulate=<built-in function sum>, integers=[7, -1, 42])
+
+In a script, "parse_args()" will typically be called with no
+arguments, and the "ArgumentParser" will automatically determine the
+command-line arguments from "sys.argv".
+
+
+ArgumentParser 객체
+===================
+
+class argparse.ArgumentParser(prog=None, usage=None, description=None, epilog=None, parents=[], formatter_class=argparse.HelpFormatter, prefix_chars='-', fromfile_prefix_chars=None, argument_default=None, conflict_handler='error', add_help=True, allow_abbrev=True, exit_on_error=True)
+
+   새로운 "ArgumentParser" 객체를 만듭니다. 모든 매개 변수는 키워드 인
+   자로 전달되어야 합니다. 매개 변수마다 아래에서 더 자세히 설명되지만
+   , 요약하면 다음과 같습니다:
+
+   * prog - The name of the program (default:
+     "os.path.basename(sys.argv[0])")
+
+   * usage - 프로그램 사용법을 설명하는 문자열 (기본값: 파서에 추가된
+     인자로부터 만들어지는 값)
+
+   * description - Text to display before the argument help (by
+     default, no text)
+
+   * epilog - Text to display after the argument help (by default, no
+     text)
+
+   * parents - "ArgumentParser" 객체들의 리스트이고, 이 들의 인자들도
+     포함된다
+
+   * formatter_class - 도움말 출력을 사용자 정의하기 위한 클래스
+
+   * prefix_chars - 선택 인자 앞에 붙는 문자 집합 (기본값: '-').
+
+   * fromfile_prefix_chars - 추가 인자를 읽어야 하는 파일 앞에 붙는 문
+     자 집합 (기본값: "None").
+
+   * argument_default - 인자의 전역 기본값 (기본값: "None")
+
+   * conflict_handler - 충돌하는 선택 사항을 해결하기 위한 전략 (일반
+     적으로 불필요함)
+
+   * add_help - 파서에 "-h/--help" 옵션을 추가합니다 (기본값: "True")
+
+   * allow_abbrev - 약어가 모호하지 않으면 긴 옵션을 축약할 수 있도록
+     합니다. (기본값: "True")
+
+   * exit_on_error - Determines whether or not ArgumentParser exits
+     with error info when an error occurs. (default: "True")
+
+   버전 3.5에서 변경: *allow_abbrev* 매개 변수가 추가되었습니다.
+
+   버전 3.8에서 변경: 이전 버전에서는, *allow_abbrev*는 "-vv"가 "-v
+   -v"를 뜻하는 것과 같은 짧은 플래그의 그룹화도 비활성화했습니다.
+
+   버전 3.9에서 변경: *exit_on_error* 매개 변수가 추가되었습니다.
+
+다음 절에서는 이들 각각의 사용 방법에 관해 설명합니다.
+
+
+prog
+----
+
+By default, "ArgumentParser" objects use "sys.argv[0]" to determine
+how to display the name of the program in help messages.  This default
+is almost always desirable because it will make the help messages
+match how the program was invoked on the command line.  For example,
+consider a file named "myprogram.py" with the following code:
+
+   import argparse
+   parser = argparse.ArgumentParser()
+   parser.add_argument('--foo', help='foo help')
+   args = parser.parse_args()
+
+The help for this program will display "myprogram.py" as the program
+name (regardless of where the program was invoked from):
+
+   $ python myprogram.py --help
+   usage: myprogram.py [-h] [--foo FOO]
+
+   options:
+    -h, --help  show this help message and exit
+    --foo FOO   foo help
+   $ cd ..
+   $ python subdir/myprogram.py --help
+   usage: myprogram.py [-h] [--foo FOO]
+
+   options:
+    -h, --help  show this help message and exit
+    --foo FOO   foo help
+
+To change this default behavior, another value can be supplied using
+the "prog=" argument to "ArgumentParser":
+
+   >>> parser = argparse.ArgumentParser(prog='myprogram')
+   >>> parser.print_help()
+   usage: myprogram [-h]
+
+   options:
+    -h, --help  show this help message and exit
+
+프로그램 이름은 "%(prog)s" 포맷 지정자를 사용해서 도움말에 쓸 수 있습
+니다. "sys.argv[0]" 나 "prog=" 인자 중 어떤 것으로부터 결정되든 상관없
+습니다.
+
+   >>> parser = argparse.ArgumentParser(prog='myprogram')
+   >>> parser.add_argument('--foo', help='foo of the %(prog)s program')
+   >>> parser.print_help()
+   usage: myprogram [-h] [--foo FOO]
+
+   options:
+    -h, --help  show this help message and exit
+    --foo FOO   foo of the myprogram program
+
+
+usage
+-----
+
+By default, "ArgumentParser" calculates the usage message from the
+arguments it contains:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('--foo', nargs='?', help='foo help')
+   >>> parser.add_argument('bar', nargs='+', help='bar help')
+   >>> parser.print_help()
+   usage: PROG [-h] [--foo [FOO]] bar [bar ...]
+
+   positional arguments:
+    bar          bar help
+
+   options:
+    -h, --help   show this help message and exit
+    --foo [FOO]  foo help
+
+The default message can be overridden with the "usage=" keyword
+argument:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG', usage='%(prog)s [options]')
+   >>> parser.add_argument('--foo', nargs='?', help='foo help')
+   >>> parser.add_argument('bar', nargs='+', help='bar help')
+   >>> parser.print_help()
+   usage: PROG [options]
+
+   positional arguments:
+    bar          bar help
+
+   options:
+    -h, --help   show this help message and exit
+    --foo [FOO]  foo help
+
+"%(prog)s" 포맷 지정자는 사용법 메시지에서 프로그램 이름을 채울 때 사
+용할 수 있습니다.
+
+
+description
+-----------
+
+Most calls to the "ArgumentParser" constructor will use the
+"description=" keyword argument.  This argument gives a brief
+description of what the program does and how it works.  In help
+messages, the description is displayed between the command-line usage
+string and the help messages for the various arguments:
+
+   >>> parser = argparse.ArgumentParser(description='A foo that bars')
+   >>> parser.print_help()
+   usage: argparse.py [-h]
+
+   A foo that bars
+
+   options:
+    -h, --help  show this help message and exit
+
+기본적으로, 설명은 주어진 공간에 맞도록 줄 바꿈 됩니다. 이 동작을 변경
+하려면 formatter_class 인자를 참조하십시오.
+
+
+epilog
+------
+
+일부 프로그램은 인자에 대한 설명 뒤에 프로그램에 대한 추가 설명을 표시
+하려고 합니다. 이러한 텍스트는 "epilog=" 에 대한 인자를
+"ArgumentParser" 에 사용하여 지정할 수 있습니다:
+
+   >>> parser = argparse.ArgumentParser(
+   ...     description='A foo that bars',
+   ...     epilog="And that's how you'd foo a bar")
+   >>> parser.print_help()
+   usage: argparse.py [-h]
+
+   A foo that bars
+
+   options:
+    -h, --help  show this help message and exit
+
+   And that's how you'd foo a bar
+
+description 인자와 마찬가지로, "epilog=" 텍스트가 기본적으로 줄 바꿈
+됩니다만, 이 동작은 formatter_class 인자를 "ArgumentParser" 에 제공해
+서 조정할 수 있습니다.
+
+
+parents
+-------
+
+때로는 여러 파서가 공통 인자 집합을 공유하는 경우가 있습니다. 이러한
+인자의 정의를 반복하는 대신, 모든 공유 인자를 갖는 파서를
+"ArgumentParser" 에 "parents=" 인자로 전달할 수 있습니다. "parents="
+인자는 "ArgumentParser" 객체의 리스트를 취하여, 그것들로부터 모든 위치
+와 선택 액션을 수집해서 새로 만들어지는 "ArgumentParser" 객체에 추가합
+니다:
+
+   >>> parent_parser = argparse.ArgumentParser(add_help=False)
+   >>> parent_parser.add_argument('--parent', type=int)
+
+   >>> foo_parser = argparse.ArgumentParser(parents=[parent_parser])
+   >>> foo_parser.add_argument('foo')
+   >>> foo_parser.parse_args(['--parent', '2', 'XXX'])
+   Namespace(foo='XXX', parent=2)
+
+   >>> bar_parser = argparse.ArgumentParser(parents=[parent_parser])
+   >>> bar_parser.add_argument('--bar')
+   >>> bar_parser.parse_args(['--bar', 'YYY'])
+   Namespace(bar='YYY', parent=None)
+
+대부분의 부모 파서는 "add_help=False" 를 지정합니다. 그렇지 않으면,
+"ArgumentParser" 는 (하나는 부모에, 하나는 자식에 있는) 두 개의
+"-h/--help" 옵션을 보게 될 것이고, 에러를 발생시킵니다.
+
+참고:
+
+  "parents=" 를 통해 전달하기 전에 파서를 완전히 초기화해야 합니다. 자
+  식 파서 다음에 부모 파서를 변경하면 자식에 반영되지 않습니다.
+
+
+formatter_class
+---------------
+
+"ArgumentParser" 객체는 대체 포매팅 클래스를 지정함으로써 도움말 포매
+팅을 사용자 정의 할 수 있도록 합니다. 현재 네 가지 클래스가 있습니다:
+
+class argparse.RawDescriptionHelpFormatter
+class argparse.RawTextHelpFormatter
+class argparse.ArgumentDefaultsHelpFormatter
+class argparse.MetavarTypeHelpFormatter
+
+"RawDescriptionHelpFormatter" 와 "RawTextHelpFormatter" 는 텍스트 설명
+이 표시되는 방법을 더 제어할 수 있도록 합니다. 기본적으로,
+"ArgumentParser" 객체는 명령행 도움말 메시지에서 description 및 epilog
+텍스트를 줄 바꿈 합니다.:
+
+   >>> parser = argparse.ArgumentParser(
+   ...     prog='PROG',
+   ...     description='''this description
+   ...         was indented weird
+   ...             but that is okay''',
+   ...     epilog='''
+   ...             likewise for this epilog whose whitespace will
+   ...         be cleaned up and whose words will be wrapped
+   ...         across a couple lines''')
+   >>> parser.print_help()
+   usage: PROG [-h]
+
+   this description was indented weird but that is okay
+
+   options:
+    -h, --help  show this help message and exit
+
+   likewise for this epilog whose whitespace will be cleaned up and whose words
+   will be wrapped across a couple lines
+
+"RawDescriptionHelpFormatter" 를 "formatter_class=" 로 전달하는 것은
+description 과 epilog 가 이미 올바르게 포맷되어 있어서 줄 바꿈 되어서
+는 안 된다는 것을 가리킵니다:
+
+   >>> parser = argparse.ArgumentParser(
+   ...     prog='PROG',
+   ...     formatter_class=argparse.RawDescriptionHelpFormatter,
+   ...     description=textwrap.dedent('''\
+   ...         Please do not mess up this text!
+   ...         --------------------------------
+   ...             I have indented it
+   ...             exactly the way
+   ...             I want it
+   ...         '''))
+   >>> parser.print_help()
+   usage: PROG [-h]
+
+   Please do not mess up this text!
+   --------------------------------
+      I have indented it
+      exactly the way
+      I want it
+
+   options:
+    -h, --help  show this help message and exit
+
+"RawTextHelpFormatter" maintains whitespace for all sorts of help
+text, including argument descriptions. However, multiple new lines are
+replaced with one. If you wish to preserve multiple blank lines, add
+spaces between the newlines.
+
+"ArgumentDefaultsHelpFormatter" 는 기본값에 대한 정보를 각각의 인자 도
+움말 메시지에 자동으로 추가합니다:
+
+   >>> parser = argparse.ArgumentParser(
+   ...     prog='PROG',
+   ...     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+   >>> parser.add_argument('--foo', type=int, default=42, help='FOO!')
+   >>> parser.add_argument('bar', nargs='*', default=[1, 2, 3], help='BAR!')
+   >>> parser.print_help()
+   usage: PROG [-h] [--foo FOO] [bar ...]
+
+   positional arguments:
+    bar         BAR! (default: [1, 2, 3])
+
+   options:
+    -h, --help  show this help message and exit
+    --foo FOO   FOO! (default: 42)
+
+"MetavarTypeHelpFormatter" 는 각 인자 값의 표시 이름으로 (일반 포매터
+처럼 dest 를 사용하는 대신에) type 인자의 이름을 사용합니다:
+
+   >>> parser = argparse.ArgumentParser(
+   ...     prog='PROG',
+   ...     formatter_class=argparse.MetavarTypeHelpFormatter)
+   >>> parser.add_argument('--foo', type=int)
+   >>> parser.add_argument('bar', type=float)
+   >>> parser.print_help()
+   usage: PROG [-h] [--foo int] float
+
+   positional arguments:
+     float
+
+   options:
+     -h, --help  show this help message and exit
+     --foo int
+
+
+prefix_chars
+------------
+
+Most command-line options will use "-" as the prefix, e.g. "-f/--foo".
+Parsers that need to support different or additional prefix
+characters, e.g. for options like "+f" or "/foo", may specify them
+using the "prefix_chars=" argument to the ArgumentParser constructor:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG', prefix_chars='-+')
+   >>> parser.add_argument('+f')
+   >>> parser.add_argument('++bar')
+   >>> parser.parse_args('+f X ++bar Y'.split())
+   Namespace(bar='Y', f='X')
+
+"prefix_chars=" 인자의 기본값은 "'-'" 입니다. "-" 를 포함하지 않는 문
+자 집합을 제공하면 "-f/--foo" 옵션이 허용되지 않게 됩니다.
+
+
+fromfile_prefix_chars
+---------------------
+
+Sometimes, for example when dealing with a particularly long argument
+list, it may make sense to keep the list of arguments in a file rather
+than typing it out at the command line.  If the
+"fromfile_prefix_chars=" argument is given to the "ArgumentParser"
+constructor, then arguments that start with any of the specified
+characters will be treated as files, and will be replaced by the
+arguments they contain.  For example:
+
+   >>> with open('args.txt', 'w') as fp:
+   ...     fp.write('-f\nbar')
+   >>> parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
+   >>> parser.add_argument('-f')
+   >>> parser.parse_args(['-f', 'foo', '@args.txt'])
+   Namespace(f='bar')
+
+파일에서 읽은 인자는 기본적으로 한 줄에 하나씩 있어야 하고 (하지만
+"convert_arg_line_to_args()" 도 참조하십시오), 명령행에서 원래 파일을
+참조하는 인자와 같은 위치에 있는 것처럼 처리됩니다. 위의 예에서 표현식
+"['-f', 'foo', '@args.txt']" 는 "['-f', 'foo', '-f', 'bar']" 와 동등하
+게 취급됩니다.
+
+"fromfile_prefix_chars=" 인자의 기본값은 "None" 입니다. 이것은 인자가
+절대로 파일 참조로 취급되지 않는다는 것을 의미합니다.
+
+
+argument_default
+----------------
+
+일반적으로 인자의 기본값은 "add_argument()" 에 기본값을 전달하거나 특
+정 이름-값 쌍 집합을 사용하여 "set_defaults()" 메서드를 호출하여 지정
+됩니다. 그러나 때로는, 파서 전체에 적용되는 단일 기본값을 지정하는 것
+이 유용 할 수 있습니다. 이것은 "argument_default=" 키워드 인자를
+"ArgumentParser" 에 전달함으로써 이루어질 수 있습니다. 예를 들어,
+"parse_args()" 호출에서 어트리뷰트 생성을 전역적으로 억제하려면,
+"argument_default=SUPPRESS" 를 제공합니다:
+
+   >>> parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
+   >>> parser.add_argument('--foo')
+   >>> parser.add_argument('bar', nargs='?')
+   >>> parser.parse_args(['--foo', '1', 'BAR'])
+   Namespace(bar='BAR', foo='1')
+   >>> parser.parse_args([])
+   Namespace()
+
+
+allow_abbrev
+------------
+
+일반적으로 "ArgumentParser" 의 "parse_args()" 메서드에 인자 리스트를
+건네주면 긴 옵션의 약어를 인식합니다.
+
+"allow_abbrev" 를 "False" 로 설정하면 이 기능을 비활성화 할 수 있습니
+다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG', allow_abbrev=False)
+   >>> parser.add_argument('--foobar', action='store_true')
+   >>> parser.add_argument('--foonley', action='store_false')
+   >>> parser.parse_args(['--foon'])
+   usage: PROG [-h] [--foobar] [--foonley]
+   PROG: error: unrecognized arguments: --foon
+
+버전 3.5에 추가.
+
+
+conflict_handler
+----------------
+
+"ArgumentParser" 객체는 같은 옵션 문자열을 가진 두 개의 액션을 허용하
+지 않습니다. 기본적으로 "ArgumentParser" 객체는 이미 사용 중인 옵션 문
+자열로 인자를 만들려고 시도하면 예외를 발생시킵니다
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-f', '--foo', help='old foo help')
+   >>> parser.add_argument('--foo', help='new foo help')
+   Traceback (most recent call last):
+    ..
+   ArgumentError: argument --foo: conflicting option string(s): --foo
+
+때로는 (예를 들어 parents 를 사용하는 경우) 같은 옵션 문자열을 갖는 예
+전의 인자들을 간단히 대체하는 것이 유용 할 수 있습니다. 이 동작을 얻으
+려면, "ArgumentParser" 의 "conflict_handler=" 인자에 "'resolve'" 값을
+제공합니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG', conflict_handler='resolve')
+   >>> parser.add_argument('-f', '--foo', help='old foo help')
+   >>> parser.add_argument('--foo', help='new foo help')
+   >>> parser.print_help()
+   usage: PROG [-h] [-f FOO] [--foo FOO]
+
+   options:
+    -h, --help  show this help message and exit
+    -f FOO      old foo help
+    --foo FOO   new foo help
+
+"ArgumentParser" 객체는 모든 옵션 문자열이 재정의된 경우에만 액션을 제
+거합니다. 위의 예에서, 이전의 "-f/--foo" 액션은 "--foo" 옵션 문자열만
+재정의되었기 때문에 "-f" 액션으로 유지됩니다.
+
+
+add_help
+--------
+
+By default, ArgumentParser objects add an option which simply displays
+the parser's help message. For example, consider a file named
+"myprogram.py" containing the following code:
+
+   import argparse
+   parser = argparse.ArgumentParser()
+   parser.add_argument('--foo', help='foo help')
+   args = parser.parse_args()
+
+If "-h" or "--help" is supplied at the command line, the
+ArgumentParser help will be printed:
+
+   $ python myprogram.py --help
+   usage: myprogram.py [-h] [--foo FOO]
+
+   options:
+    -h, --help  show this help message and exit
+    --foo FOO   foo help
+
+때에 따라, 이 도움말 옵션을 추가하지 않도록 설정하는 것이 유용 할 수
+있습니다. "add_help=" 인자를 "False" 로 "ArgumentParser" 에 전달하면
+됩니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG', add_help=False)
+   >>> parser.add_argument('--foo', help='foo help')
+   >>> parser.print_help()
+   usage: PROG [--foo FOO]
+
+   options:
+    --foo FOO  foo help
+
+도움말 옵션은 일반적으로 "-h/--help" 입니다. 예외는 "prefix_chars=" 가
+지정되고 "-" 을 포함하지 않는 경우입니다. 이 경우 "-h" 와 "--help" 는
+유효한 옵션이 아닙니다. 이 경우, "prefix_chars" 의 첫 번째 문자가 도움
+말 옵션 접두어로 사용됩니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG', prefix_chars='+/')
+   >>> parser.print_help()
+   usage: PROG [+h]
+
+   options:
+     +h, ++help  show this help message and exit
+
+
+exit_on_error
+-------------
+
+Normally, when you pass an invalid argument list to the "parse_args()"
+method of an "ArgumentParser", it will exit with error info.
+
+If the user would like to catch errors manually, the feature can be
+enabled by setting "exit_on_error" to "False":
+
+   >>> parser = argparse.ArgumentParser(exit_on_error=False)
+   >>> parser.add_argument('--integers', type=int)
+   _StoreAction(option_strings=['--integers'], dest='integers', nargs=None, const=None, default=None, type=<class 'int'>, choices=None, help=None, metavar=None)
+   >>> try:
+   ...     parser.parse_args('--integers a'.split())
+   ... except argparse.ArgumentError:
+   ...     print('Catching an argumentError')
+   ...
+   Catching an argumentError
+
+버전 3.9에 추가.
+
+
+add_argument() 메서드
+=====================
+
+ArgumentParser.add_argument(name or flags...[, action][, nargs][, const][, default][, type][, choices][, required][, help][, metavar][, dest])
+
+   단일 명령행 인자를 구문 분석하는 방법을 정의합니다. 매개 변수마다
+   아래에서 더 자세히 설명되지만, 요약하면 다음과 같습니다:
+
+   * name or flags - Either a name or a list of option strings, e.g.
+     "foo" or "-f, --foo".
+
+   * action - 명령행에서 이 인자가 발견될 때 수행 할 액션의 기본형.
+
+   * nargs - 소비되어야 하는 명령행 인자의 수.
+
+   * const - 일부 action 및 nargs 를 선택할 때 필요한 상숫값.
+
+   * default - 인자가 명령행에 없고 namespace 객체에 없으면 생성되는
+     값.
+
+   * type - 명령행 인자가 변환되어야 할 형.
+
+   * choices - A sequence of the allowable values for the argument.
+
+   * required - 명령행 옵션을 생략 할 수 있는지 아닌지 (선택적일 때만
+     ).
+
+   * help - 인자가 하는 일에 대한 간단한 설명.
+
+   * metavar - 사용 메시지에 사용되는 인자의 이름.
+
+   * dest - "parse_args()" 가 반환하는 객체에 추가될 어트리뷰트의 이름
+     .
+
+다음 절에서는 이들 각각의 사용 방법에 관해 설명합니다.
+
+
+name or flags
+-------------
+
+The "add_argument()" method must know whether an optional argument,
+like "-f" or "--foo", or a positional argument, like a list of
+filenames, is expected.  The first arguments passed to
+"add_argument()" must therefore be either a series of flags, or a
+simple argument name.  For example, an optional argument could be
+created like:
+
+   >>> parser.add_argument('-f', '--foo')
+
+반면에 위치 인자는 이렇게 만들어집니다:
+
+   >>> parser.add_argument('bar')
+
+"parse_args()" 가 호출되면, 선택 인자는 "-" 접두사로 식별되고, 그 밖의
+인자는 위치 인자로 간주합니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-f', '--foo')
+   >>> parser.add_argument('bar')
+   >>> parser.parse_args(['BAR'])
+   Namespace(bar='BAR', foo=None)
+   >>> parser.parse_args(['BAR', '--foo', 'FOO'])
+   Namespace(bar='BAR', foo='FOO')
+   >>> parser.parse_args(['--foo', 'FOO'])
+   usage: PROG [-h] [-f FOO] bar
+   PROG: error: the following arguments are required: bar
+
+
+action
+------
+
+"ArgumentParser" 객체는 명령행 인자를 액션과 연관시킵니다. 대부분의 액
+션은 단순히 "parse_args()" 에 의해 반환된 객체에 어트리뷰트를 추가하기
+만 하지만, 액션은 관련된 명령행 인자로 무엇이든 할 수 있습니다.
+"action" 키워드 인자는 명령행 인자의 처리 방법을 지정합니다. 제공되는
+액션은 다음과 같습니다:
+
+* "'store'" - This just stores the argument's value.  This is the
+  default action. For example:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--foo')
+     >>> parser.parse_args('--foo 1'.split())
+     Namespace(foo='1')
+
+* "'store_const'" - This stores the value specified by the const
+  keyword argument.  The "'store_const'" action is most commonly used
+  with optional arguments that specify some sort of flag.  For
+  example:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--foo', action='store_const', const=42)
+     >>> parser.parse_args(['--foo'])
+     Namespace(foo=42)
+
+* "'store_true'" and "'store_false'" - These are special cases of
+  "'store_const'" used for storing the values "True" and "False"
+  respectively.  In addition, they create default values of "False"
+  and "True" respectively.  For example:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--foo', action='store_true')
+     >>> parser.add_argument('--bar', action='store_false')
+     >>> parser.add_argument('--baz', action='store_false')
+     >>> parser.parse_args('--foo --bar'.split())
+     Namespace(foo=True, bar=False, baz=True)
+
+* "'append'" - This stores a list, and appends each argument value to
+  the list.  This is useful to allow an option to be specified
+  multiple times. Example usage:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--foo', action='append')
+     >>> parser.parse_args('--foo 1 --foo 2'.split())
+     Namespace(foo=['1', '2'])
+
+* "'append_const'" - This stores a list, and appends the value
+  specified by the const keyword argument to the list.  (Note that the
+  const keyword argument defaults to "None".)  The "'append_const'"
+  action is typically useful when multiple arguments need to store
+  constants to the same list. For example:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--str', dest='types', action='append_const', const=str)
+     >>> parser.add_argument('--int', dest='types', action='append_const', const=int)
+     >>> parser.parse_args('--str --int'.split())
+     Namespace(types=[<class 'str'>, <class 'int'>])
+
+* "'count'" - 키워드 인자가 등장한 횟수를 계산합니다. 예를 들어, 상세
+  도를 높이는 데 유용합니다:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--verbose', '-v', action='count', default=0)
+     >>> parser.parse_args(['-vvv'])
+     Namespace(verbose=3)
+
+  참고, 명시적으로 *0*으로 설정되지 않으면 *default*는 "None"이 됩니다
+  .
+
+* "'help'" - 현재 파서의 모든 옵션에 대한 완전한 도움말 메시지를 출력
+  하고 종료합니다. 기본적으로 help 액션은 자동으로 파서에 추가됩니다.
+  출력이 만들어지는 방법에 대한 자세한 내용은 "ArgumentParser" 를 보세
+  요.
+
+* "'version'" - "add_argument()" 호출에서 "version=" 키워드 인자를 기
+  대하고, 호출되면 버전 정보를 출력하고 종료합니다:
+
+     >>> import argparse
+     >>> parser = argparse.ArgumentParser(prog='PROG')
+     >>> parser.add_argument('--version', action='version', version='%(prog)s 2.0')
+     >>> parser.parse_args(['--version'])
+     PROG 2.0
+
+* "'extend'" - This stores a list, and extends each argument value to
+  the list. Example usage:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument("--foo", action="extend", nargs="+", type=str)
+     >>> parser.parse_args(["--foo", "f1", "--foo", "f2", "f3", "f4"])
+     Namespace(foo=['f1', 'f2', 'f3', 'f4'])
+
+  버전 3.8에 추가.
+
+You may also specify an arbitrary action by passing an Action subclass
+or other object that implements the same interface. The
+"BooleanOptionalAction" is available in "argparse" and adds support
+for boolean actions such as "--foo" and "--no-foo":
+
+   >>> import argparse
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', action=argparse.BooleanOptionalAction)
+   >>> parser.parse_args(['--no-foo'])
+   Namespace(foo=False)
+
+버전 3.9에 추가.
+
+The recommended way to create a custom action is to extend "Action",
+overriding the "__call__" method and optionally the "__init__" and
+"format_usage" methods.
+
+사용자 정의 액션의 예:
+
+   >>> class FooAction(argparse.Action):
+   ...     def __init__(self, option_strings, dest, nargs=None, **kwargs):
+   ...         if nargs is not None:
+   ...             raise ValueError("nargs not allowed")
+   ...         super().__init__(option_strings, dest, **kwargs)
+   ...     def __call__(self, parser, namespace, values, option_string=None):
+   ...         print('%r %r %r' % (namespace, values, option_string))
+   ...         setattr(namespace, self.dest, values)
+   ...
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', action=FooAction)
+   >>> parser.add_argument('bar', action=FooAction)
+   >>> args = parser.parse_args('1 --foo 2'.split())
+   Namespace(bar=None, foo=None) '1' None
+   Namespace(bar='1', foo=None) '2' '--foo'
+   >>> args
+   Namespace(bar='1', foo='2')
+
+자세한 내용은 "Action" 을 참조하십시오.
+
+
+nargs
+-----
+
+ArgumentParser objects usually associate a single command-line
+argument with a single action to be taken.  The "nargs" keyword
+argument associates a different number of command-line arguments with
+a single action.  The supported values are:
+
+* "N" (정수). 명령행에서 "N" 개의 인자를 함께 모아서 리스트에 넣습니다
+  . 예를 들면:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--foo', nargs=2)
+     >>> parser.add_argument('bar', nargs=1)
+     >>> parser.parse_args('c --foo a b'.split())
+     Namespace(bar=['c'], foo=['a', 'b'])
+
+  "nargs=1" 은 하나의 항목을 갖는 리스트를 생성합니다. 이는 항목 그대
+  로 생성되는 기본값과 다릅니다.
+
+* "'?'". 가능하다면 한 인자가 명령행에서 소비되고 단일 항목으로 생성됩
+  니다. 명령행 인자가 없으면 default 의 값이 생성됩니다. 선택 인자의
+  경우 추가적인 경우가 있습니다 - 옵션 문자열은 있지만, 명령행 인자가
+  따라붙지 않는 경우입니다. 이 경우 const 의 값이 생성됩니다. 이것을
+  보여주기 위해 몇 가지 예를 듭니다:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--foo', nargs='?', const='c', default='d')
+     >>> parser.add_argument('bar', nargs='?', default='d')
+     >>> parser.parse_args(['XX', '--foo', 'YY'])
+     Namespace(bar='XX', foo='YY')
+     >>> parser.parse_args(['XX', '--foo'])
+     Namespace(bar='XX', foo='c')
+     >>> parser.parse_args([])
+     Namespace(bar='d', foo='d')
+
+  "nargs='?'" 의 흔한 사용법 중 하나는 선택적 입출력 파일을 허용하는
+  것입니다:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('infile', nargs='?', type=argparse.FileType('r'),
+     ...                     default=sys.stdin)
+     >>> parser.add_argument('outfile', nargs='?', type=argparse.FileType('w'),
+     ...                     default=sys.stdout)
+     >>> parser.parse_args(['input.txt', 'output.txt'])
+     Namespace(infile=<_io.TextIOWrapper name='input.txt' encoding='UTF-8'>,
+               outfile=<_io.TextIOWrapper name='output.txt' encoding='UTF-8'>)
+     >>> parser.parse_args([])
+     Namespace(infile=<_io.TextIOWrapper name='<stdin>' encoding='UTF-8'>,
+               outfile=<_io.TextIOWrapper name='<stdout>' encoding='UTF-8'>)
+
+* "'*'". 모든 명령행 인자를 리스트로 수집합니다. 일반적으로 두 개 이상
+  의 위치 인자에 대해 "nargs='*'" 를 사용하는 것은 별로 의미가 없지만,
+  "nargs='*'" 를 갖는 여러 개의 선택 인자는 가능합니다. 예를 들면:
+
+     >>> parser = argparse.ArgumentParser()
+     >>> parser.add_argument('--foo', nargs='*')
+     >>> parser.add_argument('--bar', nargs='*')
+     >>> parser.add_argument('baz', nargs='*')
+     >>> parser.parse_args('a b --foo x y --bar 1 2'.split())
+     Namespace(bar=['1', '2'], baz=['a', 'b'], foo=['x', 'y'])
+
+* "'+'". "'*'" 와 같이, 존재하는 모든 명령행 인자를 리스트로 모읍니다.
+  또한, 적어도 하나의 명령행 인자가 제공되지 않으면 에러 메시지가 만들
+  어집니다. 예를 들면:
+
+     >>> parser = argparse.ArgumentParser(prog='PROG')
+     >>> parser.add_argument('foo', nargs='+')
+     >>> parser.parse_args(['a', 'b'])
+     Namespace(foo=['a', 'b'])
+     >>> parser.parse_args([])
+     usage: PROG [-h] foo [foo ...]
+     PROG: error: the following arguments are required: foo
+
+If the "nargs" keyword argument is not provided, the number of
+arguments consumed is determined by the action.  Generally this means
+a single command-line argument will be consumed and a single item (not
+a list) will be produced.
+
+
+const
+-----
+
+"add_argument()" 의 "const" 인자는 명령행에서 읽지는 않지만 다양한
+"ArgumentParser" 액션에 필요한 상숫값을 저장하는 데 사용됩니다. 가장
+흔한 두 가지 용도는 다음과 같습니다:
+
+* When "add_argument()" is called with "action='store_const'" or
+  "action='append_const'".  These actions add the "const" value to one
+  of the attributes of the object returned by "parse_args()". See the
+  action description for examples.
+
+* When "add_argument()" is called with option strings (like "-f" or "
+  --foo") and "nargs='?'".  This creates an optional argument that can
+  be followed by zero or one command-line arguments. When parsing the
+  command line, if the option string is encountered with no command-
+  line argument following it, the value of "const" will be assumed
+  instead. See the nargs description for examples.
+
+With the "'store_const'" and "'append_const'" actions, the "const"
+keyword argument must be given.  For other actions, it defaults to
+"None".
+
+
+default
+-------
+
+모든 선택 인자와 일부 위치 인자는 명령행에서 생략될 수 있습니다.
+"add_argument()" 의 "default" 키워드 인자는, 기본값은 "None" 입니다,
+명령행 인자가 없을 때 어떤 값을 사용해야 하는지를 지정합니다. 선택 인
+자의 경우, 옵션 문자열이 명령행에 없을 때 "default" 값이 사용됩니다:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', default=42)
+   >>> parser.parse_args(['--foo', '2'])
+   Namespace(foo='2')
+   >>> parser.parse_args([])
+   Namespace(foo=42)
+
+If the target namespace already has an attribute set, the action
+*default* will not over write it:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', default=42)
+   >>> parser.parse_args([], namespace=argparse.Namespace(foo=101))
+   Namespace(foo=101)
+
+"default" 값이 문자열이면, 파서는 마치 명령행 인자인 것처럼 파싱합니다
+. 특히, 파서는 "Namespace" 반환 값에 어트리뷰트를 설정하기 전에, 제공
+된 모든 type 변환 인자를 적용합니다. 그렇지 않은 경우, 파서는 값을 있
+는 그대로 사용합니다:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--length', default='10', type=int)
+   >>> parser.add_argument('--width', default=10.5, type=int)
+   >>> parser.parse_args()
+   Namespace(length=10, width=10.5)
+
+nargs 가 "?" 또는 "*" 인 위치 인자의 경우, 명령행 인자가 없을 때
+"default" 값이 사용됩니다:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('foo', nargs='?', default=42)
+   >>> parser.parse_args(['a'])
+   Namespace(foo='a')
+   >>> parser.parse_args([])
+   Namespace(foo=42)
+
+"default=argparse.SUPPRESS" 를 지정하면 명령행 인자가 없는 경우 어트리
+뷰트가 추가되지 않습니다:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', default=argparse.SUPPRESS)
+   >>> parser.parse_args([])
+   Namespace()
+   >>> parser.parse_args(['--foo', '1'])
+   Namespace(foo='1')
+
+
+type
+----
+
+기본적으로, 파서는 명령행 인자를 간단한 문자열로 읽습니다. 그러나 꽤
+자주 명령행 문자열은 "float"나 "int"와 같은 다른 형으로 해석되어야 합
+니다. "add_argument()" 의 "type" 키워드는 필요한 형 검사와 형 변환이
+수행되도록 합니다.
+
+type 키워드가 default 키워드와 함께 사용되면, 형 변환기는 기본값이 문
+자열일 때만 적용됩니다.
+
+The argument to "type" can be any callable that accepts a single
+string. If the function raises "ArgumentTypeError", "TypeError", or
+"ValueError", the exception is caught and a nicely formatted error
+message is displayed.  No other exception types are handled.
+
+일반적인 내장형과 함수는 형 변환기로 사용될 수 있습니다:
+
+   import argparse
+   import pathlib
+
+   parser = argparse.ArgumentParser()
+   parser.add_argument('count', type=int)
+   parser.add_argument('distance', type=float)
+   parser.add_argument('street', type=ascii)
+   parser.add_argument('code_point', type=ord)
+   parser.add_argument('source_file', type=open)
+   parser.add_argument('dest_file', type=argparse.FileType('w', encoding='latin-1'))
+   parser.add_argument('datapath', type=pathlib.Path)
+
+사용자 정의 함수도 사용할 수 있습니다:
+
+   >>> def hyphenated(string):
+   ...     return '-'.join([word[:4] for word in string.casefold().split()])
+   ...
+   >>> parser = argparse.ArgumentParser()
+   >>> _ = parser.add_argument('short_title', type=hyphenated)
+   >>> parser.parse_args(['"The Tale of Two Cities"'])
+   Namespace(short_title='"the-tale-of-two-citi')
+
+"bool()" 함수는 형 변환기로 권장되지 않습니다. 빈 문자열을 "False"로,
+비어 있지 않은 문자열을 "True"로 변환하는 것뿐입니다. 이것은 일반적으
+로 원하는 것이 아닙니다.
+
+일반적으로, "type" 키워드는 지원되는 세 가지 예외 중 하나만 발생할 수
+있는 간단한 변환에만 사용해야 하는 편의 기능입니다. 더 흥미로운 에러
+처리나 리소스 관리가 필요한 모든 작업은 인자가 구문 분석된 후에 수행되
+어야 합니다.
+
+For example, JSON or YAML conversions have complex error cases that
+require better reporting than can be given by the "type" keyword.  A
+"JSONDecodeError" would not be well formatted and a "FileNotFound"
+exception would not be handled at all.
+
+Even "FileType" has its limitations for use with the "type" keyword.
+If one argument uses *FileType* and then a subsequent argument fails,
+an error is reported but the file is not automatically closed.  In
+this case, it would be better to wait until after the parser has run
+and then use the "with"-statement to manage the files.
+
+고정된 값 집합에 대해 단순히 확인하는 형 검사기의 경우, 대신 choices
+키워드를 사용하는 것을 고려하십시오.
+
+
+choices
+-------
+
+Some command-line arguments should be selected from a restricted set
+of values. These can be handled by passing a sequence object as the
+*choices* keyword argument to "add_argument()".  When the command line
+is parsed, argument values will be checked, and an error message will
+be displayed if the argument was not one of the acceptable values:
+
+   >>> parser = argparse.ArgumentParser(prog='game.py')
+   >>> parser.add_argument('move', choices=['rock', 'paper', 'scissors'])
+   >>> parser.parse_args(['rock'])
+   Namespace(move='rock')
+   >>> parser.parse_args(['fire'])
+   usage: game.py [-h] {rock,paper,scissors}
+   game.py: error: argument move: invalid choice: 'fire' (choose from 'rock',
+   'paper', 'scissors')
+
+Note that inclusion in the *choices* sequence is checked after any
+type conversions have been performed, so the type of the objects in
+the *choices* sequence should match the type specified:
+
+   >>> parser = argparse.ArgumentParser(prog='doors.py')
+   >>> parser.add_argument('door', type=int, choices=range(1, 4))
+   >>> print(parser.parse_args(['3']))
+   Namespace(door=3)
+   >>> parser.parse_args(['4'])
+   usage: doors.py [-h] {1,2,3}
+   doors.py: error: argument door: invalid choice: 4 (choose from 1, 2, 3)
+
+Any sequence can be passed as the *choices* value, so "list" objects,
+"tuple" objects, and custom sequences are all supported.
+
+"enum.Enum"은 사용법, 도움말 및 에러 메시지에서 나타나는 방식을 제어하
+기 어렵기 때문에 사용하지 않는 것이 좋습니다.
+
+Formatted choices overrides the default *metavar* which is normally
+derived from *dest*.  This is usually what you want because the user
+never sees the *dest* parameter.  If this display isn't desirable
+(perhaps because there are many choices), just specify an explicit
+metavar.
+
+
+required
+--------
+
+In general, the "argparse" module assumes that flags like "-f" and "--
+bar" indicate *optional* arguments, which can always be omitted at the
+command line. To make an option *required*, "True" can be specified
+for the "required=" keyword argument to "add_argument()":
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', required=True)
+   >>> parser.parse_args(['--foo', 'BAR'])
+   Namespace(foo='BAR')
+   >>> parser.parse_args([])
+   usage: [-h] --foo FOO
+   : error: the following arguments are required: --foo
+
+예에서 보듯이, 옵션이 "required" 로 표시되면, "parse_args()" 는 그 옵
+션이 명령행에 없을 때 에러를 보고합니다.
+
+참고:
+
+  필수 옵션은 사용자가 *옵션* 이 *선택적* 일 것으로 기대하기 때문에 일
+  반적으로 나쁜 형식으로 간주하므로 가능하면 피해야 합니다.
+
+
+help
+----
+
+The "help" value is a string containing a brief description of the
+argument. When a user requests help (usually by using "-h" or "--help"
+at the command line), these "help" descriptions will be displayed with
+each argument:
+
+   >>> parser = argparse.ArgumentParser(prog='frobble')
+   >>> parser.add_argument('--foo', action='store_true',
+   ...                     help='foo the bars before frobbling')
+   >>> parser.add_argument('bar', nargs='+',
+   ...                     help='one of the bars to be frobbled')
+   >>> parser.parse_args(['-h'])
+   usage: frobble [-h] [--foo] bar [bar ...]
+
+   positional arguments:
+    bar     one of the bars to be frobbled
+
+   options:
+    -h, --help  show this help message and exit
+    --foo   foo the bars before frobbling
+
+"help" 문자열은 프로그램 이름이나 인자 default 와 같은 것들의 반복을
+피하고자 다양한 포맷 지정자를 포함 할 수 있습니다. 사용할 수 있는 지정
+자는 프로그램 이름, "%(prog)s" 와 "add_argument()" 의 대부분의 키워드
+인자, "%(default)s", "%(type)s" 등을 포함합니다.:
+
+   >>> parser = argparse.ArgumentParser(prog='frobble')
+   >>> parser.add_argument('bar', nargs='?', type=int, default=42,
+   ...                     help='the bar to %(prog)s (default: %(default)s)')
+   >>> parser.print_help()
+   usage: frobble [-h] [bar]
+
+   positional arguments:
+    bar     the bar to frobble (default: 42)
+
+   options:
+    -h, --help  show this help message and exit
+
+도움말 문자열이 %-포매팅을 지원하기 때문에, 도움말 문자열에 리터럴 "%"
+을 표시하려면, "%%" 로 이스케이프 처리해야 합니다.
+
+"argparse" supports silencing the help entry for certain options, by
+setting the "help" value to "argparse.SUPPRESS":
+
+   >>> parser = argparse.ArgumentParser(prog='frobble')
+   >>> parser.add_argument('--foo', help=argparse.SUPPRESS)
+   >>> parser.print_help()
+   usage: frobble [-h]
+
+   options:
+     -h, --help  show this help message and exit
+
+
+metavar
+-------
+
+When "ArgumentParser" generates help messages, it needs some way to
+refer to each expected argument.  By default, ArgumentParser objects
+use the dest value as the "name" of each object.  By default, for
+positional argument actions, the dest value is used directly, and for
+optional argument actions, the dest value is uppercased.  So, a single
+positional argument with "dest='bar'" will be referred to as "bar". A
+single optional argument "--foo" that should be followed by a single
+command-line argument will be referred to as "FOO".  An example:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo')
+   >>> parser.add_argument('bar')
+   >>> parser.parse_args('X --foo Y'.split())
+   Namespace(bar='X', foo='Y')
+   >>> parser.print_help()
+   usage:  [-h] [--foo FOO] bar
+
+   positional arguments:
+    bar
+
+   options:
+    -h, --help  show this help message and exit
+    --foo FOO
+
+다른 이름은 "metavar" 로 지정할 수 있습니다:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', metavar='YYY')
+   >>> parser.add_argument('bar', metavar='XXX')
+   >>> parser.parse_args('X --foo Y'.split())
+   Namespace(bar='X', foo='Y')
+   >>> parser.print_help()
+   usage:  [-h] [--foo YYY] XXX
+
+   positional arguments:
+    XXX
+
+   options:
+    -h, --help  show this help message and exit
+    --foo YYY
+
+"metavar" 는 *표시되는* 이름 만 변경합니다 - "parse_args()" 객체의 어
+트리뷰트 이름은 여전히 dest 값에 의해 결정됩니다.
+
+"nargs" 값이 다르면 metavar 가 여러 번 사용될 수 있습니다. "metavar"
+에 튜플을 제공하면 인자마다 다른 디스플레이가 지정됩니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-x', nargs=2)
+   >>> parser.add_argument('--foo', nargs=2, metavar=('bar', 'baz'))
+   >>> parser.print_help()
+   usage: PROG [-h] [-x X X] [--foo bar baz]
+
+   options:
+    -h, --help     show this help message and exit
+    -x X X
+    --foo bar baz
+
+
+dest
+----
+
+대부분 "ArgumentParser" 액션은 "parse_args()" 에 의해 반환된 객체의 어
+트리뷰트로 어떤 값을 추가합니다. 이 어트리뷰트의 이름은
+"add_argument()" 의 "dest" 키워드 인자에 의해 결정됩니다. 위치 인자 액
+션의 경우, "dest" 는 일반적으로 "add_argument()" 에 첫 번째 인자로 제
+공됩니다.:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('bar')
+   >>> parser.parse_args(['XXX'])
+   Namespace(bar='XXX')
+
+선택 인자 액션의 경우, "dest" 의 값은 보통 옵션 문자열에서 유추됩니다.
+"ArgumentParser" 는 첫 번째 긴 옵션 문자열을 취하고 앞의 "--" 문자열을
+제거하여 "dest" 의 값을 만듭니다. 긴 옵션 문자열이 제공되지 않았다면
+"dest" 는 첫 번째 짧은 옵션 문자열에서 앞의 "-" 문자를 제거하여 만듭니
+다. 문자열이 항상 유효한 어트리뷰트 이름이 되도록 만들기 위해 중간에
+나오는 "-" 문자는 "_" 문자로 변환됩니다. 아래 예제는 이 동작을 보여줍
+니다:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('-f', '--foo-bar', '--foo')
+   >>> parser.add_argument('-x', '-y')
+   >>> parser.parse_args('-f 1 -x 2'.split())
+   Namespace(foo_bar='1', x='2')
+   >>> parser.parse_args('--foo 1 -y 2'.split())
+   Namespace(foo_bar='1', x='2')
+
+"dest" 는 사용자 정의 어트리뷰트 이름을 지정할 수 있게 합니다:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', dest='bar')
+   >>> parser.parse_args('--foo XXX'.split())
+   Namespace(bar='XXX')
+
+
+Action 클래스
+-------------
+
+Action classes implement the Action API, a callable which returns a
+callable which processes arguments from the command-line. Any object
+which follows this API may be passed as the "action" parameter to
+"add_argument()".
+
+class argparse.Action(option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None)
+
+Action objects are used by an ArgumentParser to represent the
+information needed to parse a single argument from one or more strings
+from the command line. The Action class must accept the two positional
+arguments plus any keyword arguments passed to
+"ArgumentParser.add_argument()" except for the "action" itself.
+
+Instances of Action (or return value of any callable to the "action"
+parameter) should have attributes "dest", "option_strings", "default",
+"type", "required", "help", etc. defined. The easiest way to ensure
+these attributes are defined is to call "Action.__init__".
+
+Action instances should be callable, so subclasses must override the
+"__call__" method, which should accept four parameters:
+
+* "parser" - The ArgumentParser object which contains this action.
+
+* "namespace" - The "Namespace" object that will be returned by
+  "parse_args()".  Most actions add an attribute to this object using
+  "setattr()".
+
+* "values" - The associated command-line arguments, with any type
+  conversions applied.  Type conversions are specified with the type
+  keyword argument to "add_argument()".
+
+* "option_string" - The option string that was used to invoke this
+  action. The "option_string" argument is optional, and will be absent
+  if the action is associated with a positional argument.
+
+The "__call__" method may perform arbitrary actions, but will
+typically set attributes on the "namespace" based on "dest" and
+"values".
+
+Action subclasses can define a "format_usage" method that takes no
+argument and return a string which will be used when printing the
+usage of the program. If such method is not provided, a sensible
+default will be used.
+
+
+parse_args() 메서드
+===================
+
+ArgumentParser.parse_args(args=None, namespace=None)
+
+   인자 문자열을 객체로 변환하고 namespace의 어트리뷰트로 설정합니다.
+   값들이 설정된 namespace를 돌려줍니다.
+
+   Previous calls to "add_argument()" determine exactly what objects
+   are created and how they are assigned. See the documentation for
+   "add_argument()" for details.
+
+   * args - 구문 분석할 문자열 리스트. 기본값은 "sys.argv" 에서 취합니
+     다.
+
+   * namespace - 어트리뷰트가 대입될 객체. 기본값은 새로 만들어지는 빈
+     "Namespace" 객체입니다.
+
+
+옵션값 문법
+-----------
+
+"parse_args()" 메서드는 (취할 것이 있다면) 옵션의 값을 지정하는 몇 가
+지 방법을 지원합니다. 가장 단순한 경우, 옵션과 그 값은 두 개의 독립적
+인 인자로 전달됩니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-x')
+   >>> parser.add_argument('--foo')
+   >>> parser.parse_args(['-x', 'X'])
+   Namespace(foo=None, x='X')
+   >>> parser.parse_args(['--foo', 'FOO'])
+   Namespace(foo='FOO', x=None)
+
+긴 옵션(단일 문자보다 긴 이름을 가진 옵션)의 경우, 옵션과 값을 "=" 로
+구분하여 단일 명령행 인자로 전달할 수도 있습니다:
+
+   >>> parser.parse_args(['--foo=FOO'])
+   Namespace(foo='FOO', x=None)
+
+짧은 옵션(한 문자 길이의 옵션)의 경우, 옵션과 해당 값을 이어붙일 수 있
+습니다:
+
+   >>> parser.parse_args(['-xX'])
+   Namespace(foo=None, x='X')
+
+여러 개의 짧은 옵션은 마지막 옵션만 값을 요구하는 한 (또는 그들 중 아
+무것도 값을 요구하지 않거나), 하나의 "-" 접두어를 사용하여 함께 결합
+할 수 있습니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-x', action='store_true')
+   >>> parser.add_argument('-y', action='store_true')
+   >>> parser.add_argument('-z')
+   >>> parser.parse_args(['-xyzZ'])
+   Namespace(x=True, y=True, z='Z')
+
+
+잘못된 인자
+-----------
+
+명령행을 파싱할 때, "parse_args()" 는 모호한 옵션, 유효하지 않은 형,
+유효하지 않은 옵션, 잘못된 위치 인자의 수 등을 포함한 다양한 에러를 검
+사합니다. 이런 에러가 발생하면, 사용 메시지와 함께 에러를 인쇄합니다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('--foo', type=int)
+   >>> parser.add_argument('bar', nargs='?')
+
+   >>> # invalid type
+   >>> parser.parse_args(['--foo', 'spam'])
+   usage: PROG [-h] [--foo FOO] [bar]
+   PROG: error: argument --foo: invalid int value: 'spam'
+
+   >>> # invalid option
+   >>> parser.parse_args(['--bar'])
+   usage: PROG [-h] [--foo FOO] [bar]
+   PROG: error: no such option: --bar
+
+   >>> # wrong number of arguments
+   >>> parser.parse_args(['spam', 'badger'])
+   usage: PROG [-h] [--foo FOO] [bar]
+   PROG: error: extra arguments found: badger
+
+
+"-" 를 포함하는 인자들
+----------------------
+
+"parse_args()" 메서드는 사용자가 분명히 실수했을 때마다 에러를 주려고
+하지만, 어떤 상황은 본질에서 모호합니다. 예를 들어, 명령행 인자 "-1"
+은 옵션을 지정하려는 시도이거나 위치 인자를 제공하려는 시도일 수 있습
+니다. "parse_args()" 메서드는 이럴 때 신중합니다: 위치 인자는 음수처럼
+보이고 파서에 음수처럼 보이는 옵션이 없을 때만 "-" 로 시작할 수 있습니
+다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-x')
+   >>> parser.add_argument('foo', nargs='?')
+
+   >>> # no negative number options, so -1 is a positional argument
+   >>> parser.parse_args(['-x', '-1'])
+   Namespace(foo=None, x='-1')
+
+   >>> # no negative number options, so -1 and -5 are positional arguments
+   >>> parser.parse_args(['-x', '-1', '-5'])
+   Namespace(foo='-5', x='-1')
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-1', dest='one')
+   >>> parser.add_argument('foo', nargs='?')
+
+   >>> # negative number options present, so -1 is an option
+   >>> parser.parse_args(['-1', 'X'])
+   Namespace(foo=None, one='X')
+
+   >>> # negative number options present, so -2 is an option
+   >>> parser.parse_args(['-2'])
+   usage: PROG [-h] [-1 ONE] [foo]
+   PROG: error: no such option: -2
+
+   >>> # negative number options present, so both -1s are options
+   >>> parser.parse_args(['-1', '-1'])
+   usage: PROG [-h] [-1 ONE] [foo]
+   PROG: error: argument -1: expected one argument
+
+"-" 로 시작해야 하고, 음수처럼 보이지 않는 위치 인자가 있는 경우,
+"parse_args()" 에 다음과 같은 의사 인자 "'--'" 를 삽입 할 수 있습니다.
+그 이후의 모든 것은 위치 인자입니다:
+
+   >>> parser.parse_args(['--', '-f'])
+   Namespace(foo='-f', one=None)
+
+
+인자 약어 (접두사 일치)
+-----------------------
+
+"parse_args()" 메서드는 기본적으로 약어가 모호하지 않으면 (접두사가 오
+직 하나의 옵션과 일치합니다) 긴 옵션을 접두사로 축약 할 수 있도록 합니
+다:
+
+   >>> parser = argparse.ArgumentParser(prog='PROG')
+   >>> parser.add_argument('-bacon')
+   >>> parser.add_argument('-badger')
+   >>> parser.parse_args('-bac MMM'.split())
+   Namespace(bacon='MMM', badger=None)
+   >>> parser.parse_args('-bad WOOD'.split())
+   Namespace(bacon=None, badger='WOOD')
+   >>> parser.parse_args('-ba BA'.split())
+   usage: PROG [-h] [-bacon BACON] [-badger BADGER]
+   PROG: error: ambiguous option: -ba could match -badger, -bacon
+
+둘 이상의 옵션과 일치하는 인자는 에러를 일으킵니다. 이 기능은
+allow_abbrev를 "False" 로 설정함으로써 비활성화시킬 수 있습니다.
+
+
+"sys.argv" 너머
+---------------
+
+Sometimes it may be useful to have an ArgumentParser parse arguments
+other than those of "sys.argv".  This can be accomplished by passing a
+list of strings to "parse_args()".  This is useful for testing at the
+interactive prompt:
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument(
+   ...     'integers', metavar='int', type=int, choices=range(10),
+   ...     nargs='+', help='an integer in the range 0..9')
+   >>> parser.add_argument(
+   ...     '--sum', dest='accumulate', action='store_const', const=sum,
+   ...     default=max, help='sum the integers (default: find the max)')
+   >>> parser.parse_args(['1', '2', '3', '4'])
+   Namespace(accumulate=<built-in function max>, integers=[1, 2, 3, 4])
+   >>> parser.parse_args(['1', '2', '3', '4', '--sum'])
+   Namespace(accumulate=<built-in function sum>, integers=[1, 2, 3, 4])
+
+
+Namespace 객체
+--------------
+
+class argparse.Namespace
+
+   "parse_args()" 가 어트리뷰트를 저장하고 반환할 객체를 만드는 데 기
+   본적으로 사용하는 간단한 클래스.
+
+이 클래스는 의도적으로 단순한데, 단지 가독성 있는 문자열 표현을 갖는
+"object" 의 서브 클래스입니다. 어트리뷰트를 딕셔너리처럼 보기 원한다면
+, 표준 파이썬 관용구를 사용할 수 있습니다, "vars()":
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo')
+   >>> args = parser.parse_args(['--foo', 'BAR'])
+   >>> vars(args)
+   {'foo': 'BAR'}
+
+"ArgumentParser" 가 새 "Namespace" 객체가 아니라 이미 존재하는 객체에
+어트리뷰트를 대입하는 것이 유용 할 수 있습니다. "namespace=" 키워드 인
+자를 지정하면 됩니다:
+
+   >>> class C:
+   ...     pass
+   ...
+   >>> c = C()
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo')
+   >>> parser.parse_args(args=['--foo', 'BAR'], namespace=c)
+   >>> c.foo
+   'BAR'
+
+
+기타 유틸리티
+=============
+
+
+부속 명령
+---------
+
+ArgumentParser.add_subparsers([title][, description][, prog][, parser_class][, action][, option_strings][, dest][, required][, help][, metavar])
+
+   Many programs split up their functionality into a number of sub-
+   commands, for example, the "svn" program can invoke sub-commands
+   like "svn checkout", "svn update", and "svn commit".  Splitting up
+   functionality this way can be a particularly good idea when a
+   program performs several different functions which require
+   different kinds of command-line arguments. "ArgumentParser"
+   supports the creation of such sub-commands with the
+   "add_subparsers()" method.  The "add_subparsers()" method is
+   normally called with no arguments and returns a special action
+   object.  This object has a single method, "add_parser()", which
+   takes a command name and any "ArgumentParser" constructor
+   arguments, and returns an "ArgumentParser" object that can be
+   modified as usual.
+
+   매개 변수 설명:
+
+   * title - title for the sub-parser group in help output; by default
+     "subcommands" if description is provided, otherwise uses title
+     for positional arguments
+
+   * description - description for the sub-parser group in help
+     output, by default "None"
+
+   * prog - usage information that will be displayed with sub-command
+     help, by default the name of the program and any positional
+     arguments before the subparser argument
+
+   * parser_class - class which will be used to create sub-parser
+     instances, by default the class of the current parser (e.g.
+     ArgumentParser)
+
+   * action - 이 인자를 명령행에서 만날 때 수행 할 액션의 기본형
+
+   * dest - 부속 명령 이름을 저장하는 어트리뷰트의 이름. 기본적으로
+     "None" 이며 값은 저장되지 않습니다.
+
+   * required - 부속 명령이 꼭 제공되어야 하는지 아닌지, 기본값은
+     "False" (3.7에서 추가)
+
+   * help - 도움말 출력의 부속 파서 그룹 도움말, 기본적으로 "None"
+
+   * metavar - string presenting available sub-commands in help; by
+     default it is "None" and presents sub-commands in form {cmd1,
+     cmd2, ..}
+
+   몇 가지 사용 예:
+
+      >>> # create the top-level parser
+      >>> parser = argparse.ArgumentParser(prog='PROG')
+      >>> parser.add_argument('--foo', action='store_true', help='foo help')
+      >>> subparsers = parser.add_subparsers(help='sub-command help')
+      >>>
+      >>> # create the parser for the "a" command
+      >>> parser_a = subparsers.add_parser('a', help='a help')
+      >>> parser_a.add_argument('bar', type=int, help='bar help')
+      >>>
+      >>> # create the parser for the "b" command
+      >>> parser_b = subparsers.add_parser('b', help='b help')
+      >>> parser_b.add_argument('--baz', choices='XYZ', help='baz help')
+      >>>
+      >>> # parse some argument lists
+      >>> parser.parse_args(['a', '12'])
+      Namespace(bar=12, foo=False)
+      >>> parser.parse_args(['--foo', 'b', '--baz', 'Z'])
+      Namespace(baz='Z', foo=True)
+
+   "parse_args()" 에 의해 반환된 객체는 주 파서와 명령행에 의해 선택된
+   부속 파서(다른 부속 파서는 아님)의 어트리뷰트만을 포함한다는 것에
+   주의하십시오. 그래서 위의 예에서, "a" 명령이 지정되면 "foo" 와
+   "bar" 어트리뷰트 만 존재하고, "b" 명령이 지정되면 "foo" 와 "baz" 어
+   트리뷰트만 존재합니다.
+
+   Similarly, when a help message is requested from a subparser, only
+   the help for that particular parser will be printed.  The help
+   message will not include parent parser or sibling parser messages.
+   (A help message for each subparser command, however, can be given
+   by supplying the "help=" argument to "add_parser()" as above.)
+
+      >>> parser.parse_args(['--help'])
+      usage: PROG [-h] [--foo] {a,b} ...
+
+      positional arguments:
+        {a,b}   sub-command help
+          a     a help
+          b     b help
+
+      options:
+        -h, --help  show this help message and exit
+        --foo   foo help
+
+      >>> parser.parse_args(['a', '--help'])
+      usage: PROG a [-h] bar
+
+      positional arguments:
+        bar     bar help
+
+      options:
+        -h, --help  show this help message and exit
+
+      >>> parser.parse_args(['b', '--help'])
+      usage: PROG b [-h] [--baz {X,Y,Z}]
+
+      options:
+        -h, --help     show this help message and exit
+        --baz {X,Y,Z}  baz help
+
+   "add_subparsers()" 메서드는 또한 "title" 과 "description" 키워드 인
+   자를 지원합니다. 둘 중 하나가 있으면 부속 파서의 명령이 도움말 출력
+   에서 자체 그룹으로 나타납니다. 예를 들면:
+
+      >>> parser = argparse.ArgumentParser()
+      >>> subparsers = parser.add_subparsers(title='subcommands',
+      ...                                    description='valid subcommands',
+      ...                                    help='additional help')
+      >>> subparsers.add_parser('foo')
+      >>> subparsers.add_parser('bar')
+      >>> parser.parse_args(['-h'])
+      usage:  [-h] {foo,bar} ...
+
+      options:
+        -h, --help  show this help message and exit
+
+      subcommands:
+        valid subcommands
+
+        {foo,bar}   additional help
+
+   Furthermore, "add_parser" supports an additional "aliases"
+   argument, which allows multiple strings to refer to the same
+   subparser. This example, like "svn", aliases "co" as a shorthand
+   for "checkout":
+
+      >>> parser = argparse.ArgumentParser()
+      >>> subparsers = parser.add_subparsers()
+      >>> checkout = subparsers.add_parser('checkout', aliases=['co'])
+      >>> checkout.add_argument('foo')
+      >>> parser.parse_args(['co', 'bar'])
+      Namespace(foo='bar')
+
+   One particularly effective way of handling sub-commands is to
+   combine the use of the "add_subparsers()" method with calls to
+   "set_defaults()" so that each subparser knows which Python function
+   it should execute.  For example:
+
+      >>> # sub-command functions
+      >>> def foo(args):
+      ...     print(args.x * args.y)
+      ...
+      >>> def bar(args):
+      ...     print('((%s))' % args.z)
+      ...
+      >>> # create the top-level parser
+      >>> parser = argparse.ArgumentParser()
+      >>> subparsers = parser.add_subparsers(required=True)
+      >>>
+      >>> # create the parser for the "foo" command
+      >>> parser_foo = subparsers.add_parser('foo')
+      >>> parser_foo.add_argument('-x', type=int, default=1)
+      >>> parser_foo.add_argument('y', type=float)
+      >>> parser_foo.set_defaults(func=foo)
+      >>>
+      >>> # create the parser for the "bar" command
+      >>> parser_bar = subparsers.add_parser('bar')
+      >>> parser_bar.add_argument('z')
+      >>> parser_bar.set_defaults(func=bar)
+      >>>
+      >>> # parse the args and call whatever function was selected
+      >>> args = parser.parse_args('foo 1 -x 2'.split())
+      >>> args.func(args)
+      2.0
+      >>>
+      >>> # parse the args and call whatever function was selected
+      >>> args = parser.parse_args('bar XYZYX'.split())
+      >>> args.func(args)
+      ((XYZYX))
+
+   이렇게 하면 "parse_args()" 가 파싱이 완료된 후 적절한 함수를 호출하
+   게 할 수 있습니다. 이처럼 액션과 함수를 연결하는 것이, 일반적으로
+   각 부속 파서가 서로 다른 액션을 처리하도록 하는 가장 쉬운 방법입니
+   다. 그러나 호출된 부속 파서의 이름을 확인해야 하는 경우
+   "add_subparsers()" 호출에 "dest" 키워드 인자를 제공합니다:
+
+      >>> parser = argparse.ArgumentParser()
+      >>> subparsers = parser.add_subparsers(dest='subparser_name')
+      >>> subparser1 = subparsers.add_parser('1')
+      >>> subparser1.add_argument('-x')
+      >>> subparser2 = subparsers.add_parser('2')
+      >>> subparser2.add_argument('y')
+      >>> parser.parse_args(['2', 'frobble'])
+      Namespace(subparser_name='2', y='frobble')
+
+   버전 3.7에서 변경: New *required* keyword argument.
+
+
+FileType 객체
+-------------
+
+class argparse.FileType(mode='r', bufsize=- 1, encoding=None, errors=None)
+
+   "FileType" 팩토리는 "ArgumentParser.add_argument()" 의 type 인자로
+   전달될 수 있는 객체를 만듭니다. type으로 "FileType" 객체를 사용하는
+   인자는 명령행 인자를 요청된 모드, 버퍼 크기, 인코딩 및 오류 처리의
+   파일로 엽니다 (자세한 내용은 "open()" 함수를 참조하세요):
+
+      >>> parser = argparse.ArgumentParser()
+      >>> parser.add_argument('--raw', type=argparse.FileType('wb', 0))
+      >>> parser.add_argument('out', type=argparse.FileType('w', encoding='UTF-8'))
+      >>> parser.parse_args(['--raw', 'raw.dat', 'file.txt'])
+      Namespace(out=<_io.TextIOWrapper name='file.txt' mode='w' encoding='UTF-8'>, raw=<_io.FileIO name='raw.dat' mode='wb'>)
+
+   FileType objects understand the pseudo-argument "'-'" and
+   automatically convert this into "sys.stdin" for readable "FileType"
+   objects and "sys.stdout" for writable "FileType" objects:
+
+      >>> parser = argparse.ArgumentParser()
+      >>> parser.add_argument('infile', type=argparse.FileType('r'))
+      >>> parser.parse_args(['-'])
+      Namespace(infile=<_io.TextIOWrapper name='<stdin>' encoding='UTF-8'>)
+
+   버전 3.4에 추가: The *encodings* and *errors* keyword arguments.
+
+
+인자 그룹
+---------
+
+ArgumentParser.add_argument_group(title=None, description=None)
+
+   By default, "ArgumentParser" groups command-line arguments into
+   "positional arguments" and "optional arguments" when displaying
+   help messages. When there is a better conceptual grouping of
+   arguments than this default one, appropriate groups can be created
+   using the "add_argument_group()" method:
+
+      >>> parser = argparse.ArgumentParser(prog='PROG', add_help=False)
+      >>> group = parser.add_argument_group('group')
+      >>> group.add_argument('--foo', help='foo help')
+      >>> group.add_argument('bar', help='bar help')
+      >>> parser.print_help()
+      usage: PROG [--foo FOO] bar
+
+      group:
+        bar    bar help
+        --foo FOO  foo help
+
+   The "add_argument_group()" method returns an argument group object
+   which has an "add_argument()" method just like a regular
+   "ArgumentParser".  When an argument is added to the group, the
+   parser treats it just like a normal argument, but displays the
+   argument in a separate group for help messages.  The
+   "add_argument_group()" method accepts *title* and *description*
+   arguments which can be used to customize this display:
+
+      >>> parser = argparse.ArgumentParser(prog='PROG', add_help=False)
+      >>> group1 = parser.add_argument_group('group1', 'group1 description')
+      >>> group1.add_argument('foo', help='foo help')
+      >>> group2 = parser.add_argument_group('group2', 'group2 description')
+      >>> group2.add_argument('--bar', help='bar help')
+      >>> parser.print_help()
+      usage: PROG [--bar BAR] foo
+
+      group1:
+        group1 description
+
+        foo    foo help
+
+      group2:
+        group2 description
+
+        --bar BAR  bar help
+
+   사용자 정의 그룹에 없는 인자는 일반적인 "positional arguments" 및
+   "optional arguments" 섹션으로 들어갑니다.
+
+
+상호 배제
+---------
+
+ArgumentParser.add_mutually_exclusive_group(required=False)
+
+   Create a mutually exclusive group. "argparse" will make sure that
+   only one of the arguments in the mutually exclusive group was
+   present on the command line:
+
+      >>> parser = argparse.ArgumentParser(prog='PROG')
+      >>> group = parser.add_mutually_exclusive_group()
+      >>> group.add_argument('--foo', action='store_true')
+      >>> group.add_argument('--bar', action='store_false')
+      >>> parser.parse_args(['--foo'])
+      Namespace(bar=True, foo=True)
+      >>> parser.parse_args(['--bar'])
+      Namespace(bar=False, foo=False)
+      >>> parser.parse_args(['--foo', '--bar'])
+      usage: PROG [-h] [--foo | --bar]
+      PROG: error: argument --bar: not allowed with argument --foo
+
+   "add_mutually_exclusive_group()" 메서드는 상호 배타적 인자 중 적어
+   도 하나가 필요하다는 것을 나타내기 위한 *required* 인자도 받아들입
+   니다:
+
+      >>> parser = argparse.ArgumentParser(prog='PROG')
+      >>> group = parser.add_mutually_exclusive_group(required=True)
+      >>> group.add_argument('--foo', action='store_true')
+      >>> group.add_argument('--bar', action='store_false')
+      >>> parser.parse_args([])
+      usage: PROG [-h] (--foo | --bar)
+      PROG: error: one of the arguments --foo --bar is required
+
+   Note that currently mutually exclusive argument groups do not
+   support the *title* and *description* arguments of
+   "add_argument_group()".
+
+
+파서 기본값
+-----------
+
+ArgumentParser.set_defaults(**kwargs)
+
+   대부분은, "parse_args()" 에 의해 반환된 객체의 어트리뷰트는 명령행
+   인자와 인자 액션을 검사하여 완전히 결정됩니다. "set_defaults()" 는
+   명령행을 검사하지 않고 결정되는 몇 가지 추가적인 어트리뷰트를 추가
+   할 수 있도록 합니다:
+
+      >>> parser = argparse.ArgumentParser()
+      >>> parser.add_argument('foo', type=int)
+      >>> parser.set_defaults(bar=42, baz='badger')
+      >>> parser.parse_args(['736'])
+      Namespace(bar=42, baz='badger', foo=736)
+
+   파서 수준의 기본값은 항상 인자 수준의 기본값보다 우선합니다:
+
+      >>> parser = argparse.ArgumentParser()
+      >>> parser.add_argument('--foo', default='bar')
+      >>> parser.set_defaults(foo='spam')
+      >>> parser.parse_args([])
+      Namespace(foo='spam')
+
+   파서 수준의 기본값은 여러 파서로 작업 할 때 특히 유용 할 수 있습니
+   다. 이 유형의 예제는 "add_subparsers()" 메서드를 참조하십시오.
+
+ArgumentParser.get_default(dest)
+
+   "add_argument()" 또는 "set_defaults()" 에 의해 설정된 이름 공간 어
+   트리뷰트의 기본값을 가져옵니다:
+
+      >>> parser = argparse.ArgumentParser()
+      >>> parser.add_argument('--foo', default='badger')
+      >>> parser.get_default('foo')
+      'badger'
+
+
+도움말 인쇄
+-----------
+
+대부분의 일반적인 응용 프로그램에서 "parse_args()" 가 사용법이나 오류
+메시지를 포매팅하고 인쇄하는 것을 담당합니다. 그러나 여러 가지 포매팅
+방법이 제공됩니다:
+
+ArgumentParser.print_usage(file=None)
+
+   "ArgumentParser" 가 어떻게 명령행에서 호출되어야 하는지에 대한 간단
+   한 설명을 인쇄합니다. *file* 이 "None" 이면, "sys.stdout" 이 가정됩
+   니다.
+
+ArgumentParser.print_help(file=None)
+
+   프로그램 사용법과 "ArgumentParser" 에 등록된 인자에 대한 정보를 포
+   함하는 도움말 메시지를 출력합니다. *file* 이 "None" 이면,
+   "sys.stdout" 이 가정됩니다.
+
+인쇄하는 대신 단순히 문자열을 반환하는, 이러한 메서드의 변형도 있습니
+다:
+
+ArgumentParser.format_usage()
+
+   "ArgumentParser" 가 어떻게 명령행에서 호출되어야 하는지에 대한 간단
+   한 설명을 담은 문자열을 반환합니다.
+
+ArgumentParser.format_help()
+
+   프로그램 사용법과 "ArgumentParser" 에 등록된 인자에 대한 정보를 포
+   함하는 도움말 메시지를 담은 문자열을 반환합니다.
+
+
+부분 파싱
+---------
+
+ArgumentParser.parse_known_args(args=None, namespace=None)
+
+때에 따라 스크립트는 명령행 인자 중 일부만 파싱하고 나머지 인자를 다른
+스크립트 나 프로그램에 전달할 수 있습니다. 이 경우
+"parse_known_args()" 메서드가 유용 할 수 있습니다. "parse_args()" 와
+매우 유사하게 작동하는데, 여분의 인자가 있을 때 에러를 발생시키지 않는
+점이 다릅니다. 대신, 채워진 이름 공간과 여분의 인자 문자열 리스트를 포
+함하는 두 항목 튜플을 반환합니다.
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo', action='store_true')
+   >>> parser.add_argument('bar')
+   >>> parser.parse_known_args(['--foo', '--badger', 'BAR', 'spam'])
+   (Namespace(bar='BAR', foo=True), ['--badger', 'spam'])
+
+경고:
+
+  Prefix matching rules apply to "parse_known_args()". The parser may
+  consume an option even if it's just a prefix of one of its known
+  options, instead of leaving it in the remaining arguments list.
+
+
+파일 파싱 사용자 정의
+---------------------
+
+ArgumentParser.convert_arg_line_to_args(arg_line)
+
+   파일에서 읽은 인자는 ("ArgumentParser" 생성자의
+   *fromfile_prefix_chars* 키워드 인자를 참조하세요) 한 줄에 하나의 인
+   자로 읽습니다. 이 동작을 변경하려면 "convert_arg_line_to_args()" 를
+   재정의합니다.
+
+   이 메서드는 하나의 인자 *arg_line* 를 받아들이는데, 인자 파일에서
+   읽어 들인 문자열입니다. 이 문자열에서 파싱된 인자 리스트를 반환합니
+   다. 메서드는 인자 파일에서 읽어 들이는 대로 한 줄에 한 번씩 순서대
+   로 호출됩니다.
+
+   이 메서드의 재정의하는 유용한 경우는 스페이스로 분리된 각 단어를 인
+   자로 처리하는 것입니다. 다음 예제는 이렇게 하는 방법을 보여줍니다:
+
+      class MyArgumentParser(argparse.ArgumentParser):
+          def convert_arg_line_to_args(self, arg_line):
+              return arg_line.split()
+
+
+종료 메서드
+-----------
+
+ArgumentParser.exit(status=0, message=None)
+
+   This method terminates the program, exiting with the specified
+   *status* and, if given, it prints a *message* before that. The user
+   can override this method to handle these steps differently:
+
+      class ErrorCatchingArgumentParser(argparse.ArgumentParser):
+          def exit(self, status=0, message=None):
+              if status:
+                  raise Exception(f'Exiting because of an error: {message}')
+              exit(status)
+
+ArgumentParser.error(message)
+
+   This method prints a usage message including the *message* to the
+   standard error and terminates the program with a status code of 2.
+
+
+혼합 파싱
+---------
+
+ArgumentParser.parse_intermixed_args(args=None, namespace=None)
+
+ArgumentParser.parse_known_intermixed_args(args=None, namespace=None)
+
+많은 유닉스 명령은 사용자가 선택 인자와 위치 인자를 섞을 수 있도록 합
+니다. "parse_intermixed_args()" 와 "parse_known_intermixed_args()" 메
+서드는 이런 파싱 스타일을 지원합니다.
+
+These parsers do not support all the argparse features, and will raise
+exceptions if unsupported features are used.  In particular,
+subparsers, "argparse.REMAINDER", and mutually exclusive groups that
+include both optionals and positionals are not supported.
+
+다음 예제는 "parse_known_args()" 와 "parse_intermixed_args()" 의 차이
+점을 보여줍니다: 전자는 여분의 인자로 "['2', '3']" 을 반환하는 반면,
+후자는 모든 위치 인자를 "rest" 로 모읍니다.
+
+   >>> parser = argparse.ArgumentParser()
+   >>> parser.add_argument('--foo')
+   >>> parser.add_argument('cmd')
+   >>> parser.add_argument('rest', nargs='*', type=int)
+   >>> parser.parse_known_args('doit 1 --foo bar 2 3'.split())
+   (Namespace(cmd='doit', foo='bar', rest=[1]), ['2', '3'])
+   >>> parser.parse_intermixed_args('doit 1 --foo bar 2 3'.split())
+   Namespace(cmd='doit', foo='bar', rest=[1, 2, 3])
+
+"parse_known_intermixed_args()" 는 채워진 이름 공간과 잔여 인자 문자열
+의 리스트를 포함하는 두 항목 튜플을 반환합니다.
+"parse_intermixed_args()" 는 파싱되지 않은 인자 문자열이 남아 있으면
+에러를 발생시킵니다.
+
+버전 3.7에 추가.
+
+
+Upgrading optparse code
+=======================
+
+Originally, the "argparse" module had attempted to maintain
+compatibility with "optparse".  However, "optparse" was difficult to
+extend transparently, particularly with the changes required to
+support the new "nargs=" specifiers and better usage messages.  When
+most everything in "optparse" had either been copy-pasted over or
+monkey-patched, it no longer seemed practical to try to maintain the
+backwards compatibility.
+
+The "argparse" module improves on the standard library "optparse"
+module in a number of ways including:
+
+* Handling positional arguments.
+
+* Supporting sub-commands.
+
+* Allowing alternative option prefixes like "+" and "/".
+
+* Handling zero-or-more and one-or-more style arguments.
+
+* Producing more informative usage messages.
+
+* Providing a much simpler interface for custom "type" and "action".
+
+A partial upgrade path from "optparse" to "argparse":
+
+* Replace all "optparse.OptionParser.add_option()" calls with
+  "ArgumentParser.add_argument()" calls.
+
+* Replace "(options, args) = parser.parse_args()" with "args =
+  parser.parse_args()" and add additional
+  "ArgumentParser.add_argument()" calls for the positional arguments.
+  Keep in mind that what was previously called "options", now in the
+  "argparse" context is called "args".
+
+* Replace "optparse.OptionParser.disable_interspersed_args()" by using
+  "parse_intermixed_args()" instead of "parse_args()".
+
+* Replace callback actions and the "callback_*" keyword arguments with
+  "type" or "action" arguments.
+
+* Replace string names for "type" keyword arguments with the
+  corresponding type objects (e.g. int, float, complex, etc).
+
+* Replace "optparse.Values" with "Namespace" and
+  "optparse.OptionError" and "optparse.OptionValueError" with
+  "ArgumentError".
+
+* Replace strings with implicit arguments such as "%default" or
+  "%prog" with the standard Python syntax to use dictionaries to
+  format strings, that is, "%(default)s" and "%(prog)s".
+
+* Replace the OptionParser constructor "version" argument with a call
+  to "parser.add_argument('--version', action='version', version='<the
+  version>')".

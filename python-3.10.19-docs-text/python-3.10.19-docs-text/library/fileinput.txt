@@ -1,0 +1,209 @@
+"fileinput" --- Iterate over lines from multiple input streams
+**************************************************************
+
+**소스 코드:** Lib/fileinput.py
+
+======================================================================
+
+이 모듈은 표준 입력이나 파일 목록에 대한 루프를 빠르게 작성하기 위한
+도우미 클래스와 함수를 구현합니다. 단지 하나의 파일을 읽거나 쓰려면
+"open()"을 참조하십시오.
+
+일반적인 사용법은 다음과 같습니다:
+
+   import fileinput
+   for line in fileinput.input(encoding="utf-8"):
+       process(line)
+
+이것은 "sys.argv[1:]"에 나열된 모든 파일의 줄을 이터레이트 하며, 목록
+이 비어 있으면 기본값은 "sys.stdin"입니다. 파일 이름이 "'-'"이면, 이
+또한 "sys.stdin"으로 대체되고 선택적 인자 *mode*와 *openhook*은 무시됩
+니다. 대체 파일명 목록을 지정하려면, "input()"의 첫 번째 인자로 전달하
+십시오. 단일 파일 이름도 허용됩니다.
+
+모든 파일은 기본적으로 텍스트 모드로 열리지만, "input()"이나
+"FileInput"을 호출할 때 *mode* 매개 변수를 지정하여 이를 재정의할 수
+있습니다. 파일을 열거나 읽는 동안 I/O 에러가 발생하면, "OSError"가 발
+생합니다.
+
+버전 3.3에서 변경: "IOError"가 발생했었습니다; 이제 이것은 "OSError"의
+별칭입니다.
+
+"sys.stdin"이 두 번 이상 사용되면, 대화식으로 사용되거나 명시적으로 재
+설정된 경우(예를 들어, "sys.stdin.seek(0)"을 사용해서)를 제외하고 두
+번째와 그 이후의 사용은 줄을 반환하지 않습니다.
+
+빈 파일은 열리고 즉시 닫힙니다; 파일명 목록에 존재함이 인식되는 유일한
+시간은 마지막에 열린 파일이 비어있을 때입니다.
+
+줄은 줄 바꿈이 그대로 유지된 채로 반환됩니다. 즉, 파일의 마지막 줄에는
+줄 바꿈이 없을 수도 있습니다.
+
+You can control how files are opened by providing an opening hook via
+the *openhook* parameter to "fileinput.input()" or "FileInput()". The
+hook must be a function that takes two arguments, *filename* and
+*mode*, and returns an accordingly opened file-like object. If
+*encoding* and/or *errors* are specified, they will be passed to the
+hook as additional keyword arguments. This module provides a
+"hook_compressed()" to support compressed files.
+
+다음 함수는 이 모듈의 기본 인터페이스입니다:
+
+fileinput.input(files=None, inplace=False, backup='', *, mode='r', openhook=None, encoding=None, errors=None)
+
+   "FileInput" 클래스의 인스턴스를 만듭니다. 인스턴스는 이 모듈의 함수
+   에 대한 전역 상태로 사용되며, 이터레이션 중에 사용하기 위해 반환되
+   기도 합니다. 이 함수의 매개 변수는 "FileInput" 클래스의 생성자로 전
+   달됩니다.
+
+   "FileInput" 인스턴스는 "with" 문에서 컨텍스트 관리자로 사용될 수 있
+   습니다. 이 예제에서, 예외가 발생하더라도 "with" 문이 종료된 후
+   *input*이 닫힙니다:
+
+      with fileinput.input(files=('spam.txt', 'eggs.txt'), encoding="utf-8") as f:
+          for line in f:
+              process(line)
+
+   버전 3.2에서 변경: 컨텍스트 관리자로 사용할 수 있습니다.
+
+   버전 3.8에서 변경: 키워드 매개 변수 *mode*와 *openhook*은 이제 키워
+   드 전용입니다.
+
+   버전 3.10에서 변경: 키워드 전용 매개 변수 *encoding* 와 *errors*를
+   추가했습니다.
+
+다음 함수는 "fileinput.input()"에 의해 만들어진 전역 상태를 사용합니다
+; 활성 상태가 없으면, "RuntimeError"가 발생합니다.
+
+fileinput.filename()
+
+   현재 읽고 있는 파일의 이름을 반환합니다. 첫 번째 줄을 읽기 전에는,
+   "None"을 반환합니다.
+
+fileinput.fileno()
+
+   현재 파일의 정수 "파일 기술자"를 반환합니다. 파일이 열리지 않았으면
+   (첫 번째 줄 전과 파일 사이에), "-1"을 반환합니다.
+
+fileinput.lineno()
+
+   방금 읽은 줄의 누적 줄 번호를 반환합니다. 첫 번째 줄을 읽기 전에는,
+   "0"을 반환합니다. 마지막 파일의 마지막 줄을 읽은 후에는, 그 줄의 줄
+   번호를 반환합니다.
+
+fileinput.filelineno()
+
+   현재 파일의 줄 번호를 반환합니다. 첫 번째 줄을 읽기 전에는, "0"을
+   반환합니다. 마지막 파일의 마지막 줄을 읽은 후에는, 그 줄의 파일 내
+   에서의 줄 번호를 반환합니다.
+
+fileinput.isfirstline()
+
+   방금 읽은 줄이 파일의 첫 번째 줄이면 "True"를, 그렇지 않으면
+   "False"를 반환합니다.
+
+fileinput.isstdin()
+
+   마지막 줄을 "sys.stdin"에서 읽었으면 "True"를, 그렇지 않으면
+   "False"를 반환합니다.
+
+fileinput.nextfile()
+
+   다음 이터레이션에서 다음 파일(있다면)의 첫 번째 줄을 읽도록 현재 파
+   일을 닫습니다; 파일에서 읽지 않은 줄은 누적 줄 수에 포함되지 않습니
+   다. 파일명은 다음 파일의 첫 번째 줄을 읽을 때까지 변경되지 않습니다
+   . 첫 번째 줄을 읽기 전에는, 이 함수가 효과가 없습니다; 첫 번째 파일
+   을 건너뛰는 데 사용할 수 없습니다. 마지막 파일의 마지막 줄을 읽은
+   후에는, 이 함수는 효과가 없습니다.
+
+fileinput.close()
+
+   시퀀스를 닫습니다.
+
+모듈이 제공하는 시퀀스 동작을 구현하는 클래스는 서브 클래싱에도 사용할
+수 있습니다:
+
+class fileinput.FileInput(files=None, inplace=False, backup='', *, mode='r', openhook=None, encoding=None, errors=None)
+
+   Class "FileInput" is the implementation; its methods "filename()",
+   "fileno()", "lineno()", "filelineno()", "isfirstline()",
+   "isstdin()", "nextfile()" and "close()" correspond to the functions
+   of the same name in the module. In addition it has a "readline()"
+   method which returns the next input line, and a "__getitem__()"
+   method which implements the sequence behavior. The sequence must be
+   accessed in strictly sequential order; random access and
+   "readline()" cannot be mixed.
+
+   With *mode* you can specify which file mode will be passed to
+   "open()". It must be one of "'r'", "'rU'", "'U'" and "'rb'".
+
+   *openhook*이 제공되면 두 개의 인자 *filename*과 *mode*를 취하고, 이
+   에 따라 열린 파일류 객체를 반환하는 함수여야 합니다. *inplace*와
+   *openhook*을 함께 사용할 수 없습니다.
+
+   You can specify *encoding* and *errors* that is passed to "open()"
+   or *openhook*.
+
+   "FileInput" 인스턴스는 "with" 문에서 컨텍스트 관리자로 사용될 수 있
+   습니다. 이 예제에서, 예외가 발생하더라도 "with" 문이 종료된 후
+   *input*이 닫힙니다:
+
+      with FileInput(files=('spam.txt', 'eggs.txt')) as input:
+          process(input)
+
+   버전 3.2에서 변경: 컨텍스트 관리자로 사용할 수 있습니다.
+
+   버전 3.4부터 폐지: The "'rU'" and "'U'" modes.
+
+   버전 3.8부터 폐지: Support for "__getitem__()" method is
+   deprecated.
+
+   버전 3.8에서 변경: 키워드 매개 변수 *mode*와 *openhook*은 이제 키워
+   드 전용입니다.
+
+   버전 3.10에서 변경: 키워드 전용 매개 변수 *encoding* 와 *errors*를
+   추가했습니다.
+
+**선택적 제자리 필터링(in-place filtering):** 키워드 인자
+"inplace=True"가 "fileinput.input()"이나 "FileInput" 생성자로 전달되면
+, 파일이 백업 파일로 이동되고 표준 출력은 입력 파일로 보내집니다 (백업
+파일과 같은 이름의 파일이 이미 있으면, 조용히 대체됩니다). 이를 통해
+입력 파일을 다시 쓰는 필터를 작성할 수 있습니다. *backup* 매개 변수가
+제공되면 (일반적으로 "backup='.<some extension>'"으로), 백업 파일의 확
+장자를 지정하고, 백업 파일은 그대로 남아 있습니다; 기본적으로 확장자는
+"'.bak'"이고, 출력 파일을 닫을 때 삭제됩니다. 표준 입력을 읽을 때는 제
+자리 필터링이 비활성화됩니다.
+
+이 모듈은 다음과 같은 두 개의 열기 훅을 제공합니다:
+
+fileinput.hook_compressed(filename, mode, *, encoding=None, errors=None)
+
+   "gzip"과 "bz2" 모듈을 사용하여 gzip과 bzip2로 압축된 파일(확장자
+   "'.gz'"와 "'.bz2'"로 인식합니다)을 투명하게 엽니다. 파일명 확장자가
+   "'.gz'"나 "'.bz2'"가 아니면, 파일이 정상적으로 열립니다 (즉, 압축
+   해제 없이 "open()"을 사용합니다).
+
+   The *encoding* and *errors* values are passed to "io.TextIOWrapper"
+   for compressed files and open for normal files.
+
+   사용 예: "fi =
+   fileinput.FileInput(openhook=fileinput.hook_compressed,
+   encoding="utf-8")"
+
+   버전 3.10에서 변경: 키워드 전용 매개 변수 *encoding* 와 *errors*를
+   추가했습니다.
+
+fileinput.hook_encoded(encoding, errors=None)
+
+   주어진 *encoding*과 *errors*를 사용하여 파일을 읽도록 "open()"으로
+   각 파일을 여는 훅을 반환합니다.
+
+   사용 예: "fi =
+   fileinput.FileInput(openhook=fileinput.hook_encoded("utf-8",
+   "surrogateescape"))"
+
+   버전 3.6에서 변경: 선택적 *errors* 매개 변수를 추가했습니다.
+
+   버전 3.10부터 폐지: This function is deprecated since
+   "fileinput.input()" and "FileInput" now have *encoding* and
+   *errors* parameters.

@@ -1,0 +1,124 @@
+"sched" --- Event scheduler
+***************************
+
+**소스 코드:** Lib/sched.py
+
+======================================================================
+
+"sched" 모듈은 범용 이벤트 스케줄러를 구현하는 클래스를 정의합니다:
+
+class sched.scheduler(timefunc=time.monotonic, delayfunc=time.sleep)
+
+   "scheduler" 클래스는 이벤트 스케줄링을 위한 일반적인 인터페이스를
+   정의합니다. "외부 세계"를 실제로 다루기 위해 두 개의 함수를 요구합
+   니다 --- *timefunc*는 인자 없이 호출할 수 있어야 하고, 숫자(단위가
+   무엇이든, "시간")를 반환합니다. *delayfunc* 함수는 하나의 인자로 호
+   출 가능해야 하며, *timefunc*의 출력과 호환되어야 하고, 그 시간 동안
+   지연시켜야 합니다. *delayfunc*는 다중 스레드 응용 프로그램에서 다른
+   스레드가 실행할 기회를 주기 위해 각 이벤트가 실행된 후 "0" 인자로
+   호출되기도 합니다.
+
+   버전 3.3에서 변경: *timefunc* 와 *delayfunc* 매개 변수는 선택적입니
+   다.
+
+   버전 3.3에서 변경: "scheduler" 클래스는 다중 스레드 환경에서 안전하
+   게 사용할 수 있습니다.
+
+예제:
+
+   >>> import sched, time
+   >>> s = sched.scheduler(time.time, time.sleep)
+   >>> def print_time(a='default'):
+   ...     print("From print_time", time.time(), a)
+   ...
+   >>> def print_some_times():
+   ...     print(time.time())
+   ...     s.enter(10, 1, print_time)
+   ...     s.enter(5, 2, print_time, argument=('positional',))
+   ...     # despite having higher priority, 'keyword' runs after 'positional' as enter() is relative
+   ...     s.enter(5, 1, print_time, kwargs={'a': 'keyword'})
+   ...     s.enterabs(1_650_000_000, 10, print_time, argument=("first enterabs",))
+   ...     s.enterabs(1_650_000_000, 5, print_time, argument=("second enterabs",))
+   ...     s.run()
+   ...     print(time.time())
+   ...
+   >>> print_some_times()
+   1652342830.3640375
+   From print_time 1652342830.3642538 second enterabs
+   From print_time 1652342830.3643398 first enterabs
+   From print_time 1652342835.3694863 positional
+   From print_time 1652342835.3696074 keyword
+   From print_time 1652342840.369612 default
+   1652342840.3697174
+
+
+스케줄러 객체
+=============
+
+"scheduler" 인스턴스에는 다음과 같은 메서드와 어트리뷰트가 있습니다:
+
+scheduler.enterabs(time, priority, action, argument=(), kwargs={})
+
+   새 이벤트를 예약합니다. *time* 인자는 생성자에 전달된 *timefunc* 함
+   수의 반환 값과 호환되는 숫자 형이어야 합니다. 같은 *time*으로 예약
+   된 이벤트는 *priority* 순으로 실행됩니다. 낮은 숫자는 높은 우선순위
+   를 나타냅니다.
+
+   이벤트를 실행하는 것은 "action(*argument, **kwargs)"를 실행하는 것
+   을 의미합니다. *argument*는 *action*에 대한 위치 인자가 들어있는 시
+   퀀스입니다. *kwargs*는 *action*에 대한 키워드 인자가 들어있는 딕셔
+   너리입니다.
+
+   반환 값은 나중에 이벤트를 취소하는 데 사용할 수 있는 이벤트입니다
+   ("cancel()" 참조).
+
+   버전 3.3에서 변경: *argument* 매개 변수는 선택적입니다.
+
+   버전 3.3에서 변경: *kwargs* 매개 변수가 추가되었습니다.
+
+scheduler.enter(delay, priority, action, argument=(), kwargs={})
+
+   *delay* 시간 단위 후로 이벤트를 예약합니다. 상대 시간 이외의 다른
+   인자, 효과 및 반환 값은 "enterabs()"와 같습니다.
+
+   버전 3.3에서 변경: *argument* 매개 변수는 선택적입니다.
+
+   버전 3.3에서 변경: *kwargs* 매개 변수가 추가되었습니다.
+
+scheduler.cancel(event)
+
+   큐에서 이벤트를 제거합니다. *event*가 현재 큐에 없으면, 이 메서드는
+   "ValueError"를 발생시킵니다.
+
+scheduler.empty()
+
+   이벤트 큐가 비어있으면 "True"를 반환합니다.
+
+scheduler.run(blocking=True)
+
+   Run all scheduled events. This method will wait  (using the
+   "delayfunc()" function passed to the constructor) for the next
+   event, then execute it and so on until there are no more scheduled
+   events.
+
+   *blocking*이 거짓이면 시간이 도래한 (있다면) 예약된 이벤트를 모두
+   실행한 다음, 스케줄러에서 다음 예약된 호출까지의 (있다면) 대기시간
+   을 반환합니다 .
+
+   *action* 이나 *delayfunc*는 예외를 발생시킬 수 있습니다. 두 경우 모
+   두, 스케줄러는 일관된 상태를 유지하고 예외를 전파합니다. *action*에
+   의해 예외가 발생하면, 이후에 "run()"을 호출할 때 이벤트를 실행하려
+   고 하지 않습니다.
+
+   일련의 이벤트가 다음 이벤트 이전에 사용 가능한 시간보다 실행하는 데
+   더 오래 걸리면, 스케줄러는 단순히 지연됩니다. 어떤 이벤트도 삭제되
+   지 않습니다; 더는 적절하지 않은 이벤트를 취소할 책임은 호출 코드에
+   있습니다.
+
+   버전 3.3에서 변경: *blocking* 매개 변수가 추가되었습니다.
+
+scheduler.queue
+
+   남은 이벤트의 리스트를 실행될 순서대로 반환하는 읽기 전용 어트리뷰
+   트입니다. 각 이벤트는 다음과 같은 필드를 갖는 *네임드 튜플*로 표시
+   됩니다: time, priority, action, argument, kwargs.

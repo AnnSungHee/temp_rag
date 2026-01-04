@@ -1,0 +1,51 @@
+암호화 서비스
+*************
+
+The modules described in this chapter implement various algorithms of
+a cryptographic nature.  They are available at the discretion of the
+installation. On Unix systems, the "crypt" module may also be
+available. Here's an overview:
+
+* "hashlib" --- Secure hashes and message digests
+
+  * 해시 알고리즘
+
+  * SHAKE 가변 길이 요약
+
+  * 키 파생
+
+  * BLAKE2
+
+    * 해시 객체 만들기
+
+    * 상수
+
+    * 예
+
+      * 간단한 해싱
+
+      * 다른 요약 크기 사용하기
+
+      * 키 해싱
+
+      * 무작위 해싱
+
+      * 개인화
+
+      * 트리 모드
+
+    * 크레딧
+
+* "hmac" --- Keyed-Hashing for Message Authentication
+
+* "secrets" --- Generate secure random numbers for managing secrets
+
+  * 난수
+
+  * 토큰 생성
+
+    * 토큰은 몇 바이트를 사용해야 합니까?
+
+  * 기타 함수
+
+  * 조리법과 모범 사례

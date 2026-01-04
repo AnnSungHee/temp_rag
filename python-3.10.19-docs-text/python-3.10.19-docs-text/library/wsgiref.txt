@@ -1,0 +1,750 @@
+"wsgiref" --- WSGI Utilities and Reference Implementation
+*********************************************************
+
+**소스 코드:** Lib/wsgiref
+
+======================================================================
+
+WSGI(Web Server Gateway Interface)는 웹 서버 소프트웨어와 파이썬으로
+작성된 웹 응용 프로그램 간의 표준 인터페이스입니다. 표준 인터페이스는
+여러 웹 서버에서 WSGI를 지원하는 응용 프로그램을 쉽게 사용할 수 있도록
+합니다.
+
+웹 서버와 프로그래밍 프레임워크의 작성자만 WSGI 설계의 모든 세부 사항
+과 코너 케이스를 알 필요가 있습니다. 단지 WSGI 응용 프로그램을 설치하
+거나 기존 프레임워크를 사용하여 웹 응용 프로그램을 작성하기 위해, WSGI
+의 모든 세부 사항을 이해할 필요는 없습니다.
+
+"wsgiref" is a reference implementation of the WSGI specification that
+can be used to add WSGI support to a web server or framework.  It
+provides utilities for manipulating WSGI environment variables and
+response headers, base classes for implementing WSGI servers, a demo
+HTTP server that serves WSGI applications, and a validation tool that
+checks WSGI servers and applications for conformance to the WSGI
+specification (**PEP 3333**).
+
+WSGI에 대한 더 자세한 정보 및 자습서와 기타 자원에 대한 링크는
+wsgi.readthedocs.io를 참조하십시오.
+
+
+"wsgiref.util" -- WSGI 환경 유틸리티
+====================================
+
+This module provides a variety of utility functions for working with
+WSGI environments.  A WSGI environment is a dictionary containing HTTP
+request variables as described in **PEP 3333**.  All of the functions
+taking an *environ* parameter expect a WSGI-compliant dictionary to be
+supplied; please see **PEP 3333** for a detailed specification.
+
+wsgiref.util.guess_scheme(environ)
+
+   *environ* 딕셔너리에서 "HTTPS" 환경 변수를 검사하여
+   "wsgi.url_scheme"이 "http"와 "https" 중 어느 것인지 추측합니다. 반
+   환 값은 문자열입니다.
+
+   이 함수는 CGI 나 FastCGI와 같은 CGI와 유사한 프로토콜을 감싸는 게이
+   트웨이를 만들 때 유용합니다. 일반적으로, 이러한 프로토콜을 제공하는
+   서버는 SSL을 통해 요청이 수신될 때 "1", "yes" 또는 "on" 값을 갖는
+   "HTTPS" 변수를 포함합니다. 따라서, 이 함수는 그런 값을 발견하면
+   "https"를 반환하고, 그렇지 않으면 "http"를 반환합니다.
+
+wsgiref.util.request_uri(environ, include_query=True)
+
+   **PEP 3333**의 "URL 재구성" 절에 있는 알고리즘을 사용하여 전체 요청
+   URI를 반환합니다. 선택적으로 질의 문자열(query string)을 포함합니다
+   . *include_query*가 거짓이면 질의 문자열은 결과 URI에 포함되지 않습
+   니다.
+
+wsgiref.util.application_uri(environ)
+
+   "PATH_INFO" 와 "QUERY_STRING" 변수가 무시된다는 점을 제외하면
+   "request_uri()"와 유사합니다. 결과는 요청이 가리키는 응용 프로그램
+   객체의 기본 URI입니다.
+
+wsgiref.util.shift_path_info(environ)
+
+   단일 이름을 "PATH_INFO"에서 "SCRIPT_NAME"로 이동하고 이름을 반환합
+   니다. *environ* 딕셔너리는 그 자리에서 *수정*됩니다; 원본
+   "PATH_INFO" 나 "SCRIPT_NAME"를 그대로 유지해야 하면 사본을 사용하십
+   시오.
+
+   "PATH_INFO"에 남아있는 경로 세그먼트가 없으면, "None"이 반환됩니다.
+
+   일반적으로, 이 루틴은 요청 URI 경로의 각 부분을 처리하는 데 사용됩
+   니다, 예를 들어 경로를 일련의 딕셔너리 키로 취급합니다. 이 루틴은
+   전달된 환경을 수정하여 대상 URI에 있는 다른 WSGI 응용 프로그램을 호
+   출하는 데 적합하게 만듭니다. 예를 들어, "/foo"에 WSGI 응용 프로그램
+   이 있고, 요청 URI 경로가 "/foo/bar/baz"이고, "/foo"의 WSGI 응용 프
+   로그램이 "shift_path_info()"를 호출하면 "bar" 문자열을 수신하고 전
+   달할 환경이 "/foo/bar"에 있는 WSGI 응용 프로그램에 전달하기 적합하
+   도록 갱신됩니다. 즉, "SCRIPT_NAME"는 "/foo"에서 "/foo/bar"로 변경되
+   고, "PATH_INFO"는 "/bar/baz"에서 "/baz"로 변경됩니다.
+
+   "PATH_INFO"가 단지 "/"일 때, 이 루틴은 빈 문자열을 반환하고
+   "SCRIPT_NAME"에 후행 슬래시를 추가합니다; 빈 경로 세그먼트는 일반적
+   으로 무시되고, "SCRIPT_NAME"는 일반적으로 슬래시로 끝나지 않음에도
+   그렇게 합니다. 의도적인 동작입니다. 이 루틴을 사용하여 객체를 탐색
+   할 때, 응용 프로그램이 "/x"로 끝나는 URI와 "/x/"로 끝나는 URI의 차
+   이를 구별할 수 있도록 하기 위함입니다.
+
+wsgiref.util.setup_testing_defaults(environ)
+
+   테스트 목적으로 *environ*를 뻔한 기본값으로 갱신합니다.
+
+   이 루틴은 "HTTP_HOST", "SERVER_NAME", "SERVER_PORT",
+   "REQUEST_METHOD", "SCRIPT_NAME", "PATH_INFO" 및 모든 **PEP 3333**에
+   서 정의된 "wsgi.*" 변수를 포함하여 WSGI에 필요한 다양한 매개 변수를
+   추가합니다. 기본값만 제공하며, 이 변수들에 대한 기존 설정을 대체하
+   지 않습니다.
+
+   이 루틴은 WSGI 서버와 응용 프로그램의 단위 테스트가 더미 환경을 쉽
+   게 설정하도록 하기 위한 것입니다. 데이터가 가짜이므로, 실제 WSGI 서
+   버나 응용 프로그램에서 사용해서는 안 됩니다!
+
+   사용 예:
+
+      from wsgiref.util import setup_testing_defaults
+      from wsgiref.simple_server import make_server
+
+      # A relatively simple WSGI application. It's going to print out the
+      # environment dictionary after being updated by setup_testing_defaults
+      def simple_app(environ, start_response):
+          setup_testing_defaults(environ)
+
+          status = '200 OK'
+          headers = [('Content-type', 'text/plain; charset=utf-8')]
+
+          start_response(status, headers)
+
+          ret = [("%s: %s\n" % (key, value)).encode("utf-8")
+                 for key, value in environ.items()]
+          return ret
+
+      with make_server('', 8000, simple_app) as httpd:
+          print("Serving on port 8000...")
+          httpd.serve_forever()
+
+위의 환경 함수 외에도, "wsgiref.util" 모듈은 다음과 같은 기타 유틸리티
+를 제공합니다:
+
+wsgiref.util.is_hop_by_hop(header_name)
+
+   'header_name'이 **RFC 2616**가 정의하고 있는 HTTP/1.1 "Hop-by-Hop"
+   헤더면 "True"를 반환합니다.
+
+class wsgiref.util.FileWrapper(filelike, blksize=8192)
+
+   A wrapper to convert a file-like object to an *iterator*.  The
+   resulting objects support both "__getitem__()" and "__iter__()"
+   iteration styles, for compatibility with Python 2.1 and Jython. As
+   the object is iterated over, the optional *blksize* parameter will
+   be repeatedly passed to the *filelike* object's "read()" method to
+   obtain bytestrings to yield.  When "read()" returns an empty
+   bytestring, iteration is ended and is not resumable.
+
+   *filelike*에 "close()" 메서드가 있으면, 반환된 객체에도 "close()"
+   메서드가 있고, 호출될 때 *filelike* 객체의 "close()" 메서드를 호출
+   합니다.
+
+   사용 예:
+
+      from io import StringIO
+      from wsgiref.util import FileWrapper
+
+      # We're using a StringIO-buffer for as the file-like object
+      filelike = StringIO("This is an example file-like object"*10)
+      wrapper = FileWrapper(filelike, blksize=5)
+
+      for chunk in wrapper:
+          print(chunk)
+
+   버전 3.8부터 폐지: Support for "sequence protocol" is deprecated.
+
+
+"wsgiref.headers" -- WSGI 응답 헤더 도구
+========================================
+
+이 모듈은 매핑류 인터페이스를 사용하여 WSGI 응답 헤더를 편리하게 조작
+할 수 있는 클래스 "Headers" 하나를 제공합니다.
+
+class wsgiref.headers.Headers([headers])
+
+   **PEP 3333**에 설명된 것처럼 헤더 이름/값 튜플의 리스트이어야 하는
+   *headers*를 감싸는 매핑류 객체를 만듭니다. *headers*의 기본값은 빈
+   리스트입니다.
+
+   "Headers" objects support typical mapping operations including
+   "__getitem__()", "get()", "__setitem__()", "setdefault()",
+   "__delitem__()" and "__contains__()".  For each of these methods,
+   the key is the header name (treated case-insensitively), and the
+   value is the first value associated with that header name.  Setting
+   a header deletes any existing values for that header, then adds a
+   new value at the end of the wrapped header list.  Headers' existing
+   order is generally maintained, with new headers added to the end of
+   the wrapped list.
+
+   딕셔너리와 달리, "Headers" 객체는 감싸진 헤더 리스트에 없는 키를 가
+   져오거나 삭제하려고 하면 에러를 발생시키지 않습니다. 존재하지 않는
+   헤더를 가져오려고 하면 "None"을 반환하고, 존재하지 않는 헤더를 삭제
+   하면 아무것도 하지 않습니다.
+
+   "Headers" 객체는 "keys()", "values()" 및 "items()" 메서드도 지원합
+   니다. "keys()" 와 "items()"에 의해 반환된 리스트에는 다중-값 헤더가
+   있으면 같은 키가 두 번 이상 포함될 수 있습니다. "Headers" 객체의
+   "len()"는 "items()"의 길이와 같고, 이는 감싸진 헤더 리스트의 길이와
+   같습니다. 실제로, "items()" 메서드는 단지 감싸진 헤더 리스트의 복사
+   본을 반환합니다.
+
+   "Headers" 객체에서 "bytes()"를 호출하면 HTTP 응답 헤더로 전송하기에
+   적합한 포맷된 바이트열이 반환됩니다. 각 헤더는 콜론과 공백으로 구분
+   된 값과 함께 줄에 들어갑니다. 각 줄은 캐리지 리턴과 줄넘김으로 끝나
+   며, 바이트열은 빈 줄로 끝납니다.
+
+   "Headers" 객체는 매핑 인터페이스와 포매팅 기능 외에도, 다중-값 헤더
+   를 조회하거나 추가하고, MIME 파라미터가 있는 헤더를 추가하기 위해
+   다음과 같은 메서드를 제공합니다:
+
+   get_all(name)
+
+      주어진 이름의 헤더에 대한 모든 값의 리스트를 반환합니다.
+
+      반환된 리스트는 원래 헤더 리스트에 나타나거나 이 인스턴스에 추가
+      된 순서대로 정렬되고, 중복을 포함할 수 있습니다. 삭제되고 다시
+      삽입된 필드는 항상 헤더 리스트의 끝에 추가됩니다. 주어진 이름의
+      필드가 존재하지 않으면, 빈 리스트를 반환합니다.
+
+   add_header(name, value, **_params)
+
+      키워드 인자로 지정되는 선택적 MIME 파라미터와 함께 헤더를 추가합
+      니다 (다중-값 가능).
+
+      *name*은 추가할 헤더 필드입니다. 키워드 인자는 헤더 필드에 대한
+      MIME 파라미터를 설정하는 데 사용될 수 있습니다. 각 파라미터는 문
+      자열이나 "None" 이어야 합니다. 파라미터 이름의 밑줄은 대시로 변
+      환됩니다; 파이썬 식별자에서는 대시가 유효하지 않지만 많은 MIME
+      파라미터 이름에는 대시가 포함되기 때문입니다. 파라미터값이 문자
+      열이면 "name="value"" 형식으로 헤더 값 파라미터에 추가됩니다.
+      "None"이면 파라미터 이름 만 추가됩니다. (이것은 값이 없는 MIME
+      파라미터에 사용됩니다.) 사용 예:
+
+         h.add_header('content-disposition', 'attachment', filename='bud.gif')
+
+      위의 코드는 다음과 같은 헤더를 추가합니다:
+
+         Content-Disposition: attachment; filename="bud.gif"
+
+   버전 3.5에서 변경: *headers* 매개 변수는 선택적입니다.
+
+
+"wsgiref.simple_server" -- 간단한 WSGI HTTP 서버
+================================================
+
+이 모듈은 WSGI 응용 프로그램을 서빙하는 간단한 HTTP 서버("http.server"
+기반)를 구현합니다. 각 서버 인스턴스는 주어진 호스트와 포트에서 단일
+WSGI 응용 프로그램을 서빙합니다. 단일 호스트와 포트에서 여러 응용 프로
+그램을 서빙하려면, "PATH_INFO"를 구문 분석하여 각 요청에 대해 호출할
+응용 프로그램을 선택하는 WSGI 응용 프로그램을 만들어야 합니다. (예를
+들어, "wsgiref.util"의 "shift_path_info()" 함수를 사용해서.)
+
+wsgiref.simple_server.make_server(host, port, app, server_class=WSGIServer, handler_class=WSGIRequestHandler)
+
+   *host* 와 *port*에서 수신을 기다리고, *app*에 대한 연결을 수락하는
+   새 WSGI 서버를 만듭니다. 반환 값은 제공된 *server_class*의 인스턴스
+   이며, 지정된 *handler_class*를 사용하여 요청을 처리합니다. *app*는
+   **PEP 3333**에 정의된 WSGI 응용 프로그램 객체여야 합니다.
+
+   사용 예:
+
+      from wsgiref.simple_server import make_server, demo_app
+
+      with make_server('', 8000, demo_app) as httpd:
+          print("Serving HTTP on port 8000...")
+
+          # Respond to requests until process is killed
+          httpd.serve_forever()
+
+          # Alternative: serve one request, then exit
+          httpd.handle_request()
+
+wsgiref.simple_server.demo_app(environ, start_response)
+
+   이 함수는 작지만 완벽한 WSGI 응용 프로그램인데, "Hello world!" 메시
+   지와 *environ* 매개 변수에 제공된 키/값 쌍 목록이 포함된 텍스트 페
+   이지를 반환합니다. WSGI 서버(가령 "wsgiref.simple_server")가 간단한
+   WSGI 응용 프로그램을 올바르게 실행할 수 있는지 확인하는 데 유용합니
+   다.
+
+class wsgiref.simple_server.WSGIServer(server_address, RequestHandlerClass)
+
+   "WSGIServer" 인스턴스를 만듭니다. *server_address*는 "(host,port)"
+   튜플이어야 하며, *RequestHandlerClass*는
+   "http.server.BaseHTTPRequestHandler"의 서브 클래스여야 하는데, 요청
+   을 처리하는 데 사용됩니다.
+
+   "make_server()" 함수가 모든 세부 사항을 처리할 수 있으므로, 일반적
+   으로 이 생성자를 호출할 필요가 없습니다.
+
+   "WSGIServer"는 "http.server.HTTPServer"의 서브 클래스이므로, 모든
+   메서드(가령 "serve_forever()"와 "handle_request()")를 사용할 수 있
+   습니다. "WSGIServer"는 또한 다음과 같은 WSGI 전용 메서드를 제공합니
+   다:
+
+   set_app(application)
+
+      콜러블 *application*을 요청을 수신하는 WSGI 응용 프로그램으로 설
+      정합니다.
+
+   get_app()
+
+      현재 설정되어있는 응용 프로그램 콜러블을 반환합니다.
+
+   그러나 일반적으로, 이러한 추가 메서드를 사용할 필요가 없는데,
+   "set_app()"는 일반적으로 "make_server()"에서 호출되고, "get_app()"
+   은 주로 요청 처리기 인스턴스의 필요를 위해 존재하기 때문입니다
+
+class wsgiref.simple_server.WSGIRequestHandler(request, client_address, server)
+
+   지정된 *request* (즉, 소켓), *client_address* ("(host,port)" 튜플)
+   및 *server* ("WSGIServer" 인스턴스)를 위한 HTTP 처리기를 만듭니다.
+
+   이 클래스의 인스턴스를 직접 만들 필요는 없습니다; "WSGIServer" 객체
+   가 필요에 따라 자동으로 만듭니다. 그러나, 이 클래스를 서브 클래싱하
+   여 *handler_class*로 "make_server()" 함수에 제공할 수 있습니다. 서
+   브 클래스에서 재정의하는데 적합한 메서드들은 다음과 같습니다:
+
+   get_environ()
+
+      Returns a dictionary containing the WSGI environment for a
+      request.  The default implementation copies the contents of the
+      "WSGIServer" object's "base_environ" dictionary attribute and
+      then adds various headers derived from the HTTP request.  Each
+      call to this method should return a new dictionary containing
+      all of the relevant CGI environment variables as specified in
+      **PEP 3333**.
+
+   get_stderr()
+
+      "wsgi.errors" 스트림으로 사용해야 하는 객체를 반환합니다. 기본
+      구현은 단지 "sys.stderr"를 반환합니다.
+
+   handle()
+
+      HTTP 요청을 처리합니다. 기본 구현은 "wsgiref.handlers" 클래스를
+      사용하여 실제 WSGI 응용 프로그램 인터페이스를 구현하는 처리기 인
+      스턴스를 만듭니다.
+
+
+"wsgiref.validate" --- WSGI 적합성 검사기
+=========================================
+
+새로운 WSGI 응용 프로그램 객체, 프레임워크, 서버 또는 미들웨어를 만들
+때, "wsgiref.validate"를 사용하여 새 코드의 적합성을 확인하는 것이 유
+용할 수 있습니다. 이 모듈은 WSGI 서버나 게이트웨이와 WSGI 응용 프로그
+램 객체 사이의 통신을 검증하는 WSGI 응용 프로그램 객체를 만드는 함수를
+제공하여, 양측의 프로토콜 준수 여부를 검사할 수 있도록 합니다.
+
+이 유틸리티는 완전한 **PEP 3333** 적합성을 보장하지는 않습니다; 이 모
+듈에서 에러가 없다고 해서 에러가 존재하지 않는다는 것을 의미하지는 않
+습니다. 그러나, 이 모듈에서 오류가 발생하면, 서버나 응용 프로그램이
+100% 적합하지 않다는 것은 사실상 확실합니다.
+
+이 모듈은 Ian Bicking의 "Python Paste" 라이브러리의 "paste.lint" 모듈
+을 기반으로 합니다.
+
+wsgiref.validate.validator(application)
+
+   *application* 감싸고 새 WSGI 응용 프로그램 객체를 반환합니다. 반환
+   된 응용 프로그램은 모든 요청을 원래 *application*으로 전달하고,
+   *application*과 이를 호출하는 서버가 모두 WSGI 명세와 **RFC 2616**
+   를 준수하는지 확인합니다.
+
+   탐지된 모든 부적합 결과는 "AssertionError"를 일으킵니다; 그러나 이
+   러한 에러를 처리하는 방법은 서버에 따라 다릅니다. 예를 들어,
+   "wsgiref.simple_server"와 "wsgiref.handlers"를 기반으로 하는 다른 (
+   에러 처리 메서드를 재정의해서 다른 작업을 수행하지 않는) 서버는 단
+   순히 에러가 발생했다는 메시지를 출력하고 "sys.stderr" 나 기타 에러
+   스트림으로 트레이스백을 덤프합니다.
+
+   이 래퍼는 의심스럽기는 하지만 **PEP 3333**에서 실제로 금지되지 않을
+   수도 있는 동작을 나타내도록 "warnings" 모듈을 사용하여 출력을 생성
+   할 수도 있습니다. 파이썬 명령 줄 옵션이나 "warnings" API를 사용해서
+   억제되지 않는 한, 그러한 경고는 "sys.stderr"(같은 객체가 아니라면
+   "wsgi.errors"가 *아닙니다*)에 기록됩니다.
+
+   사용 예:
+
+      from wsgiref.validate import validator
+      from wsgiref.simple_server import make_server
+
+      # Our callable object which is intentionally not compliant to the
+      # standard, so the validator is going to break
+      def simple_app(environ, start_response):
+          status = '200 OK'  # HTTP Status
+          headers = [('Content-type', 'text/plain')]  # HTTP Headers
+          start_response(status, headers)
+
+          # This is going to break because we need to return a list, and
+          # the validator is going to inform us
+          return b"Hello World"
+
+      # This is the application wrapped in a validator
+      validator_app = validator(simple_app)
+
+      with make_server('', 8000, validator_app) as httpd:
+          print("Listening on port 8000....")
+          httpd.serve_forever()
+
+
+"wsgiref.handlers" -- 서버/게이트웨이 베이스 클래스
+===================================================
+
+이 모듈은 WSGI 서버와 게이트웨이를 구현하기 위한 베이스 처리기 클래스
+를 제공합니다. 이러한 베이스 클래스는 입력, 출력 및 에러 스트림과 함께
+CGI와 유사한 환경이 제공되는 한, WSGI 응용 프로그램과 통신하는 대부분
+작업을 처리합니다.
+
+class wsgiref.handlers.CGIHandler
+
+   "sys.stdin", "sys.stdout", "sys.stderr" 및 "os.environ"를 통한 CGI
+   기반 호출. 이것은 WSGI 응용 프로그램이 있고 CGI 스크립트로 실행하려
+   고 할 때 유용합니다. "CGIHandler().run(app)"을 호출하기만 하면 됩니
+   다. 여기서 "app"은 호출할 WSGI 응용 프로그램 객체입니다.
+
+   이 클래스는 "wsgi.run_once"를 참으로, "wsgi.multithread"를 거짓으로
+   , "wsgi.multiprocess"를 참으로 설정하고, 필요한 CGI 스트림과 환경을
+   얻기 위해 항상 "sys"와 "os"를 사용하는 "BaseCGIHandler"의 서브 클래
+   스입니다.
+
+class wsgiref.handlers.IISCGIHandler
+
+   config allowPathInfo 옵션 (IIS>=7) 나 metabase
+   allowPathInfoForScriptMappings (IIS<7)를 설정하지 않고도, Microsoft
+   IIS 웹 서버에 배포할 때 사용할 수 있는 "CGIHandler"의 특수한 대안.
+
+   기본적으로, IIS는 앞에 "SCRIPT_NAME"이 중복된 "PATH_INFO"를 제공하
+   므로, 라우팅을 구현하려는 WSGI 응용 프로그램에 문제가 발생합니다.
+   이 처리기는 중복된 경로를 제거합니다.
+
+   IIS가 올바른 "PATH_INFO"를 전달하도록 구성할 수 있지만,
+   "PATH_TRANSLATED"가 잘못되는 다른 버그가 발생합니다. 다행히도 이 변
+   수는 거의 사용되지 않으며 WSGI에서 보장하지 않습니다. 그러나 IIS<7
+   에서는 설정이 가상 호스트 수준에서만 이루어지므로, 다른 모든 스크립
+   트 매핑에 영향을 미치며, 그중 많은 것들이 "PATH_TRANSLATED" 버그에
+   노출되면 망가집니다. 이러한 이유로 IIS<7은 거의 수정해서 배포되지
+   않습니다 (아직도 UI가 없어서 IIS7 조차도 거의 사용하지 않습니다.).
+
+   CGI 코드가 옵션이 설정되었는지를 알 수 있는 방법이 없으므로, 별도의
+   처리기 클래스가 제공됩니다. "CGIHandler"와 같은 방식으로 사용됩니다
+   . 즉, "IISCGIHandler().run(app)"을 호출합니다. 여기서 "app"은 호출
+   할 WSGI 응용 프로그램 객체입니다.
+
+   버전 3.2에 추가.
+
+class wsgiref.handlers.BaseCGIHandler(stdin, stdout, stderr, environ, multithread=True, multiprocess=False)
+
+   "CGIHandler"와 유사하지만, "sys" 와 "os" 모듈을 사용하는 대신, CGI
+   환경과 I/O 스트림이 명시적으로 지정됩니다. *multithread* 와
+   *multiprocess* 값은 처리기 인스턴스가 실행하는 모든 응용 프로그램에
+   대한 "wsgi.multithread" 와 "wsgi.multiprocess" 플래그를 설정하는 데
+   사용됩니다.
+
+   이 클래스는 HTTP "오리진 서버" 이외의 소프트웨어에서 사용하기 위한
+   "SimpleHandler"의 서브 클래스입니다. HTTP 상태를 보내기 위해
+   "Status:" 헤더를 사용하는 게이트웨이 프로토콜 구현(가령 CGI,
+   FastCGI, SCGI 등)을 작성하는 경우 "SimpleHandler" 대신 이것을 서브
+   클래싱하고 싶을 겁니다.
+
+class wsgiref.handlers.SimpleHandler(stdin, stdout, stderr, environ, multithread=True, multiprocess=False)
+
+   "BaseCGIHandler"와 유사하지만, HTTP 오리진 서버에 사용하도록 설계되
+   었습니다. HTTP 서버 구현을 작성하는 경우 "BaseCGIHandler" 대신 이것
+   을 서브 클래싱하고 싶을 겁니다.
+
+   This class is a subclass of "BaseHandler".  It overrides the
+   "__init__()", "get_stdin()", "get_stderr()", "add_cgi_vars()",
+   "_write()", and "_flush()" methods to support explicitly setting
+   the environment and streams via the constructor.  The supplied
+   environment and streams are stored in the "stdin", "stdout",
+   "stderr", and "environ" attributes.
+
+   *stdout*의 "write()" 메서드는 "io.BufferedIOBase"처럼 각 덩어리 전
+   체를 기록해야 합니다.
+
+class wsgiref.handlers.BaseHandler
+
+   이것은 WSGI 응용 프로그램을 실행하기 위한 추상 베이스 클래스입니다.
+   원칙적으로 여러 요청에 대해 재사용할 수 있는 서브 클래스를 만들 수
+   있지만, 각 인스턴스는 단일 HTTP 요청을 처리합니다.
+
+   "BaseHandler" 인스턴스에는 외부 사용을 위한 하나의 메서드 만 있습니
+   다:
+
+   run(app)
+
+      지정된 WSGI 응용 프로그램인 *app*을 실행합니다.
+
+   다른 모든 "BaseHandler" 메서드는 응용 프로그램을 실행하는 과정에서
+   이 메서드에 의해 호출되므로, 주로 과정을 사용자 정의하기 위해 존재
+   합니다.
+
+   다음 메서드는 서브 클래스에서 반드시 재정의되어야 합니다:
+
+   _write(data)
+
+      클라이언트로의 전송을 위해 바이트열 *data*를 버퍼링합니다. 이 메
+      서드가 실제로 데이터를 전송해도 상관없습니다; "BaseHandler"는 쓰
+      기와 플러시 연산을 분리하여 하부 시스템에 실제로 이러한 구분이
+      있을 때 효율성을 높입니다.
+
+   _flush()
+
+      버퍼링 된 데이터를 클라이언트로 전송하도록 강제합니다. 이 메서드
+      가 아무 일도 하지 않아도 상관없습니다 (즉, "_write()"가 실제로
+      데이터를 보낸다면).
+
+   get_stdin()
+
+      Return an input stream object suitable for use as the
+      "wsgi.input" of the request currently being processed.
+
+   get_stderr()
+
+      Return an output stream object suitable for use as the
+      "wsgi.errors" of the request currently being processed.
+
+   add_cgi_vars()
+
+      현재 요청에 대한 CGI 변수를 "environ" 어트리뷰트에 삽입합니다.
+
+   재정의하고 싶을 수 있는 다른 메서드와 어트리뷰트는 다음과 같습니다.
+   그러나, 이 목록은 요약에 지나지 않고, 재정의할 수 있는 모든 메서드
+   가 포함되어 있지 않습니다. 사용자 정의된 "BaseHandler" 서브 클래스
+   를 작성하기 전에 독스트링과 소스 코드를 참조하여 추가 정보를 얻어야
+   합니다.
+
+   WSGI 환경을 사용자 정의하기 위한 어트리뷰트와 메서드:
+
+   wsgi_multithread
+
+      "wsgi.multithread" 환경 변수에 사용될 값. "BaseHandler"에서는 기
+      본값이 참이지만, 다른 서브 클래스는 다른 기본값을 가질 수 있습니
+      다 (또는 생성자에 의해 설정될 수 있습니다).
+
+   wsgi_multiprocess
+
+      "wsgi.multiprocess" 환경 변수에 사용될 값. "BaseHandler"에서는
+      기본값이 참이지만, 다른 서브 클래스는 다른 기본값을 가질 수 있습
+      니다 (또는 생성자에 의해 설정될 수 있습니다).
+
+   wsgi_run_once
+
+      "wsgi.run_once" 환경 변수에 사용될 값. "BaseHandler"에서는 기본
+      값이 거짓이지만, "CGIHandler"는 기본적으로 참으로 설정합니다.
+
+   os_environ
+
+      모든 요청의 WSGI 환경에 포함될 기본 환경 변수. 기본적으로,
+      "wsgiref.handlers"를 임포트 한 시점의 "os.environ" 사본이지만,
+      서브 클래스는 클래스나 인스턴스 수준에서 자체적으로 만들 수 있습
+      니다. 기본값이 여러 클래스와 인스턴스 간에 공유되므로, 딕셔너리
+      는 읽기 전용으로 간주해야 합니다.
+
+   server_software
+
+      "origin_server" 어트리뷰트가 설정된 경우, 이 어트리뷰트의 값은
+      기본 "SERVER_SOFTWARE" WSGI 환경 변수를 설정하는 데 사용되고,
+      HTTP 응답의 기본 "Server:" 헤더를 설정하는 데도 사용됩니다. HTTP
+      오리진 서버가 아닌 처리기(가령 "BaseCGIHandler" 와 "CGIHandler")
+      에서는 무시됩니다.
+
+      버전 3.3에서 변경: "Python"이라는 용어는 "CPython", "Jython" 등
+      과 같은 구현 특정 용어로 대체됩니다.
+
+   get_scheme()
+
+      현재의 요청에 사용되고 있는 URL 스킴을 반환합니다. 기본 구현은
+      "wsgiref.util"의 "guess_scheme()" 함수를 사용하여, 현재 요청의
+      "environ" 변수를 기반으로, 스킴이 "http"와 "https" 중 어느 것인
+      지 추측합니다.
+
+   setup_environ()
+
+      "environ" 어트리뷰트를 완전히 채워진 WSGI 환경으로 설정합니다.
+      기본 구현에서는 위의 모든 메서드와 어트리뷰트에 더해
+      "get_stdin()", "get_stderr()" 및 "add_cgi_vars()" 메서드와
+      "wsgi_file_wrapper" 어트리뷰트를 모두 사용합니다.
+      "origin_server" 어트리뷰트가 참이고 "server_software" 어트리뷰트
+      가 설정된 경우 "SERVER_SOFTWARE" 키가 없으면 삽입합니다.
+
+   예외 처리를 사용자 정의하기 위한 메서드와 어트리뷰트:
+
+   log_exception(exc_info)
+
+      *exc_info* 튜플을 서버 로그에 기록합니다. *exc_info*는 "(type,
+      value, traceback)" 튜플입니다. 기본 구현은 요청의 "wsgi.errors"
+      스트림에 트레이스백을 쓰고 플러시 합니다. 서브 클래스는 이 메서
+      드를 재정의해서, 형식을 변경하거나 출력의 대상을 바꾸거나, 관리
+      자에게 트레이스백을 메일로 보내거나, 적절한 것으로 생각되는 다른
+      액션을 수행할 수 있습니다.
+
+   traceback_limit
+
+      기본 "log_exception()" 메서드에 의해 출력되는 트레이스백에 포함
+      하는 프레임의 최대 수. "None"이면, 모든 프레임이 포함됩니다.
+
+   error_output(environ, start_response)
+
+      이 메서드는 사용자를 위한 에러 페이지를 생성하는 WSGI 응용 프로
+      그램입니다. 헤더가 클라이언트에 전송되기 전에 오류가 발생할 때만
+      호출됩니다.
+
+      This method can access the current error information using
+      "sys.exc_info()", and should pass that information to
+      *start_response* when calling it (as described in the "Error
+      Handling" section of **PEP 3333**).
+
+      기본 구현은 "error_status", "error_headers" 및 "error_body" 어트
+      리뷰트를 사용하여 출력 페이지를 생성합니다. 서브 클래스는 이것을
+      재정의하여, 더욱 동적인 에러 출력을 생성할 수 있습니다.
+
+      그러나, 보안 관점에서 오래된 사용자에게는 진단을 내보내지 않는
+      것이 좋습니다; 이상적으로, 진단 출력을 활성화하기 위해서는 특별
+      한 것을 해야 합니다. 이것이 기본 구현이 아무것도 포함하지 않는
+      이유입니다.
+
+   error_status
+
+      에러 응답에 사용되는 HTTP 상태. **PEP 3333**에 정의된 상태 문자
+      열이어야 합니다; 기본값은 500 코드와 메시지입니다.
+
+   error_headers
+
+      에러 응답에 사용되는 HTTP 헤더. 이것은 **PEP 3333**에서 설명하는
+      WSGI 응답 헤더 ("(name, value)" 튜플)의 리스트여야 합니다. 기본
+      리스트는 단지 콘텐츠 형식을 "text/plain"으로 설정합니다.
+
+   error_body
+
+      에러 응답 바디. 이것은 HTTP 응답 바디 바이트열이어야 합니다. 기
+      본적으로 "A server error occurred.  Please contact the
+      administrator." 라는 단순 텍스트입니다.
+
+   **PEP 3333**의 "선택적 플랫폼 특정 파일 처리" 기능을 위한 메서드와
+   어트리뷰트:
+
+   wsgi_file_wrapper
+
+      A "wsgi.file_wrapper" factory, or "None".  The default value of
+      this attribute is the "wsgiref.util.FileWrapper" class.
+
+   sendfile()
+
+      플랫폼 특정 파일 전송을 구현하기 위해 재정의합니다. 이 메서드는
+      응용 프로그램의 반환 값이 "wsgi_file_wrapper" 어트리뷰트로 지정
+      된 클래스의 인스턴스일 때만 호출됩니다. 파일을 성공적으로 전송할
+      수 있었으면 참값을 반환해야 합니다. 그러면 기본 전송 코드가 실행
+      되지 않습니다. 이 메서드의 기본 구현은 단지 거짓 값을 반환합니다
+      .
+
+   기타 메서드와 어트리뷰트:
+
+   origin_server
+
+      특별한 "Status:" 헤더를 통해 HTTP 상태를 원하는 CGI와 같은 게이
+      트웨이 프로토콜을 통하는 것이 아니라, 처리기의 "_write()"와
+      "_flush()"가 클라이언트와 직접 통신하는 데 사용되는 경우 이 어트
+      리뷰트를 참으로 설정해야 합니다.
+
+      "BaseHandler"에서는 이 어트리뷰트의 기본값이 참이지만,
+      "BaseCGIHandler"와 "CGIHandler"에서는 거짓입니다.
+
+   http_version
+
+      "origin_server"가 참이면, 이 문자열 어트리뷰트를 사용하여 클라이
+      언트로 보내는 응답 집합의 HTTP 버전을 설정합니다. 기본값은
+      ""1.0""입니다.
+
+wsgiref.handlers.read_environ()
+
+   CGI 변수를 "os.environ"에서 **PEP 3333** "유니코드에 들어있는 바이
+   트열" 문자열로 변환하여, 새 딕셔너리를 반환합니다. 이 함수는
+   "os.environ"을 직접 사용하는 대신 "CGIHandler"와 "IISCGIHandler"에
+   서 사용됩니다. "os.environ"은 파이썬 3을 사용하는 모든 플랫폼과 웹
+   서버에서 WSGI를 준수한다는 보장이 없습니다 -- 구체적으로, OS의 실제
+   환경이 유니코드인 곳(가령 윈도우)이나 환경은 바이트열이지만 파이썬
+   이 디코딩하기 위해 사용하는 시스템 인코딩이 ISO-8859-1 이외의 것인
+   곳(예를 들어 UTF-8을 사용하는 유닉스 시스템).
+
+   여러분 자신의 CGI 기반 처리기를 구현한다면, "os.environ"에서 직접
+   값을 복사하는 대신 이 루틴을 사용하는 것이 좋습니다.
+
+   버전 3.2에 추가.
+
+
+예제
+====
+
+This is a working "Hello World" WSGI application:
+
+   from wsgiref.simple_server import make_server
+
+   # Every WSGI application must have an application object - a callable
+   # object that accepts two arguments. For that purpose, we're going to
+   # use a function (note that you're not limited to a function, you can
+   # use a class for example). The first argument passed to the function
+   # is a dictionary containing CGI-style environment variables and the
+   # second variable is the callable object.
+   def hello_world_app(environ, start_response):
+       status = '200 OK'  # HTTP Status
+       headers = [('Content-type', 'text/plain; charset=utf-8')]  # HTTP Headers
+       start_response(status, headers)
+
+       # The returned object is going to be printed
+       return [b"Hello World"]
+
+   with make_server('', 8000, hello_world_app) as httpd:
+       print("Serving on port 8000...")
+
+       # Serve until process is killed
+       httpd.serve_forever()
+
+Example of a WSGI application serving the current directory, accept
+optional directory and port number (default: 8000) on the command
+line:
+
+   #!/usr/bin/env python3
+   '''
+   Small wsgiref based web server. Takes a path to serve from and an
+   optional port number (defaults to 8000), then tries to serve files.
+   Mime types are guessed from the file names, 404 errors are raised
+   if the file is not found. Used for the make serve target in Doc.
+   '''
+   import sys
+   import os
+   import mimetypes
+   from wsgiref import simple_server, util
+
+   def app(environ, respond):
+
+       fn = os.path.join(path, environ['PATH_INFO'][1:])
+       if '.' not in fn.split(os.path.sep)[-1]:
+           fn = os.path.join(fn, 'index.html')
+       type = mimetypes.guess_type(fn)[0]
+
+       if os.path.exists(fn):
+           respond('200 OK', [('Content-Type', type)])
+           return util.FileWrapper(open(fn, "rb"))
+       else:
+           respond('404 Not Found', [('Content-Type', 'text/plain')])
+           return [b'not found']
+
+   if __name__ == '__main__':
+       path = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
+       port = int(sys.argv[2]) if len(sys.argv) > 2 else 8000
+       httpd = simple_server.make_server('', port, app)
+       print("Serving {} on port {}, control-C to stop".format(path, port))
+       try:
+           httpd.serve_forever()
+       except KeyboardInterrupt:
+           print("Shutting down.")
+           httpd.server_close()

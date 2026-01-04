@@ -1,0 +1,176 @@
+"filecmp" --- File and Directory Comparisons
+********************************************
+
+**소스 코드:** Lib/filecmp.py
+
+======================================================================
+
+"filecmp" 모듈은 다양한 선택적 시간/정확도 절충을 통해 파일과 디렉터리
+를 비교하는 함수를 정의합니다. 파일 비교에 대해서는, "difflib" 모듈을
+참조하십시오.
+
+"filecmp" 모듈은 다음 함수를 정의합니다:
+
+filecmp.cmp(f1, f2, shallow=True)
+
+   *f1*와 *f2*로 이름이 지정된 파일을 비교하여, 같아 보이면 "True"를
+   반환하고, 그렇지 않으면 "False"를 반환합니다.
+
+   *shallow*가 참이고 두 파일의 "os.stat()" 서명(파일 유형, 크기, 수정
+   시간)이 동일하면, 파일을 같다고 취급합니다.
+
+   그렇지 않으면, 파일의 크기나 내용이 다를 때 다르다고 취급합니다.
+
+   이 함수는 외부 프로그램을 호출하지 않으므로 이식성과 효율성을 제공
+   합니다.
+
+   이 함수는 과거 비교와 결과에 대해 캐시를 사용합니다. 파일에 대한
+   "os.stat()" 정보가 변경되면 캐시 항목이 무효화 됩니다. 전체 캐시는
+   "clear_cache()"를 사용하여 지울 수 있습니다.
+
+filecmp.cmpfiles(dir1, dir2, common, shallow=True)
+
+   두 디렉터리 *dir1* 과 *dir2*에 있는 이름이 *common*으로 지정된 파일
+   들을 비교합니다.
+
+   파일 이름의 세 가지 리스트를 반환합니다: *match*, *mismatch*,
+   *errors*. *match*는 일치하는 파일 리스트를 포함하고, *mismatch*는
+   일치하지 않는 파일의 이름을 포함하며, *errors*는 비교할 수 없는 파
+   일의 이름을 나열합니다. 파일이 디렉터리 중 하나에 없거나, 사용자가
+   읽을 수 있는 권한이 없거나, 다른 이유로 인해 비교를 수행할 수 없으
+   면 파일은 *errors*에 나열됩니다.
+
+   *shallow* 매개 변수는 "filecmp.cmp()"와 같은 의미와 기본값을 가집니
+   다.
+
+   예를 들어, "cmpfiles('a', 'b', ['c', 'd/e'])"는 "a/c"와 "b/c",
+   "a/d/e"와 "b/d/e"를 비교합니다. "'c'" 와 "'d/e'"는 각각 반환된 세
+   개의 리스트 중 하나에 포함됩니다.
+
+filecmp.clear_cache()
+
+   filecmp 캐시를 지웁니다. 파일이 수정된 후 너무 빨리 비교되어 하부
+   파일 시스템의 mtime 해상도 내에 있을 때 유용합니다.
+
+   버전 3.4에 추가.
+
+
+"dircmp" 클래스
+===============
+
+class filecmp.dircmp(a, b, ignore=None, hide=None)
+
+   Construct a new directory comparison object, to compare the
+   directories *a* and *b*.  *ignore* is a list of names to ignore,
+   and defaults to "filecmp.DEFAULT_IGNORES".  *hide* is a list of
+   names to hide, and defaults to "[os.curdir, os.pardir]".
+
+   The "dircmp" class compares files by doing *shallow* comparisons as
+   described for "filecmp.cmp()".
+
+   "dircmp" 클래스는 다음 메서드를 제공합니다:
+
+   report()
+
+      *a*와 *b* 사이의 비교를 ("sys.stdout"로) 인쇄합니다.
+
+   report_partial_closure()
+
+      *a*와 *b* 및 공통 직접 하위 디렉터리 사이의 비교를 인쇄합니다.
+
+   report_full_closure()
+
+      *a*와 *b* 및 공통 하위 디렉터리 (재귀적으로) 사이의 비교를 인쇄
+      합니다.
+
+   "dircmp" 클래스는 비교되는 디렉터리 트리에 대한 다양한 정보 비트를
+   얻는 데 사용될 수 있는 여러 가지 흥미로운 어트리뷰트를 제공합니다.
+
+   Note that via "__getattr__()" hooks, all attributes are computed
+   lazily, so there is no speed penalty if only those attributes which
+   are lightweight to compute are used.
+
+   left
+
+      디렉터리 *a*.
+
+   right
+
+      디렉터리 *b*.
+
+   left_list
+
+      *hide* 와 *ignore*로 필터링 된, *a*의 파일과 하위 디렉터리.
+
+   right_list
+
+      *hide* 와 *ignore*로 필터링 된, *b*의 파일과 하위 디렉터리.
+
+   common
+
+      *a* 와 *b*의 공통 파일과 하위 디렉터리.
+
+   left_only
+
+      *a*에만 있는 파일과 하위 디렉터리.
+
+   right_only
+
+      *b*에만 있는 파일과 하위 디렉터리.
+
+   common_dirs
+
+      *a* 및 *b*의 공통 하위 디렉터리.
+
+   common_files
+
+      *a* 와 *b*의 공통 파일.
+
+   common_funny
+
+      *a*와 *b*의 공통 이름으로, 디렉터리 간에 유형이 다르거나,
+      "os.stat()"가 에러를 보고하는 이름.
+
+   same_files
+
+      *a* 와 *b*에 모두 있고, 클래스의 파일 비교 연산자를 사용할 때 같
+      은 파일.
+
+   diff_files
+
+      *a* 및 *b*에 모두 있고, 클래스의 파일 비교 연산자를 사용할 때 내
+      용이 다른 파일.
+
+   funny_files
+
+      *a* 및 *b*에 모두 있지만, 비교할 수 없는 파일.
+
+   subdirs
+
+      "common_dirs"의 이름을 "dircmp" 인스턴스로 (또는 이 인스턴스가
+      "dircmp"의 서브 클래스인 MyDirCmp 형이면 MyDirCmp 인스턴스로) 매
+      핑하는 딕셔너리.
+
+      버전 3.10에서 변경: Previously entries were always "dircmp"
+      instances. Now entries are the same type as *self*, if *self* is
+      a subclass of "dircmp".
+
+filecmp.DEFAULT_IGNORES
+
+   버전 3.4에 추가.
+
+   "dircmp"에 의해 기본적으로 무시되는 디렉터리 리스트.
+
+다음은 이름이 같지만, 내용이 다른 파일을 표시하기 위해, "subdirs" 어트
+리뷰트로 두 개의 디렉터리를 재귀적으로 검색하는 간단한 예제입니다:
+
+   >>> from filecmp import dircmp
+   >>> def print_diff_files(dcmp):
+   ...     for name in dcmp.diff_files:
+   ...         print("diff_file %s found in %s and %s" % (name, dcmp.left,
+   ...               dcmp.right))
+   ...     for sub_dcmp in dcmp.subdirs.values():
+   ...         print_diff_files(sub_dcmp)
+   ...
+   >>> dcmp = dircmp('dir1', 'dir2') 
+   >>> print_diff_files(dcmp) 

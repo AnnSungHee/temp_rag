@@ -1,0 +1,178 @@
+동시 실행
+*********
+
+이 장에서 설명하는 모듈은 코드의 동시 실행을 지원합니다. 적절한 도구
+선택은 실행할 작업(CPU 병목 대 IO 병목)과 선호하는 개발 스타일(이벤트
+구동 협력적 다중작업 대 선점적 다중작업)에 따라 달라집니다. 다음은 개
+요입니다:
+
+* "threading" --- Thread-based parallelism
+
+  * 스레드 로컬 데이터
+
+  * Thread 객체
+
+  * Lock 객체
+
+  * RLock 객체
+
+  * Condition 객체
+
+  * Semaphore 객체
+
+    * "Semaphore" 예
+
+  * Event 객체
+
+  * Timer 객체
+
+  * Barrier 객체
+
+  * "with" 문으로 록, 조건 및 세마포어 사용하기
+
+* "multiprocessing" --- Process-based parallelism
+
+  * 소개
+
+    * "Process" 클래스
+
+    * 컨텍스트 및 시작 방법
+
+    * 프로세스 간 객체 교환
+
+    * 프로세스 간 동기화
+
+    * 프로세스 간 상태 공유
+
+    * 작업자 풀 사용
+
+  * 레퍼런스
+
+    * "Process"와 예외
+
+    * 파이프와 큐
+
+    * 잡동사니
+
+    * Connection 객체
+
+    * 동기화 프리미티브
+
+    * 공유 "ctypes" 객체
+
+      * "multiprocessing.sharedctypes" 모듈
+
+    * 관리자
+
+      * 사용자 정의 관리자
+
+      * 원격 관리자 사용하기
+
+    * 프락시 객체
+
+      * 정리
+
+    * 프로세스 풀
+
+    * 리스너와 클라이언트
+
+      * 주소 형식
+
+    * 인증 키
+
+    * 로깅
+
+    * "multiprocessing.dummy" 모듈
+
+  * 프로그래밍 지침
+
+    * 모든 시작 방법
+
+    * *spawn* 과 *forkserver* 시작 방법
+
+  * 예제
+
+* "multiprocessing.shared_memory" --- Shared memory for direct access
+  across processes
+
+* The "concurrent" package
+
+* "concurrent.futures" --- Launching parallel tasks
+
+  * Executor 객체
+
+  * ThreadPoolExecutor
+
+    * ThreadPoolExecutor 예제
+
+  * ProcessPoolExecutor
+
+    * ProcessPoolExecutor 예제
+
+  * Future 객체
+
+  * 모듈 함수
+
+  * 예외 클래스
+
+* "subprocess" --- Subprocess management
+
+  * "subprocess" 모듈 사용하기
+
+    * 자주 사용되는 인자
+
+    * Popen 생성자
+
+    * 예외
+
+  * 보안 고려 사항
+
+  * Popen 객체
+
+  * 윈도우 Popen 도우미
+
+    * 윈도우 상수
+
+  * 오래된 고수준 API
+
+  * 이전 함수를 "subprocess" 모듈로 교체하기
+
+    * **/bin/sh** 셸 명령 치환 교체하기
+
+    * 셸 파이프라인 교체하기
+
+    * "os.system()" 교체하기
+
+    * "os.spawn" 패밀리 교체하기
+
+    * "os.popen()", "os.popen2()", "os.popen3()" 교체하기
+
+    * Replacing functions from the "popen2" module
+
+  * 레거시 셸 호출 함수
+
+  * 노트
+
+    * 윈도우에서 인자 시퀀스를 문자열로 변환하기
+
+* "sched" --- Event scheduler
+
+  * 스케줄러 객체
+
+* "queue" --- A synchronized queue class
+
+  * 큐 객체
+
+  * SimpleQueue 객체
+
+* "contextvars" --- Context Variables
+
+  * 컨텍스트 변수
+
+  * 수동 컨텍스트 관리
+
+  * asyncio 지원
+
+다음은 위 서비스 중 일부에 대한 지원 모듈입니다:
+
+* "_thread" --- Low-level threading API

@@ -1,0 +1,40 @@
+제너레이터 객체
+***************
+
+제너레이터 객체는 파이썬이 제너레이터 이터레이터를 구현하기 위해 사용
+하는 객체입니다. 일반적으로 "PyGen_New()" 또는
+"PyGen_NewWithQualName()"를 명시적으로 호출하는 것이 아니라, 값을 일드
+(yield)하는 함수를 이터레이트하여 만들어집니다.
+
+type PyGenObject
+
+   제너레이터 객체에 사용되는 C 구조체.
+
+PyTypeObject PyGen_Type
+
+   제너레이터 객체에 해당하는 형 객체
+
+int PyGen_Check(PyObject *ob)
+
+   *ob*가 제너레이터 객체면 참을 돌려줍니다; *ob*는 "NULL"이 아니어야
+   합니다. 이 함수는 항상 성공합니다.
+
+int PyGen_CheckExact(PyObject *ob)
+
+   *ob*의 형이 "PyGen_Type"이면 참을 돌려줍니다; *ob*는 "NULL"이 아니
+   어야 합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyGen_New(PyFrameObject *frame)
+    *반환값: 새 참조.*
+
+   *frame* 객체에 기반한 새 제너레이터 객체를 만들어 반환합니다. 이 함
+   수는 *frame*에 대한 참조를 훔칩니다. 인자는 "NULL"이 아니어야 합니
+   다.
+
+PyObject *PyGen_NewWithQualName(PyFrameObject *frame, PyObject *name, PyObject *qualname)
+    *반환값: 새 참조.*
+
+   *frame* 객체에 기반한 새 제너레이터 객체를 만들어 반환하는데,
+   "__name__" 과 "__qualname__"를 *name* 및 *qualname*로 설정합니다.
+   이 함수는 *frame*에 대한 참조를 훔칩니다. *frame* 인자는 "NULL"이
+   아니어야 합니다.

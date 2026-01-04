@@ -1,0 +1,2687 @@
+"ssl" --- TLS/SSL wrapper for socket objects
+********************************************
+
+**소스 코드:** Lib/ssl.py
+
+======================================================================
+
+This module provides access to Transport Layer Security (often known
+as "Secure Sockets Layer") encryption and peer authentication
+facilities for network sockets, both client-side and server-side.
+This module uses the OpenSSL library. It is available on all modern
+Unix systems, Windows, macOS, and probably additional platforms, as
+long as OpenSSL is installed on that platform.
+
+참고:
+
+  Some behavior may be platform dependent, since calls are made to the
+  operating system socket APIs.  The installed version of OpenSSL may
+  also cause variations in behavior. For example, TLSv1.3 with OpenSSL
+  version 1.1.1.
+
+경고:
+
+  보안 고려 사항을 읽지 않고 이 모듈을 사용하지 마십시오. 그렇게 하면
+  ssl 모듈의 기본 설정이 반드시 여러분의 응용 프로그램에 적합하지는 않
+  으므로 잘못된 보안 인식으로 이어질 수 있습니다.
+
+이 절에서는 "ssl" 모듈의 객체와 함수를 설명합니다; TLS, SSL 및 인증서
+에 대한보다 일반적인 정보는, 하단의 "더 보기" 절에 있는 문서를 참조하
+십시오.
+
+This module provides a class, "ssl.SSLSocket", which is derived from
+the "socket.socket" type, and provides a socket-like wrapper that also
+encrypts and decrypts the data going over the socket with SSL.  It
+supports additional methods such as "getpeercert()", which retrieves
+the certificate of the other side of the connection, and "cipher()",
+which retrieves the cipher being used for the secure connection.
+
+더욱 정교한 응용 프로그램의 경우, "ssl.SSLContext" 클래스는 설정과 인
+증서를 관리하는 데 도움이 되며, "SSLContext.wrap_socket()" 메서드를 통
+해 만들어진 SSL 소켓이 상속할 수 있습니다.
+
+버전 3.5.3에서 변경: OpenSSL 1.1.0과의 링크를 지원하도록 갱신되었습니
+다
+
+버전 3.6에서 변경: OpenSSL 0.9.8, 1.0.0 및 1.0.1은 폐지되었으며 더는
+지원되지 않습니다. 미래에는 ssl 모듈이 최소한 OpenSSL 1.0.2 나 1.1.0을
+요구할 것입니다.
+
+버전 3.10에서 변경: **PEP 644** has been implemented. The ssl module
+requires OpenSSL 1.1.1 or newer.Use of deprecated constants and
+functions result in deprecation warnings.
+
+
+함수, 상수 및 예외
+==================
+
+
+소켓 생성
+---------
+
+Since Python 3.2 and 2.7.9, it is recommended to use the
+"SSLContext.wrap_socket()" of an "SSLContext" instance to wrap sockets
+as "SSLSocket" objects. The helper functions
+"create_default_context()" returns a new context with secure default
+settings. The old "wrap_socket()" function is deprecated since it is
+both inefficient and has no support for server name indication (SNI)
+and hostname matching.
+
+기본 컨텍스트와 IPv4/IPv6 이중 스택을 사용하는 클라이언트 소켓 예제:
+
+   import socket
+   import ssl
+
+   hostname = 'www.python.org'
+   context = ssl.create_default_context()
+
+   with socket.create_connection((hostname, 443)) as sock:
+       with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+           print(ssock.version())
+
+사용자 정의 컨텍스트와 IPv4를 사용하는 클라이언트 소켓 예제:
+
+   hostname = 'www.python.org'
+   # PROTOCOL_TLS_CLIENT requires valid cert chain and hostname
+   context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+   context.load_verify_locations('path/to/cabundle.pem')
+
+   with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
+       with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+           print(ssock.version())
+
+localhost IPv4에서 리스닝하는 서버 소켓 예제:
+
+   context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+   context.load_cert_chain('/path/to/certchain.pem', '/path/to/private.key')
+
+   with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
+       sock.bind(('127.0.0.1', 8443))
+       sock.listen(5)
+       with context.wrap_socket(sock, server_side=True) as ssock:
+           conn, addr = ssock.accept()
+           ...
+
+
+컨텍스트 생성
+-------------
+
+편리 함수는 공통 목적을 위한 "SSLContext" 객체를 만드는 데 도움이 됩니
+다.
+
+ssl.create_default_context(purpose=Purpose.SERVER_AUTH, cafile=None, capath=None, cadata=None)
+
+   지정된 *purpose*를 위한 기본 설정으로 새 "SSLContext" 객체를 반환합
+   니다. 설정은 "ssl" 모듈에 의해 선택되며, 일반적으로 "SSLContext" 생
+   성자를 직접 호출할 때 보다 높은 보안 수준을 나타냅니다.
+
+   *cafile*, *capath*, *cadata*는,
+   "SSLContext.load_verify_locations()"에서와 같이, 인증서 확인을 위해
+   신뢰할 수 있는 선택적 CA 인증서를 나타냅니다. 세 개 모두가 "None"이
+   면, 이 함수는 대신 시스템의 기본 CA 인증서를 신뢰하도록 선택할 수
+   있습니다.
+
+   The settings are: "PROTOCOL_TLS_CLIENT" or "PROTOCOL_TLS_SERVER",
+   "OP_NO_SSLv2", and "OP_NO_SSLv3" with high encryption cipher suites
+   without RC4 and without unauthenticated cipher suites. Passing
+   "SERVER_AUTH" as *purpose* sets "verify_mode" to "CERT_REQUIRED"
+   and either loads CA certificates (when at least one of *cafile*,
+   *capath* or *cadata* is given) or uses
+   "SSLContext.load_default_certs()" to load default CA certificates.
+
+   "keylog_filename"이 지원되고 환경 변수 "SSLKEYLOGFILE"이 설정될 때,
+   "create_default_context()"는 키 로깅을 활성화합니다.
+
+   참고:
+
+     프로토콜, 옵션, 사이퍼 및 기타 설정은 사전 폐지 없이 언제든지 더
+     욱 제한적인 값으로 변경될 수 있습니다. 이 값은 호환성과 보안 간의
+     적절한 균형을 나타냅니다.응용 프로그램에 특정 설정이 필요하면,
+     "SSLContext"를 만들어 설정을 직접 적용해야 합니다.
+
+   참고:
+
+     특정 이전 클라이언트나 서버가 이 함수로 만든 "SSLContext"로 연결
+     을 시도할 때 "Protocol or cipher suite mismatch"라는 에러가 발생
+     하면, 이 함수가 "OP_NO_SSLv3"를 사용해서 제외하는 SSL3.0만 지원하
+     는 것일 수 있습니다. SSL3.0은 완전히 망가진것으로 널리 인식되고
+     있습니다. 이 함수를 계속 사용하면서 SSL 3.0 연결을 계속 허용하려
+     면 다음과 같이 다시 활성화할 수 있습니다:
+
+        ctx = ssl.create_default_context(Purpose.CLIENT_AUTH)
+        ctx.options &= ~ssl.OP_NO_SSLv3
+
+   버전 3.4에 추가.
+
+   버전 3.4.4에서 변경: RC4는 기본 사이퍼 문자열에서 삭제되었습니다.
+
+   버전 3.6에서 변경: ChaCha20/Poly1305가 기본 사이퍼 문자열에 추가되
+   었습니다.3DES가 기본 사이퍼 문자열에서 삭제되었습니다.
+
+   버전 3.8에서 변경: "SSLKEYLOGFILE"에 대한 키 로깅 지원이 추가되었습
+   니다.
+
+   버전 3.10에서 변경: The context now uses "PROTOCOL_TLS_CLIENT" or
+   "PROTOCOL_TLS_SERVER" protocol instead of generic "PROTOCOL_TLS".
+
+
+예외
+----
+
+exception ssl.SSLError
+
+   하부 SSL 구현(현재 OpenSSL 라이브러리에서 제공)으로부터의 에러를 알
+   리기 위해 발생합니다. 이는 하부 네트워크 연결에 겹쳐진 상위 수준의
+   암호화와 인증 계층에서 문제가 있음을 나타냅니다. 이 에러는
+   "OSError"의 서브 형입니다. "SSLError" 인스턴스의 에러 코드와 메시지
+   는 OpenSSL 라이브러리에 의해 제공됩니다.
+
+   버전 3.3에서 변경: "SSLError"는 "socket.error"의 서브 형이었습니다.
+
+   library
+
+      "SSL", "PEM" 또는 "X509"와 같이, 에러가 발생한 OpenSSL 하위 모듈
+      을 지정하는 문자열 기호입니다. 가능한 값의 범위는 OpenSSL 버전에
+      따라 다릅니다.
+
+      버전 3.3에 추가.
+
+   reason
+
+      이 에러가 발생한 이유를 나타내는 문자열 기호, 예를 들어,
+      "CERTIFICATE_VERIFY_FAILED". 가능한 값의 범위는 OpenSSL 버전에
+      따라 다릅니다.
+
+      버전 3.3에 추가.
+
+exception ssl.SSLZeroReturnError
+
+   읽기나 쓰기를 시도하고 SSL 연결이 정상적으로 닫혔을 때 발생하는
+   "SSLError"의 서브 클래스. 이것이 하부 트랜스포트(TCP 읽기)가 닫혔음
+   을 뜻하지는 않습니다.
+
+   버전 3.3에 추가.
+
+exception ssl.SSLWantReadError
+
+   데이터를 읽거나 쓰려고 하지만, 요청을 만족하려면 하부 TCP 트랜스포
+   트에서 데이터를 더 수신해야 할 때, 비 블로킹 SSL 소켓에 의해 발생하
+   는 "SSLError"의 서브 클래스.
+
+   버전 3.3에 추가.
+
+exception ssl.SSLWantWriteError
+
+   데이터를 읽거나 쓰려고 하지만, 요청을 만족하려면 하부 TCP 트랜스포
+   트로 데이터를 더 보내야 할 때, 비 블로킹 SSL 소켓에 의해 발생하는
+   "SSLError"의 서브 클래스.
+
+   버전 3.3에 추가.
+
+exception ssl.SSLSyscallError
+
+   SSL 소켓에서 작업을 수행하는 동안 시스템 에러를 만났을 때 발생하는
+   "SSLError"의 서브 클래스. 불행히도 원래의 errno 번호를 검사하는 쉬
+   운 방법은 없습니다.
+
+   버전 3.3에 추가.
+
+exception ssl.SSLEOFError
+
+   SSL 연결이 갑자기 종료되었을 때 발생하는 "SSLError"의 서브 클래스.
+   일반적으로, 이 에러가 발생하면 하부 트랜스포트를 다시 사용하지 않아
+   야 합니다.
+
+   버전 3.3에 추가.
+
+exception ssl.SSLCertVerificationError
+
+   인증서 유효성 검사가 실패했을 때 발생하는 "SSLError"의 서브 클래스.
+
+   버전 3.7에 추가.
+
+   verify_code
+
+      유효성 검사 에러를 나타내는 숫자 에러 번호.
+
+   verify_message
+
+      사람이 읽을 수 있는 유효성 검사 에러 문자열.
+
+exception ssl.CertificateError
+
+   "SSLCertVerificationError"의 별칭.
+
+   버전 3.7에서 변경: 예외는 이제 "SSLCertVerificationError"의 별칭입
+   니다.
+
+
+난수 생성
+---------
+
+ssl.RAND_bytes(num)
+
+   길이 *num*의 암호학적으로 강한 의사 난수 바이트열을 반환합니다.
+   PRNG에 충분한 데이터가 시드(seed) 되지 않았거나 현재 RAND 메서드에
+   서 지원되지 않는 연산이면 "SSLError"를 발생시킵니다.
+   "RAND_status()"를 PRNG의 상태를 확인하는 데 사용할 수 있으며
+   "RAND_add()"는 PRNG를 시드 하는 데 사용할 수 있습니다.
+
+   거의 모든 응용 프로그램에서 "os.urandom()"을 선호합니다.
+
+   암호학적으로 강한 생성기의 요구 사항을 얻으려면 위키피디아 기사
+   Cryptographically secure pseudorandom number generator (CSPRNG)를
+   읽으십시오.
+
+   버전 3.3에 추가.
+
+ssl.RAND_pseudo_bytes(num)
+
+   Return (bytes, is_cryptographic): bytes are *num* pseudo-random
+   bytes, is_cryptographic is "True" if the bytes generated are
+   cryptographically strong. Raises an "SSLError" if the operation is
+   not supported by the current RAND method.
+
+   Generated pseudo-random byte sequences will be unique if they are
+   of sufficient length, but are not necessarily unpredictable. They
+   can be used for non-cryptographic purposes and for certain purposes
+   in cryptographic protocols, but usually not for key generation etc.
+
+   거의 모든 응용 프로그램에서 "os.urandom()"을 선호합니다.
+
+   버전 3.3에 추가.
+
+   버전 3.6부터 폐지: OpenSSL has deprecated
+   "ssl.RAND_pseudo_bytes()", use "ssl.RAND_bytes()" instead.
+
+ssl.RAND_status()
+
+   SSL 의사 난수 생성기에 '충분한' 임의성이 시드 되었으면 "True"를 반
+   환하고, 그렇지 않으면 "False"를 반환합니다. "ssl.RAND_egd()"와
+   "ssl.RAND_add()"를 사용하여 의사 난수 생성기의 임의성을 높일 수 있
+   습니다.
+
+ssl.RAND_add(bytes, entropy)
+
+   Mix the given *bytes* into the SSL pseudo-random number generator.
+   The parameter *entropy* (a float) is a lower bound on the entropy
+   contained in string (so you can always use "0.0").  See **RFC
+   1750** for more information on sources of entropy.
+
+   버전 3.5에서 변경: 이제 쓰기 가능한 *바이트열류 객체*를 받아들입니
+   다.
+
+
+인증서 처리
+-----------
+
+ssl.match_hostname(cert, hostname)
+
+   Verify that *cert* (in decoded format as returned by
+   "SSLSocket.getpeercert()") matches the given *hostname*.  The rules
+   applied are those for checking the identity of HTTPS servers as
+   outlined in **RFC 2818**, **RFC 5280** and **RFC 6125**.  In
+   addition to HTTPS, this function should be suitable for checking
+   the identity of servers in various SSL-based protocols such as
+   FTPS, IMAPS, POPS and others.
+
+   "CertificateError" is raised on failure. On success, the function
+   returns nothing:
+
+      >>> cert = {'subject': ((('commonName', 'example.com'),),)}
+      >>> ssl.match_hostname(cert, "example.com")
+      >>> ssl.match_hostname(cert, "example.org")
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+        File "/home/py3k/Lib/ssl.py", line 130, in match_hostname
+      ssl.CertificateError: hostname 'example.org' doesn't match 'example.com'
+
+   버전 3.2에 추가.
+
+   버전 3.3.3에서 변경: The function now follows **RFC 6125**, section
+   6.4.3 and does neither match multiple wildcards (e.g. "*.*.com" or
+   "*a*.example.org") nor a wildcard inside an internationalized
+   domain names (IDN) fragment. IDN A-labels such as "www*.xn--pthon-
+   kva.org" are still supported, but "x*.python.org" no longer matches
+   "xn--tda.python.org".
+
+   버전 3.5에서 변경: Matching of IP addresses, when present in the
+   subjectAltName field of the certificate, is now supported.
+
+   버전 3.7에서 변경: The function is no longer used to TLS
+   connections. Hostname matching is now performed by OpenSSL.Allow
+   wildcard when it is the leftmost and the only character in that
+   segment. Partial wildcards like "www*.example.com" are no longer
+   supported.
+
+   버전 3.7부터 폐지.
+
+ssl.cert_time_to_seconds(cert_time)
+
+   인증서의 "notBefore" 나 "notAfter" 날짜를 나타내는 ""%b %d %H:%M:%S
+   %Y %Z"" strptime 형식(C 로케일)의 "cert_time" 문자열이 지정하는 시
+   간을 Epoch 이후 초 단위로 반환합니다.
+
+   여기 예제가 있습니다:
+
+      >>> import ssl
+      >>> timestamp = ssl.cert_time_to_seconds("Jan  5 09:34:43 2018 GMT")
+      >>> timestamp  
+      1515144883
+      >>> from datetime import datetime
+      >>> print(datetime.utcfromtimestamp(timestamp))  
+      2018-01-05 09:34:43
+
+   "notBefore" 나 "notAfter" 날짜는 GMT(**RFC 5280**)를 사용해야 합니
+   다.
+
+   버전 3.5에서 변경: 입력된 시간을 입력 문자열의 'GMT' 시간대로 지정
+   된 UTC 시간으로 해석합니다. 이전에는 지역 시간대가 사용되었습니다.
+   정수를 반환합니다 (입력 형식에는 부분 초가 없습니다).
+
+ssl.get_server_certificate(addr, ssl_version=PROTOCOL_TLS_CLIENT, ca_certs=None[, timeout])
+
+   Given the address "addr" of an SSL-protected server, as a
+   (*hostname*, *port-number*) pair, fetches the server's certificate,
+   and returns it as a PEM-encoded string.  If "ssl_version" is
+   specified, uses that version of the SSL protocol to attempt to
+   connect to the server.  If "ca_certs" is specified, it should be a
+   file containing a list of root certificates, the same format as
+   used for the same parameter in "SSLContext.wrap_socket()".  The
+   call will attempt to validate the server certificate against that
+   set of root certificates, and will fail if the validation attempt
+   fails.  A timeout can be specified with the "timeout" parameter.
+
+   버전 3.3에서 변경: 이 함수는 이제 IPv6와 호환됩니다.
+
+   버전 3.5에서 변경: 최신 서버와의 호환성을 최대화하기 위해 기본
+   *ssl_version*이 "PROTOCOL_SSLv3"에서 "PROTOCOL_TLS"로 변경되었습니
+   다.
+
+   버전 3.10에서 변경: The *timeout* parameter was added.
+
+ssl.DER_cert_to_PEM_cert(DER_cert_bytes)
+
+   인증서가 DER-인코딩된 바이트열로 주어지면, 같은 인증서의 PEM-인코딩
+   된 문자열 버전을 반환합니다.
+
+ssl.PEM_cert_to_DER_cert(PEM_cert_string)
+
+   인증서가 ASCII PEM 문자열로 주어지면, 같은 인증서의 DER-인코딩된 바
+   이트열 시퀀스를 반환합니다.
+
+ssl.get_default_verify_paths()
+
+   OpenSSL의 기본 cafile 및 capath에 대한 경로가 있는 네임드 튜플을 반
+   환합니다. 경로는 "SSLContext.set_default_verify_paths()"에서 사용하
+   는 경로와 같습니다. 반환 값은 *네임드 튜플* "DefaultVerifyPaths"입
+   니다.:
+
+   * "cafile" - cafile에 대한 확인된 경로나 파일이 존재하지 않으면
+     "None",
+
+   * "capath" - capath에 대한 확인된 경로나 디렉터리가 존재하지 않으면
+     "None",
+
+   * "openssl_cafile_env" - cafile을 가리키는 OpenSSL의 환경 키,
+
+   * "openssl_cafile" - cafile에 대한 하드 코딩된 경로,
+
+   * "openssl_capath_env" - capath를 가리키는 OpenSSL의 환경 키,
+
+   * "openssl_capath" - capath 디렉터리에 대한 하드 코딩된 경로
+
+   Availability: LibreSSL ignores the environment vars
+   "openssl_cafile_env" and "openssl_capath_env".
+
+   버전 3.4에 추가.
+
+ssl.enum_certificates(store_name)
+
+   윈도우의 시스템 인증서 저장소에서 인증서를 꺼냅니다. *store_name*은
+   "CA", "ROOT" 또는 "MY" 중 하나일 수 있습니다. 윈도우가 추가 인증서
+   저장소를 제공 할 수도 있습니다.
+
+   이 함수는 (cert_bytes, encoding_type, trust) 튜플의 리스트를 반환합
+   니다. encoding_type은 cert_bytes의 인코딩을 지정합니다. X.509 ASN.1
+   데이터를 위한 "x509_asn"이거나 PKCS#7 ASN.1 데이터를 위한
+   "pkcs_7_asn"입니다. Trust는 인증서의 목적을 OIDS 집합으로 지정하거
+   나, 인증서가 모든 목적에 대해 신뢰할 수 있으면 정확히 "True"입니다.
+
+   예제:
+
+      >>> ssl.enum_certificates("CA")
+      [(b'data...', 'x509_asn', {'1.3.6.1.5.5.7.3.1', '1.3.6.1.5.5.7.3.2'}),
+       (b'data...', 'x509_asn', True)]
+
+   Availability: Windows.
+
+   버전 3.4에 추가.
+
+ssl.enum_crls(store_name)
+
+   윈도우의 시스템 인증서 저장소에서 CRL을 꺼냅니다. *store_name*는
+   "CA", "ROOT" 또는 "MY" 중 하나일 수 있습니다. 윈도우가 추가 인증서
+   저장소를 제공 할 수도 있습니다.
+
+   이 함수는 (cert_bytes, encoding_type, trust) 튜플의 리스트를 반환합
+   니다. encoding_type은 cert_bytes의 인코딩을 지정합니다. X.509 ASN.1
+   데이터를 위한 "x509_asn"이거나 PKCS#7 ASN.1 데이터를 위한
+   "pkcs_7_asn"입니다.
+
+   Availability: Windows.
+
+   버전 3.4에 추가.
+
+ssl.wrap_socket(sock, keyfile=None, certfile=None, server_side=False, cert_reqs=CERT_NONE, ssl_version=PROTOCOL_TLS, ca_certs=None, do_handshake_on_connect=True, suppress_ragged_eofs=True, ciphers=None)
+
+   Takes an instance "sock" of "socket.socket", and returns an
+   instance of "ssl.SSLSocket", a subtype of "socket.socket", which
+   wraps the underlying socket in an SSL context.  "sock" must be a
+   "SOCK_STREAM" socket; other socket types are unsupported.
+
+   Internally, function creates a "SSLContext" with protocol
+   *ssl_version* and "SSLContext.options" set to *cert_reqs*. If
+   parameters *keyfile*, *certfile*, *ca_certs* or *ciphers* are set,
+   then the values are passed to "SSLContext.load_cert_chain()",
+   "SSLContext.load_verify_locations()", and
+   "SSLContext.set_ciphers()".
+
+   The arguments *server_side*, *do_handshake_on_connect*, and
+   *suppress_ragged_eofs* have the same meaning as
+   "SSLContext.wrap_socket()".
+
+   버전 3.7부터 폐지: Since Python 3.2 and 2.7.9, it is recommended to
+   use the "SSLContext.wrap_socket()" instead of "wrap_socket()". The
+   top-level function is limited and creates an insecure client socket
+   without server name indication or hostname matching.
+
+
+상수
+----
+
+   모든 상수는 이제 "enum.IntEnum" 이나 "enum.IntFlag" 컬렉션입니다.
+
+   버전 3.6에 추가.
+
+ssl.CERT_NONE
+
+   Possible value for "SSLContext.verify_mode", or the "cert_reqs"
+   parameter to "wrap_socket()".  Except for "PROTOCOL_TLS_CLIENT", it
+   is the default mode.  With client-side sockets, just about any cert
+   is accepted.  Validation errors, such as untrusted or expired cert,
+   are ignored and do not abort the TLS/SSL handshake.
+
+   서버 모드에서는, 클라이언트에서 인증서를 요청하지 않으므로 클라이언
+   트는 클라이언트 인증서 인증을 위해 인증서를 보내지 않습니다.
+
+   아래의 보안 고려 사항의 논의를 참조하십시오.
+
+ssl.CERT_OPTIONAL
+
+   Possible value for "SSLContext.verify_mode", or the "cert_reqs"
+   parameter to "wrap_socket()".  In client mode, "CERT_OPTIONAL" has
+   the same meaning as "CERT_REQUIRED". It is recommended to use
+   "CERT_REQUIRED" for client-side sockets instead.
+
+   서버 모드에서는, 클라이언트 인증서 요청이 클라이언트로 전송됩니다.
+   클라이언트는 요청을 무시하거나 TLS 클라이언트 인증서 인증을 수행하
+   기 위해 인증서를 보낼 수 있습니다. 클라이언트가 인증서를 보내기로
+   선택하면, 인증서가 유효성 검사됩니다. 모든 유효성 검사 에러는, TLS
+   핸드 셰이크를 즉시 중단합니다.
+
+   Use of this setting requires a valid set of CA certificates to be
+   passed, either to "SSLContext.load_verify_locations()" or as a
+   value of the "ca_certs" parameter to "wrap_socket()".
+
+ssl.CERT_REQUIRED
+
+   Possible value for "SSLContext.verify_mode", or the "cert_reqs"
+   parameter to "wrap_socket()".  In this mode, certificates are
+   required from the other side of the socket connection; an
+   "SSLError" will be raised if no certificate is provided, or if its
+   validation fails. This mode is **not** sufficient to verify a
+   certificate in client mode as it does not match hostnames.
+   "check_hostname" must be enabled as well to verify the authenticity
+   of a cert. "PROTOCOL_TLS_CLIENT" uses "CERT_REQUIRED" and enables
+   "check_hostname" by default.
+
+   서버 소켓에서, 이 모드는 필수 TLS 클라이언트 인증서 인증을 제공합니
+   다. 클라이언트 인증서 요청이 클라이언트에 보내지고 클라이언트는 유
+   효하고 신뢰할 수 있는 인증서를 제공해야 합니다.
+
+   Use of this setting requires a valid set of CA certificates to be
+   passed, either to "SSLContext.load_verify_locations()" or as a
+   value of the "ca_certs" parameter to "wrap_socket()".
+
+class ssl.VerifyMode
+
+   CERT_* 상수의 "enum.IntEnum" 컬렉션.
+
+   버전 3.6에 추가.
+
+ssl.VERIFY_DEFAULT
+
+   "SSLContext.verify_flags"의 가능한 값. 이 모드에서는 인증서 해지 목
+   록(CRL)을 검사하지 않습니다. 기본적으로 OpenSSL은 CRL을 요구하지도
+   검사하지도 않습니다.
+
+   버전 3.4에 추가.
+
+ssl.VERIFY_CRL_CHECK_LEAF
+
+   "SSLContext.verify_flags"의 가능한 값. 이 모드에서는, 피어 인증서만
+   확인할 뿐 중간 CA 인증서는 확인하지 않습니다. 이 모드는 피어 인증서
+   의 발급자(그것의 직계 조상 CA)가 서명한 유효한 CRL을 요구합니다. 적
+   절한 CRL이 "SSLContext.load_verify_locations"로 로드되지 않았으면
+   유효성 검사가 실패합니다.
+
+   버전 3.4에 추가.
+
+ssl.VERIFY_CRL_CHECK_CHAIN
+
+   "SSLContext.verify_flags"의 가능한 값. 이 모드에서는, 피어 인증서
+   체인의 모든 인증서에 대한 CRL이 확인됩니다.
+
+   버전 3.4에 추가.
+
+ssl.VERIFY_X509_STRICT
+
+   망가진 X.509 인증서에 대한 우회를 사용하지 못하도록 하는
+   "SSLContext.verify_flags"의 가능한 값.
+
+   버전 3.4에 추가.
+
+ssl.VERIFY_ALLOW_PROXY_CERTS
+
+   Possible value for "SSLContext.verify_flags" to enables proxy
+   certificate verification.
+
+   버전 3.10에 추가.
+
+ssl.VERIFY_X509_TRUSTED_FIRST
+
+   "SSLContext.verify_flags"의 가능한 값. OpenSSL이 인증서의 유효성을
+   검사하기 위해 트러스트 체인을 구축할 때 신뢰할 수 있는 인증서를 선
+   호하도록 지시합니다. 이 플래그는 기본적으로 활성화됩니다.
+
+   버전 3.4.4에 추가.
+
+ssl.VERIFY_X509_PARTIAL_CHAIN
+
+   Possible value for "SSLContext.verify_flags". It instructs OpenSSL
+   to accept intermediate CAs in the trust store to be treated as
+   trust-anchors, in the same way as the self-signed root CA
+   certificates. This makes it possible to trust certificates issued
+   by an intermediate CA without having to trust its ancestor root CA.
+
+   버전 3.10에 추가.
+
+class ssl.VerifyFlags
+
+   VERIFY_* 상수의 "enum.IntFlag" 컬렉션.
+
+   버전 3.6에 추가.
+
+ssl.PROTOCOL_TLS
+
+   클라이언트와 서버가 모두 지원하는 가장 높은 프로토콜 버전을 선택합
+   니다. 이름에도 불구하고, 이 옵션은 "SSL" 과 "TLS" 프로토콜을 모두
+   선택할 수 있습니다.
+
+   버전 3.6에 추가.
+
+   버전 3.10부터 폐지: TLS clients and servers require different
+   default settings for secure communication. The generic TLS protocol
+   constant is deprecated in favor of "PROTOCOL_TLS_CLIENT" and
+   "PROTOCOL_TLS_SERVER".
+
+ssl.PROTOCOL_TLS_CLIENT
+
+   Auto-negotiate the highest protocol version that both the client
+   and server support, and configure the context client-side
+   connections. The protocol enables "CERT_REQUIRED" and
+   "check_hostname" by default.
+
+   버전 3.6에 추가.
+
+ssl.PROTOCOL_TLS_SERVER
+
+   Auto-negotiate the highest protocol version that both the client
+   and server support, and configure the context server-side
+   connections.
+
+   버전 3.6에 추가.
+
+ssl.PROTOCOL_SSLv23
+
+   "PROTOCOL_TLS"의 별칭.
+
+   버전 3.6부터 폐지: 대신 "PROTOCOL_TLS"를 사용하십시오.
+
+ssl.PROTOCOL_SSLv2
+
+   Selects SSL version 2 as the channel encryption protocol.
+
+   This protocol is not available if OpenSSL is compiled with the "no-
+   ssl2" option.
+
+   경고:
+
+     SSL version 2 is insecure.  Its use is highly discouraged.
+
+   버전 3.6부터 폐지: OpenSSL has removed support for SSLv2.
+
+ssl.PROTOCOL_SSLv3
+
+   채널 암호화 프로토콜로 SSL 버전 3을 선택합니다.
+
+   This protocol is not available if OpenSSL is compiled with the "no-
+   ssl3" option.
+
+   경고:
+
+     SSL 버전 3은 안전하지 않습니다. 사용하지 말도록 강력히 권고합니다
+     .
+
+   버전 3.6부터 폐지: OpenSSL has deprecated all version specific
+   protocols. Use the default protocol "PROTOCOL_TLS_SERVER" or
+   "PROTOCOL_TLS_CLIENT" with "SSLContext.minimum_version" and
+   "SSLContext.maximum_version" instead.
+
+ssl.PROTOCOL_TLSv1
+
+   채널 암호화 프로토콜로 TLS 버전 1.0을 선택합니다.
+
+   버전 3.6부터 폐지: OpenSSL has deprecated all version specific
+   protocols.
+
+ssl.PROTOCOL_TLSv1_1
+
+   채널 암호화 프로토콜로 TLS 버전 1.1을 선택합니다. openssl 버전
+   1.0.1+ 에서만 사용할 수 있습니다.
+
+   버전 3.4에 추가.
+
+   버전 3.6부터 폐지: OpenSSL has deprecated all version specific
+   protocols.
+
+ssl.PROTOCOL_TLSv1_2
+
+   Selects TLS version 1.2 as the channel encryption protocol.
+   Available only with openssl version 1.0.1+.
+
+   버전 3.4에 추가.
+
+   버전 3.6부터 폐지: OpenSSL has deprecated all version specific
+   protocols.
+
+ssl.OP_ALL
+
+   다른 SSL 구현에 있는 다양한 버그에 대한 해결 방법을 활성화합니다.
+   이 옵션은 기본적으로 설정됩니다. 반드시 OpenSSL의 "SSL_OP_ALL" 상수
+   와 같은 플래그를 설정할 필요는 없습니다.
+
+   버전 3.2에 추가.
+
+ssl.OP_NO_SSLv2
+
+   SSLv2 연결을 방지합니다. 이 옵션은 "PROTOCOL_TLS"와 결합해서만 적용
+   할 수 있습니다. 피어가 SSLv2를 프로토콜 버전으로 선택하지 못하도록
+   합니다.
+
+   버전 3.2에 추가.
+
+   버전 3.6부터 폐지: SSLv2는 폐지되었습니다.
+
+ssl.OP_NO_SSLv3
+
+   SSLv3 연결을 방지합니다. 이 옵션은 "PROTOCOL_TLS"와 결합해서만 적용
+   할 수 있습니다. 피어가 프로토콜 버전으로 SSLv3을 선택하지 못하게 합
+   니다.
+
+   버전 3.2에 추가.
+
+   버전 3.6부터 폐지: SSLv3은 폐지되었습니다.
+
+ssl.OP_NO_TLSv1
+
+   TLSv1 연결을 금지합니다. 이 옵션은 "PROTOCOL_TLS"와 결합해서만 적용
+   할 수 있습니다. 피어가 TLSv1을 프로토콜 버전으로 선택하지 못하게 합
+   니다.
+
+   버전 3.2에 추가.
+
+   버전 3.7부터 폐지: 이 옵션은 OpenSSL 1.1.0부터 폐지되었습니다, 새로
+   운 "SSLContext.minimum_version"과 "SSLContext.maximum_version"을 대
+   신 사용하십시오.
+
+ssl.OP_NO_TLSv1_1
+
+   TLSv1.1 연결을 금지합니다. 이 옵션은 "PROTOCOL_TLS"와 결합해서만 적
+   용할 수 있습니다. 피어가 TLSv1.1을 프로토콜 버전으로 선택하지 못하
+   게 합니다. openssl 버전 1.0.1+ 에서만 사용할 수 있습니다.
+
+   버전 3.4에 추가.
+
+   버전 3.7부터 폐지: 이 옵션은 OpenSSL 1.1.0부터 폐지되었습니다.
+
+ssl.OP_NO_TLSv1_2
+
+   TLSv1.2 연결을 방지합니다. 이 옵션은 "PROTOCOL_TLS"와 결합해서만 적
+   용할 수 있습니다. 피어가 프로토콜 버전으로 TLSv1.2를 선택하지 못하
+   게 합니다. openssl 버전 1.0.1+ 에서만 사용할 수 있습니다.
+
+   버전 3.4에 추가.
+
+   버전 3.7부터 폐지: 이 옵션은 OpenSSL 1.1.0부터 폐지되었습니다.
+
+ssl.OP_NO_TLSv1_3
+
+   TLSv1.3 연결을 방지합니다. 이 옵션은 "PROTOCOL_TLS"와 결합해서만 적
+   용할 수 있습니다. 피어가 프로토콜 버전으로 TLSv1.3을 선택하지 못하
+   게 합니다. TLS 1.3은 OpenSSL 1.1.1 이상에서 사용할 수 있습니다. 파
+   이썬이 OpenSSL의 이전 버전에 대해 컴파일되면, 플래그의 기본값은 *0*
+   입니다.
+
+   버전 3.7에 추가.
+
+   버전 3.7부터 폐지: The option is deprecated since OpenSSL 1.1.0. It
+   was added to 2.7.15, 3.6.3 and 3.7.0 for backwards compatibility
+   with OpenSSL 1.0.2.
+
+ssl.OP_NO_RENEGOTIATION
+
+   TLSv1.2와 그 이전 버전에서 모든 재협상을 비활성화합니다.
+   HelloRequest 메시지를 보내지 않고, ClientHello를 통한 재협상 요청을
+   무시합니다.
+
+   이 옵션은 OpenSSL 1.1.0h 이상에서만 사용할 수 있습니다.
+
+   버전 3.7에 추가.
+
+ssl.OP_CIPHER_SERVER_PREFERENCE
+
+   클라이언트보다는 서버의 사이퍼 순서 선호를 사용합니다. 이 옵션은 클
+   라이언트 소켓과 SSLv2 서버 소켓에는 영향을 미치지 않습니다.
+
+   버전 3.3에 추가.
+
+ssl.OP_SINGLE_DH_USE
+
+   Prevents re-use of the same DH key for distinct SSL sessions.  This
+   improves forward secrecy but requires more computational resources.
+   This option only applies to server sockets.
+
+   버전 3.3에 추가.
+
+ssl.OP_SINGLE_ECDH_USE
+
+   Prevents re-use of the same ECDH key for distinct SSL sessions.
+   This improves forward secrecy but requires more computational
+   resources. This option only applies to server sockets.
+
+   버전 3.3에 추가.
+
+ssl.OP_ENABLE_MIDDLEBOX_COMPAT
+
+   TLS 1.3 연결을 더 TLS 1.2 연결처럼 보이게 하려고 TLS 1.3 핸드 셰이
+   크에서 더미 암호 변경 사양(CCS - Change Cipher Spec) 메시지를 보냅
+   니다.
+
+   이 옵션은 OpenSSL 1.1.1 이상에서만 사용할 수 있습니다.
+
+   버전 3.8에 추가.
+
+ssl.OP_NO_COMPRESSION
+
+   SSL 채널에서 압축을 사용하지 않습니다. 응용 프로그램 프로토콜이 자
+   체 압축 방법을 지원할 때 유용합니다.
+
+   버전 3.3에 추가.
+
+class ssl.Options
+
+   OP_* 상수의 "enum.IntFlag" 컬렉션.
+
+ssl.OP_NO_TICKET
+
+   클라이언트 측에서 세션 티켓을 요청하지 못하게 합니다.
+
+   버전 3.6에 추가.
+
+ssl.OP_IGNORE_UNEXPECTED_EOF
+
+   Ignore unexpected shutdown of TLS connections.
+
+   This option is only available with OpenSSL 3.0.0 and later.
+
+   버전 3.10에 추가.
+
+ssl.HAS_ALPN
+
+   OpenSSL 라이브러리가 **RFC 7301**에서 설명한 대로 *응용 계층 프로토
+   콜 협상(Application-Layer Protocol Negotiation)* TLS 확장에 대한 지
+   원을 기본 제공하는지 여부
+
+   버전 3.5에 추가.
+
+ssl.HAS_NEVER_CHECK_COMMON_NAME
+
+   OpenSSL 라이브러리가 SCN(subject common name)을 검사하지 않는 지원
+   을 기본 제공하고 "SSLContext.hostname_checks_common_name"가 쓰기 가
+   능한지 아닌지.
+
+   버전 3.7에 추가.
+
+ssl.HAS_ECDH
+
+   OpenSSL 라이브러리가 타원 곡선(Elliptic Curve) 기반 Diffie-Hellman
+   키 교환 지원을 기본 제공하는지 여부. 기능이 배포자에 의해 명시적으
+   로 비활성화되어 있지 않은 한, 참이어야 합니다.
+
+   버전 3.3에 추가.
+
+ssl.HAS_SNI
+
+   OpenSSL 라이브러리가 *서버 이름 표시(Server Name Indication)* 확장
+   (**RFC 6066**에 정의된 대로)에 대한 지원을 기본 제공하는지 여부.
+
+   버전 3.2에 추가.
+
+ssl.HAS_NPN
+
+   OpenSSL 라이브러리가 Application Layer Protocol Negotiation에 설명
+   된 대로 *NPN(Next Protocol Negotiation)*에 대한 지원을 기본 제공하
+   는지 여부. 참이면 "SSLContext.set_npn_protocols()" 메서드를 사용하
+   여 지원할 프로토콜을 알릴 수 있습니다.
+
+   버전 3.3에 추가.
+
+ssl.HAS_SSLv2
+
+   OpenSSL 라이브러리가 SSL 2.0 프로토콜 지원을 기본 제공하는지 여부
+
+   버전 3.7에 추가.
+
+ssl.HAS_SSLv3
+
+   OpenSSL 라이브러리가 SSL 3.0 프로토콜 지원을 기본 제공하는지 여부
+
+   버전 3.7에 추가.
+
+ssl.HAS_TLSv1
+
+   OpenSSL 라이브러리가 TLS 1.0 프로토콜 지원을 기본 제공하는지 여부
+
+   버전 3.7에 추가.
+
+ssl.HAS_TLSv1_1
+
+   OpenSSL 라이브러리가 TLS 1.1 프로토콜 지원을 기본 제공하는지 여부
+
+   버전 3.7에 추가.
+
+ssl.HAS_TLSv1_2
+
+   OpenSSL 라이브러리가 TLS 1.2 프로토콜 지원을 기본 제공하는지 여부
+
+   버전 3.7에 추가.
+
+ssl.HAS_TLSv1_3
+
+   OpenSSL 라이브러리가 TLS 1.3 프로토콜 지원을 기본 제공하는지 여부
+
+   버전 3.7에 추가.
+
+ssl.CHANNEL_BINDING_TYPES
+
+   지원되는 TLS 채널 바인딩 유형의 리스트. 이 리스트의 문자열은
+   "SSLSocket.get_channel_binding()"에 대한 인자로 사용될 수 있습니다.
+
+   버전 3.3에 추가.
+
+ssl.OPENSSL_VERSION
+
+   인터프리터에 의해 로드된 OpenSSL 라이브러리의 버전 문자열:
+
+      >>> ssl.OPENSSL_VERSION
+      'OpenSSL 1.0.2k  26 Jan 2017'
+
+   버전 3.2에 추가.
+
+ssl.OPENSSL_VERSION_INFO
+
+   OpenSSL 라이브러리에 대한 버전 정보를 나타내는 5개의 정수 튜플:
+
+      >>> ssl.OPENSSL_VERSION_INFO
+      (1, 0, 2, 11, 15)
+
+   버전 3.2에 추가.
+
+ssl.OPENSSL_VERSION_NUMBER
+
+   단일 정수로 표현되는, OpenSSL 라이브러리의 원시 버전 번호:
+
+      >>> ssl.OPENSSL_VERSION_NUMBER
+      268443839
+      >>> hex(ssl.OPENSSL_VERSION_NUMBER)
+      '0x100020bf'
+
+   버전 3.2에 추가.
+
+ssl.ALERT_DESCRIPTION_HANDSHAKE_FAILURE
+ssl.ALERT_DESCRIPTION_INTERNAL_ERROR
+ALERT_DESCRIPTION_*
+
+   **RFC 5246** 및 기타의 경고 설명. IANA TLS Alert Registry에는 이 목
+   록과 그 의미가 정의된 RFC에 대한 참조가 들어 있습니다.
+
+   "SSLContext.set_servername_callback()"에서 콜백 함수의 반환 값으로
+   사용됩니다.
+
+   버전 3.4에 추가.
+
+class ssl.AlertDescription
+
+   ALERT_DESCRIPTION_* 상수의 "enum.IntEnum" 컬렉션.
+
+   버전 3.6에 추가.
+
+Purpose.SERVER_AUTH
+
+   Option for "create_default_context()" and
+   "SSLContext.load_default_certs()".  This value indicates that the
+   context may be used to authenticate web servers (therefore, it will
+   be used to create client-side sockets).
+
+   버전 3.4에 추가.
+
+Purpose.CLIENT_AUTH
+
+   Option for "create_default_context()" and
+   "SSLContext.load_default_certs()".  This value indicates that the
+   context may be used to authenticate web clients (therefore, it will
+   be used to create server-side sockets).
+
+   버전 3.4에 추가.
+
+class ssl.SSLErrorNumber
+
+   SSL_ERROR_* 상수의 "enum.IntEnum" 컬렉션.
+
+   버전 3.6에 추가.
+
+class ssl.TLSVersion
+
+   "SSLContext.maximum_version"과 "SSLContext.minimum_version" 용 SSL
+   과 TLS 버전의 "enum.IntEnum" 컬렉션.
+
+   버전 3.7에 추가.
+
+TLSVersion.MINIMUM_SUPPORTED
+
+TLSVersion.MAXIMUM_SUPPORTED
+
+   지원되는 SSL 또는 TLS 버전의 최소 또는 최대. 이것들은 마법 상수
+   (magic constant)입니다. 이들의 값은 사용 가능한 가장 낮거나 높은
+   TLS/SSL 버전을 반영하지 않습니다.
+
+TLSVersion.SSLv3
+
+TLSVersion.TLSv1
+
+TLSVersion.TLSv1_1
+
+TLSVersion.TLSv1_2
+
+TLSVersion.TLSv1_3
+
+   SSL 3.0 에서 TLS 1.3.
+
+   버전 3.10부터 폐지: All "TLSVersion" members except
+   "TLSVersion.TLSv1_2" and "TLSVersion.TLSv1_3" are deprecated.
+
+
+SSL 소켓
+========
+
+class ssl.SSLSocket(socket.socket)
+
+   SSL 소켓은 다음과 같은 소켓 객체 메서드를 제공합니다:
+
+   * "accept()"
+
+   * "bind()"
+
+   * "close()"
+
+   * "connect()"
+
+   * "detach()"
+
+   * "fileno()"
+
+   * "getpeername()", "getsockname()"
+
+   * "getsockopt()", "setsockopt()"
+
+   * "gettimeout()", "settimeout()", "setblocking()"
+
+   * "listen()"
+
+   * "makefile()"
+
+   * "recv()", "recv_into()" (but passing a non-zero "flags" argument
+     is not allowed)
+
+   * "send()", "sendall()" (with the same limitation)
+
+   * "sendfile()" (but "os.sendfile" will be used for plain-text
+     sockets only, else "send()" will be used)
+
+   * "shutdown()"
+
+   그러나 SSL (및 TLS) 프로토콜은 TCP 위에 자체 프레임을 가지고 있으므
+   로, SSL 소켓 추상화는 특정 측면에서 정상적인 OS 수준 소켓의 사양에
+   서 벗어날 수 있습니다. 특히 비 블로킹 소켓에 대한 참고 사항을 보십
+   시오.
+
+   "SSLSocket"의 인스턴스는 "SSLContext.wrap_socket()" 메서드를 사용하
+   여 민들어야 합니다.
+
+   버전 3.5에서 변경: "sendfile()" 메서드가 추가되었습니다.
+
+   버전 3.5에서 변경: The "shutdown()" does not reset the socket
+   timeout each time bytes are received or sent. The socket timeout is
+   now the maximum total duration of the shutdown.
+
+   버전 3.6부터 폐지: "SSLSocket" 인스턴스를 직접 만드는 것은 폐지되었
+   습니다, "SSLContext.wrap_socket()"를 사용하여 소켓을 감싸십시오.
+
+   버전 3.7에서 변경: "SSLSocket" 인스턴스는 "wrap_socket()"로 만들어
+   야 합니다. 이전 버전에서는 직접 인스턴스를 만들 수 있었습니다. 이것
+   은 문서로 만들어지거나 공식적으로 지원된 적이 없습니다.
+
+   버전 3.10에서 변경: Python now uses "SSL_read_ex" and
+   "SSL_write_ex" internally. The functions support reading and
+   writing of data larger than 2 GB. Writing zero-length data no
+   longer fails with a protocol violation error.
+
+SSL 소켓에는 다음과 같은 추가 메서드와 어트리뷰트도 있습니다:
+
+SSLSocket.read(len=1024, buffer=None)
+
+   SSL 소켓에서 최대 *len* 바이트의 데이터를 읽고 그 결과를 "bytes" 인
+   스턴스로 반환합니다. *buffer*가 지정되면, 대신 버퍼로 읽어 들이고,
+   읽은 바이트 수를 반환합니다.
+
+   소켓이 비 블로킹이고 읽기가 블록 되려고 하면 "SSLWantReadError" 나
+   "SSLWantWriteError"를 발생시킵니다.
+
+   언제나 재협상이 가능하므로, "read()"를 호출해도 쓰기 연산이 발생할
+   수 있습니다.
+
+   버전 3.5에서 변경: The socket timeout is no longer reset each time
+   bytes are received or sent. The socket timeout is now the maximum
+   total duration to read up to *len* bytes.
+
+   버전 3.6부터 폐지: "read()" 대신 "recv()"를 사용하십시오.
+
+SSLSocket.write(buf)
+
+   SSL 소켓에 *buf*를 기록하고, 기록한 바이트 수를 돌려줍니다. *buf*
+   인자는 버퍼 인터페이스를 지원하는 객체여야 합니다.
+
+   소켓이 비 블로킹이고, 쓰기가 블록 하려고 하면 "SSLWantReadError" 나
+   "SSLWantWriteError"를 발생시킵니다.
+
+   언제나 재협상이 가능하므로, "write()"를 호출해도 읽기 연산이 발생할
+   수 있습니다.
+
+   버전 3.5에서 변경: The socket timeout is no longer reset each time
+   bytes are received or sent. The socket timeout is now the maximum
+   total duration to write *buf*.
+
+   버전 3.6부터 폐지: "write()" 대신 "send()"를 사용하십시오.
+
+참고:
+
+  "read()" 과 "write()" 메서드는 암호화되지 않은 응용 프로그램 수준 데
+  이터를 읽고 쓰고 그것을 암호화되고 와이어 수준(wire-level) 데이터로
+  복호화/암호화하는 저수준 메서드입니다. 이 메서드는 활성화된 SSL 연결
+  , 즉, 핸드 셰이크가 완료되고, "SSLSocket.unwrap()"가 호출되지 않은
+  것이 필요합니다.일반적으로 이러한 메서드 대신 "recv()" 와 "send()"와
+  같은 소켓 API 메서드를 사용해야합니다.
+
+SSLSocket.do_handshake()
+
+   SSL 설정 핸드 셰이크를 수행합니다.
+
+   버전 3.4에서 변경: 핸드 셰이크 메서드는 소켓의 "context"의
+   "check_hostname" 어트리뷰트가 참일 때 "match_hostname()"도 수행합니
+   다.
+
+   버전 3.5에서 변경: The socket timeout is no longer reset each time
+   bytes are received or sent. The socket timeout is now the maximum
+   total duration of the handshake.
+
+   버전 3.7에서 변경: Hostname or IP address is matched by OpenSSL
+   during handshake. The function "match_hostname()" is no longer
+   used. In case OpenSSL refuses a hostname or IP address, the
+   handshake is aborted early and a TLS alert message is sent to the
+   peer.
+
+SSLSocket.getpeercert(binary_form=False)
+
+   연결의 다른 끝의 피어에 대한 인증서가 없으면 "None"을 반환합니다.
+   SSL 핸드 셰이크가 아직 수행되지 않았으면, "ValueError"를 발생시킵니
+   다.
+
+   "binary_form" 매개 변수가 "False"이고, 피어에서 인증서를 받았으면,
+   이 메서드는 "dict" 인스턴스를 반환합니다. 인증서의 유효성을 검사하
+   지 않았으면, 딕셔너리는 비어 있습니다. 인증서의 유효성을 검사했으면
+   "subject"(인증서가 발행된 주체)와 "issuer"(인증서를 발급한 주체)와
+   같은 몇 가지 키가 있는 dict를 반환합니다. 인증서가 *SAN(Subject
+   Alternative Name)* 확장(**RFC 3280** 참조)의 인스턴스를 포함하면 딕
+   셔너리에 "subjectAltName" 키도 있습니다.
+
+   "subject" 와 "issuer" 필드는 각 필드에 대한 인증서의 데이터 구조에
+   제공된 RDN(relative distinguished name)의 시퀀스를 포함하는 튜플이
+   며, 각 RDN은 이름-값 쌍의 시퀀스입니다. 실제 예를 들어 보겠습니다:
+
+      {'issuer': ((('countryName', 'IL'),),
+                  (('organizationName', 'StartCom Ltd.'),),
+                  (('organizationalUnitName',
+                    'Secure Digital Certificate Signing'),),
+                  (('commonName',
+                    'StartCom Class 2 Primary Intermediate Server CA'),)),
+       'notAfter': 'Nov 22 08:15:19 2013 GMT',
+       'notBefore': 'Nov 21 03:09:52 2011 GMT',
+       'serialNumber': '95F0',
+       'subject': ((('description', '571208-SLe257oHY9fVQ07Z'),),
+                   (('countryName', 'US'),),
+                   (('stateOrProvinceName', 'California'),),
+                   (('localityName', 'San Francisco'),),
+                   (('organizationName', 'Electronic Frontier Foundation, Inc.'),),
+                   (('commonName', '*.eff.org'),),
+                   (('emailAddress', 'hostmaster@eff.org'),)),
+       'subjectAltName': (('DNS', '*.eff.org'), ('DNS', 'eff.org')),
+       'version': 3}
+
+   참고:
+
+     To validate a certificate for a particular service, you can use
+     the "match_hostname()" function.
+
+   "binary_form" 매개 변수가 "True"이고, 인증서가 제공되었으면, 이 메
+   서드는 전체 인증서의 DER-인코딩 형식을 바이트 시퀀스로 반환하고, 피
+   어가 인증서를 제공하지 않았으면 "None"을 반환합니다. 피어가 인증서
+   를 제공하는지는 SSL 소켓의 역할에 따라 다릅니다:
+
+   * 클라이언트 SSL 소켓의 경우, 서버는 유효성 검사가 필요한지에 관계
+     없이 항상 인증서를 제공합니다.
+
+   * 서버 SSL 소켓의 경우, 클라이언트는 서버가 요청할 때만 인증서를 제
+     공합니다; 따라서 "CERT_NONE"("CERT_OPTIONAL" 나 "CERT_REQUIRED"
+     대신)을 사용하면 "getpeercert()"는 "None"을 반환합니다.
+
+   버전 3.2에서 변경: 반환된 딕셔너리에는 "issuer" 와 "notBefore"와 같
+   은 추가 항목이 포함됩니다.
+
+   버전 3.4에서 변경: 핸드 셰이크가 완료되지 않았으면 "ValueError"가
+   발생합니다. 반환된 딕셔너리에는 "crlDistributionPoints",
+   "caIssuers" 및 "OCSP" URI와 같은 추가 X509v3 확장 항목이 포함됩니다
+   .
+
+   버전 3.9에서 변경: IPv6 주소 문자열에는 더는 후행 줄 바꿈이 없습니
+   다.
+
+SSLSocket.cipher()
+
+   사용되는 사이퍼의 이름, 그것의 사용을 정의하는 SSL 프로토콜의 버전
+   및 사용되는 비밀 비트의 수를 포함하는 3-튜플을 반환합니다. 연결이
+   이루어지지 않았으면 "None"을 반환합니다.
+
+SSLSocket.shared_ciphers()
+
+   Return the list of ciphers available in both the client and server.
+   Each entry of the returned list is a three-value tuple containing
+   the name of the cipher, the version of the SSL protocol that
+   defines its use, and the number of secret bits the cipher uses.
+   "shared_ciphers()" returns "None" if no connection has been
+   established or the socket is a client socket.
+
+   버전 3.5에 추가.
+
+SSLSocket.compression()
+
+   사용되는 압축 알고리즘을 문자열로 반환하거나, 연결이 압축되지 않으
+   면 "None"을 반환합니다.
+
+   상위-수준 프로토콜이 자체 압축 메커니즘을 지원하면,
+   "OP_NO_COMPRESSION"을 사용하여 SSL-수준 압축을 비활성화할 수 있습니
+   다.
+
+   버전 3.3에 추가.
+
+SSLSocket.get_channel_binding(cb_type='tls-unique')
+
+   현재 연결에 대한 채널 바인딩 데이터를 바이트열 객체로 가져옵니다.
+   연결되어 있지 않거나 핸드 셰이크가 완료되지 않았으면 "None"을 반환
+   합니다.
+
+   *cb_type* 매개 변수를 사용하여 원하는 채널 바인딩 유형을 선택할 수
+   있습니다. 유효한 채널 바인딩 유형은 "CHANNEL_BINDING_TYPES" 리스트
+   에 나열됩니다. 현재는 **RFC 5929**가 정의한 'tls-unique' 채널 바인
+   딩만 지원됩니다. 지원되지 않는 채널 바인딩 유형이 요청되면
+   "ValueError"가 발생합니다.
+
+   버전 3.3에 추가.
+
+SSLSocket.selected_alpn_protocol()
+
+   TLS 핸드 셰이크 중에 선택된 프로토콜을 반환합니다.
+   "SSLContext.set_alpn_protocols()"가 호출되지 않았거나, 상대방이
+   ALPN을 지원하지 않거나, 이 소켓이 클라이언트가 제안한 프로토콜 중
+   어떤 것도 지원하지 않거나, 핸드 셰이크가 아직 발생하지 않았으면
+   "None"이 반환됩니다.
+
+   버전 3.5에 추가.
+
+SSLSocket.selected_npn_protocol()
+
+   TLS/SSL 핸드 셰이크 중에 선택된 상위-수준의 프로토콜을 반환합니다.
+   "SSLContext.set_npn_protocols()"가 호출되지 않았거나, 상대방이 NPN
+   을 지원하지 않거나, 핸드 셰이크가 아직 발생하지 않았으면 "None"을
+   반환합니다.
+
+   버전 3.3에 추가.
+
+   버전 3.10부터 폐지: NPN has been superseded by ALPN
+
+SSLSocket.unwrap()
+
+   SSL 종료 핸드 셰이크를 수행해서 하부 소켓에서 TLS 계층을 제거하고,
+   하부 소켓 객체를 반환합니다. 이것은 연결을 통한 암호화된 연산에서
+   암호화되지 않은 것으로 이동하는 데 사용할 수 있습니다. 원래 소켓이
+   아닌 반환된 소켓을 연결의 다른 쪽과 계속 통신하기 위해 항상 사용해
+   야 합니다.
+
+SSLSocket.verify_client_post_handshake()
+
+   TLS 1.3 클라이언트로부터 PHA(post-handshake authentication)를 요청
+   합니다. PHA는 양쪽에서 PHA가 활성화된 초기 TLS 핸드 셰이크 후에 서
+   버 측 소켓에서 TLS 1.3 연결에 대해서만 시작할 수 있습니다,
+   "SSLContext.post_handshake_auth"를 참조하세요.
+
+   이 메서드는 즉시 인증서 교환을 수행하지 않습니다. 서버 측은 다음 쓰
+   기 이벤트 중에 CertificateRequest를 보내고 클라이언트가 다음 읽기
+   이벤트에서 인증서로 응답할 것으로 기대합니다.
+
+   사전 조건이 모두 충족되지 않으면 (예를 들어, TLS 1.3이 아니거나 PHA
+   가 활성화되지 않았을 때), "SSLError"가 발생합니다.
+
+   참고:
+
+     OpenSSL 1.1.1과 TLS 1.3이 활성화된 경우에만 사용할 수 있습니다.
+     TLS 1.3 지원이 없으면, 이 메서드는 "NotImplementedError"를 발생시
+     킵니다.
+
+   버전 3.8에 추가.
+
+SSLSocket.version()
+
+   Return the actual SSL protocol version negotiated by the connection
+   as a string, or "None" if no secure connection is established. As
+   of this writing, possible return values include ""SSLv2"",
+   ""SSLv3"", ""TLSv1"", ""TLSv1.1"" and ""TLSv1.2"". Recent OpenSSL
+   versions may define more return values.
+
+   버전 3.5에 추가.
+
+SSLSocket.pending()
+
+   접속에 계류 중인, 읽기용으로 이미 복호화된 바이트의 수를 돌려줍니다
+   .
+
+SSLSocket.context
+
+   The "SSLContext" object this SSL socket is tied to.  If the SSL
+   socket was created using the deprecated "wrap_socket()" function
+   (rather than "SSLContext.wrap_socket()"), this is a custom context
+   object created for this SSL socket.
+
+   버전 3.2에 추가.
+
+SSLSocket.server_side
+
+   서버 측 소켓에서는 "True"이고 클라이언트 측 소켓에서는 "False" 인
+   논릿값.
+
+   버전 3.2에 추가.
+
+SSLSocket.server_hostname
+
+   서버의 호스트 이름: "str" 형, 또는 서버 측 소켓이거나 호스트 이름이
+   생성자에 지정되지 않았으면 "None".
+
+   버전 3.2에 추가.
+
+   버전 3.7에서 변경: 어트리뷰트는 이제 항상 ASCII 텍스트입니다.
+   "server_hostname"이 국제화 된 도메인 이름(IDN)일 때, 이 어트리뷰트
+   는 이제 U-레이블 형식(""pythön.org"") 대신 A-레이블 형식(""xn
+   --pythn-mua.org"")을 저장합니다.
+
+SSLSocket.session
+
+   이 SSL 연결을 위한 "SSLSession". 이 세션은 TLS 핸드 셰이크가 수행된
+   후 클라이언트와 서버 측 소켓에서 사용할 수 있습니다. 클라이언트 소
+   켓의 경우 세션을 다시 사용하기 위해 "do_handshake()"가 호출되기 전
+   에 세션을 설정할 수 있습니다.
+
+   버전 3.6에 추가.
+
+SSLSocket.session_reused
+
+   버전 3.6에 추가.
+
+
+SSL 컨텍스트
+============
+
+버전 3.2에 추가.
+
+SSL 컨텍스트는 SSL 구성 옵션, 인증서 및 개인 키와 같이 단일 SSL 연결보
+다 수명이 긴 다양한 데이터를 보관합니다. 또한, 같은 클라이언트의 반복
+된 연결 속도를 높이기 위해 서버 측 소켓에 대한 SSL 세션 캐시를 관리합
+니다.
+
+class ssl.SSLContext(protocol=None)
+
+   새 SSL 컨텍스트를 만듭니다. *protocol*를 전달할 수 있는데, 이 모듈
+   에 정의된 "PROTOCOL_*" 상수 중 하나여야 합니다. 매개 변수는 사용할
+   SSL 프로토콜의 버전을 지정합니다. 일반적으로 서버는 특정 프로토콜
+   버전을 선택하고, 클라이언트는 서버의 선택에 적응해야 합니다. 대부분
+   의 버전은 다른 버전과 상호 운용할 수 없습니다. 지정하지 않으면, 기
+   본값은 "PROTOCOL_TLS"입니다; 다른 버전과의 호환성이 가장 뛰어납니다
+   .
+
+   다음은 클라이언트의 어느 버전(행)이 서버의 어떤 버전(열)에 연결할
+   수 있는지 보여주는 표입니다:
+
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+      | *클라이언트* / **서버**  | **SSLv2**    | **SSLv3**    | **TLS** [3]   | **TLSv1** | **TLSv1.1** | **TLSv1.2** |
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+      | *SSLv2*                  | yes          | no           | no [1]        | no        | no          | no          |
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+      | *SSLv3*                  | no           | yes          | no [2]        | no        | no          | no          |
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+      | *TLS* (*SSLv23*) [3]     | no [1]       | no [2]       | yes           | yes       | yes         | yes         |
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+      | *TLSv1*                  | no           | no           | yes           | yes       | no          | no          |
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+      | *TLSv1.1*                | no           | no           | yes           | no        | yes         | no          |
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+      | *TLSv1.2*                | no           | no           | yes           | no        | no          | yes         |
+      +--------------------------+--------------+--------------+---------------+-----------+-------------+-------------+
+
+   -[ 각주 ]-
+
+   [1] "SSLContext"는 기본적으로 "OP_NO_SSLv2"로 SSLv2를 비활성화합니
+       다.
+
+   [2] "SSLContext"는 기본적으로 "OP_NO_SSLv3"으로 SSLv3을 비활성화합
+       니다.
+
+   [3] TLS 1.3 프로토콜은 OpenSSL >= 1.1.1에서 "PROTOCOL_TLS"로 사용할
+       수 있습니다. TLS 1.3만을 위한 전용 PROTOCOL 상수는 없습니다.
+
+   더 보기:
+
+     "create_default_context()"는 "ssl" 모듈이 주어진 목적을 위한 보안
+     설정을 선택할 수 있게 합니다.
+
+   버전 3.6에서 변경: The context is created with secure default
+   values. The options "OP_NO_COMPRESSION",
+   "OP_CIPHER_SERVER_PREFERENCE", "OP_SINGLE_DH_USE",
+   "OP_SINGLE_ECDH_USE", "OP_NO_SSLv2" (except for "PROTOCOL_SSLv2"),
+   and "OP_NO_SSLv3" (except for "PROTOCOL_SSLv3") are set by default.
+   The initial cipher suite list contains only "HIGH" ciphers, no
+   "NULL" ciphers and no "MD5" ciphers (except for "PROTOCOL_SSLv2").
+
+   버전 3.10부터 폐지: "SSLContext" without protocol argument is
+   deprecated. The context class will either require
+   "PROTOCOL_TLS_CLIENT" or "PROTOCOL_TLS_SERVER" protocol in the
+   future.
+
+   버전 3.10에서 변경: The default cipher suites now include only
+   secure AES and ChaCha20 ciphers with forward secrecy and security
+   level 2. RSA and DH keys with less than 2048 bits and ECC keys with
+   less than 224 bits are prohibited. "PROTOCOL_TLS",
+   "PROTOCOL_TLS_CLIENT", and "PROTOCOL_TLS_SERVER" use TLS 1.2 as
+   minimum TLS version.
+
+"SSLContext" 객체에는 다음과 같은 메서드와 어트리뷰트가 있습니다:
+
+SSLContext.cert_store_stats()
+
+   로드된 X.509 인증서 수량, CA 인증서로 표시된 X.509 인증서 및 인증서
+   취소 목록(CRL)의 수에 대한 통계를 딕셔너리로 가져옵니다.
+
+   하나의 CA 인증서와 다른 인증서 하나를 가진 컨텍스트 예:
+
+      >>> context.cert_store_stats()
+      {'crl': 0, 'x509_ca': 1, 'x509': 2}
+
+   버전 3.4에 추가.
+
+SSLContext.load_cert_chain(certfile, keyfile=None, password=None)
+
+   Load a private key and the corresponding certificate.  The
+   *certfile* string must be the path to a single file in PEM format
+   containing the certificate as well as any number of CA certificates
+   needed to establish the certificate's authenticity.  The *keyfile*
+   string, if present, must point to a file containing the private
+   key.  Otherwise the private key will be taken from *certfile* as
+   well.  See the discussion of 인증서 for more information on how the
+   certificate is stored in the *certfile*.
+
+   *password* 인자는 개인 키의 복호화를 위한 암호를 얻기 위해 호출하는
+   함수가 될 수 있습니다. 개인 키가 암호화되어있고 암호가 필요한 경우
+   에만 호출됩니다. 인자 없이 호출되며, 문자열, 바이트열 또는
+   bytearray를 반환해야 합니다. 반환 값이 문자열이면 키를 해독하기 전
+   에 UTF-8로 인코딩됩니다. 또는 문자열, 바이트열 또는 bytearray 값을
+   *password* 인자로 직접 제공할 수 있습니다. 개인 키가 암호화되지 않
+   고 암호가 필요 없으면 무시됩니다.
+
+   *password* 인자가 지정되지 않고 암호가 필요하면, OpenSSL의 기본 암
+   호 프롬프트 메커니즘을 사용하여 대화식으로 사용자에게 암호를 묻습니
+   다.
+
+   개인 키가 인증서와 일치하지 않으면 "SSLError"가 발생합니다.
+
+   버전 3.3에서 변경: 새로운 선택적 인자 *password*.
+
+SSLContext.load_default_certs(purpose=Purpose.SERVER_AUTH)
+
+   Load a set of default "certification authority" (CA) certificates
+   from default locations. On Windows it loads CA certs from the "CA"
+   and "ROOT" system stores. On all systems it calls
+   "SSLContext.set_default_verify_paths()". In the future the method
+   may load CA certificates from other locations, too.
+
+   The *purpose* flag specifies what kind of CA certificates are
+   loaded. The default settings "Purpose.SERVER_AUTH" loads
+   certificates, that are flagged and trusted for TLS web server
+   authentication (client side sockets). "Purpose.CLIENT_AUTH" loads
+   CA certificates for client certificate verification on the server
+   side.
+
+   버전 3.4에 추가.
+
+SSLContext.load_verify_locations(cafile=None, capath=None, cadata=None)
+
+   "verify_mode"가 "CERT_NONE"가 아닐 때, 다른 피어의 인증서를 확인하
+   는 데 사용되는 "인증 기관" (CA) 인증서 집합을 로드합니다. *cafile*
+   나 *capath* 중 적어도 하나는 지정해야 합니다.
+
+   이 메서드는 PEM 이나 DER 형식으로 인증서 해지 목록(CRL)을 로드할 수
+   도 있습니다. CRL을 사용하려면 "SSLContext.verify_flags"를 올바르게
+   구성해야 합니다.
+
+   *cafile* 문자열이 있으면 이어붙인 PEM 형식의 CA 인증서 파일 경로입
+   니다. 이 파일에 인증서를 정렬하는 방법에 대한 자세한 내용은 인증서
+   의 논의를 참조하십시오.
+
+   The *capath* string, if present, is the path to a directory
+   containing several CA certificates in PEM format, following an
+   OpenSSL specific layout.
+
+   *cadata* 객체가 있으면, 하나 이상의 PEM-인코딩된 인증서의 ASCII 문
+   자열이거나 DER-인코딩된 인증서의 *바이트열류 객체*입니다. *capath*
+   와 마찬가지로 PEM-인코딩된 인증서 주위에 추가한 줄은 무시되지만 적
+   어도 하나의 인증서가 있어야 합니다.
+
+   버전 3.4에서 변경: 새로운 선택적 인자 *cadata*
+
+SSLContext.get_ca_certs(binary_form=False)
+
+   로드된 "인증 기관" (CA) 인증서 목록을 가져옵니다. "binary_form" 매
+   개 변수가 "False"면 각 리스트 항목은 "SSLSocket.getpeercert()"의 출
+   력과 같은 딕셔너리입니다. 그렇지 않으면, 이 메서드는 DER-인코딩된
+   인증서의 리스트를 반환합니다. 반환된 리스트에는 인증서가 SSL 연결이
+   요청하고 로드되지 않는 한 *capath*의 인증서가 포함되어 있지 않습니
+   다.
+
+   참고:
+
+     capath 디렉터리의 인증서는 적어도 한 번 이상 사용하지 않으면 로드
+     되지 않습니다.
+
+   버전 3.4에 추가.
+
+SSLContext.get_ciphers()
+
+   활성화된 사이퍼의 리스트를 가져옵니다. 리스트는 사이퍼 우선순위 순
+   입니다. "SSLContext.set_ciphers()"를 참조하십시오.
+
+   예제:
+
+      >>> ctx = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+      >>> ctx.set_ciphers('ECDHE+AESGCM:!ECDSA')
+      >>> ctx.get_ciphers()
+      [{'aead': True,
+        'alg_bits': 256,
+        'auth': 'auth-rsa',
+        'description': 'ECDHE-RSA-AES256-GCM-SHA384 TLSv1.2 Kx=ECDH     Au=RSA  '
+                       'Enc=AESGCM(256) Mac=AEAD',
+        'digest': None,
+        'id': 50380848,
+        'kea': 'kx-ecdhe',
+        'name': 'ECDHE-RSA-AES256-GCM-SHA384',
+        'protocol': 'TLSv1.2',
+        'strength_bits': 256,
+        'symmetric': 'aes-256-gcm'},
+       {'aead': True,
+        'alg_bits': 128,
+        'auth': 'auth-rsa',
+        'description': 'ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 Kx=ECDH     Au=RSA  '
+                       'Enc=AESGCM(128) Mac=AEAD',
+        'digest': None,
+        'id': 50380847,
+        'kea': 'kx-ecdhe',
+        'name': 'ECDHE-RSA-AES128-GCM-SHA256',
+        'protocol': 'TLSv1.2',
+        'strength_bits': 128,
+        'symmetric': 'aes-128-gcm'}]
+
+   버전 3.6에 추가.
+
+SSLContext.set_default_verify_paths()
+
+   OpenSSL 라이브러리를 빌드할 때 정의된 파일 시스템 경로에서 기본 "인
+   증 기관" (CA) 인증서 집합을 로드합니다. 불행히도, 이 메서드가 성공
+   하는지를 쉽게 알 방법이 없습니다: 인증서를 찾을 수 없어도 에러가 반
+   환되지 않습니다. 하지만 OpenSSL 라이브러리가 운영 체제 일부로 제공
+   되면 올바르게 구성되었을 가능성이 큽니다.
+
+SSLContext.set_ciphers(ciphers)
+
+   Set the available ciphers for sockets created with this context. It
+   should be a string in the OpenSSL cipher list format. If no cipher
+   can be selected (because compile-time options or other
+   configuration forbids use of all the specified ciphers), an
+   "SSLError" will be raised.
+
+   참고:
+
+     연결될 때, SSL 소켓의 "SSLSocket.cipher()" 메서드가 현재 선택된
+     사이퍼를 제공합니다.TLS 1.3 cipher suites cannot be disabled with
+     "set_ciphers()".
+
+SSLContext.set_alpn_protocols(protocols)
+
+   SSL/TLS 핸드 셰이크 중에 소켓이 알려야 하는 프로토콜을 지정합니다.
+   우선순위에 따라 정렬된 "['http/1.1', 'spdy/2']"와 같은 ASCII 문자열
+   리스트여야 합니다. 프로토콜 선택은 핸드 셰이크 중에 발생하며, **RFC
+   7301**에 따라 처리됩니다. 성공적인 핸드 셰이크가 끝나면,
+   "SSLSocket.selected_alpn_protocol()" 메서드는 합의된 프로토콜을 반
+   환합니다.
+
+   "HAS_NPN"이 "False"면, 이 메서드는 "NotImplementedError"를 발생시킵
+   니다.
+
+   버전 3.5에 추가.
+
+SSLContext.set_npn_protocols(protocols)
+
+   SSL/TLS 핸드 셰이크 중에 소켓이 알려야 하는 프로토콜을 지정합니다.
+   우선순위에 따라 정렬된 "['http/1.1', 'spdy/2']"와 같은 문자열 리스
+   트여야 합니다. 프로토콜 선택은 핸드 셰이크 중에 발생하며,
+   Application Layer Protocol Negotiation에 따라 처리됩니다. 성공적인
+   핸드 셰이크가 끝나면, "SSLSocket.selected_npn_protocol()" 메서드는
+   합의된 프로토콜을 반환합니다.
+
+   "HAS_NPN"이 "False"면, 이 메서드는 "NotImplementedError"를 발생시킵
+   니다.
+
+   버전 3.3에 추가.
+
+   버전 3.10부터 폐지: NPN has been superseded by ALPN
+
+SSLContext.sni_callback
+
+   TLS 클라이언트가 서버 이름 표시를 지정할 때 SSL/TLS 서버에서 TLS 클
+   라이언트 Hello 핸드 셰이크 메시지를 받은 후 호출될 콜백 함수를 등록
+   합니다. 서버 이름 표시 메커니즘은 **RFC 6066** section 3 - Server
+   Name Indication에서 지정됩니다.
+
+   "SSLContext" 당 하나의 콜백 만 설정할 수 있습니다. *sni_callback*이
+   "None"으로 설정되면 콜백이 비활성화됩니다. 이 함수를 호출하면 이전
+   에 등록된 콜백이 비활성화됩니다.
+
+   콜백 함수는 세 개의 인자로 호출됩니다. 첫 번째는 "ssl.SSLSocket"이
+   고, 두 번째는 클라이언트가 통신하려는 서버 이름을 나타내는 문자열(
+   또는 TLS 클라이언트 Hello에 서버 이름이 없으면 "None")이며, 세 번째
+   인자는 원래 "SSLContext"입니다. 서버 이름 인자는 텍스트입니다. 국제
+   화된 도메인 이름의 경우, 서버 이름은 IDN A-레이블(""xn--pythn-
+   mua.org"")입니다.
+
+   이 콜백은 일반적으로 "ssl.SSLSocket"의 "SSLSocket.context" 어트리뷰
+   트를 서버 이름과 일치하는 인증서 체인을 나타내는 "SSLContext" 형의
+   새 객체로 변경하는 데 사용됩니다.
+
+   Due to the early negotiation phase of the TLS connection, only
+   limited methods and attributes are usable like
+   "SSLSocket.selected_alpn_protocol()" and "SSLSocket.context". The
+   "SSLSocket.getpeercert()", "SSLSocket.cipher()" and
+   "SSLSocket.compression()" methods require that the TLS connection
+   has progressed beyond the TLS Client Hello and therefore will not
+   return meaningful values nor can they be called safely.
+
+   TLS 협상을 계속하려면 *sni_callback* 함수가 "None"을 반환해야 합니
+   다. TLS 실패가 필요하면, 상수 "ALERT_DESCRIPTION_*"를 반환할 수 있
+   습니다. 다른 반환 값은 "ALERT_DESCRIPTION_INTERNAL_ERROR"로 TLS 치
+   명적인 에러를 발생시킵니다.
+
+   *sni_callback* 함수에서 예외가 발생하면, TLS 연결이 치명적인 TLS 경
+   고 메시지 "ALERT_DESCRIPTION_HANDSHAKE_FAILURE"로 종료됩니다.
+
+   이 메서드는 OpenSSL 라이브러리가 빌드될 때 OPENSSL_NO_TLSEXT가 정의
+   되었으면 "NotImplementedError"를 발생시킵니다.
+
+   버전 3.7에 추가.
+
+SSLContext.set_servername_callback(server_name_callback)
+
+   이전 버전과의 호환성을 위해 유지되는 기존 API입니다. 가능하면, 대신
+   "sni_callback"을 사용해야 합니다. 주어진 *server_name_callback*은
+   *sni_callback*과 비슷하지만, 서버 호스트 이름이 IDN-인코딩된 국제화
+   된 도메인 이름일 때 *server_name_callback*은 디코딩된 U-레이블
+   (""pythön.org"")을 받습니다.
+
+   If there is an decoding error on the server name, the TLS
+   connection will terminate with an
+   "ALERT_DESCRIPTION_INTERNAL_ERROR" fatal TLS alert message to the
+   client.
+
+   버전 3.4에 추가.
+
+SSLContext.load_dh_params(dhfile)
+
+   Diffie-Hellman (DH) 키 교환을 위한 키 생성 매개 변수를 로드합니다.
+   DH 키 교환을 사용하면 계산 자원(서버와 클라이언트 모두)을 희생하여
+   FS(forward secrecy)를 향상합니다. *dhfile* 매개 변수는 PEM 형식의
+   DH 매개 변수를 포함하는 파일의 경로여야 합니다.
+
+   이 설정은 클라이언트 소켓에는 적용되지 않습니다. "OP_SINGLE_DH_USE"
+   옵션을 사용하여 보안을 더 향상할 수도 있습니다.
+
+   버전 3.3에 추가.
+
+SSLContext.set_ecdh_curve(curve_name)
+
+   타원 곡선(Elliptic Curve) 기반 Diffie-Hellman (ECDH) 키 교환을 위한
+   곡선 이름을 설정합니다. 보안성에 대한 논란의 여지는 있지만 ECDH는
+   일반 DH보다 상당히 빠릅니다. *curve_name* 매개 변수는 잘 알려진 타
+   원 곡선을 설명하는 문자열이어야 합니다, 예를 들어, 널리 지원되는 곡
+   선인 "prime256v1".
+
+   이 설정은 클라이언트 소켓에는 적용되지 않습니다.
+   "OP_SINGLE_ECDH_USE" 옵션을 사용하여 보안을 더 향상할 수도 있습니다
+   .
+
+   "HAS_ECDH"가 "False"면 이 메서드를 사용할 수 없습니다.
+
+   버전 3.3에 추가.
+
+   더 보기:
+
+     SSL/TLS & Perfect Forward Secrecy
+        Vincent Bernat.
+
+SSLContext.wrap_socket(sock, server_side=False, do_handshake_on_connect=True, suppress_ragged_eofs=True, server_hostname=None, session=None)
+
+   Wrap an existing Python socket *sock* and return an instance of
+   "SSLContext.sslsocket_class" (default "SSLSocket"). The returned
+   SSL socket is tied to the context, its settings and certificates.
+   *sock* must be a "SOCK_STREAM" socket; other socket types are
+   unsupported.
+
+   매개 변수 "server_side"는 서버 측과 클라이언트 측 동작 중 어느 것이
+   소켓에서 필요한지를 식별하는 논릿값입니다.
+
+   클라이언트 측 소켓의 경우, 컨텍스트 구성이 지연됩니다; 하부 소켓이
+   아직 연결되어 있지 않으면, "connect()"가 소켓에서 호출된 후 컨텍스
+   트 생성이 수행됩니다. 서버 측 소켓의 경우, 소켓에 원격 피어가 없으
+   면, 리스닝 소켓이라고 가정하고, 서버 측 SSL 감싸기는 "accept()" 메
+   서드를 통해 받아들인 클라이언트 연결에 대해 자동으로 수행됩니다. 메
+   서드는 "SSLError"를 발생시킬 수 있습니다.
+
+   클라이언트 연결에서, 선택적 매개 변수 *server_hostname*는 연결하려
+   는 서비스의 호스트 이름을 지정합니다. 이를 통해 단일 서버는 HTTP 가
+   상 호스트와 매우 흡사하게 서로 다른 인증서로 여러 SSL 기반 서비스를
+   호스팅 할 수 있습니다. *server_side*가 참일 때 *server_hostname*를
+   지정하면 "ValueError"가 발생합니다.
+
+   매개 변수 "do_handshake_on_connect"는 "socket.connect()"를 수행한
+   후 SSL 핸드 셰이크를 자동으로 수행할지, 또는 응용 프로그램이
+   "SSLSocket.do_handshake()" 메서드를 호출하여 명시적으로 호출할지를
+   지정합니다. "SSLSocket.do_handshake()"를 명시적으로 호출하면, 핸드
+   셰이크에 수반되는 소켓 I/O의 블로킹 동작을 프로그램에서 제어할 수
+   있습니다.
+
+   매개 변수 "suppress_ragged_eofs"는 "SSLSocket.recv()" 메서드가 연결
+   의 다른 끝으로부터의 예기치 않은 EOF를 알리는 방법을 지정합니다.
+   "True"(기본값)로 지정되면, 하부 소켓에서 발생한 예기치 않은 EOF 에
+   러에 대한 응답으로 정상 EOF(빈 바이트열 객체)를 반환합니다. "False"
+   면 예외를 호출자에게 다시 발생시킵니다.
+
+   *session*, "session"을 참조하십시오.
+
+   버전 3.5에서 변경: OpenSSL에 SNI가 없더라도 항상 server_hostname을
+   전달할 수 있습니다.
+
+   버전 3.6에서 변경: *session* 인자가 추가되었습니다.
+
+   버전 3.7에서 변경: The method returns on instance of
+   "SSLContext.sslsocket_class" instead of hard-coded "SSLSocket".
+
+SSLContext.sslsocket_class
+
+   "SSLContext.wrap_socket()"의 반환형, 기본값은 "SSLSocket"입니다. 이
+   어트리뷰트는 "SSLSocket"의 사용자 정의 서브 클래스를 반환하기 위해
+   클래스의 인스턴스에서 재정의될 수 있습니다.
+
+   버전 3.7에 추가.
+
+SSLContext.wrap_bio(incoming, outgoing, server_side=False, server_hostname=None, session=None)
+
+   BIO 객체 *incoming* 과 *outgoing*을 감싸고
+   "SSLContext.sslobject_class"(기본값 "SSLObject")의 인스턴스를 반환
+   합니다. SSL 루틴은 incoming BIO에서 입력 데이터를 읽고 outgoing BIO
+   에 데이터를 씁니다.
+
+   *server_side*, *server_hostname* 및 *session* 매개 변수는
+   "SSLContext.wrap_socket()"에서와 같은 의미입니다.
+
+   버전 3.6에서 변경: *session* 인자가 추가되었습니다.
+
+   버전 3.7에서 변경: The method returns on instance of
+   "SSLContext.sslobject_class" instead of hard-coded "SSLObject".
+
+SSLContext.sslobject_class
+
+   "SSLContext.wrap_bio()"의 반환형, 기본값은 "SSLObject"입니다. 이 어
+   트리뷰트는 "SSLObject"의 사용자 정의 서브 클래스를 반환하기 위해 클
+   래스의 인스턴스에서 재정의될 수 있습니다.
+
+   버전 3.7에 추가.
+
+SSLContext.session_stats()
+
+   Get statistics about the SSL sessions created or managed by this
+   context. A dictionary is returned which maps the names of each
+   piece of information to their numeric values.  For example, here is
+   the total number of hits and misses in the session cache since the
+   context was created:
+
+      >>> stats = context.session_stats()
+      >>> stats['hits'], stats['misses']
+      (0, 0)
+
+SSLContext.check_hostname
+
+   "SSLSocket.do_handshake()"에서 피어 인증서의 호스트 이름을 일치시킬
+   지 여부. 컨텍스트의 "verify_mode"는 "CERT_OPTIONAL"나
+   "CERT_REQUIRED"로 설정되어야 하며, 호스트 이름을 일치시키려면
+   *server_hostname*을 "wrap_socket()"로 전달해야 합니다. 호스트 이름
+   확인을 활성화하면 "verify_mode"가 "CERT_NONE"에서 "CERT_REQUIRED"로
+   자동 설정됩니다. 호스트 이름 검사가 활성화되어 있으면 "CERT_NONE"로
+   다시 설정할 수 없습니다. "PROTOCOL_TLS_CLIENT" 프로토콜은 기본적으
+   로 호스트 이름 확인을 활성화합니다. 다른 프로토콜의 경우, 호스트 이
+   름 확인을 명시적으로 활성화해야 합니다.
+
+   예제:
+
+      import socket, ssl
+
+      context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+      context.verify_mode = ssl.CERT_REQUIRED
+      context.check_hostname = True
+      context.load_default_certs()
+
+      s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      ssl_sock = context.wrap_socket(s, server_hostname='www.verisign.com')
+      ssl_sock.connect(('www.verisign.com', 443))
+
+   버전 3.4에 추가.
+
+   버전 3.7에서 변경: 호스트 이름 검사가 활성화되고 "verify_mode"가
+   "CERT_NONE"이면 이제 "verify_mode"가 "CERT_REQUIRED"로 자동 변경됩
+   니다. 이전에는 같은 작업이 "ValueError"로 실패했을 것입니다.
+
+SSLContext.keylog_filename
+
+   키 자료가 생성되거나 수신될 때마다, TLS 키를 키로그(keylog) 파일에
+   기록합니다. 키로그 파일은 디버깅 목적으로만 설계되었습니다. 파일 형
+   식은 NSS에 의해 지정되었고 Wireshark과 같은 많은 트래픽 분석기에서
+   사용됩니다. 로그 파일은 덧붙이기 전용 모드로 열립니다. 쓰기는 스레
+   드 간에 동기화되지만, 프로세스 간에는 동기화되지 않습니다.
+
+   버전 3.8에 추가.
+
+SSLContext.maximum_version
+
+   A "TLSVersion" enum member representing the highest supported TLS
+   version. The value defaults to "TLSVersion.MAXIMUM_SUPPORTED". The
+   attribute is read-only for protocols other than "PROTOCOL_TLS",
+   "PROTOCOL_TLS_CLIENT", and "PROTOCOL_TLS_SERVER".
+
+   어트리뷰트 "maximum_version", "minimum_version" 및
+   "SSLContext.options"는 모두 컨텍스트의 지원되는 SSL과 TLS 버전에 영
+   향을 줍니다. 구현은 부적합한 조합을 방지하지 못합니다. 예를 들어,
+   "options"에 "OP_NO_TLSv1_2"가 있고 "maximum_version"이
+   "TLSVersion.TLSv1_2"로 설정된 컨텍스트는 TLS 1.2 연결을 이룰 수 없
+   습니다.
+
+   버전 3.7에 추가.
+
+SSLContext.minimum_version
+
+   가장 낮은 지원 버전 또는 "TLSVersion.MINIMUM_SUPPORTED"이라는 것만
+   제외하면 "SSLContext.maximum_version"과 같습니다.
+
+   버전 3.7에 추가.
+
+SSLContext.num_tickets
+
+   Control the number of TLS 1.3 session tickets of a
+   "PROTOCOL_TLS_SERVER" context. The setting has no impact on TLS 1.0
+   to 1.2 connections.
+
+   버전 3.8에 추가.
+
+SSLContext.options
+
+   이 컨텍스트에서 활성화된 SSL 옵션 집합을 나타내는 정수. 기본값은
+   "OP_ALL"이지만, "OP_NO_SSLv2"와 같은 다른 옵션을 함께 OR로 연결하여
+   지정할 수 있습니다.
+
+   버전 3.6에서 변경: "SSLContext.options"는 "Options" 플래그를 반환합
+   니다.:
+
+   >>> ssl.create_default_context().options  
+   <Options.OP_ALL|OP_NO_SSLv3|OP_NO_SSLv2|OP_NO_COMPRESSION: 2197947391>
+
+   버전 3.7부터 폐지: All "OP_NO_SSL*" and "OP_NO_TLS*" options have
+   been deprecated since Python 3.7. Use "SSLContext.minimum_version"
+   and "SSLContext.maximum_version" instead.
+
+SSLContext.post_handshake_auth
+
+   TLS 1.3 포스트 핸드 셰이크 클라이언트 인증을 사용합니다. 포스트 핸
+   드 셰이크 인증은 기본적으로 사용되지 않으며 서버는 초기 핸드 셰이크
+   중에 TLS 클라이언트 인증서만 요청할 수 있습니다. 활성화되면, 서버는
+   핸드 셰이크 후에 언제든지 TLS 클라이언트 인증서를 요청할 수 있습니
+   다.
+
+   클라이언트 측 소켓에서 활성화될 때, 클라이언트는 포스트 핸드 셰이크
+   인증을 지원하는 서버에 신호를 보냅니다.
+
+   서버 측 소켓에서 활성화될 때, "SSLContext.verify_mode"도
+   "CERT_OPTIONAL"이나 "CERT_REQUIRED"로 설정해야 합니다. 실제 클라이
+   언트 인증서 교환은 "SSLSocket.verify_client_post_handshake()"가 호
+   출되고 일부 I/O가 수행될 때까지 지연됩니다.
+
+   버전 3.8에 추가.
+
+SSLContext.protocol
+
+   컨텍스트를 구성할 때 선택한 프로토콜 버전. 이 어트리뷰트는 읽기 전
+   용입니다.
+
+SSLContext.hostname_checks_common_name
+
+   "check_hostname"가 SAN(subject alternative name) 확장이 없을 때 인
+   증서의 SCN(subject common name)을 유효성 검사하는 것으로 폴백 할지
+   아닐지 (기본값: 참)
+
+   버전 3.7에 추가.
+
+   버전 3.10에서 변경: The flag had no effect with OpenSSL before
+   version 1.1.1k. Python 3.8.9, 3.9.3, and 3.10 include workarounds
+   for previous versions.
+
+SSLContext.security_level
+
+   An integer representing the security level for the context. This
+   attribute is read-only.
+
+   버전 3.10에 추가.
+
+SSLContext.verify_flags
+
+   The flags for certificate verification operations. You can set
+   flags like "VERIFY_CRL_CHECK_LEAF" by ORing them together. By
+   default OpenSSL does neither require nor verify certificate
+   revocation lists (CRLs).
+
+   버전 3.4에 추가.
+
+   버전 3.6에서 변경: "SSLContext.verify_flags"는 "VerifyFlags" 플래그
+   를 반환합니다.:
+
+   >>> ssl.create_default_context().verify_flags  
+   <VerifyFlags.VERIFY_X509_TRUSTED_FIRST: 32768>
+
+SSLContext.verify_mode
+
+   다른 피어의 인증서를 확인할지와 확인이 실패할 때 어떻게 해야 하는지
+   를 나타냅니다. 이 어트리뷰트는 "CERT_NONE", "CERT_OPTIONAL" 또는
+   "CERT_REQUIRED" 중 하나여야 합니다.
+
+   버전 3.6에서 변경: "SSLContext.verify_mode"는 "VerifyMode" 열거형을
+   반환합니다.:
+
+   >>> ssl.create_default_context().verify_mode
+   <VerifyMode.CERT_REQUIRED: 2>
+
+
+인증서
+======
+
+인증서는 일반적으로 공개키/개인키 시스템 일부입니다. 이 시스템에서, 각
+*주체(principal)*(시스템, 사람 또는 조직일 수 있습니다)에게는 고유한
+두 부분으로 된 암호화 키가 지정됩니다. 열쇠의 한 부분은 공개(public)며
+, *공개키(public key)*라고 불립니다; 다른 부분은 비밀로 유지되며, *개
+인키(private key)*라고 합니다. 두 부분은 관련이 있습니다. 두 부분 중
+하나를 사용하여 메시지를 암호화하면, 다른 부분으로 해독할 수 있고, **
+오직** 다른 부분으로만 해독할 수 있습니다.
+
+인증서에는 두 주체에 대한 정보가 들어 있습니다. *주체(subject)*의 이름
+과 주체의 공개키가 들어 있습니다. 또한 *발행자(issuer)*라는 두 번째 주
+체의 진술을 포함하는데, 해당 주체(subject)는 자신이 주장하는 존재며,
+실제로 공개키 또한 주체(subject)의 것이 맞는다는 내용입니다. 발행자의
+진술은 발행자만이 알고 있는 발행자의 개인키로 서명됩니다. 그러나 누구
+든지 발행자의 공개키를 찾고 이를 사용하여 진술을 해독하고 인증서의 다
+른 정보와 비교함으로써 발행자의 진술을 확인할 수 있습니다. 또한, 인증
+서에는 유효 기간에 대한 정보가 들어 있습니다. 이것은 "notBefore"와
+"notAfter"라고 하는 두 개의 필드로 표현됩니다.
+
+파이썬에서 인증서를 사용할 때, 클라이언트나 서버는 인증서를 사용하여
+자신이 누구인지 증명할 수 있습니다. 네트워크 연결의 다른 쪽은 인증서
+생성을 요구받을 수도 있으며, 해당 인증서는 이러한 유효성 검사가 필요한
+클라이언트나 서버를 만족하도록 유효성을 검사할 수 있습니다. 유효성 검
+증이 실패하면 연결 시도가 예외를 발생시키도록 설정할 수 있습니다. 유효
+성 검사는 하부 OpenSSL 프레임워크에 의해 자동으로 수행됩니다; 응용 프
+로그램은 그 메커니즘에 관심을 두지 않아도 됩니다. 그러나 응용 프로그램
+은 일반적으로 이 절차를 수행할 수 있도록 인증서 집합을 제공해야 합니다
+.
+
+파이썬은 인증서를 포함하기 위해 파일을 사용합니다. 그들은 "PEM"(**RFC
+1422**를 참조하세요)으로 포맷해야 합니다. 머릿줄과 꼬리 줄로 감싼
+base-64 로 인코딩된 형식입니다:
+
+   -----BEGIN CERTIFICATE-----
+   ... (certificate in base64 PEM encoding) ...
+   -----END CERTIFICATE-----
+
+
+인증서 체인
+-----------
+
+인증서를 포함하는 파이썬 파일에는 인증서 시퀀스가 포함될 수 있는데, 때
+로 *인증서 체인(*certificate chain)*이라고 부릅니다. 이 체인은 클라이
+언트 또는 서버 "당사자" 주체에 대한 특정 인증서로 시작해야 하며, 그다
+음에 그 인증서의 발행자에 대한 인증서가 오고, 그다음에 *직전* 인증서
+발행자에 대한 인증서가 오는 식으로 이어지다가, 결국에는 *자체 서명
+(self-signed)* 인증서를 얻게 되는데, 주체와 발행자가 같은 인증서로 때
+로 *루트 인증서*라고도 부릅니다. 인증서는 인증서 파일에 함께 이어붙여
+야 합니다. 예를 들어, 서버 인증서에서 서버 인증서에 서명한 인증 기관의
+인증서를 거쳐 인증 기관의 인증서를 발행한 기관의 루트 인증서에 이르는
+세 개의 인증서 체인이 있다고 가정합시다:
+
+   -----BEGIN CERTIFICATE-----
+   ... (certificate for your server)...
+   -----END CERTIFICATE-----
+   -----BEGIN CERTIFICATE-----
+   ... (the certificate for the CA)...
+   -----END CERTIFICATE-----
+   -----BEGIN CERTIFICATE-----
+   ... (the root certificate for the CA's issuer)...
+   -----END CERTIFICATE-----
+
+
+CA 인증서
+---------
+
+연결의 반대편의 인증서의 유효성 검사가 필요하면, 신뢰할 수 있는 각 발
+행자의 인증서 체인으로 채워진 "CA 인증서" 파일을 제공해야 합니다. 다시
+말하지만, 이 파일은 단지 이러한 체인들을 함께 이어붙인 것입니다. 유효
+성 검사를 위해, 파이썬은 일치하는 파일에서 찾은 첫 번째 체인을 사용합
+니다. 플랫폼의 인증서 파일은 "SSLContext.load_default_certs()"를 호출
+하여 사용할 수 있습니다, 이는 "create_default_context()"로 자동으로 수
+행됩니다.
+
+
+결합한 키와 인증서
+------------------
+
+Often the private key is stored in the same file as the certificate;
+in this case, only the "certfile" parameter to
+"SSLContext.load_cert_chain()" and "wrap_socket()" needs to be passed.
+If the private key is stored with the certificate, it should come
+before the first certificate in the certificate chain:
+
+   -----BEGIN RSA PRIVATE KEY-----
+   ... (private key in base64 encoding) ...
+   -----END RSA PRIVATE KEY-----
+   -----BEGIN CERTIFICATE-----
+   ... (certificate in base64 PEM encoding) ...
+   -----END CERTIFICATE-----
+
+
+자체 서명 인증서
+----------------
+
+SSL-암호화된 연결 서비스를 제공하는 서버를 만들려면, 해당 서비스에 대
+한 인증서를 얻어야 합니다. 인증 기관에서 사는 등 다양한 방법으로 적절
+한 인증서를 얻을 수 있습니다. 또 다른 일반적인 관행은 자체 서명 인증서
+를 생성하는 것입니다. 이렇게 하는 가장 간단한 방법은 OpenSSL 패키지에
+서 다음과 같은 방법을 사용하는 것입니다:
+
+   % openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout cert.pem
+   Generating a 1024 bit RSA private key
+   .......++++++
+   .............................++++++
+   writing new private key to 'cert.pem'
+   -----
+   You are about to be asked to enter information that will be incorporated
+   into your certificate request.
+   What you are about to enter is what is called a Distinguished Name or a DN.
+   There are quite a few fields but you can leave some blank
+   For some fields there will be a default value,
+   If you enter '.', the field will be left blank.
+   -----
+   Country Name (2 letter code) [AU]:US
+   State or Province Name (full name) [Some-State]:MyState
+   Locality Name (eg, city) []:Some City
+   Organization Name (eg, company) [Internet Widgits Pty Ltd]:My Organization, Inc.
+   Organizational Unit Name (eg, section) []:My Group
+   Common Name (eg, YOUR name) []:myserver.mygroup.myorganization.com
+   Email Address []:ops@myserver.mygroup.myorganization.com
+   %
+
+자체 서명 인증서의 단점은 그 자신이 루트 인증서이고, 아무도 그들의 알
+려진(그리고 신뢰할 수 있는) 루트 인증서의 캐시에 이 인증서를 갖고 있지
+않다는 것입니다.
+
+
+예제
+====
+
+
+SSL 지원 검사하기
+-----------------
+
+파이썬 설치에 SSL 지원이 있는지를 검사하려면, 사용자 코드는 다음과 같
+은 관용구를 사용해야 합니다:
+
+   try:
+       import ssl
+   except ImportError:
+       pass
+   else:
+       ...  # do something that requires SSL support
+
+
+클라이언트 측 연산
+------------------
+
+이 예제는 자동 인증서 확인을 포함하여 클라이언트 소켓에 대해 권장되는
+보안 설정을 사용하여 SSL 컨텍스트를 만듭니다:
+
+   >>> context = ssl.create_default_context()
+
+보안 설정을 직접 조정하려면, 처음부터 컨텍스트를 만들 수 있습니다 (그
+러나 올바른 설정을 얻지 못할 수도 있습니다):
+
+   >>> context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+   >>> context.load_verify_locations("/etc/ssl/certs/ca-bundle.crt")
+
+(이 코드 조각은 운영 체제가 모든 CA 인증서 번들을 "/etc/ssl/certs/ca-
+bundle.crt"에 배치한다고 가정합니다; 그렇지 않으면, 에러가 발생하고 위
+치를 조정해야 합니다)
+
+"PROTOCOL_TLS_CLIENT" 프로토콜은 인증서 유효성 검사와 호스트 이름 확인
+을 위한 컨텍스트를 구성합니다. "verify_mode"는 "CERT_REQUIRED"로 설정
+되고 "check_hostname"는 "True"로 설정됩니다. 다른 모든 프로토콜은 안전
+하지 않은 기본값으로 SSL 컨텍스트를 만듭니다.
+
+컨텍스트를 사용하여 서버에 연결할 때, "CERT_REQUIRED"와
+"check_hostname"은 서버 인증서의 유효성을 검사합니다: 서버 인증서가 CA
+인증서 중 하나를 사용하여 서명되었는지 확인하고, 서명의 정확성을 검사
+하고, 호스트 이름의 유효성과 아이덴티티와 같은 다른 속성을 확인합니다:
+
+   >>> conn = context.wrap_socket(socket.socket(socket.AF_INET),
+   ...                            server_hostname="www.python.org")
+   >>> conn.connect(("www.python.org", 443))
+
+그런 다음 인증서를 가져올 수 있습니다:
+
+   >>> cert = conn.getpeercert()
+
+시각적인 검사는 인증서가 원하는 서비스(즉, HTTPS 호스트
+"www.python.org")를 식별함을 보여줍니다:
+
+   >>> pprint.pprint(cert)
+   {'OCSP': ('http://ocsp.digicert.com',),
+    'caIssuers': ('http://cacerts.digicert.com/DigiCertSHA2ExtendedValidationServerCA.crt',),
+    'crlDistributionPoints': ('http://crl3.digicert.com/sha2-ev-server-g1.crl',
+                              'http://crl4.digicert.com/sha2-ev-server-g1.crl'),
+    'issuer': ((('countryName', 'US'),),
+               (('organizationName', 'DigiCert Inc'),),
+               (('organizationalUnitName', 'www.digicert.com'),),
+               (('commonName', 'DigiCert SHA2 Extended Validation Server CA'),)),
+    'notAfter': 'Sep  9 12:00:00 2016 GMT',
+    'notBefore': 'Sep  5 00:00:00 2014 GMT',
+    'serialNumber': '01BB6F00122B177F36CAB49CEA8B6B26',
+    'subject': ((('businessCategory', 'Private Organization'),),
+                (('1.3.6.1.4.1.311.60.2.1.3', 'US'),),
+                (('1.3.6.1.4.1.311.60.2.1.2', 'Delaware'),),
+                (('serialNumber', '3359300'),),
+                (('streetAddress', '16 Allen Rd'),),
+                (('postalCode', '03894-4801'),),
+                (('countryName', 'US'),),
+                (('stateOrProvinceName', 'NH'),),
+                (('localityName', 'Wolfeboro'),),
+                (('organizationName', 'Python Software Foundation'),),
+                (('commonName', 'www.python.org'),)),
+    'subjectAltName': (('DNS', 'www.python.org'),
+                       ('DNS', 'python.org'),
+                       ('DNS', 'pypi.org'),
+                       ('DNS', 'docs.python.org'),
+                       ('DNS', 'testpypi.org'),
+                       ('DNS', 'bugs.python.org'),
+                       ('DNS', 'wiki.python.org'),
+                       ('DNS', 'hg.python.org'),
+                       ('DNS', 'mail.python.org'),
+                       ('DNS', 'packaging.python.org'),
+                       ('DNS', 'pythonhosted.org'),
+                       ('DNS', 'www.pythonhosted.org'),
+                       ('DNS', 'test.pythonhosted.org'),
+                       ('DNS', 'us.pycon.org'),
+                       ('DNS', 'id.python.org')),
+    'version': 3}
+
+이제 SSL 채널이 설정되고 인증서가 확인되었습니다, 서버와 대화할 수 있
+습니다:
+
+   >>> conn.sendall(b"HEAD / HTTP/1.0\r\nHost: linuxfr.org\r\n\r\n")
+   >>> pprint.pprint(conn.recv(1024).split(b"\r\n"))
+   [b'HTTP/1.1 200 OK',
+    b'Date: Sat, 18 Oct 2014 18:27:20 GMT',
+    b'Server: nginx',
+    b'Content-Type: text/html; charset=utf-8',
+    b'X-Frame-Options: SAMEORIGIN',
+    b'Content-Length: 45679',
+    b'Accept-Ranges: bytes',
+    b'Via: 1.1 varnish',
+    b'Age: 2188',
+    b'X-Served-By: cache-lcy1134-LCY',
+    b'X-Cache: HIT',
+    b'X-Cache-Hits: 11',
+    b'Vary: Cookie',
+    b'Strict-Transport-Security: max-age=63072000; includeSubDomains',
+    b'Connection: close',
+    b'',
+    b'']
+
+아래의 보안 고려 사항의 논의를 참조하십시오.
+
+
+서버 측 연산
+------------
+
+서버 연산의 경우, 일반적으로 서버 인증서와 개인 키가 각각 파일에 있어
+야 합니다. 먼저 클라이언트가 여러분의 신원을 확인할 수 있도록 키와 인
+증서가 있는 컨텍스트를 만듭니다. 그런 다음 소켓을 열고, 포트에 바인드
+하고, "listen()"을 호출한 다음 클라이언트가 연결하기를 기다립니다:
+
+   import socket, ssl
+
+   context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+   context.load_cert_chain(certfile="mycertfile", keyfile="mykeyfile")
+
+   bindsocket = socket.socket()
+   bindsocket.bind(('myaddr.example.com', 10023))
+   bindsocket.listen(5)
+
+클라이언트가 연결하면, 소켓에서 "accept()"를 호출하여 다른 쪽 끝과 연
+결된 새 소켓을 얻고, 컨텍스트의 "SSLContext.wrap_socket()" 메서드를 사
+용하여 연결을 위한 서버 측 SSL 소켓을 만듭니다.:
+
+   while True:
+       newsocket, fromaddr = bindsocket.accept()
+       connstream = context.wrap_socket(newsocket, server_side=True)
+       try:
+           deal_with_client(connstream)
+       finally:
+           connstream.shutdown(socket.SHUT_RDWR)
+           connstream.close()
+
+그런 다음 "connstream"에서 데이터를 읽고 클라이언트와 작업을 마칠 때까
+지 (또는 클라이언트가 마칠 때까지) 뭔가 합니다:
+
+   def deal_with_client(connstream):
+       data = connstream.recv(1024)
+       # empty data means the client is finished with us
+       while data:
+           if not do_something(connstream, data):
+               # we'll assume do_something returns False
+               # when we're finished with client
+               break
+           data = connstream.recv(1024)
+       # finished with client
+
+그리고는 새로운 클라이언트 연결을 리스닝하는 것으로 돌아갑니다 (물론,
+실제 서버는 별도의 스레드에서 각 클라이언트 연결을 처리하거나 소켓을
+비 블로킹 모드로 만들고 이벤트 루프를 사용합니다).
+
+
+비 블로킹 소켓에 대한 참고 사항
+===============================
+
+SSL 소켓은 비 블로킹 모드에서 일반 소켓과 약간 다르게 작동합니다. 비
+블로킹 소켓으로 작업할 때 주의해야 할 몇 가지 사항이 있습니다:
+
+* 대부분 "SSLSocket" 메서드는 I/O 연산이 블록하려고 할 때
+  "BlockingIOError" 대신 "SSLWantWriteError" 나 "SSLWantReadError"를
+  발생시킵니다. 하부 소켓에서의 읽기 연산이 필요하면
+  "SSLWantReadError"가 발생하고, 하부 소켓에서의 쓰기 연산이 필요하면
+  "SSLWantWriteError"가 발생합니다. SSL 소켓에 대한 *쓰기* 시도는 우선
+  하부 소켓에서 *읽기*가 필요할 수 있으며, SSL 소켓에서 *읽기*를 시도
+  하면 하부 소켓에서 선행 *쓰기*가 필요할 수 있습니다.
+
+  버전 3.5에서 변경: 이전 파이썬 버전에서는, "SSLSocket.send()" 메서드
+  가 "SSLWantWriteError" 나 "SSLWantReadError"를 발생시키는 대신 0을
+  반환했습니다.
+
+* "select()"를 호출하면 OS-수준 소켓을 읽을 수 있음을 (또는 쓸 수 있음
+  을) 알려줄 수 있습니다만, 이것이 상위 SSL 계층에 충분한 데이터가 있
+  음을 의미하지는 않습니다. 예를 들어, SSL 프레임의 일부만 도착했을 수
+  있습니다. 따라서, "SSLSocket.recv()" 와 "SSLSocket.send()" 실패를 처
+  리할 준비가 되어 있어야 하며, "select()"를 다시 호출한 후 재시도해야
+  합니다.
+
+* 반대로, SSL 계층에는 자체 프레임이 있으므로, SSL 소켓에는 "select()"
+  가 인식하지 못하더라도 읽을 수 있는 데이터가 있을 수 있습니다. 따라
+  서, 먼저 "SSLSocket.recv()"를 호출하여 잠재적으로 사용 가능한 모든
+  데이터를 꺼낸 다음, 여전히 필요할 때만 "select()" 호출에 블록해야 합
+  니다.
+
+  (물론, "poll()" 이나 "selectors" 모듈에 있는 것과 같은 다른 프리미티
+  브를 사용할 때도 비슷한 조항이 적용됩니다)
+
+* SSL 핸드 셰이크 자체는 비 블로킹입니다: "SSLSocket.do_handshake()"
+  메서드는 성공적으로 반환될 때까지 재시도해야 합니다. 다음은
+  "select()"를 사용하여 소켓의 준비 상태를 기다리는 개요입니다:
+
+     while True:
+         try:
+             sock.do_handshake()
+             break
+         except ssl.SSLWantReadError:
+             select.select([sock], [], [])
+         except ssl.SSLWantWriteError:
+             select.select([], [sock], [])
+
+더 보기:
+
+  The "asyncio" module supports non-blocking SSL sockets and provides
+  a higher level API. It polls for events using the "selectors" module
+  and handles "SSLWantWriteError", "SSLWantReadError" and
+  "BlockingIOError" exceptions. It runs the SSL handshake
+  asynchronously as well.
+
+
+메모리 BIO 지원
+===============
+
+버전 3.5에 추가.
+
+SSL 모듈이 파이썬 2.6에서 소개된 이래로, "SSLSocket" 클래스는 관련성이
+있지만, 별개의 두 기능 영역을 제공했습니다:
+
+* SSL 프로토콜 처리
+
+* 네트워크 IO
+
+네트워크 IO API는 "socket.socket"가 제공하는 것과 같으며, "SSLSocket"
+는 그 것을 상속합니다. 이렇게해서 SSL 소켓을 일반 소켓의 드롭 인 대체
+품으로 사용할 수 있으므로, 기존 응용 프로그램에 SSL 지원을 쉽게 추가
+할 수 있습니다.
+
+SSL 프로토콜 처리와 네트워크 IO의 결합은 일반적으로 잘 작동하지만, 그
+렇지 않은 경우도 있습니다. "socket.socket" 과 내부 OpenSSL 소켓 IO 루
+틴이 가정하는 "파일 기술자에 대한 select/poll" (준비 상태 기반) 모델과
+다른 IO 멀티플렉싱 모델을 사용하려는 비동기 IO 프레임워크가 그 예입니
+다. 이것은 주로 이 모델이 효율적이지 않은 윈도우와 같은 플랫폼과 관련
+이 있습니다. 이를 위해, "SSLObject"라는 "SSLSocket"의 축소된 범위 변형
+이 제공됩니다.
+
+class ssl.SSLObject
+
+   네트워크 IO 메서드를 포함하지 않는 SSL 프로토콜 인스턴스를 나타내는
+   "SSLSocket"의 축소 범위 변형입니다. 이 클래스는 일반적으로 메모리
+   버퍼를 통해 SSL 용 비동기 IO를 구현하려는 프레임워크 작성자가 사용
+   합니다.
+
+   이 클래스는 OpenSSL에 의해 구현된 저수준 SSL 객체 위에 인터페이스를
+   구현합니다. 이 객체는 SSL 연결의 상태를 캡처하지만, 네트워크 IO 자
+   체를 제공하지는 않습니다. IO는 OpenSSL의 IO 추상화 계층인 별도의
+   "BIO" 객체를 통해 수행되어야 합니다.
+
+   이 클래스에는 공개된 생성자가 없습니다. "SSLObject" 인스턴스는
+   "wrap_bio()" 메서드를 사용해서 만들어야 합니다. 이 메서드는
+   "SSLObject" 인스턴스를 생성하고 BIO 쌍에 연결합니다. *incoming* BIO
+   는 파이썬에서 SSL 프로토콜 인스턴스로 데이터를 전달하는 데 사용되는
+   반면, *outgoing* BIO는 반대 방향으로 데이터를 전달하는 데 사용됩니
+   다.
+
+   다음 메서드를 사용할 수 있습니다:
+
+   * "context"
+
+   * "server_side"
+
+   * "server_hostname"
+
+   * "session"
+
+   * "session_reused"
+
+   * "read()"
+
+   * "write()"
+
+   * "getpeercert()"
+
+   * "selected_alpn_protocol()"
+
+   * "selected_npn_protocol()"
+
+   * "cipher()"
+
+   * "shared_ciphers()"
+
+   * "compression()"
+
+   * "pending()"
+
+   * "do_handshake()"
+
+   * "verify_client_post_handshake()"
+
+   * "unwrap()"
+
+   * "get_channel_binding()"
+
+   * "version()"
+
+   "SSLSocket"와 비교할 때, 이 객체에는 다음과 같은 기능이 없습니다:
+
+   * 모든 형태의 네트워크 IO; "recv()" 와 "send()"는 하부 "MemoryBIO"
+     버퍼만 읽고 씁니다.
+
+   * *do_handshake_on_connect* 기작이 없습니다. 핸드 셰이크를 시작하려
+     면 항상 "do_handshake()"를 수동으로 호출해야 합니다.
+
+   * *suppress_ragged_eofs*는 처리되지 않습니다. 프로토콜을 위반하는
+     모든 파일 끝(end-of-file) 조건은 "SSLEOFError" 예외를 통해 보고됩
+     니다.
+
+   * 메서드 "unwrap()" 호출은 하부 소켓을 반환하는 SSL 소켓과 달리 아
+     무것도 반환하지 않습니다.
+
+   * "SSLContext.set_servername_callback()"에 전달된
+     *server_name_callback* 콜백은 첫 번째 매개 변수로 "SSLSocket" 인
+     스턴스 대신 "SSLObject" 인스턴스를 받습니다.
+
+   "SSLObject" 사용과 관련된 몇 가지 참고 사항:
+
+   * "SSLObject"의 모든 IO는 비 블로킹입니다. 이것은 예를 들어
+     "read()"는 incoming BIO에 있는 것보다 많은 데이터가 필요하면
+     "SSLWantReadError"를 발생시킨다는 것을 의미합니다.
+
+   * There is no module-level "wrap_bio()" call like there is for
+     "wrap_socket()". An "SSLObject" is always created via an
+     "SSLContext".
+
+   버전 3.7에서 변경: "SSLObject" instances must to created with
+   "wrap_bio()". In earlier versions, it was possible to create
+   instances directly. This was never documented or officially
+   supported.
+
+SSLObject는 메모리 버퍼를 사용하여 바깥세상과 통신합니다. "MemoryBIO"
+클래스는 이 목적으로 사용할 수 있는 메모리 버퍼를 제공합니다. OpenSSL
+메모리 BIO (Basic IO) 객체를 감쌉니다:
+
+class ssl.MemoryBIO
+
+   파이썬과 SSL 프로토콜 인스턴스 간에 데이터를 전달하는 데 사용할 수
+   있는 메모리 버퍼.
+
+   pending
+
+      현재 메모리 버퍼에 있는 바이트의 수를 반환합니다.
+
+   eof
+
+      메모리 BIO가 현재 EOF(end-of-file) 위치에 있는지를 나타내는 논릿
+      값입니다.
+
+   read(n=- 1)
+
+      메모리 버퍼에서 최대 *n* 바이트를 읽습니다. *n*이 지정되지 않았
+      거나 음수면, 모든 바이트가 반환됩니다.
+
+   write(buf)
+
+      *buf*의 바이트를 메모리 BIO에 씁니다. *buf* 인자는 버퍼 프로토콜
+      을 지원하는 객체여야 합니다.
+
+      반환 값은 기록된 바이트 수인데, 항상 *buf*의 길이와 같습니다.
+
+   write_eof()
+
+      EOF 마커를 메모리 BIO에 씁니다. 이 메서드가 호출된 후, "write()"
+      를 호출하는 것은 불법입니다. "eof" 어트리뷰트는 현재 버퍼에 있는
+      모든 데이터를 읽은 후에 참이 됩니다.
+
+
+SSL 세션
+========
+
+버전 3.6에 추가.
+
+class ssl.SSLSession
+
+   "session"에서 사용되는 세션 객체.
+
+   id
+
+   time
+
+   timeout
+
+   ticket_lifetime_hint
+
+   has_ticket
+
+
+보안 고려 사항
+==============
+
+
+가장 좋은 기본값
+----------------
+
+**클라이언트**의 경우, 보안 정책에 대한 특별한 요구 사항이 없으면,
+"create_default_context()" 함수를 사용하여 SSL 컨텍스트를 만드는 것이
+좋습니다. 시스템의 신뢰할 수 있는 CA 인증서를 로드하고, 인증서 유효성
+검사와 호스트 이름 검사를 활성화하고, 합리적으로 안전한 프로토콜과 사
+이퍼 설정을 선택합니다.
+
+예를 들어, 다음은 "smtplib.SMTP" 클래스를 사용하여 SMTP 서버에 대한 신
+뢰할 수 있고 안전한 연결을 만드는 방법입니다:
+
+   >>> import ssl, smtplib
+   >>> smtp = smtplib.SMTP("mail.python.org", port=587)
+   >>> context = ssl.create_default_context()
+   >>> smtp.starttls(context=context)
+   (220, b'2.0.0 Ready to start TLS')
+
+연결에 클라이언트 인증서가 필요하면, "SSLContext.load_cert_chain()"으
+로 추가할 수 있습니다.
+
+대조적으로, "SSLContext" 생성자를 직접 호출하여 SSL 컨텍스트를 만들면,
+기본적으로 인증서 유효성 검사나 호스트 이름 확인이 활성화되지 않습니다
+. 그렇게 하면, 아래 단락을 읽고 적절한 보안 수준을 달성하십시오.
+
+
+수동 설정
+---------
+
+
+인증서 확인
+~~~~~~~~~~~
+
+When calling the "SSLContext" constructor directly, "CERT_NONE" is the
+default.  Since it does not authenticate the other peer, it can be
+insecure, especially in client mode where most of time you would like
+to ensure the authenticity of the server you're talking to. Therefore,
+when in client mode, it is highly recommended to use "CERT_REQUIRED".
+However, it is in itself not sufficient; you also have to check that
+the server certificate, which can be obtained by calling
+"SSLSocket.getpeercert()", matches the desired service.  For many
+protocols and applications, the service can be identified by the
+hostname; in this case, the "match_hostname()" function can be used.
+This common check is automatically performed when
+"SSLContext.check_hostname" is enabled.
+
+버전 3.7에서 변경: 이제 호스트 이름 일치가 OpenSSL에 의해 수행됩니다.
+파이썬은 더는 "match_hostname()"을 사용하지 않습니다.
+
+서버 모드에서, (고수준 인증 메커니즘을 사용하는 대신) SSL 계층을 사용
+하여 클라이언트를 인증하려면, "CERT_REQUIRED"를 지정하고 클라이언트 인
+증서도 비슷하게 확인해야 합니다.
+
+
+프로토콜 버전
+~~~~~~~~~~~~~
+
+SSL 버전 2와 3은 안전하지 않은 것으로 간주하므로 사용하기에 위험합니다
+. 클라이언트와 서버 간에 최대한의 호환성을 원하면 프로토콜 버전으로
+"PROTOCOL_TLS_CLIENT" 나 "PROTOCOL_TLS_SERVER"를 사용하는 것이 좋습니
+다. SSLv2 및 SSLv3은 기본적으로 비활성화되어 있습니다.
+
+   >>> client_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+   >>> client_context.minimum_version = ssl.TLSVersion.TLSv1_3
+   >>> client_context.maximum_version = ssl.TLSVersion.TLSv1_3
+
+The SSL context created above will only allow TLSv1.3 and later (if
+supported by your system) connections to a server.
+"PROTOCOL_TLS_CLIENT" implies certificate validation and hostname
+checks by default. You have to load certificates into the context.
+
+
+사이퍼 선택
+~~~~~~~~~~~
+
+If you have advanced security requirements, fine-tuning of the ciphers
+enabled when negotiating a SSL session is possible through the
+"SSLContext.set_ciphers()" method.  Starting from Python 3.2.3, the
+ssl module disables certain weak ciphers by default, but you may want
+to further restrict the cipher choice. Be sure to read OpenSSL's
+documentation about the cipher list format. If you want to check which
+ciphers are enabled by a given cipher list, use
+"SSLContext.get_ciphers()" or the "openssl ciphers" command on your
+system.
+
+
+다중 프로세싱
+-------------
+
+If using this module as part of a multi-processed application (using,
+for example the "multiprocessing" or "concurrent.futures" modules), be
+aware that OpenSSL's internal random number generator does not
+properly handle forked processes.  Applications must change the PRNG
+state of the parent process if they use any SSL feature with
+"os.fork()".  Any successful call of "RAND_add()", "RAND_bytes()" or
+"RAND_pseudo_bytes()" is sufficient.
+
+
+TLS 1.3
+=======
+
+버전 3.7에 추가.
+
+The TLS 1.3 protocol behaves slightly differently than previous
+version of TLS/SSL. Some new TLS 1.3 features are not yet available.
+
+* TLS 1.3은 분리된 사이퍼 스위트 집합을 사용합니다. 모든 AES-GCM과
+  ChaCha20 사이퍼 스위트는 기본적으로 활성화되어 있습니다.
+  "SSLContext.set_ciphers()" 메서드는 아직 TLS 1.3 사이퍼를 활성화하거
+  나 비활성화할 수 없지만, "SSLContext.get_ciphers()"는 이들을 반환합
+  니다.
+
+* 세션 티켓은 더는 초기 핸드 셰이크의 일부로 전송되지 않고 다르게 처리
+  됩니다. "SSLSocket.session" 과 "SSLSession"은 TLS 1.3과 호환되지 않
+  습니다.
+
+* 클라이언트 측 인증서도 더는 초기 핸드 셰이크 중에 검증되지 않습니다.
+  서버는 언제든지 인증서를 요청할 수 있습니다. 클라이언트는 서버와 응
+  용 프로그램 데이터를 주고받는 동안 인증서 요청을 처리합니다.
+
+* 초기 데이터(early data), 지연된 TLS 클라이언트 인증서 요청, 서명 알
+  고리즘 구성 및 rekeying과 같은 TLS 1.3 기능은 아직 지원되지 않습니다
+  .
+
+더 보기:
+
+  "socket.socket" 클래스
+     하부 "socket" 클래스의 설명서
+
+  SSL/TLS Strong Encryption: An Introduction
+     Apache HTTP 서버 설명서의 개요
+
+  **RFC 1422: Privacy Enhancement for Internet Electronic Mail: Part
+  II: Certificate-Based Key Management**
+     Steve Kent
+
+  **RFC 4086: Randomness Requirements for Security**
+     Donald E., Jeffrey I. Schiller
+
+  **RFC 5280: Internet X.509 Public Key Infrastructure Certificate and
+  Certificate Revocation List (CRL) Profile**
+     D. Cooper
+
+  **RFC 5246: The Transport Layer Security (TLS) Protocol Version
+  1.2**
+     T. Dierks et. al.
+
+  **RFC 6066: Transport Layer Security (TLS) Extensions**
+     D. Eastlake
+
+  IANA TLS: Transport Layer Security (TLS) Parameters
+     IANA
+
+  **RFC 7525: Recommendations for Secure Use of Transport Layer
+  Security (TLS) and Datagram Transport Layer Security (DTLS)**
+     IETF
+
+  모질라의 서버 측 TLS 추천
+     Mozilla

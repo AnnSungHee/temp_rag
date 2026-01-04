@@ -1,0 +1,262 @@
+"selectors" --- High-level I/O multiplexing
+*******************************************
+
+버전 3.4에 추가.
+
+**소스 코드:** Lib/selectors.py
+
+======================================================================
+
+
+소개
+====
+
+이 모듈은 "select" 모듈 프리미티브에 기반하여 고수준의 효율적인 I/O 다
+중화를 가능하게 합니다. 사용되는 OS 수준 프리미티브를 정확하게 제어하
+고 싶지 않으면, 사용자는 이 모듈을 대신 사용하는 것이 좋습니다.
+
+It defines a "BaseSelector" abstract base class, along with several
+concrete implementations ("KqueueSelector", "EpollSelector"...), that
+can be used to wait for I/O readiness notification on multiple file
+objects. In the following, "file object" refers to any object with a
+"fileno()" method, or a raw file descriptor. See *file object*.
+
+"DefaultSelector"는 현재 플랫폼에서 사용할 수 있는 가장 효율적인 구현
+의 별칭입니다: 대부분 사용자는 기본적으로 이것을 선택해야 합니다.
+
+참고:
+
+  지원되는 파일 객체의 유형은 플랫폼에 따라 다릅니다: 윈도우에서는 소
+  켓은 지원되지만, 파이프는 지원되지 않습니다. 반면에, 유닉스에서는 둘
+  다 지원됩니다 (fifo나 특수 파일 장치와 같은 다른 유형도 지원될 수 있
+  습니다).
+
+더 보기:
+
+  "select"
+     저수준 I/O 다중화 모듈.
+
+
+클래스
+======
+
+클래스 계층 구조:
+
+   BaseSelector
+   +-- SelectSelector
+   +-- PollSelector
+   +-- EpollSelector
+   +-- DevpollSelector
+   +-- KqueueSelector
+
+다음에서, *events*는 주어진 파일 객체에서 어떤 I/O 이벤트를 기다려야
+하는지를 나타내는 비트 마스크입니다. 다음 모듈 상수의 조합일 수 있습니
+다:
+
+   +-------------------------+-------------------------------------------------+
+   | 상수                    | 의미                                            |
+   |=========================|=================================================|
+   | "EVENT_READ"            | 읽기 가능                                       |
+   +-------------------------+-------------------------------------------------+
+   | "EVENT_WRITE"           | 쓰기 가능                                       |
+   +-------------------------+-------------------------------------------------+
+
+class selectors.SelectorKey
+
+   "SelectorKey"는 파일 객체에 그것의 하부 파일 기술자, 선택한 이벤트
+   마스크 및 첨부된 데이터를 연결하는 데 사용되는 "namedtuple"입니다.
+   여러 "BaseSelector" 메서드에 의해 반환됩니다.
+
+   fileobj
+
+      등록된 파일 객체.
+
+   fd
+
+      하부 파일 기술자.
+
+   events
+
+      이 파일 객체에서 기다려야 하는 이벤트.
+
+   data
+
+      이 파일 객체에 연결된 선택적인 불투명한 데이터: 예를 들어, 이것
+      은 클라이언트별 세션 ID를 저장하는 데 사용될 수 있습니다.
+
+class selectors.BaseSelector
+
+   "BaseSelector"는 여러 파일 객체에 대한 I/O 이벤트 준비를 기다리는
+   데 사용됩니다. 파일 스트림 등록, 등록 취소 및 선택적 제한 시간과 함
+   께 해당 스트림에서 I/O 이벤트를 기다리는 메서드를 지원합니다. 추상
+   베이스 클래스이므로, 인스턴스를 만들 수 없습니다. "DefaultSelector"
+   를 대신 사용하거나, 특정 구현을 사용하고 싶고, 플랫폼에서 지원한다
+   면 "SelectSelector", "KqueueSelector" 등을 사용하십시오.
+   "BaseSelector"와 그것의 구상 구현은 *컨텍스트 관리자* 프로토콜을 지
+   원합니다.
+
+   abstractmethod register(fileobj, events, data=None)
+
+      I/O 이벤트를 셀렉트하고 감시하기 위한 파일 객체를 등록합니다.
+
+      *fileobj*는 감시할 파일 객체입니다. 정수 파일 기술자이거나
+      "fileno()" 메서드를 가진 객체일 수 있습니다. *events*는 감시할
+      이벤트의 비트 마스크입니다. *data*는 불투명한 객체입니다.
+
+      새로운 "SelectorKey" 인스턴스를 반환하거나, 유효하지 않은 이벤트
+      마스크나 파일 기술자의 경우 "ValueError"를, 파일 객체가 이미 등
+      록된 경우 "KeyError"를 발생시킵니다.
+
+   abstractmethod unregister(fileobj)
+
+      셀렉트로부터 파일 객체를 등록 해지하고, 감시에서 삭제합니다. 파
+      일 객체는 닫히기 전에 등록 해지되어야 합니다.
+
+      *fileobj*는 이전에 등록된 파일 객체여야 합니다.
+
+      연결된 "SelectorKey" 인스턴스를 반환하거나, *fileobj*가 등록되어
+      있지 않으면 "KeyError"를 발생시킵니다. *fileobj*가 유효하지 않으
+      면 (예를 들어, "fileno()" 메서드가 없거나 "fileno()" 메서드가 유
+      효하지 않은 반환 값을 가지면) "ValueError"가 발생합니다.
+
+   modify(fileobj, events, data=None)
+
+      등록된 파일 객체의 감시되는 이벤트나 첨부된 데이터를 변경합니다.
+
+      This is equivalent to "BaseSelector.unregister(fileobj)()"
+      followed by "BaseSelector.register(fileobj, events, data)()",
+      except that it can be implemented more efficiently.
+
+      새로운 "SelectorKey" 인스턴스를 반환하거나, 유효하지 않은 이벤트
+      마스크나 파일 기술자의 경우 "ValueError"를, 파일 객체가 등록되지
+      않았으면 "KeyError"를 발생시킵니다.
+
+   abstractmethod select(timeout=None)
+
+      등록된 파일 객체의 일부가 준비될 때까지 기다리거나, 제한 시간이
+      만료됩니다.
+
+      "timeout > 0" 이면, 최대 대기 시간을 초로 지정합니다. "timeout
+      <= 0"이면, 호출은 블록하지 않고, 현재 준비된 파일 객체를 보고합
+      니다. *timeout*이 "None"이면, 감시되는 파일 객체가 준비될 때까지
+      호출이 블록 됩니다.
+
+      각 준비된 파일 객체마다 하나씩, "(key, events)" 튜플의 리스트를
+      반환합니다.
+
+      *key*는 준비된 파일 객체에 해당하는 "SelectorKey" 인스턴스입니다
+      . *events*는 이 파일 객체에서 준비된 이벤트의 비트 마스크입니다.
+
+      참고:
+
+        현재 프로세스가 시그널을 받으면, 이 메서드는 파일 객체가 준비
+        되거나 제한 시간이 지나기 전에 반환할 수 있습니다: 이때는 빈
+        리스트가 반환됩니다.
+
+      버전 3.5에서 변경: 시그널에 의해 인터럽트 되었을 때, 셀렉터는 이
+      제 시그널 처리기가 예외를 발생시키지 않으면, 제한 시간 이전에 빈
+      이벤트 리스트를 반환하는 대신, 재계산 된 제한 시간으로 재 시도됩
+      니다 (근거는 **PEP 475**를 참조하세요).
+
+   close()
+
+      셀렉터를 닫습니다.
+
+      모든 하부 자원을 해제하기 위해 이 메서드를 호출해야 합니다. 일단
+      닫은 후에는 셀렉터를 더는 사용하지 않아야 합니다.
+
+   get_key(fileobj)
+
+      등록된 파일 객체에 연결된 키를 반환합니다.
+
+      이 파일 객체에 연결된 "SelectorKey" 인스턴스를 반환하거나, 파일
+      객체가 등록되지 않았으면 "KeyError"를 발생시킵니다.
+
+   abstractmethod get_map()
+
+      파일 객체에서 셀렉터로의 매핑을 반환합니다.
+
+      등록된 파일 객체를 연결된 "SelectorKey" 인스턴스로 매핑하는
+      "Mapping" 인스턴스를 반환합니다.
+
+class selectors.DefaultSelector
+
+   현재의 플랫폼에서 사용할 수 있는 가장 효율적인 구현을 사용하는 기본
+   셀렉터 클래스입니다. 대부분 사용자는 기본적으로 이것을 선택해야 합
+   니다.
+
+class selectors.SelectSelector
+
+   "select.select()" 기반 셀렉터.
+
+class selectors.PollSelector
+
+   "select.poll()" 기반 셀렉터.
+
+class selectors.EpollSelector
+
+   "select.epoll()" 기반 셀렉터.
+
+   fileno()
+
+      하부 "select.epoll()" 객체에서 사용하는 파일 기술자를 반환합니다
+      .
+
+class selectors.DevpollSelector
+
+   "select.devpoll()" 기반 셀렉터.
+
+   fileno()
+
+      하부 "select.devpoll()" 객체에서 사용하는 파일 기술자를 반환합니
+      다.
+
+   버전 3.5에 추가.
+
+class selectors.KqueueSelector
+
+   "select.kqueue()" 기반 셀렉터.
+
+   fileno()
+
+      하부 "select.kqueue()" 객체에서 사용하는 파일 기술자를 반환합니
+      다.
+
+
+예제
+====
+
+다음은 간단한 메아리 서버 구현입니다:
+
+   import selectors
+   import socket
+
+   sel = selectors.DefaultSelector()
+
+   def accept(sock, mask):
+       conn, addr = sock.accept()  # Should be ready
+       print('accepted', conn, 'from', addr)
+       conn.setblocking(False)
+       sel.register(conn, selectors.EVENT_READ, read)
+
+   def read(conn, mask):
+       data = conn.recv(1000)  # Should be ready
+       if data:
+           print('echoing', repr(data), 'to', conn)
+           conn.send(data)  # Hope it won't block
+       else:
+           print('closing', conn)
+           sel.unregister(conn)
+           conn.close()
+
+   sock = socket.socket()
+   sock.bind(('localhost', 1234))
+   sock.listen(100)
+   sock.setblocking(False)
+   sel.register(sock, selectors.EVENT_READ, accept)
+
+   while True:
+       events = sel.select()
+       for key, mask in events:
+           callback = key.data
+           callback(key.fileobj, mask)

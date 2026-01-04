@@ -1,0 +1,170 @@
+"plistlib" --- Generate and parse Apple ".plist" files
+******************************************************
+
+**소스 코드:** Lib/plistlib.py
+
+======================================================================
+
+이 모듈은 애플, 주로 macOS와 iOS에서 사용되는 "프로퍼티 리스트
+(property list)" 파일을 읽고 쓰는 인터페이스를 제공합니다. 이 모듈은
+바이너리와 XML plist 파일을 모두 지원합니다.
+
+프로퍼티 리스트 (".plist") 파일 형식은 딕셔너리, 리스트, 숫자 및 문자
+열과 같은 기본 객체 형을 지원하는 간단한 직렬화입니다. 일반적으로 최상
+위 객체는 딕셔너리입니다.
+
+plist 파일을 쓰고 구문 분석하려면, "dump()"와 "load()" 함수를 사용하십
+시오.
+
+To work with plist data in bytes objects, use "dumps()" and "loads()".
+
+값은 문자열, 정수, 부동 소수점, 논릿값, 튜플, 리스트, 딕셔너리 (단, 문
+자열 키만 가능), "bytes", "bytearray" 또는 "datetime.datetime" 객체일
+수 있습니다.
+
+버전 3.4에서 변경: 새 API, 이전 API는 폐지되었습니다. 바이너리 형식
+plist에 대한 지원이 추가되었습니다.
+
+버전 3.8에서 변경: NSKeyedArchiver 와 NSKeyedUnarchiver 에서 사용되듯
+이 바이너리 plist에서 "UID" 토큰을 읽고 쓰는 것에 대한 지원이 추가되었
+습니다.
+
+버전 3.9에서 변경: 낡은 API가 제거되었습니다.
+
+더 보기:
+
+  PList manual page
+     애플의 파일 형식 설명서.
+
+이 모듈은 다음 함수를 정의합니다:
+
+plistlib.load(fp, *, fmt=None, dict_type=dict)
+
+   plist 파일을 읽습니다. *fp*는 읽을 수 있는 바이너리 파일 객체여야
+   합니다. 해독된 루트 객체를 반환합니다 (일반적으로 딕셔너리입니다).
+
+   *fmt*는 파일의 형식이며 다음 값이 유효합니다:
+
+   * "None": 파일 형식을 자동 감지
+
+   * "FMT_XML": XML 파일 형식
+
+   * "FMT_BINARY": 바이너리 plist 형식
+
+   *dict_type*은 plist 파일에서 읽은 딕셔너리에 사용되는 형입니다.
+
+   "FMT_XML" 형식의 XML 데이터는 "xml.parsers.expat" 의 Expat 구문 분
+   석기로 구문 분석됩니다 -- 잘못된 형식의 XML로 인한 예외에 대해서는
+   해당 설명서를 참조하십시오. 알 수 없는 엘리먼트는 plist 구문분석기
+   에서 단순히 무시됩니다.
+
+   The parser for the binary format raises "InvalidFileException" when
+   the file cannot be parsed.
+
+   버전 3.4에 추가.
+
+plistlib.loads(data, *, fmt=None, dict_type=dict)
+
+   Load a plist from a bytes object. See "load()" for an explanation
+   of the keyword arguments.
+
+   버전 3.4에 추가.
+
+plistlib.dump(value, fp, *, fmt=FMT_XML, sort_keys=True, skipkeys=False)
+
+   Write *value* to a plist file. *Fp* should be a writable, binary
+   file object.
+
+   *fmt* 인자는 plist 파일의 형식을 지정하며 다음 값 중 하나일 수 있습
+   니다:
+
+   * "FMT_XML": XML 형식의 plist 파일
+
+   * "FMT_BINARY": 바이너리 형식의 plist 파일
+
+   *sort_keys*가 참(기본값)이면 딕셔너리의 키가 정렬된 순서로 plist에
+   기록되고, 그렇지 않으면 딕셔너리의 이터레이션 순서로 기록됩니다.
+
+   *skipkeys*가 거짓(기본값)일 때, 딕셔너리의 키가 문자열이 아니면 함
+   수는 "TypeError"를 발생시킵니다. 그렇지 않으면 해당 키를 건너뜁니다
+   .
+
+   객체가 지원되지 않는 형이거나 지원되지 않는 형의 객체를 포함하는 컨
+   테이너면 "TypeError"가 발생합니다.
+
+   (바이너리) plist 파일에서 표현할 수 없는 정숫값은 "OverflowError"를
+   발생시킵니다.
+
+   버전 3.4에 추가.
+
+plistlib.dumps(value, *, fmt=FMT_XML, sort_keys=True, skipkeys=False)
+
+   plist 형식의 바이트열 객체로 *value*를 반환합니다. 이 함수의 키워드
+   인자에 대한 설명은 "dump()" 설명서를 참조하십시오.
+
+   버전 3.4에 추가.
+
+다음 클래스를 사용할 수 있습니다:
+
+class plistlib.UID(data)
+
+   "int"를 감쌉니다. 이것은 UID를 포함하는 NSKeyedArchiver 인코딩된 데
+   이터를 읽거나 쓸 때 사용됩니다 (PList 매뉴얼을 참조하십시오).
+
+   It has one attribute, "data", which can be used to retrieve the int
+   value of the UID.  "data" must be in the range "0 <= data < 2**64".
+
+   버전 3.8에 추가.
+
+다음 상수를 사용할 수 있습니다:
+
+plistlib.FMT_XML
+
+   plist 파일의 XML 형식.
+
+   버전 3.4에 추가.
+
+plistlib.FMT_BINARY
+
+   plist 파일의 바이너리 형식
+
+   버전 3.4에 추가.
+
+
+예제
+====
+
+plist 만들기:
+
+   import datetime
+   import plistlib
+
+   pl = dict(
+       aString = "Doodah",
+       aList = ["A", "B", 12, 32.1, [1, 2, 3]],
+       aFloat = 0.1,
+       anInt = 728,
+       aDict = dict(
+           anotherString = "<hello & hi there!>",
+           aThirdString = "M\xe4ssig, Ma\xdf",
+           aTrueValue = True,
+           aFalseValue = False,
+       ),
+       someData = b"<binary gunk>",
+       someMoreData = b"<lots of binary gunk>" * 10,
+       aDate = datetime.datetime.now()
+   )
+   print(plistlib.dumps(pl).decode())
+
+plist 구문 분석하기:
+
+   import plistlib
+
+   plist = b"""<plist version="1.0">
+   <dict>
+       <key>foo</key>
+       <string>bar</string>
+   </dict>
+   </plist>"""
+   pl = plistlib.loads(plist)
+   print(pl["foo"])

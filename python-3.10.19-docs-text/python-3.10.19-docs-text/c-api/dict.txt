@@ -1,0 +1,225 @@
+딕셔너리 객체
+*************
+
+type PyDictObject
+
+   이 "PyObject"의 서브 형은 파이썬 딕셔너리 객체를 나타냅니다.
+
+PyTypeObject PyDict_Type
+    * Part of the Stable ABI.*
+
+   이 "PyTypeObject" 인스턴스는 파이썬 딕셔너리 형을 나타냅니다. 이것
+   은 파이썬 계층의 "dict"와 같은 객체입니다.
+
+int PyDict_Check(PyObject *p)
+
+   *p*가 dict 객체이거나 dict 형의 서브 형의 인스턴스면 참을 반환합니
+   다. 이 함수는 항상 성공합니다.
+
+int PyDict_CheckExact(PyObject *p)
+
+   *p*가 dict 객체이지만, dict 형의 서브 형의 인스턴스는 아니면 참을
+   반환합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyDict_New()
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   새로운 빈 딕셔너리를 반환하거나, 실패하면 "NULL"을 반환합니다.
+
+PyObject *PyDictProxy_New(PyObject *mapping)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   읽기 전용 동작을 강제하는 매핑을 위한 "types.MappingProxyType" 객체
+   를 반환합니다. 이것은 일반적으로 비 동적 클래스 형을 위한 딕셔너리
+   의 수정을 방지하기 위해 뷰를 만드는 데 사용됩니다.
+
+void PyDict_Clear(PyObject *p)
+    * Part of the Stable ABI.*
+
+   기존 딕셔너리의 모든 키-값 쌍을 비웁니다.
+
+int PyDict_Contains(PyObject *p, PyObject *key)
+    * Part of the Stable ABI.*
+
+   딕셔너리 *p*에 *key*가 포함되어 있는지 확인합니다. *p*의 항목이
+   *key*와 일치하면 "1"을 반환하고, 그렇지 않으면 "0"을 반환합니다. 에
+   러면 "-1"을 반환합니다. 이는 파이썬 표현식 "key in p"와 동등합니다.
+
+PyObject *PyDict_Copy(PyObject *p)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *p*와 같은 키-값 쌍을 포함하는 새 딕셔너리를 반환합니다.
+
+int PyDict_SetItem(PyObject *p, PyObject *key, PyObject *val)
+    * Part of the Stable ABI.*
+
+   딕셔너리 *p*에 *val*을 *key* 키로 삽입합니다. *key*는 *해시 가능*해
+   야 합니다. 그렇지 않으면 "TypeError"가 발생합니다. 성공하면 "0"을,
+   실패하면 "-1"을 반환합니다. 이 함수는 *val*에 대한 참조를 훔치지 *
+   않습니다*.
+
+int PyDict_SetItemString(PyObject *p, const char *key, PyObject *val)
+    * Part of the Stable ABI.*
+
+   Insert *val* into the dictionary *p* using *key* as a key. *key*
+   should be a "const char*".  The key object is created using
+   "PyUnicode_FromString(key)".  Return "0" on success or "-1" on
+   failure.  This function *does not* steal a reference to *val*.
+
+int PyDict_DelItem(PyObject *p, PyObject *key)
+    * Part of the Stable ABI.*
+
+   딕셔너리 *p*에서 키가 *key*인 항목을 제거합니다. *key*는 *해시 가능
+   *해야 합니다. 그렇지 않으면 "TypeError"가 발생합니다. *key*가 딕셔
+   너리에 없으면, "KeyError"가 발생합니다. 성공하면 "0"을, 실패하면
+   "-1"을 반환합니다.
+
+int PyDict_DelItemString(PyObject *p, const char *key)
+    * Part of the Stable ABI.*
+
+   Remove the entry in dictionary *p* which has a key specified by the
+   string *key*. If *key* is not in the dictionary, "KeyError" is
+   raised. Return "0" on success or "-1" on failure.
+
+PyObject *PyDict_GetItem(PyObject *p, PyObject *key)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   Return the object from dictionary *p* which has a key *key*.
+   Return "NULL" if the key *key* is not present, but *without*
+   setting an exception.
+
+   Note that exceptions which occur while calling "__hash__()" and
+   "__eq__()" methods will get suppressed. To get error reporting use
+   "PyDict_GetItemWithError()" instead.
+
+   버전 3.10에서 변경: Calling this API without *GIL* held had been
+   allowed for historical reason. It is no longer allowed.
+
+PyObject *PyDict_GetItemWithError(PyObject *p, PyObject *key)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   예외를 억제하지 않는 "PyDict_GetItem()"의 변형입니다. 예외가 발생하
+   면 예외를 **설정하고** "NULL"을 반환합니다. 키가 없으면 예외를 설정
+   하지 **않고** "NULL"을 반환합니다.
+
+PyObject *PyDict_GetItemString(PyObject *p, const char *key)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   This is the same as "PyDict_GetItem()", but *key* is specified as a
+   "const char*", rather than a "PyObject*".
+
+   Note that exceptions which occur while calling "__hash__()" and
+   "__eq__()" methods and creating a temporary string object will get
+   suppressed. To get error reporting use "PyDict_GetItemWithError()"
+   instead.
+
+PyObject *PyDict_SetDefault(PyObject *p, PyObject *key, PyObject *defaultobj)
+    *반환값: 빌린 참조.*
+
+   이것은 파이썬 수준의 "dict.setdefault()"와 같습니다. 존재하면, 딕셔
+   너리 *p*에서 *key*에 해당하는 값을 반환합니다. 키가 dict에 없으면,
+   값 *defaultobj*로 삽입되고, *defaultobj*가 반환됩니다. 이 함수는
+   *key*의 해시 함수를 조회 및 삽입을 위해 독립적으로 평가하는 대신 한
+   번만 평가합니다.
+
+   버전 3.4에 추가.
+
+PyObject *PyDict_Items(PyObject *p)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   딕셔너리의 모든 항목을 포함하는 "PyListObject"를 반환합니다.
+
+PyObject *PyDict_Keys(PyObject *p)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   딕셔너리의 모든 키를 포함하는 "PyListObject"를 반환합니다.
+
+PyObject *PyDict_Values(PyObject *p)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   딕셔너리 *p*의 모든 값을 포함하는 "PyListObject"를 반환합니다.
+
+Py_ssize_t PyDict_Size(PyObject *p)
+    * Part of the Stable ABI.*
+
+   딕셔너리에 있는 항목의 수를 반환합니다. 이는 딕셔너리에 대한
+   "len(p)"와 동등합니다.
+
+int PyDict_Next(PyObject *p, Py_ssize_t *ppos, PyObject **pkey, PyObject **pvalue)
+    * Part of the Stable ABI.*
+
+   딕셔너리 *p*의 모든 키-값 쌍을 이터레이트 합니다. *ppos*에 의해 참
+   조된 "Py_ssize_t"는, 이터레이션을 시작하기 위해 이 함수를 처음 호출
+   하기 전에 "0"으로 초기화되어야 합니다; 이 함수는 딕셔너리의 각 쌍에
+   대해 참을 반환하고, 모든 쌍이 보고되었으면 거짓을 반환합니다. 매개
+   변수 *pkey*와 *pvalue*는 각각 키와 값으로 채울 "PyObject*" 변수를
+   가리 키거나, "NULL" 일 수 있습니다. 이들을 통해 반환된 참조는 모두
+   빌린(borrowed) 것입니다. 이터레이션 중에 *ppos*를 변경하면 안 됩니
+   다. 이 값은 내부 딕셔너리 구조 내의 오프셋을 나타내며, 구조가 희박
+   하므로 오프셋이 연속되지 않습니다.
+
+   예를 들면:
+
+      PyObject *key, *value;
+      Py_ssize_t pos = 0;
+
+      while (PyDict_Next(self->dict, &pos, &key, &value)) {
+          /* do something interesting with the values... */
+          ...
+      }
+
+   딕셔너리 *p*는 이터레이션 중에 변경해서는 안 됩니다. 딕셔너리를 이
+   터레이트 할 때 값을 변경하는 것은 안전하지만, 키 집합이 변경되지 않
+   는 한만 그렇습니다. 예를 들면:
+
+      PyObject *key, *value;
+      Py_ssize_t pos = 0;
+
+      while (PyDict_Next(self->dict, &pos, &key, &value)) {
+          long i = PyLong_AsLong(value);
+          if (i == -1 && PyErr_Occurred()) {
+              return -1;
+          }
+          PyObject *o = PyLong_FromLong(i + 1);
+          if (o == NULL)
+              return -1;
+          if (PyDict_SetItem(self->dict, key, o) < 0) {
+              Py_DECREF(o);
+              return -1;
+          }
+          Py_DECREF(o);
+      }
+
+int PyDict_Merge(PyObject *a, PyObject *b, int override)
+    * Part of the Stable ABI.*
+
+   매핑 객체 *b*를 이터레이트 하면서, 키-값 쌍을 딕셔너리 *a*에 추가합
+   니다. *b*는 딕셔너리거나 "PyMapping_Keys()"와 "PyObject_GetItem()"
+   를 지원하는 모든 객체일 수 있습니다. *override*가 참이면, *a*에 있
+   는 기존 쌍이 *b*에서 일치하는 키가 있으면 교체되고, 그렇지 않으면
+   *a*와 일치하는 키가 없을 때만 쌍이 추가됩니다. 성공하면 "0"을 반환
+   하고, 예외가 발생하면 "-1"을 반환합니다.
+
+int PyDict_Update(PyObject *a, PyObject *b)
+    * Part of the Stable ABI.*
+
+   이는 C에서 "PyDict_Merge(a, b, 1)"와 같고, 두 번째 인자에 "keys" 어
+   트리뷰트가 없을 때 "PyDict_Update()"가 키-값 쌍의 시퀀스에 대해 이
+   터레이트 하지 않는다는 점만 제외하면, 파이썬에서 "a.update(b)"와 유
+   사합니다. 성공하면 "0"을 반환하고, 예외가 발생하면 "-1"을 반환합니
+   다.
+
+int PyDict_MergeFromSeq2(PyObject *a, PyObject *seq2, int override)
+    * Part of the Stable ABI.*
+
+   *seq2*의 키-값 쌍으로 딕셔너리 *a*를 갱신하거나 병합합니다. *seq2*
+   는 키-값 쌍으로 간주하는 길이 2의 이터러블 객체를 생성하는 이터러블
+   객체여야 합니다. 중복 키가 있으면, *override*가 참이면 마지막이 승
+   리하고, 그렇지 않으면 첫 번째가 승리합니다. 성공 시 "0"을 반환하고,
+   예외가 발생하면 "-1"을 반환합니다. 동등한 파이썬은 이렇습니다(반환
+   값 제외)
+
+      def PyDict_MergeFromSeq2(a, seq2, override):
+          for key, value in seq2:
+              if override or key not in a:
+                  a[key] = value

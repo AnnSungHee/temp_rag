@@ -1,0 +1,207 @@
+"email.utils": Miscellaneous utilities
+**************************************
+
+**소스 코드:** Lib/email/utils.py
+
+======================================================================
+
+"email.utils" 모듈에서 제공되는 몇 가지 유용한 유틸리티가 있습니다:
+
+email.utils.localtime(dt=None)
+
+   Return local time as an aware datetime object.  If called without
+   arguments, return current time.  Otherwise *dt* argument should be
+   a "datetime" instance, and it is converted to the local time zone
+   according to the system time zone database.  If *dt* is naive (that
+   is, "dt.tzinfo" is "None"), it is assumed to be in local time.  In
+   this case, a positive or zero value for *isdst* causes "localtime"
+   to presume initially that summer time (for example, Daylight Saving
+   Time) is or is not (respectively) in effect for the specified time.
+   A negative value for *isdst* causes the "localtime" to attempt to
+   divine whether summer time is in effect for the specified time.
+
+   버전 3.3에 추가.
+
+email.utils.make_msgid(idstring=None, domain=None)
+
+   **RFC 2822**-준수 *Message-ID* 헤더에 적합한 문자열을 반환합니다.
+   선택적인 *idstring*이 주어지면, 메시지 id의 고유성을 강화하는 데 사
+   용되는 문자열입니다. 선택적인 *domain*이 주어지면, msgid의 '@' 다음
+   부분을 제공합니다. 기본값은 로컬 호스트 명입니다. 일반적으로 이 기
+   본값을 재정의할 필요는 없지만, 여러 호스트에 걸쳐 일관된 도메인 이
+   름을 사용하는 분산 시스템을 구성하는 경우와 같이 특정 경우에 유용할
+   수 있습니다.
+
+   버전 3.2에서 변경: *domain* 키워드가 추가되었습니다.
+
+나머지 함수는 레거시 ("Compat32") email API의 일부입니다. 이것들이 제
+공하는 구문 분석과 포매팅은 새 API의 헤더 구문 분석 장치가 자동으로 수
+행하므로, 새 API에서 이것들을 직접 사용할 필요는 없습니다.
+
+email.utils.quote(str)
+
+   *str*에 있는 역 슬래시를 두 개의 역 슬래시로 대체하고, 큰따옴표는
+   역 슬래시-큰따옴표로 대체한 새 문자열을 반환합니다.
+
+email.utils.unquote(str)
+
+   *str*의 *unquote 된* 버전인 새 문자열을 반환합니다. *str*가 큰따옴
+   표로 끝나고 시작하면, 큰따옴표가 제거됩니다. 마찬가지로 *str*이 화
+   살괄호(angle brackets)로 끝나고 시작하면, 제거됩니다.
+
+email.utils.parseaddr(address, *, strict=True)
+
+   address(*To*나 *Cc*와 같은 주소를 포함하는 필드의 값이어야 합니다)
+   를 *realname*과 *email 주소* 구성 요소로 구문 분석합니다. 구문 분석
+   에 실패하지 않는 한 해당 정보의 튜플을 반환합니다. 실패하면 "('',
+   '')"의 2-튜플이 반환됩니다.
+
+   If *strict* is true, use a strict parser which rejects malformed
+   inputs.
+
+   버전 3.10.15에서 변경: Add *strict* optional parameter and reject
+   malformed inputs by default.
+
+email.utils.formataddr(pair, charset='utf-8')
+
+   "parseaddr()"의 역, "(realname, email_address)" 형식의 2-튜플을 취
+   해 *To*나 *Cc* 헤더에 적합한 문자열 값을 반환합니다. *pair*의 첫 번
+   째 요소가 거짓이면, 두 번째 요소는 수정되지 않은 채 반환됩니다.
+
+   선택적 *charset*은 "realname"에 비 ASCII 문자가 포함되어있을 때
+   "realname"의 **RFC 2047** 인코딩에 사용될 문자 집합입니다. "str"이
+   나 "Charset"의 인스턴스가 될 수 있습니다. 기본값은 "utf-8"입니다.
+
+   버전 3.3에서 변경: *charset* 옵션이 추가되었습니다.
+
+email.utils.getaddresses(fieldvalues, *, strict=True)
+
+   이 메서드는 "parseaddr()"에 의해 반환된 형식의 2-튜플 리스트를 반환
+   합니다. *fieldvalues*는 "Message.get_all"에 의해 반환될 수 있는 헤
+   더 필드 값의 시퀀스입니다.
+
+   If *strict* is true, use a strict parser which rejects malformed
+   inputs.
+
+   Here's a simple example that gets all the recipients of a message:
+
+      from email.utils import getaddresses
+
+      tos = msg.get_all('to', [])
+      ccs = msg.get_all('cc', [])
+      resent_tos = msg.get_all('resent-to', [])
+      resent_ccs = msg.get_all('resent-cc', [])
+      all_recipients = getaddresses(tos + ccs + resent_tos + resent_ccs)
+
+   버전 3.10.15에서 변경: Add *strict* optional parameter and reject
+   malformed inputs by default.
+
+email.utils.parsedate(date)
+
+   **RFC 2822**의 규칙에 따라 날짜를 구문 분석하려고 시도합니다. 그러
+   나, 일부 메일러는 지정된 대로 이 형식을 따르지 않으므로
+   "parsedate()"는 이러한 경우에 올바르게 추측하려고 합니다. *date*는
+   **RFC 2822** 날짜를 포함하는 문자열입니다 (가령 ""Mon, 20 Nov 1995
+   19:12:08 -0500""). 날짜 구문 분석에 성공하면, "parsedate()"는
+   "time.mktime()"에 직접 전달할 수 있는 9-튜플을 반환합니다; 그렇지
+   않으면, "None"을 반환합니다. 결과 튜플의 인덱스 6, 7 및 8은 사용할
+   수 없음에 유의하십시오.
+
+email.utils.parsedate_tz(date)
+
+   "parsedate()"와 같은 기능을 수행하지만, "None"이나 10-튜플을 반환합
+   니다; 앞의 9개 요소는 "time.mktime()"에 직접 전달할 수 있는 튜플을
+   구성하고, 열 번째 요소는 UTC(그리니치 표준 시의 공식 용어)로부터의
+   날짜의 시간대 오프셋입니다 [1]. 입력 문자열에 시간대가 없으면, 반환
+   되는 튜플의 마지막 요소는 "0"입니다, UTC를 나타냅니다. 결과 튜플의
+   인덱스 6, 7 및 8은 사용할 수 없음에 유의하십시오.
+
+email.utils.parsedate_to_datetime(date)
+
+   "format_datetime()"의 역. "parsedate()"와 같은 기능을 수행하지만,
+   성공 시에 "datetime"을 반환합니다; 그렇지 않으면, 23보다 큰 시간이
+   나 -24 와 24 시간 사이에 있지 않은 시간대와 같이 *date* 가 잘못된
+   값을 가질 때 "ValueError"가 발생합니다. 입력 date의 시간대가
+   "-0000"이면, "datetime"은 나이브 "datetime"이 되고, date가 RFC를 준
+   수하면 UTC로 시간이 표시되지만, date가 온 메시지의 실제 소스 시간대
+   는 표시되지 않습니다. 입력 date에 다른 유효한 시간대 오프셋이 있으
+   면, "datetime"은 해당 "timezone" "tzinfo"가 있는 어웨어 "datetime"
+   이 됩니다.
+
+   버전 3.3에 추가.
+
+email.utils.mktime_tz(tuple)
+
+   "parsedate_tz()"에 의해 반환된 10-튜플을 UTC 타임스탬프(Epoch 이후
+   초)로 바꿉니다. 튜플의 시간대 항목이 "None"이면, 지역 시간으로 간주
+   합니다.
+
+email.utils.formatdate(timeval=None, localtime=False, usegmt=False)
+
+   **RFC 2822**에 따르는 날짜 문자열을 반환합니다, 예를 들어:
+
+      Fri, 09 Nov 2001 01:08:47 -0000
+
+   Optional *timeval* if given is a floating point time value as
+   accepted by "time.gmtime()" and "time.localtime()", otherwise the
+   current time is used.
+
+   선택적 *localtime* 은, "True"일 때, *timeval*을 해석하고, UTC 대신
+   일광 절약 시간을 적절히 고려하는 지역 시간대에 상대적인 날짜를 반환
+   토록 하는 플래그입니다. 기본값은 UTC가 사용된다는 뜻인 "False"입니
+   다.
+
+   선택적 *usegmt*는, "True"일 때, 날짜 문자열의 시간대를 숫자 "-0000"
+   대신 ASCII 문자열 "GMT"로 출력하도록 하는 플래그입니다. 일부 프로토
+   콜(가령 HTTP)에 필요합니다. 이것은 *localtime* 이 "False"일 때만 적
+   용됩니다. 기본값은 "False"입니다.
+
+email.utils.format_datetime(dt, usegmt=False)
+
+   "formatdate"와 같지만, 입력이 "datetime" 인스턴스입니다. 나이브
+   datetime이면, "소스 시간대에 대한 정보가 없는 UTC"로 간주하며, 관습
+   적으로 "-0000"이 시간대로 사용됩니다. 어웨어 "datetime"이면, 숫자
+   시간대 오프셋이 사용됩니다. 오프셋이 0인 어웨어 시간대면, *usegmt*
+   를 "True"로 설정해서 "GMT" 문자열을 숫자 시간대 오프셋 대신 사용할
+   수 있습니다. 이것은 표준을 준수하는 HTTP date 헤더를 생성하는 방법
+   을 제공합니다.
+
+   버전 3.3에 추가.
+
+email.utils.decode_rfc2231(s)
+
+   **RFC 2231**에 따라 *s* 문자열을 디코드합니다.
+
+email.utils.encode_rfc2231(s, charset=None, language=None)
+
+   **RFC 2231**에 따라 *s* 문자열을 인코드합니다. 선택적인 *charset*과
+   *language*가 주어지면, 사용할 문자 집합 이름과 언어 이름입니다. 둘
+   다 지정되지 않으면, *s*가 그대로 반환됩니다. *charset*이 주어졌지만
+   , *language*가 지정되지 않으면, 문자열은 *language*에 대해 빈 문자
+   열을 사용하여 인코딩됩니다.
+
+email.utils.collapse_rfc2231_value(value, errors='replace', fallback_charset='us-ascii')
+
+   header 매개 변수가 **RFC 2231**로 인코딩되었을 때,
+   "Message.get_param"은 문자 집합, 언어 및 값이 포함된 3-튜플을 반환
+   할 수 있습니다. "collapse_rfc2231_value()"는 이것을 유니코드 문자열
+   로 변환합니다. 선택적 *errors*는 "str"의 "encode()" 메서드의
+   *errors* 인자로 전달됩니다; 기본값은 "'replace'"입니다. 선택적
+   *fallback_charset*은 **RFC 2231** 헤더에 있는 것이 파이썬에 알려지
+   지 않았을 때 사용할 문자 집합을 지정합니다; 기본값은 "'us-ascii'"입
+   니다.
+
+   편의상, "collapse_rfc2231_value()"에 전달된 *value*가 튜플이 아니면
+   , 문자열이어야 하고 unquote 되어 반환됩니다.
+
+email.utils.decode_params(params)
+
+   **RFC 2231**에 따라 매개 변수 리스트를 디코드합니다. *params*는
+   "(content-type, string-value)" 형식의 요소를 포함하는 2-튜플의 시퀀
+   스입니다.
+
+-[ 각주 ]-
+
+[1] 시간대 오프셋의 부호는 같은 시간대에 대한 "time.timezone" 변수의
+    부호와 반대임에 유의하십시오; 이 모듈이 **RFC 2822**를 따르지만,
+    후자의 변수는 POSIX 표준을 따릅니다.

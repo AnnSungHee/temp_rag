@@ -1,0 +1,203 @@
+"wave" --- Read and write WAV files
+***********************************
+
+**소스 코드:** Lib/wave.py
+
+======================================================================
+
+The "wave" module provides a convenient interface to the WAV sound
+format. Only files using "WAVE_FORMAT_PCM" are supported. Note that
+this does not include files using "WAVE_FORMAT_EXTENSIBLE" even if the
+subformat is PCM.
+
+"wave" 모듈은 다음 함수와 예외를 정의합니다:
+
+wave.open(file, mode=None)
+
+   *file*이 문자열이면, 그 이름의 파일을 엽니다, 그렇지 않으면 파일류
+   객체로 처리합니다. *mode*는 다음 중 하나일 수 있습니다:
+
+   "'rb'"
+      읽기 전용 모드.
+
+   "'wb'"
+      쓰기 전용 모드.
+
+   WAV 파일의 읽기와 쓰기를 동시에 허락하지 않음에 유의하십시오.
+
+   "'rb'" *mode*는 "Wave_read" 객체를 반환하고, "'wb'" *mode*는
+   "Wave_write" 객체를 반환합니다. *mode*가 생략되고, 파일류 객체가
+   *file*로 전달되면, "file.mode"가 *mode*의 기본값으로 사용됩니다.
+
+   If you pass in a file-like object, the wave object will not close
+   it when its "close()" method is called; it is the caller's
+   responsibility to close the file object.
+
+   The "open()" function may be used in a "with" statement.  When the
+   "with" block completes, the "Wave_read.close()" or
+   "Wave_write.close()" method is called.
+
+   버전 3.4에서 변경: 위치 변경할 수 없는(unseekable) 파일에 대한 지원
+   이 추가되었습니다.
+
+exception wave.Error
+
+   WAV 명세를 위반하거나 구현 결함으로 인해 무언가가 불가능할 때 발생
+   하는 에러.
+
+
+Wave_read 객체
+==============
+
+"open()"이 반환하는, Wave_read 객체는 다음과 같은 메서드를 가지고 있습
+니다:
+
+Wave_read.close()
+
+   스트림이 "wave"에 의해 열렸다면 스트림을 닫고, 인스턴스를 사용할 수
+   없게 만듭니다. 이것은 객체가 가비지 수집될 때 자동으로 호출됩니다.
+
+Wave_read.getnchannels()
+
+   오디오 채널 수를 반환합니다 (모노는 "1", 스테레오는 "2").
+
+Wave_read.getsampwidth()
+
+   샘플 폭을 바이트 단위로 반환합니다.
+
+Wave_read.getframerate()
+
+   샘플링 빈도를 반환합니다.
+
+Wave_read.getnframes()
+
+   오디오 프레임의 수를 반환합니다.
+
+Wave_read.getcomptype()
+
+   압축 유형을 반환합니다 (지원되는 유형은 "'NONE'" 뿐입니다).
+
+Wave_read.getcompname()
+
+   "getcomptype()"의 사람이 읽을 수 있는 버전. 보통 "'not compressed'"
+   이 "'NONE'"에 해당합니다.
+
+Wave_read.getparams()
+
+   Returns a "namedtuple()" "(nchannels, sampwidth, framerate,
+   nframes, comptype, compname)", equivalent to output of the "get*()"
+   methods.
+
+Wave_read.readframes(n)
+
+   최대 *n* 프레임의 오디오를 "bytes" 객체로 읽고 반환합니다.
+
+Wave_read.rewind()
+
+   파일 포인터를 오디오 스트림의 시작 부분으로 되감습니다.
+
+The following two methods are defined for compatibility with the
+"aifc" module, and don't do anything interesting.
+
+Wave_read.getmarkers()
+
+   "None"을 반환합니다.
+
+Wave_read.getmark(id)
+
+   에러를 발생시킵니다.
+
+다음의 두 메서드는 이들 사이에서 호환 가능한 용어 "위치(position)"를
+정의하며, 그 외에는 구현에 따라 다릅니다.
+
+Wave_read.setpos(pos)
+
+   파일 포인터를 지정된 위치로 설정합니다.
+
+Wave_read.tell()
+
+   현재 파일 포인터 위치를 반환합니다.
+
+
+Wave_write 객체
+===============
+
+For seekable output streams, the "wave" header will automatically be
+updated to reflect the number of frames actually written.  For
+unseekable streams, the *nframes* value must be accurate when the
+first frame data is written.  An accurate *nframes* value can be
+achieved either by calling "setnframes()" or "setparams()" with the
+number of frames that will be written before "close()" is called and
+then using "writeframesraw()" to write the frame data, or by calling
+"writeframes()" with all of the frame data to be written.  In the
+latter case "writeframes()" will calculate the number of frames in the
+data and set *nframes* accordingly before writing the frame data.
+
+Wave_write objects, as returned by "open()", have the following
+methods:
+
+버전 3.4에서 변경: 위치 변경할 수 없는(unseekable) 파일에 대한 지원이
+추가되었습니다.
+
+Wave_write.close()
+
+   *nframes*를 올바르게 만들고, 파일이 "wave"로 열렸으면 파일을 닫습니
+   다. 이 메서드는 객체가 가비지 수집될 때 호출됩니다. 출력 스트림이
+   위치 변경할 수 없고 *nframes*가 실제로 기록된 프레임 수와 일치하지
+   않으면 예외를 일으킵니다.
+
+Wave_write.setnchannels(n)
+
+   채널 수를 설정합니다.
+
+Wave_write.setsampwidth(n)
+
+   샘플 폭을 *n* 바이트로 설정합니다.
+
+Wave_write.setframerate(n)
+
+   프레임 속도를 *n*으로 설정합니다.
+
+   버전 3.2에서 변경: 이 메서드에 대한 비 정수 입력은 가장 가까운 정수
+   로 자리 올림 됩니다.
+
+Wave_write.setnframes(n)
+
+   프레임 수를 *n*으로 설정합니다. 실제로 쓴 프레임 수가 다르면 나중에
+   변경됩니다 (이 변경 시도는 출력 스트림이 위치 변경할 수 없으면 에러
+   를 발생시킵니다).
+
+Wave_write.setcomptype(type, name)
+
+   압축 유형과 설명을 설정합니다. 현재, 압축 유형 "NONE" 만 지원됩니다
+   . 즉, 압축하지 않습니다.
+
+Wave_write.setparams(tuple)
+
+   The *tuple* should be "(nchannels, sampwidth, framerate, nframes,
+   comptype, compname)", with values valid for the "set*()" methods.
+   Sets all parameters.
+
+Wave_write.tell()
+
+   파일의 현재 위치를 반환하는데, "Wave_read.tell()" 과
+   "Wave_read.setpos()" 메서드와 같은 면책 조항이 적용됩니다.
+
+Wave_write.writeframesraw(data)
+
+   *nframes*를 수정하지 않고 오디오 프레임을 씁니다.
+
+   버전 3.4에서 변경: 이제 모든 *바이트열류 객체*가 허락됩니다.
+
+Wave_write.writeframes(data)
+
+   오디오 프레임을 기록하고 *nframes*를 올바르게 만듭니다. 출력 스트림
+   이 위치 변경할 수 없고 *data*를 기록한 후에 기록된 총 프레임 수가
+   *nframes*에 대해 이전에 설정된 값과 일치하지 않으면 에러가 발생시킵
+   니다.
+
+   버전 3.4에서 변경: 이제 모든 *바이트열류 객체*가 허락됩니다.
+
+"writeframes()"나 "writeframesraw()"를 호출한 후 파라미터를 설정하는
+것이 유효하지 않고, 이를 시도하면 "wave.Error"가 발생함에 유의하십시오
+.

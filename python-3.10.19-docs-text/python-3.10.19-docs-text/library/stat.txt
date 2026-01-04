@@ -1,0 +1,411 @@
+"stat" --- Interpreting "stat()" results
+****************************************
+
+**소스 코드:** Lib/stat.py
+
+======================================================================
+
+The "stat" module defines constants and functions for interpreting the
+results of "os.stat()", "os.fstat()" and "os.lstat()" (if they exist).
+For complete details about the "stat()", "fstat()" and "lstat()"
+calls, consult the documentation for your system.
+
+버전 3.4에서 변경: stat 모듈은 C 구현으로 지원됩니다.
+
+"stat" 모듈은 특정 파일 유형을 검사하기 위해 다음 함수를 정의합니다:
+
+stat.S_ISDIR(mode)
+
+   mode가 디렉터리로부터 왔으면 0이 아닌 값을 반환합니다.
+
+stat.S_ISCHR(mode)
+
+   mode가 문자 특수 장치(character special device) 파일로부터 왔으면 0
+   이 아닌 값을 반환합니다.
+
+stat.S_ISBLK(mode)
+
+   mode가 블록 특수 장치(block special device) 파일로부터 왔으면 0이
+   아닌 값을 반환합니다.
+
+stat.S_ISREG(mode)
+
+   mode가 일반 파일로부터 왔으면 0이 아닌 값을 반환합니다.
+
+stat.S_ISFIFO(mode)
+
+   mode가 FIFO(네임드 파이프)로부터 왔으면 0이 아닌 값을 반환합니다.
+
+stat.S_ISLNK(mode)
+
+   mode가 심볼릭 링크로부터 왔으면 0이 아닌 값을 반환합니다.
+
+stat.S_ISSOCK(mode)
+
+   mode가 소켓으로부터 왔으면 0이 아닌 값을 반환합니다.
+
+stat.S_ISDOOR(mode)
+
+   mode가 door로부터 왔으면 0이 아닌 값을 반환합니다.
+
+   버전 3.4에 추가.
+
+stat.S_ISPORT(mode)
+
+   mode가 이벤트 포트(event port)로부터 왔으면 0이 아닌 값을 반환합니
+   다.
+
+   버전 3.4에 추가.
+
+stat.S_ISWHT(mode)
+
+   mode가 화이트 아웃(whiteout)으로부터 왔으면 0이 아닌 값을 반환합니
+   다.
+
+   버전 3.4에 추가.
+
+파일의 모드(mode)를 보다 일반적으로 조작하기 위한 두 가지 추가 함수가
+정의됩니다:
+
+stat.S_IMODE(mode)
+
+   "os.chmod()"로 설정할 수 있는 파일 모드 부분을 반환합니다 ---즉, 파
+   일의 권한(permission) 비트, 끈끈한(sticky) 비트, set-group-id 및
+   set-user-id 비트 (지원하는 시스템에서).
+
+stat.S_IFMT(mode)
+
+   Return the portion of the file's mode that describes the file type
+   (used by the "S_IS*()" functions above).
+
+Normally, you would use the "os.path.is*()" functions for testing the
+type of a file; the functions here are useful when you are doing
+multiple tests of the same file and wish to avoid the overhead of the
+"stat()" system call for each test.  These are also useful when
+checking for information about a file that isn't handled by "os.path",
+like the tests for block and character devices.
+
+예제:
+
+   import os, sys
+   from stat import *
+
+   def walktree(top, callback):
+       '''recursively descend the directory tree rooted at top,
+          calling the callback function for each regular file'''
+
+       for f in os.listdir(top):
+           pathname = os.path.join(top, f)
+           mode = os.lstat(pathname).st_mode
+           if S_ISDIR(mode):
+               # It's a directory, recurse into it
+               walktree(pathname, callback)
+           elif S_ISREG(mode):
+               # It's a file, call the callback function
+               callback(pathname)
+           else:
+               # Unknown file type, print a message
+               print('Skipping %s' % pathname)
+
+   def visitfile(file):
+       print('visiting', file)
+
+   if __name__ == '__main__':
+       walktree(sys.argv[1], visitfile)
+
+파일의 모드를 사람이 읽을 수 있는 문자열로 변환하기 위한 추가 유틸리티
+함수가 제공됩니다:
+
+stat.filemode(mode)
+
+   파일의 mode를 '-rwxrwxrwx' 형식의 문자열로 변환합니다.
+
+   버전 3.3에 추가.
+
+   버전 3.4에서 변경: 이 함수는 "S_IFDOOR", "S_IFPORT" 및 "S_IFWHT"를
+   지원합니다.
+
+아래의 모든 변수는 단순히 "os.stat()", "os.fstat()" 또는 "os.lstat()"
+에 의해 반환된 10-튜플에 대한 기호 인덱스입니다.
+
+stat.ST_MODE
+
+   아이 노드(inode) 보호 모드.
+
+stat.ST_INO
+
+   아이 노드(inode) 번호.
+
+stat.ST_DEV
+
+   아이 노드(inode)가 위치한 장치.
+
+stat.ST_NLINK
+
+   아이 노드(inode)에 대한 링크 수.
+
+stat.ST_UID
+
+   소유자의 사용자 id.
+
+stat.ST_GID
+
+   소유자의 그룹 id.
+
+stat.ST_SIZE
+
+   일반 파일의 크기(바이트); 일부 특수 파일에서는 대기중인 데이터의 양
+   .
+
+stat.ST_ATIME
+
+   마지막 액세스 시간.
+
+stat.ST_MTIME
+
+   마지막 수정 시간.
+
+stat.ST_CTIME
+
+   운영 체제에서 보고한 "ctime". (유닉스와 같은) 일부 시스템에서는 마
+   지막 메타 데이터 변경 시간이고, (윈도우와 같은) 다른 시스템에서는
+   생성 시간입니다 (자세한 내용은 플랫폼 설명서를 참조하십시오).
+
+"파일 크기"의 해석은 파일 유형에 따라 달라집니다. 일반 파일에서는 바이
+트로 표현한 파일의 크기입니다. 대부분의 유닉스(특히 리눅스를 포함하는)
+의 FIFO와 소켓에서, "크기"는 "os.stat()", "os.fstat()" 또는
+"os.lstat()"를 호출한 시점에 읽기 대기 중인 바이트 수입니다; 이것은 때
+때로, 특히 비 블로킹으로 연 후에 이러한 특수 파일 중 하나를 폴링할 때
+유용할 수 있습니다. 다른 문자와 블록 장치에서 크기 필드의 의미는 하부
+시스템 호출의 구현에 따라 더 다양합니다.
+
+아래의 변수는 "ST_MODE" 필드에서 사용되는 플래그를 정의합니다.
+
+첫 번째 플래그 집합을 사용하는 것보다 위의 함수를 사용하는 것이 더 이
+식성 있습니다:
+
+stat.S_IFSOCK
+
+   소켓.
+
+stat.S_IFLNK
+
+   심볼릭 링크.
+
+stat.S_IFREG
+
+   일반 파일.
+
+stat.S_IFBLK
+
+   블록 장치.
+
+stat.S_IFDIR
+
+   디렉터리.
+
+stat.S_IFCHR
+
+   문자 장치.
+
+stat.S_IFIFO
+
+   FIFO.
+
+stat.S_IFDOOR
+
+   Door.
+
+   버전 3.4에 추가.
+
+stat.S_IFPORT
+
+   이벤트 포트.
+
+   버전 3.4에 추가.
+
+stat.S_IFWHT
+
+   화이트 아웃(whiteout).
+
+   버전 3.4에 추가.
+
+참고:
+
+  플랫폼이 파일 유형을 지원하지 않으면, "S_IFDOOR", "S_IFPORT" 또는
+  "S_IFWHT"는 0으로 정의됩니다.
+
+다음 플래그는 "os.chmod()"의 *mode* 인자에서도 사용할 수 있습니다:
+
+stat.S_ISUID
+
+   Set-user-ID 비트.
+
+stat.S_ISGID
+
+   Set-group-ID 비트. 이 비트는 몇 가지 특별한 용도로 사용됩니다. 디렉
+   터리에서는 그 디렉터리가 BSD의 의미가 있음을 나타냅니다: 여기에 만
+   들어진 파일은 만드는 프로세스의 유효 그룹 ID가 아니라 디렉터리에서
+   그룹 ID를 상속받고, "S_ISGID" 비트 설정도 얻습니다. 그룹 실행 비트
+   ("S_IXGRP")가 설정되지 않은 파일의 경우, set-group-ID 비트는 필수
+   파일/레코드 잠금을 나타냅니다 ("S_ENFMT"도 참조하십시오).
+
+stat.S_ISVTX
+
+   끈끈한(sticky) 비트. 이 비트가 디렉터리에 설정되면, 해당 디렉터리의
+   파일은 파일의 소유자, 디렉터리의 소유자 또는 권한 있는(privileged)
+   프로세스에 의해서만 이름이 바뀌거나 삭제될 수 있음을 의미합니다.
+
+stat.S_IRWXU
+
+   파일 소유자 권한(permission) 마스크.
+
+stat.S_IRUSR
+
+   소유자에게 읽기 권한이 있습니다.
+
+stat.S_IWUSR
+
+   소유자에게 쓰기 권한이 있습니다.
+
+stat.S_IXUSR
+
+   소유자에게 실행 권한이 있습니다.
+
+stat.S_IRWXG
+
+   그룹 권한 마스크.
+
+stat.S_IRGRP
+
+   그룹에 읽기 권한이 있습니다.
+
+stat.S_IWGRP
+
+   그룹에 쓰기 권한이 있습니다.
+
+stat.S_IXGRP
+
+   그룹에 실행 권한이 있습니다.
+
+stat.S_IRWXO
+
+   다른 사용자(그룹에 없는)에 대한 권한 마스크.
+
+stat.S_IROTH
+
+   다른 사용자에게 읽기 권한이 있습니다.
+
+stat.S_IWOTH
+
+   다른 사용자에게 쓰기 권한이 있습니다.
+
+stat.S_IXOTH
+
+   다른 사용자에게 실행 권한이 있습니다.
+
+stat.S_ENFMT
+
+   System V 파일 잠금 강제. 이 플래그는 "S_ISGID"와 공유됩니다: 파일/
+   레코드 잠금이 그룹 실행 비트("S_IXGRP")가 설정되지 않은 파일에 적용
+   됩니다.
+
+stat.S_IREAD
+
+   "S_IRUSR"에 대한 유닉스 V7 동의어.
+
+stat.S_IWRITE
+
+   "S_IWUSR"에 대한 유닉스 V7 동의어.
+
+stat.S_IEXEC
+
+   "S_IXUSR"에 대한 유닉스 V7 동의어.
+
+다음 플래그는 "os.chflags()"의 *flags* 인자에서 사용될 수 있습니다:
+
+stat.UF_NODUMP
+
+   파일을 덤프하지 마십시오.
+
+stat.UF_IMMUTABLE
+
+   파일을 변경할 수 없습니다.
+
+stat.UF_APPEND
+
+   파일은 덧붙이기만 할 수 있습니다.
+
+stat.UF_OPAQUE
+
+   디렉터리는 유니언 스택(union stack)을 통해 볼 때 불투명합니다.
+
+stat.UF_NOUNLINK
+
+   파일의 이름을 변경하거나 삭제할 수 없습니다.
+
+stat.UF_COMPRESSED
+
+   파일은 압축되어 저장됩니다 (맥 OS 10.6+).
+
+stat.UF_HIDDEN
+
+   파일을 GUI에 표시하면 안 됩니다 (맥 OS 10.5+).
+
+stat.SF_ARCHIVED
+
+   파일을 보관(archive)할 수 있습니다.
+
+stat.SF_IMMUTABLE
+
+   파일을 변경할 수 없습니다.
+
+stat.SF_APPEND
+
+   파일은 덧붙이기만 할 수 있습니다.
+
+stat.SF_NOUNLINK
+
+   파일의 이름을 변경하거나 삭제할 수 없습니다.
+
+stat.SF_SNAPSHOT
+
+   파일은 스냅숏(snapshot) 파일입니다.
+
+자세한 정보는 *BSD나 맥 OS 시스템 매뉴얼 페이지 *chflags(2)*를 참조하
+십시오.
+
+윈도우에서 "os.stat()"에 의해 반환된 "st_file_attributes" 멤버의 비트
+를 검사할 때 다음 파일 어트리뷰트 상수를 사용할 수 있습니다. 이러한 상
+수의 의미에 대한 자세한 내용은 Windows API documentation을 참조하십시
+오.
+
+stat.FILE_ATTRIBUTE_ARCHIVE
+stat.FILE_ATTRIBUTE_COMPRESSED
+stat.FILE_ATTRIBUTE_DEVICE
+stat.FILE_ATTRIBUTE_DIRECTORY
+stat.FILE_ATTRIBUTE_ENCRYPTED
+stat.FILE_ATTRIBUTE_HIDDEN
+stat.FILE_ATTRIBUTE_INTEGRITY_STREAM
+stat.FILE_ATTRIBUTE_NORMAL
+stat.FILE_ATTRIBUTE_NOT_CONTENT_INDEXED
+stat.FILE_ATTRIBUTE_NO_SCRUB_DATA
+stat.FILE_ATTRIBUTE_OFFLINE
+stat.FILE_ATTRIBUTE_READONLY
+stat.FILE_ATTRIBUTE_REPARSE_POINT
+stat.FILE_ATTRIBUTE_SPARSE_FILE
+stat.FILE_ATTRIBUTE_SYSTEM
+stat.FILE_ATTRIBUTE_TEMPORARY
+stat.FILE_ATTRIBUTE_VIRTUAL
+
+   버전 3.5에 추가.
+
+윈도우에서, "os.lstat()"이 반환한 "st_reparse_tag" 멤버와 비교하기 위
+해 다음 상수를 사용할 수 있습니다. 이것들은 잘 알려진 상수이지만, 완전
+한 목록은 아닙니다.
+
+stat.IO_REPARSE_TAG_SYMLINK
+stat.IO_REPARSE_TAG_MOUNT_POINT
+stat.IO_REPARSE_TAG_APPEXECLINK
+
+   버전 3.8에 추가.

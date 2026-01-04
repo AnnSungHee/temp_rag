@@ -1,0 +1,118 @@
+데이터 지속성
+*************
+
+이 장에서 설명하는 모듈은 파이썬 데이터를 디스크에 지속적인 형태로 저
+장하는 것을 지원합니다. "pickle"과 "marshal" 모듈은 많은 파이썬 데이터
+형을 바이트 스트림으로 바꿀 수 있고 그 바이트열로부터 객체를 재생성할
+수 있습니다. 다양한 DBM 관련 모듈은 문자열에서 다른 문자열로의 매핑을
+저장하는 일군의 해시 기반 파일 형식을 지원합니다.
+
+이 장에서 설명하는 모듈 목록은 다음과 같습니다:
+
+* "pickle" --- Python object serialization
+
+  * 다른 파이썬 모듈과의 관계
+
+    * "marshal" 과의 비교
+
+    * "json" 과의 비교
+
+  * 데이터 스트림 형식
+
+  * 모듈 인터페이스
+
+  * 어떤 것이 피클 되고 역 피클 될 수 있을까요?
+
+  * 클래스 인스턴스 피클링
+
+    * 외부 객체의 지속성
+
+    * 디스패치 테이블
+
+    * 상태 저장 객체 처리
+
+  * 형, 함수 및 기타 객체에 대한 사용자 정의 환원
+
+  * 아웃 오브 밴드 버퍼
+
+    * 제공자 API
+
+    * 소비자 API
+
+    * 예제
+
+  * 전역 제한하기
+
+  * 성능
+
+  * 예제
+
+* "copyreg" --- Register "pickle" support functions
+
+  * 예제
+
+* "shelve" --- Python object persistence
+
+  * 제약 사항
+
+  * 예제
+
+* "marshal" --- Internal Python object serialization
+
+* "dbm" --- Interfaces to Unix "databases"
+
+  * "dbm.gnu" --- GNU's reinterpretation of dbm
+
+  * "dbm.ndbm" --- Interface based on ndbm
+
+  * "dbm.dumb" --- 이식성 있는 DBM 구현
+
+* "sqlite3" --- DB-API 2.0 interface for SQLite databases
+
+  * Tutorial
+
+  * Reference
+
+    * Module functions
+
+    * Module constants
+
+    * Connection objects
+
+    * Cursor objects
+
+    * Row objects
+
+    * PrepareProtocol objects
+
+    * 예외
+
+    * SQLite 와 파이썬 형
+
+    * Default adapters and converters
+
+  * How-to guides
+
+    * How to use placeholders to bind values in SQL queries
+
+    * How to adapt custom Python types to SQLite values
+
+      * How to write adaptable objects
+
+      * How to register adapter callables
+
+    * How to convert SQLite values to custom Python types
+
+    * Adapter and converter recipes
+
+    * How to use connection shortcut methods
+
+    * How to use the connection context manager
+
+    * How to work with SQLite URIs
+
+    * How to create and use row factories
+
+  * Explanation
+
+    * Transaction control

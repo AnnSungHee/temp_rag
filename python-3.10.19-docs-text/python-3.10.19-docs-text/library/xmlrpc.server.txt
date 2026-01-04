@@ -1,0 +1,400 @@
+"xmlrpc.server" --- Basic XML-RPC servers
+*****************************************
+
+**소스 코드:** Lib/xmlrpc/server.py
+
+======================================================================
+
+"xmlrpc.server" 모듈은 파이썬으로 작성된 XML-RPC 서버를 위한 기본 서버
+프레임워크를 제공합니다. 서버는 "SimpleXMLRPCServer"를 사용하여 독립적
+이거나, "CGIXMLRPCRequestHandler"를 사용하여 CGI 환경에 내장될 수 있습
+니다.
+
+경고:
+
+  "xmlrpc.server" 모듈은 악의적으로 구성된 데이터로부터 안전하지 않습
+  니다. 신뢰할 수 없거나 인증되지 않은 데이터를 구문 분석해야 한다면
+  XML 취약점를 참조하십시오.
+
+class xmlrpc.server.SimpleXMLRPCServer(addr, requestHandler=SimpleXMLRPCRequestHandler, logRequests=True, allow_none=False, encoding=None, bind_and_activate=True, use_builtin_types=False)
+
+   새 서버 인스턴스를 만듭니다. 이 클래스는 XML-RPC 프로토콜에 의해 호
+   출될 수 있는 함수를 등록하는 메서드를 제공합니다. *requestHandler*
+   매개 변수는 요청 처리기 인스턴스의 팩토리여야 합니다; 기본값은
+   "SimpleXMLRPCRequestHandler" 입니다. *addr*과 *requestHandler* 매개
+   변수는 "socketserver.TCPServer" 생성자에 전달됩니다. *logRequests*
+   가 참(기본값)이면, 요청이 로그 됩니다; 이 매개 변수를 거짓으로 설정
+   하면 로깅이 해제됩니다. *allow_none*과 *encoding* 매개 변수는
+   "xmlrpc.client"로 전달되고 서버에서 반환될 XML-RPC 응답을 제어합니
+   다. *bind_and_activate* 매개 변수는 생성자가 "server_bind()"와
+   "server_activate()"를 즉시 호출하는지를 제어합니다; 기본값은 참입니
+   다. 이를 거짓으로 설정하면 코드가 주소가 바인드되기 전에
+   *allow_reuse_address* 클래스 변수를 조작할 수 있습니다.
+   *use_builtin_types* 매개 변수는 "loads()" 함수로 전달되며 날짜/시간
+   값이나 바이너리 데이터가 수신될 때 처리되는 형을 제어합니다; 기본값
+   은 거짓입니다.
+
+   버전 3.3에서 변경: *use_builtin_types* 플래그가 추가되었습니다.
+
+class xmlrpc.server.CGIXMLRPCRequestHandler(allow_none=False, encoding=None, use_builtin_types=False)
+
+   CGI 환경에서 XML-RPC 요청을 처리할 새 인스턴스를 만듭니다.
+   *allow_none*과 *encoding* 매개 변수는 "xmlrpc.client"로 전달되고 서
+   버에서 반환될 XML-RPC 응답을 제어합니다. *use_builtin_types* 매개
+   변수는 "loads()" 함수로 전달되며 날짜/시간 값이나 바이너리 데이터가
+   수신될 때 처리되는 형을 제어합니다; 기본값은 거짓입니다.
+
+   버전 3.3에서 변경: *use_builtin_types* 플래그가 추가되었습니다.
+
+class xmlrpc.server.SimpleXMLRPCRequestHandler
+
+   새 요청 처리기 인스턴스를 만듭니다. 이 요청 처리기는 "POST" 요청을
+   지원하고 "SimpleXMLRPCServer" 생성자 매개 변수에 대한 *logRequests*
+   매개 변수가 적용되도록 로깅을 수정합니다.
+
+
+SimpleXMLRPCServer 객체
+=======================
+
+"SimpleXMLRPCServer" 클래스는 "socketserver.TCPServer"를 기반으로 하며
+간단한 독립형 XML-RPC 서버를 작성하는 수단을 제공합니다.
+
+SimpleXMLRPCServer.register_function(function=None, name=None)
+
+   Register a function that can respond to XML-RPC requests.  If
+   *name* is given, it will be the method name associated with
+   *function*, otherwise "function.__name__" will be used.  *name* is
+   a string, and may contain characters not legal in Python
+   identifiers, including the period character.
+
+   This method can also be used as a decorator.  When used as a
+   decorator, *name* can only be given as a keyword argument to
+   register *function* under *name*.  If no *name* is given,
+   "function.__name__" will be used.
+
+   버전 3.7에서 변경: "register_function()"은 데코레이터로 사용할 수
+   있습니다.
+
+SimpleXMLRPCServer.register_instance(instance, allow_dotted_names=False)
+
+   "register_function()"을 사용하여 등록되지 않은 메서드 이름을 노출하
+   는데 사용되는 객체를 등록합니다. *instance*가 "_dispatch()" 메서드
+   를 포함하면, 요청된 메서드 이름과 요청의 매개 변수로 호출됩니다.
+   API는 "def _dispatch(self, method, params)"입니다 (*params*가 가변
+   인자 목록을 나타내지 않음에 유의하십시오). 이것이 작업을 수행하기
+   위해 하부 함수를 호출하면, 해당 함수를 매개 변수 리스트를 확장하여
+   "func(*params)"로 호출합니다. "_dispatch()"의 반환 값이 클라이언트
+   에 결과로 반환됩니다. *instance*에 "_dispatch()" 메서드가 없으면,
+   요청된 메서드의 이름과 일치하는 어트리뷰트를 검색합니다.
+
+   선택적 *allow_dotted_names* 인자가 참이고 인스턴스에 "_dispatch()"
+   메서드가 없으면, 요청된 메서드 이름에 마침표가 포함될 때, 메서드 이
+   름의 각 구성 요소가 개별적으로 검색되어, 간단한 계층 구조 검색이 수
+   행되는 효과를 줍니다. 이 검색에서 찾은 값은 요청의 매개 변수로 호출
+   되며 반환 값은 클라이언트로 다시 전달됩니다.
+
+   경고:
+
+     *allow_dotted_names* 옵션을 활성화하면 침입자가 모듈의 전역 변수
+     에 액세스할 수 있으며 침입자가 여러분의 기계에서 임의의 코드를 실
+     행할 수 있습니다. 안전한 폐쇄 네트워크에서만 이 옵션을 사용하십시
+     오.
+
+SimpleXMLRPCServer.register_introspection_functions()
+
+   XML-RPC 내부 검사 함수 "system.listMethods", "system.methodHelp" 및
+   "system.methodSignature"를 등록합니다.
+
+SimpleXMLRPCServer.register_multicall_functions()
+
+   XML-RPC 다중 호출(multicall) 함수 system.multicall을 등록합니다.
+
+SimpleXMLRPCRequestHandler.rpc_paths
+
+   XML-RPC 요청을 수신하기 위한 URL의 유효한 경로 부분을 나열하는 튜플
+   이어야 하는 어트리뷰트 값. 다른 경로로 들어오는 요청은 404 "no such
+   page" HTTP 에러를 발생시킵니다. 이 튜플이 비어 있으면, 모든 경로를
+   유효한 것으로 간주합니다. 기본값은 "('/', '/RPC2')"입니다.
+
+
+SimpleXMLRPCServer 예제
+-----------------------
+
+서버 코드:
+
+   from xmlrpc.server import SimpleXMLRPCServer
+   from xmlrpc.server import SimpleXMLRPCRequestHandler
+
+   # Restrict to a particular path.
+   class RequestHandler(SimpleXMLRPCRequestHandler):
+       rpc_paths = ('/RPC2',)
+
+   # Create server
+   with SimpleXMLRPCServer(('localhost', 8000),
+                           requestHandler=RequestHandler) as server:
+       server.register_introspection_functions()
+
+       # Register pow() function; this will use the value of
+       # pow.__name__ as the name, which is just 'pow'.
+       server.register_function(pow)
+
+       # Register a function under a different name
+       def adder_function(x, y):
+           return x + y
+       server.register_function(adder_function, 'add')
+
+       # Register an instance; all the methods of the instance are
+       # published as XML-RPC methods (in this case, just 'mul').
+       class MyFuncs:
+           def mul(self, x, y):
+               return x * y
+
+       server.register_instance(MyFuncs())
+
+       # Run the server's main loop
+       server.serve_forever()
+
+다음 클라이언트 코드는 앞의 서버가 제공하는 메서드를 호출합니다:
+
+   import xmlrpc.client
+
+   s = xmlrpc.client.ServerProxy('http://localhost:8000')
+   print(s.pow(2,3))  # Returns 2**3 = 8
+   print(s.add(2,3))  # Returns 5
+   print(s.mul(5,2))  # Returns 5*2 = 10
+
+   # Print list of available methods
+   print(s.system.listMethods())
+
+"register_function()"은 데코레이터로도 사용할 수 있습니다. 앞의 서버
+예제에서 데코레이터 방식으로 함수를 등록할 수 있습니다:
+
+   from xmlrpc.server import SimpleXMLRPCServer
+   from xmlrpc.server import SimpleXMLRPCRequestHandler
+
+   class RequestHandler(SimpleXMLRPCRequestHandler):
+       rpc_paths = ('/RPC2',)
+
+   with SimpleXMLRPCServer(('localhost', 8000),
+                           requestHandler=RequestHandler) as server:
+       server.register_introspection_functions()
+
+       # Register pow() function; this will use the value of
+       # pow.__name__ as the name, which is just 'pow'.
+       server.register_function(pow)
+
+       # Register a function under a different name, using
+       # register_function as a decorator. *name* can only be given
+       # as a keyword argument.
+       @server.register_function(name='add')
+       def adder_function(x, y):
+           return x + y
+
+       # Register a function under function.__name__.
+       @server.register_function
+       def mul(x, y):
+           return x * y
+
+       server.serve_forever()
+
+"Lib/xmlrpc/server.py" 모듈에 포함된 다음 예는 점으로 구분된 이름을 허
+용하고 다중 호출 함수를 등록하는 서버를 보여줍니다.
+
+경고:
+
+  *allow_dotted_names* 옵션을 활성화하면 침입자가 모듈의 전역 변수에
+  액세스할 수 있으며 침입자가 여러분의 기계에서 임의의 코드를 실행할
+  수 있습니다. 이 예제는 안전한 폐쇄 네트워크 내에서만 사용하십시오.
+
+   import datetime
+
+   class ExampleService:
+       def getData(self):
+           return '42'
+
+       class currentTime:
+           @staticmethod
+           def getCurrentTime():
+               return datetime.datetime.now()
+
+   with SimpleXMLRPCServer(("localhost", 8000)) as server:
+       server.register_function(pow)
+       server.register_function(lambda x,y: x+y, 'add')
+       server.register_instance(ExampleService(), allow_dotted_names=True)
+       server.register_multicall_functions()
+       print('Serving XML-RPC on localhost port 8000')
+       try:
+           server.serve_forever()
+       except KeyboardInterrupt:
+           print("\nKeyboard interrupt received, exiting.")
+           sys.exit(0)
+
+이 ExampleService 데모는 명령 줄에서 호출할 수 있습니다:
+
+   python -m xmlrpc.server
+
+위 서버와 상호 작용하는 클라이언트는 "Lib/xmlrpc/client.py"에 포함되어
+있습니다:
+
+   server = ServerProxy("http://localhost:8000")
+
+   try:
+       print(server.currentTime.getCurrentTime())
+   except Error as v:
+       print("ERROR", v)
+
+   multi = MultiCall(server)
+   multi.getData()
+   multi.pow(2,9)
+   multi.add(1,2)
+   try:
+       for response in multi():
+           print(response)
+   except Error as v:
+       print("ERROR", v)
+
+데모 XMLRPC 서버와 상호 작용하는 이 클라이언트는 다음과 같이 호출할 수
+있습니다:
+
+   python -m xmlrpc.client
+
+
+CGIXMLRPCRequestHandler
+=======================
+
+"CGIXMLRPCRequestHandler" 클래스는 파이썬 CGI 스크립트로 전송된 XML-
+RPC 요청을 처리하는 데 사용할 수 있습니다.
+
+CGIXMLRPCRequestHandler.register_function(function=None, name=None)
+
+   Register a function that can respond to XML-RPC requests.  If
+   *name* is given, it will be the method name associated with
+   *function*, otherwise "function.__name__" will be used.  *name* is
+   a string, and may contain characters not legal in Python
+   identifiers, including the period character.
+
+   This method can also be used as a decorator.  When used as a
+   decorator, *name* can only be given as a keyword argument to
+   register *function* under *name*.  If no *name* is given,
+   "function.__name__" will be used.
+
+   버전 3.7에서 변경: "register_function()"은 데코레이터로 사용할 수
+   있습니다.
+
+CGIXMLRPCRequestHandler.register_instance(instance)
+
+   "register_function()"을 사용하여 등록되지 않은 메서드 이름을 노출하
+   는데 사용되는 객체를 등록합니다. instance가 "_dispatch()" 메서드를
+   포함하면, 요청된 메서드 이름과 요청의 매개 변수로 호출됩니다; 반환
+   값이 클라이언트에 결과로 반환됩니다. instance에 "_dispatch()" 메서
+   드가 없으면, 요청된 메서드의 이름과 일치하는 어트리뷰트를 검색합니
+   다; 요청된 메서드 이름에 마침표가 포함될 때, 메서드 이름의 각 구성
+   요소가 개별적으로 검색되어, 간단한 계층 구조 검색이 수행되는 효과를
+   줍니다. 이 검색에서 찾은 값은 요청의 매개 변수로 호출되며 반환 값은
+   클라이언트로 다시 전달됩니다.
+
+CGIXMLRPCRequestHandler.register_introspection_functions()
+
+   XML-RPC 내부 검사 함수 "system.listMethods", "system.methodHelp" 및
+   "system.methodSignature"를 등록합니다.
+
+CGIXMLRPCRequestHandler.register_multicall_functions()
+
+   XML-RPC 다중 호출(multicall) 함수 "system.multicall"을 등록합니다.
+
+CGIXMLRPCRequestHandler.handle_request(request_text=None)
+
+   XML-RPC 요청을 처리합니다. *request_text*가 제공되면, HTTP 서버가
+   제공한 POST 데이터여야 합니다, 그렇지 않으면 stdin의 내용이 사용됩
+   니다.
+
+예:
+
+   class MyFuncs:
+       def mul(self, x, y):
+           return x * y
+
+
+   handler = CGIXMLRPCRequestHandler()
+   handler.register_function(pow)
+   handler.register_function(lambda x,y: x+y, 'add')
+   handler.register_introspection_functions()
+   handler.register_instance(MyFuncs())
+   handler.handle_request()
+
+
+XMLRPC 서버 문서화
+==================
+
+이 클래스들은 HTTP GET 요청에 대한 응답으로 HTML 설명서를 제공하기 위
+해 위의 클래스를 확장합니다. 서버는 "DocXMLRPCServer"를 사용하여 독립
+적이거나, "DocCGIXMLRPCRequestHandler"를 사용하여 CGI 환경에 내장될 수
+있습니다.
+
+class xmlrpc.server.DocXMLRPCServer(addr, requestHandler=DocXMLRPCRequestHandler, logRequests=True, allow_none=False, encoding=None, bind_and_activate=True, use_builtin_types=True)
+
+   새 서버 인스턴스를 만듭니다. 모든 매개 변수는 "SimpleXMLRPCServer"
+   와 같은 의미입니다; *requestHandler*의 기본값은
+   "DocXMLRPCRequestHandler" 입니다.
+
+   버전 3.3에서 변경: *use_builtin_types* 플래그가 추가되었습니다.
+
+class xmlrpc.server.DocCGIXMLRPCRequestHandler
+
+   CGI 환경에서 XML-RPC 요청을 처리할 새 인스턴스를 만듭니다.
+
+class xmlrpc.server.DocXMLRPCRequestHandler
+
+   새 요청 처리기 인스턴스를 만듭니다. 이 요청 처리기는 XML-RPC POST
+   요청과 설명서 GET 요청을 지원하고, "DocXMLRPCServer" 생성자 매개 변
+   수에 대한 *logRequests* 매개 변수가 적용되도록 로깅을 수정합니다.
+
+
+DocXMLRPCServer 객체
+====================
+
+"DocXMLRPCServer" 클래스는 "SimpleXMLRPCServer" 에서 파생되며 스스로
+설명하는 독립형 XML-RPC 서버를 만드는 수단을 제공합니다. HTTP POST 요
+청은 XML-RPC 메서드 호출로 처리됩니다. HTTP GET 요청은 pydoc 스타일
+HTML 문서를 생성하는 것으로 처리합니다. 이를 통해 서버는 자체 웹 기반
+설명서를 제공할 수 있습니다.
+
+DocXMLRPCServer.set_server_title(server_title)
+
+   생성된 HTML 설명서에 사용되는 제목을 설정합니다. 이 제목은 HTML
+   "title" 요소 안에서 사용됩니다.
+
+DocXMLRPCServer.set_server_name(server_name)
+
+   생성된 HTML 설명서에 사용되는 이름을 설정합니다. 이 이름은 설명서의
+   최상단의 "h1" 요소 안에 나타납니다.
+
+DocXMLRPCServer.set_server_documentation(server_documentation)
+
+   생성된 HTML 설명서에 사용되는 설명을 설정합니다. 이 설명은 설명서에
+   서 서버 이름 아래 단락으로 나타납니다.
+
+
+DocCGIXMLRPCRequestHandler
+==========================
+
+"DocCGIXMLRPCRequestHandler" 클래스는 "CGIXMLRPCRequestHandler" 에서
+파생되며 스스로 설명하는 XML-RPC CGI 스크립트를 만드는 수단을 제공합니
+다. HTTP POST 요청은 XML-RPC 메서드 호출로 처리됩니다. HTTP GET 요청은
+pydoc 스타일 HTML 문서를 생성하는 것으로 처리합니다. 이를 통해 서버는
+자체 웹 기반 설명서를 제공할 수 있습니다.
+
+DocCGIXMLRPCRequestHandler.set_server_title(server_title)
+
+   생성된 HTML 설명서에 사용되는 제목을 설정합니다. 이 제목은 HTML
+   "title" 요소 안에서 사용됩니다.
+
+DocCGIXMLRPCRequestHandler.set_server_name(server_name)
+
+   생성된 HTML 설명서에 사용되는 이름을 설정합니다. 이 이름은 설명서의
+   최상단의 "h1" 요소 안에 나타납니다.
+
+DocCGIXMLRPCRequestHandler.set_server_documentation(server_documentation)
+
+   생성된 HTML 설명서에 사용되는 설명을 설정합니다. 이 설명은 설명서에
+   서 서버 이름 아래 단락으로 나타납니다.

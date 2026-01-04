@@ -1,0 +1,1778 @@
+"importlib" --- "import"의 구현
+*******************************
+
+버전 3.1에 추가.
+
+**소스 코드:** Lib/importlib/__init__.py
+
+======================================================================
+
+
+소개
+====
+
+The purpose of the "importlib" package is two-fold. One is to provide
+the implementation of the "import" statement (and thus, by extension,
+the "__import__()" function) in Python source code. This provides an
+implementation of "import" which is portable to any Python
+interpreter. This also provides an implementation which is easier to
+comprehend than one implemented in a programming language other than
+Python.
+
+둘째, "import"를 구현하는 구성 요소가 이 패키지에서 노출되어, 사용자가
+임포트 프로세스에 참여하기 위해 자신의 사용자 지정 객체(일반적으로 *임
+포터*라고 합니다)를 쉽게 만들 수 있도록 합니다.
+
+더 보기:
+
+  임포트(import) 문
+     "import" 문의 언어 레퍼런스.
+
+  패키지 명세
+     패키지의 원래 명세. 이 문서를 작성한 이후로 일부 의미가 변경되었
+     습니다 (예를 들어 "sys.modules"의 "None"을 기반으로 하는 리디렉션
+     ).
+
+  "__import__()" 함수
+     "import" 문은 이 함수의 편의 문법입니다.
+
+  **PEP 235**
+     대소 문자를 구분하지 않는 플랫폼에서의 임포트
+
+  **PEP 263**
+     파이썬 소스 코드 인코딩 정의
+
+  **PEP 302**
+     새로운 임포트 훅
+
+  **PEP 328**
+     임포트: 다중 줄과 절대/상대
+
+  **PEP 366**
+     메인 모듈 명시적 상대 임포트
+
+  **PEP 420**
+     묵시적 이름 공간 패키지
+
+  **PEP 451**
+     임포트 시스템을 위한 ModuleSpec 형
+
+  **PEP 488**
+     PYO 파일 제거
+
+  **PEP 489**
+     다단계 확장 모듈 초기화
+
+  **PEP 552**
+     결정론적 pyc
+
+  **PEP 3120**
+     UTF-8을 기본 소스 인코딩으로 사용하기
+
+  **PEP 3147**
+     PYC 저장소 디렉터리
+
+
+함수
+====
+
+importlib.__import__(name, globals=None, locals=None, fromlist=(), level=0)
+
+   내장 "__import__()" 함수의 구현.
+
+   참고:
+
+     프로그래밍 방식으로 모듈을 임포트 하려면 이 함수 대신
+     "import_module()"을 사용해야 합니다.
+
+importlib.import_module(name, package=None)
+
+   모듈을 임포트 합니다. *name* 인자는 절대나 상대적인 항으로 임포트
+   할 모듈을 지정합니다 (예를 들어 "pkg.mod"나 "..mod"). 이름이 상대적
+   인 항으로 지정되면, *package* 인자는 패키지 이름을 결정하기 위한 앵
+   커 역할을 하는 패키지 이름으로 설정해야 합니다 (예를 들어
+   "import_module('..mod', 'pkg.subpkg')"는 "pkg.mod"를 임포트 합니다
+   ).
+
+   "import_module()" 함수는 "importlib.__import__()" 주위를 감싸는 단
+   순화 래퍼 역할을 합니다. 이는 함수의 모든 의미가
+   "importlib.__import__()"에서 파생됨을 뜻합니다. 이 두 함수의 가장
+   중요한 차이점은 "import_module()"이 지정된 패키지나 모듈(예를 들어
+   "pkg.mod")을 반환하는 반면, "__import__()"는 최상위 패키지나 모듈(
+   예를 들어 "pkg")을 반환한다는 것입니다.
+
+   인터프리터가 실행을 시작한 이후 만들어진 모듈(예를 들어, 파이썬 소
+   스 파일을 만들면)을 동적으로 임포트 하는 경우, 임포트 시스템에서 새
+   모듈을 알 수 있도록 "invalidate_caches()"를 호출해야 할 수 있습니다
+   .
+
+   버전 3.3에서 변경: 부모 패키지는 자동으로 임포트 됩니다.
+
+importlib.find_loader(name, path=None)
+
+   Find the loader for a module, optionally within the specified
+   *path*. If the module is in "sys.modules", then
+   "sys.modules[name].__loader__" is returned (unless the loader would
+   be "None" or is not set, in which case "ValueError" is raised).
+   Otherwise a search using "sys.meta_path" is done. "None" is
+   returned if no loader is found.
+
+   A dotted name does not have its parents implicitly imported as that
+   requires loading them and that may not be desired. To properly
+   import a submodule you will need to import all parent packages of
+   the submodule and use the correct argument to *path*.
+
+   버전 3.3에 추가.
+
+   버전 3.4에서 변경: If "__loader__" is not set, raise "ValueError",
+   just like when the attribute is set to "None".
+
+   버전 3.4부터 폐지: Use "importlib.util.find_spec()" instead.
+
+importlib.invalidate_caches()
+
+   "sys.meta_path"에 저장된 파인더의 내부 캐시를 무효로 합니다. 파인더
+   가 "invalidate_caches()"를 구현하면 무효화를 수행하기 위해 호출됩니
+   다. 모든 파인더가 새로운 모듈의 존재를 알 수 있도록 프로그램이 실행
+   되는 동안 모듈이 만들어진/설치된 경우 이 함수를 호출해야 합니다.
+
+   버전 3.3에 추가.
+
+importlib.reload(module)
+
+   이전에 임포트 한 *module*을 다시 로드합니다. 인자는 모듈 객체여야
+   해서, 이전에 성공적으로 임포트 됐어야 합니다. 외부 편집기를 사용하
+   여 모듈 소스 파일을 편집했고 파이썬 인터프리터를 떠나지 않고 새 버
+   전을 시험해보고 싶을 때 유용합니다. 반환 값은 모듈 객체입니다 (재
+   임포트로 인해 다른 객체가 "sys.modules"에 배치되면 다를 수 있습니다
+   ).
+
+   "reload()"가 실행될 때:
+
+   * 파이썬 모듈의 코드가 다시 컴파일되고 모듈 수준 코드가 다시 실행되
+     어, 원래 모듈을 로드한 *로더*를 재사용하여 모듈 딕셔너리에 있는
+     이름에 연결되는 새로운 객체 집합을 정의합니다. 확장 모듈의 "init"
+     함수는 두 번째에는 호출되지 않습니다.
+
+   * 파이썬의 다른 모든 객체와 마찬가지로 이전 객체는 참조 횟수가 0으
+     로 떨어진 후에만 자원이 회수됩니다.
+
+   * 모듈 이름 공간의 이름은 새로운 객체나 변경된 객체를 가리키도록 갱
+     신됩니다.
+
+   * 이전 객체에 대한 다른 참조(가령 모듈 외부의 이름)는 새 객체를 참
+     조하기 위해 다시 연결되지 않으며 필요하다면 그들이 등장하는 각 이
+     름 공간에서 갱신되어야 합니다.
+
+   다른 여러 가지 경고가 있습니다:
+
+   모듈을 다시 로드할 때, 그것의 (모듈의 전역 변수를 포함하는) 딕셔너
+   리가 유지됩니다. 이름을 재정의하면 이전 정의를 대체해서, 일반적으로
+   문제가 되지 않습니다. 새 버전의 모듈이 이전 버전이 정의한 이름을 정
+   의하지 않으면, 이전 정의가 그대로 남습니다. 이 기능은 객체의 전역
+   테이블이나 캐시를 유지한다면 모듈의 이점으로 사용될 수 있습니다 ---
+   "try" 문으로 테이블의 존재를 검사하고 필요하다면 초기화를 건너뛸 수
+   있습니다:
+
+      try:
+          cache
+      except NameError:
+          cache = {}
+
+   일반적으로 내장이나 동적으로 로드된 모듈을 다시 로드하는 것은 그리
+   유용하지 않습니다. "sys", "__main__", "builtins" 및 기타 주요 모듈
+   을 다시 로드하지 않는 것이 좋습니다. 많은 경우 확장 모듈은 두 번 이
+   상 초기화되도록 설계되지 않았으며, 다시 로드할 때 임의의 방식으로
+   실패할 수 있습니다.
+
+   모듈이 "from" ... "import" ...를 사용하여 다른 모듈에서 객체를 임포
+   트 하면, 다른 모듈에 대해 "reload()"를 호출해도 그것에서 임포트 한
+   객체를 재정의하지 않습니다 --- 이것을 피하는 한 가지 방법은 "from"
+   문을 다시 실행하는 것입니다, 다른 방법은 대신 "import"와 정규화된
+   이름(*module.name*)을 사용하는 것입니다.
+
+   모듈이 클래스의 인스턴스를 인스턴스 화하면, 클래스를 정의하는 모듈
+   을 다시 로드해도 인스턴스의 메서드 정의에는 영향을 미치지 않습니다
+   --- 이전 클래스 정의를 계속 사용합니다. 파생 클래스의 경우도 마찬가
+   지입니다.
+
+   버전 3.4에 추가.
+
+   버전 3.7에서 변경: 다시 로드되는 모듈에 "ModuleSpec"이 없으면
+   "ModuleNotFoundError" 가 발생합니다.
+
+
+"importlib.abc" -- import와 관련된 추상 베이스 클래스
+=====================================================
+
+**소스 코드:** Lib/importlib/abc.py
+
+======================================================================
+
+"importlib.abc" 모듈에는 "import"에서 사용하는 모든 핵심 추상 베이스
+클래스가 포함되어 있습니다. 핵심 ABC 구현에 도움이 되도록 핵심 추상 베
+이스 클래스의 일부 서브 클래스도 제공됩니다.
+
+ABC 계층:
+
+   object
+    +-- Finder (deprecated)
+    +-- MetaPathFinder
+    +-- PathEntryFinder
+    +-- Loader
+         +-- ResourceLoader --------+
+         +-- InspectLoader          |
+              +-- ExecutionLoader --+
+                                    +-- FileLoader
+                                    +-- SourceLoader
+
+class importlib.abc.Finder
+
+   An abstract base class representing a *finder*.
+
+   버전 3.3부터 폐지: Use "MetaPathFinder" or "PathEntryFinder"
+   instead.
+
+   abstractmethod find_module(fullname, path=None)
+
+      An abstract method for finding a *loader* for the specified
+      module.  Originally specified in **PEP 302**, this method was
+      meant for use in "sys.meta_path" and in the path-based import
+      subsystem.
+
+      버전 3.4에서 변경: Returns "None" when called instead of raising
+      "NotImplementedError".
+
+      버전 3.10부터 폐지: Implement "MetaPathFinder.find_spec()" or
+      "PathEntryFinder.find_spec()" instead.
+
+class importlib.abc.MetaPathFinder
+
+   *메타 경로 파인더*를 나타내는 추상 베이스 클래스.
+
+   버전 3.3에 추가.
+
+   버전 3.10에서 변경: No longer a subclass of "Finder".
+
+   find_spec(fullname, path, target=None)
+
+      An abstract method for finding a *spec* for the specified
+      module.  If this is a top-level import, *path* will be "None".
+      Otherwise, this is a search for a subpackage or module and
+      *path* will be the value of "__path__" from the parent package.
+      If a spec cannot be found, "None" is returned. When passed in,
+      "target" is a module object that the finder may use to make a
+      more educated guess about what spec to return.
+      "importlib.util.spec_from_loader()" may be useful for
+      implementing concrete "MetaPathFinders".
+
+      버전 3.4에 추가.
+
+   find_module(fullname, path)
+
+      A legacy method for finding a *loader* for the specified module.
+      If this is a top-level import, *path* will be "None". Otherwise,
+      this is a search for a subpackage or module and *path* will be
+      the value of "__path__" from the parent package. If a loader
+      cannot be found, "None" is returned.
+
+      If "find_spec()" is defined, backwards-compatible functionality
+      is provided.
+
+      버전 3.4에서 변경: Returns "None" when called instead of raising
+      "NotImplementedError". Can use "find_spec()" to provide
+      functionality.
+
+      버전 3.4부터 폐지: Use "find_spec()" instead.
+
+   invalidate_caches()
+
+      호출될 때, 파인더가 사용하는 내부 캐시를 무효로 해야 하는 선택적
+      메서드. "sys.meta_path"에서 모든 파인더의 캐시를 무효로 할 때
+      "importlib.invalidate_caches()"에서 사용합니다.
+
+      버전 3.4에서 변경: Returns "None" when called instead of
+      "NotImplemented".
+
+class importlib.abc.PathEntryFinder
+
+   *경로 엔트리 파인더*를 나타내는 추상 베이스 클래스.
+   "MetaPathFinder"와 일부 유사하지만, "PathEntryFinder"는
+   "importlib.machinery.PathFinder"가 제공하는 경로 기반 임포트 서브
+   시스템 내에서만 사용하려는 것입니다.
+
+   버전 3.3에 추가.
+
+   버전 3.10에서 변경: No longer a subclass of "Finder".
+
+   find_spec(fullname, target=None)
+
+      지정된 모듈의 *스펙*을 찾는 추상 메서드. 파인더는 할당된 *경로
+      엔트리* 내에서만 모듈을 검색합니다. 스펙을 찾을 수 없으면,
+      "None"이 반환됩니다. 전달될 때, "target"은 파인더가 반환할 스펙
+      에 대해 더 정교하게 추측하기 위해 사용할 수 있는 모듈 객체입니다
+      . "importlib.util.spec_from_loader()"는 구상 "PathEntryFinders"
+      를 구현하는 데 유용할 수 있습니다.
+
+      버전 3.4에 추가.
+
+   find_loader(fullname)
+
+      A legacy method for finding a *loader* for the specified module.
+      Returns a 2-tuple of "(loader, portion)" where "portion" is a
+      sequence of file system locations contributing to part of a
+      namespace package. The loader may be "None" while specifying
+      "portion" to signify the contribution of the file system
+      locations to a namespace package. An empty list can be used for
+      "portion" to signify the loader is not part of a namespace
+      package. If "loader" is "None" and "portion" is the empty list
+      then no loader or location for a namespace package were found
+      (i.e. failure to find anything for the module).
+
+      If "find_spec()" is defined then backwards-compatible
+      functionality is provided.
+
+      버전 3.4에서 변경: Returns "(None, [])" instead of raising
+      "NotImplementedError". Uses "find_spec()" when available to
+      provide functionality.
+
+      버전 3.4부터 폐지: Use "find_spec()" instead.
+
+   find_module(fullname)
+
+      A concrete implementation of "Finder.find_module()" which is
+      equivalent to "self.find_loader(fullname)[0]".
+
+      버전 3.4부터 폐지: Use "find_spec()" instead.
+
+   invalidate_caches()
+
+      호출될 때, 파인더가 사용하는 내부 캐시를 무효로 해야 하는 선택적
+      메서드. 모든 캐시 된 파인더의 캐시를 무효화 할 때
+      "importlib.machinery.PathFinder.invalidate_caches()"에서 사용합
+      니다.
+
+class importlib.abc.Loader
+
+   *로더*의 추상 베이스 클래스. 로더에 대한 정확한 정의는 **PEP 302**
+   를 참조하십시오.
+
+   Loaders that wish to support resource reading should implement a
+   "get_resource_reader(fullname)" method as specified by
+   "importlib.abc.ResourceReader".
+
+   버전 3.7에서 변경: Introduced the optional "get_resource_reader()"
+   method.
+
+   create_module(spec)
+
+      모듈을 임포트 할 때 사용할 모듈 객체를 반환하는 메서드. 이 메서
+      드는 "None"을 반환해서 기본 모듈 생성 시맨틱이 적용되어야 함을
+      나타낼 수 있습니다.
+
+      버전 3.4에 추가.
+
+      버전 3.5에서 변경: Starting in Python 3.6, this method will not
+      be optional when "exec_module()" is defined.
+
+   exec_module(module)
+
+      An abstract method that executes the module in its own namespace
+      when a module is imported or reloaded.  The module should
+      already be initialized when "exec_module()" is called. When this
+      method exists, "create_module()" must be defined.
+
+      버전 3.4에 추가.
+
+      버전 3.6에서 변경: "create_module()" must also be defined.
+
+   load_module(fullname)
+
+      A legacy method for loading a module. If the module cannot be
+      loaded, "ImportError" is raised, otherwise the loaded module is
+      returned.
+
+      If the requested module already exists in "sys.modules", that
+      module should be used and reloaded. Otherwise the loader should
+      create a new module and insert it into "sys.modules" before any
+      loading begins, to prevent recursion from the import. If the
+      loader inserted a module and the load fails, it must be removed
+      by the loader from "sys.modules"; modules already in
+      "sys.modules" before the loader began execution should be left
+      alone (see "importlib.util.module_for_loader()").
+
+      The loader should set several attributes on the module. (Note
+      that some of these attributes can change when a module is
+      reloaded):
+
+      * "__name__"
+           The name of the module.
+
+      * "__file__"
+           The path to where the module data is stored (not set for
+           built-in modules).
+
+      * "__cached__"
+           The path to where a compiled version of the module
+           is/should be stored (not set when the attribute would be
+           inappropriate).
+
+      * "__path__"
+           A list of strings specifying the search path within a
+           package. This attribute is not set on modules.
+
+      * "__package__"
+           The fully qualified name of the package under which the
+           module was loaded as a submodule (or the empty string for
+           top-level modules). For packages, it is the same as
+           "__name__".  The "importlib.util.module_for_loader()"
+           decorator can handle the details for "__package__".
+
+      * "__loader__"
+           The loader used to load the module. The
+           "importlib.util.module_for_loader()" decorator can handle
+           the details for "__package__".
+
+      "exec_module()"을 사용할 수 있으면 이전 버전과 호환되는 기능이
+      제공됩니다.
+
+      버전 3.4에서 변경: Raise "ImportError" when called instead of
+      "NotImplementedError". Functionality provided when
+      "exec_module()" is available.
+
+      버전 3.4부터 폐지: The recommended API for loading a module is
+      "exec_module()" (and "create_module()").  Loaders should
+      implement it instead of load_module().  The import machinery
+      takes care of all the other responsibilities of load_module()
+      when exec_module() is implemented.
+
+   module_repr(module)
+
+      A legacy method which when implemented calculates and returns
+      the given module's repr, as a string. The module type's default
+      repr() will use the result of this method as appropriate.
+
+      버전 3.3에 추가.
+
+      버전 3.4에서 변경: Made optional instead of an abstractmethod.
+
+      버전 3.4부터 폐지: The import machinery now takes care of this
+      automatically.
+
+class importlib.abc.ResourceReader
+
+   *TraversableResources 로 대체되었습니다*
+
+   *리소스(resources)*를 읽을 수 있는 기능을 제공하는 *추상 베이스 클
+   래스*.
+
+   From the perspective of this ABC, a *resource* is a binary artifact
+   that is shipped within a package. Typically this is something like
+   a data file that lives next to the "__init__.py" file of the
+   package. The purpose of this class is to help abstract out the
+   accessing of such data files so that it does not matter if the
+   package and its data file(s) are stored in a e.g. zip file versus
+   on the file system.
+
+   이 클래스의 모든 메서드에서, *resource* 인자는 개념적으로 단지 파일
+   이름을 나타내는 *경로류 객체*가 될 것으로 기대됩니다. 이는
+   *resource* 인자에 서브 디렉터리 경로가 포함되지 않아야 함을 의미합
+   니다. 판독기(reader)가 읽으려는 패키지의 위치가 "디렉터리"의 역할을
+   하기 때문입니다. 따라서 디렉터리와 파일 이름에 대한 은유는 각각 패
+   키지와 리소스입니다. 이것은 또한 이 클래스의 인스턴스가 (잠재적으로
+   여러 패키지나 모듈을 나타내는 대신) 특정 패키지와 직접적으로 연관될
+   것으로 기대되는 이유입니다.
+
+   리소스 읽기를 지원하려는 로더는 이 ABC의 인터페이스를 구현하는 객체
+   를 반환하는 "get_resource_reader(fullname)"이라는 메서드를 제공해야
+   합니다. fullname으로 지정된 모듈이 패키지가 아니면, 이 메서드는
+   "None"을 반환해야 합니다. 이 ABC와 호환되는 객체는 지정된 모듈이 패
+   키지일 때만 반환해야 합니다.
+
+   버전 3.7에 추가.
+
+   abstractmethod open_resource(resource)
+
+      *resource*의 바이너리 읽기를 위해 열린 *파일류 객체*를 반환합니
+      다.
+
+      리소스를 찾을 수 없으면, "FileNotFoundError" 가 발생합니다.
+
+   abstractmethod resource_path(resource)
+
+      *resource*에 대한 파일 시스템 경로를 반환합니다.
+
+      리소스가 파일 시스템에 구체적으로 존재하지 않으면,
+      "FileNotFoundError" 가 발생합니다.
+
+   abstractmethod is_resource(name)
+
+      명명된 *name*을 리소스로 간주하면 "True"를 반환합니다. *name*이
+      없으면, "FileNotFoundError" 가 발생합니다.
+
+   abstractmethod contents()
+
+      패키지 내용에 대한 문자열의 *이터러블*을 반환합니다. 이터레이터
+      가 반환한 모든 이름이 실제 리소스일 필요는 없음에 유의하십시오,
+      예를 들어 "is_resource()"가 거짓인 이름을 반환하는 것이 허용됩니
+      다.
+
+      리소스가 아닌 이름이 반환되도록 하는 것은 패키지와 그것의 리소스
+      가 저장되는 방법이 사전에 알려졌고 리소스가 아닌 이름이 유용한
+      상황을 허용하기 위함입니다. 예를 들어, 패키지와 리소스가 파일 시
+      스템에 저장되어있는 것으로 알려졌을 때 해당 서브 디렉터리 이름을
+      직접 사용할 수 있도록 서브 디렉터리 이름 반환이 허용됩니다.
+
+      추상 메서드는 항목이 없는 이터러블을 반환합니다.
+
+class importlib.abc.ResourceLoader
+
+   스토리지 백 엔드에서 임의의 리소스를 로드하기 위한 선택적 **PEP
+   302** 프로토콜을 구현하는 *로더*의 추상 베이스 클래스.
+
+   버전 3.7부터 폐지: This ABC is deprecated in favour of supporting
+   resource loading through "importlib.abc.ResourceReader".
+
+   abstractmethod get_data(path)
+
+      An abstract method to return the bytes for the data located at
+      *path*. Loaders that have a file-like storage back-end that
+      allows storing arbitrary data can implement this abstract method
+      to give direct access to the data stored. "OSError" is to be
+      raised if the *path* cannot be found. The *path* is expected to
+      be constructed using a module's "__file__" attribute or an item
+      from a package's "__path__".
+
+      버전 3.4에서 변경: "NotImplementedError" 대신 "OSError"를 발생시
+      킵니다.
+
+class importlib.abc.InspectLoader
+
+   모듈을 검사(inspect)하는 로더를 위한 선택적 **PEP 302** 프로토콜을
+   구현하는 *로더*의 추상 베이스 클래스.
+
+   get_code(fullname)
+
+      모듈에 대한 코드 객체나, 모듈에 코드 객체가 없으면 (예를 들어,
+      내장 모듈이 이런 경우입니다) "None"을 반환합니다. 로더가 요청한
+      모듈을 찾을 수 없으면 "ImportError"가 발생합니다.
+
+      참고:
+
+        이 메서드에는 기본 구현이 있지만, 가능하다면 성능을 위해 재정
+        의하는 것이 좋습니다.
+
+      버전 3.4에서 변경: 더는 추상적이지 않고 구상 구현이 제공됩니다.
+
+   abstractmethod get_source(fullname)
+
+      모듈의 소스를 반환하는 추상 메서드. 인식된 모든 줄 구분자를
+      "'\n'" 문자로 변환하는 *유니버설 줄 넘김*을 사용하여 텍스트 문자
+      열로 반환됩니다. 사용 가능한 소스가 없으면 (예를 들어, 내장 모듈
+      ) "None"을 반환합니다. 로더가 지정된 모듈을 찾을 수 없으면
+      "ImportError"를 발생시킵니다.
+
+      버전 3.4에서 변경: "NotImplementedError" 대신 "ImportError"를 발
+      생시킵니다.
+
+   is_package(fullname)
+
+      모듈이 패키지이면 참값을 반환하고, 그렇지 않으면 거짓 값을 반환
+      하는 선택적 메서드. *로더*가 모듈을 찾을 수 없으면 "ImportError"
+      가 발생합니다.
+
+      버전 3.4에서 변경: "NotImplementedError" 대신 "ImportError"를 발
+      생시킵니다.
+
+   static source_to_code(data, path='<string>')
+
+      파이썬 소스에서 코드 객체를 만듭니다.
+
+      *data* 인자는 "compile()" 함수가 지원하는 것은 무엇이든 될 수 있
+      습니다 (즉 문자열이나 바이트열). *path* 인자는 소스 코드가 온 곳
+      의 "경로"여야 하며, 추상 개념(예를 들어 zip 파일에서의 위치)일
+      수 있습니다.
+
+      후속 코드 객체를 사용하면 "exec(code, module.__dict__)"를 실행하
+      여 그 코드를 모듈에서 실행할 수 있습니다.
+
+      버전 3.4에 추가.
+
+      버전 3.5에서 변경: 메서드를 정적(static)으로 만들었습니다.
+
+   exec_module(module)
+
+      "Loader.exec_module()"의 구현.
+
+      버전 3.4에 추가.
+
+   load_module(fullname)
+
+      "Loader.load_module()"의 구현.
+
+      버전 3.4부터 폐지: 대신 "exec_module()"을 사용하십시오.
+
+class importlib.abc.ExecutionLoader
+
+   구현될 때, 모듈이 스크립트로 실행되도록 돕는 "InspectLoader"에서 상
+   속되는 추상 베이스 클래스. ABC는 선택적 **PEP 302** 프로토콜을 표현
+   합니다.
+
+   abstractmethod get_filename(fullname)
+
+      An abstract method that is to return the value of "__file__" for
+      the specified module. If no path is available, "ImportError" is
+      raised.
+
+      소스 코드를 사용할 수 있으면, 메서드는 모듈을 로드하는 데 바이트
+      코드를 사용했는지와 관계없이 소스 파일의 경로를 반환해야 합니다.
+
+      버전 3.4에서 변경: "NotImplementedError" 대신 "ImportError"를 발
+      생시킵니다.
+
+class importlib.abc.FileLoader(fullname, path)
+
+   "ResourceLoader"와 "ExecutionLoader"를 상속하고
+   "ResourceLoader.get_data()"와 "ExecutionLoader.get_filename()"의 구
+   상 구현을 제공하는 추상 베이스 클래스.
+
+   *fullname* 인자는 로더가 처리해야 하는 모듈의 완전히 결정된
+   (resolved) 이름입니다. *path* 인자는 모듈의 파일 경로입니다.
+
+   버전 3.3에 추가.
+
+   name
+
+      로더가 처리할 수 있는 모듈의 이름.
+
+   path
+
+      모듈 파일의 경로.
+
+   load_module(fullname)
+
+      super의 "load_module()"을 호출합니다.
+
+      버전 3.4부터 폐지: 대신 "Loader.exec_module()"을 사용하십시오.
+
+   abstractmethod get_filename(fullname)
+
+      "path"를 반환합니다.
+
+   abstractmethod get_data(path)
+
+      *path*를 바이너리 파일로 읽고 그것의 바이트열을 반환합니다.
+
+class importlib.abc.SourceLoader
+
+   소스 (및 선택적으로 바이트 코드) 파일 로드를 구현하기 위한 추상 베
+   이스 클래스. 이 클래스는 "ResourceLoader"와 "ExecutionLoader"를 모
+   두 상속하며, 다음을 구현해야 합니다:
+
+   * "ResourceLoader.get_data()"
+
+   * "ExecutionLoader.get_filename()"
+        소스 파일의 경로만 반환해야 합니다; 소스 없는 로딩은 지원되지
+        않습니다.
+
+   이 클래스에 의해 정의된 추상 메서드는 선택적 바이트 코드 파일 지원
+   을 추가하는 것입니다. 이러한 선택적 메서드를 구현하지 않으면 (또는
+   그들이 "NotImplementedError"를 발생시키도록 하면) 로더가 소스 코드
+   에 대해서만 작동하도록 만듭니다. 메서드를 구현하면 로더가 소스*와*
+   바이트 코드 파일 모두에 대해 작동하게 할 수 있습니다; 바이트 코드만
+   제공되는 *소스 없는* 로드는 허용하지 않습니다. 바이트 코드 파일은
+   파이썬 컴파일러의 구문 분석 단계를 제거하여 로딩 속도를 높이기 위한
+   최적화라서, 바이트 코드 전용 API는 노출되지 않습니다.
+
+   path_stats(path)
+
+      지정된 경로에 대한 메타 데이터를 포함하는 "dict"를 반환하는 선택
+      적 추상 메서드. 지원되는 딕셔너리 키는 다음과 같습니다:
+
+      * "'mtime'" (필수): 소스 코드의 수정 시간을 나타내는 정수나 부동
+        소수점 숫자;
+
+      * "'size'" (선택): 바이트 단위의 소스 코드의 크기.
+
+      향후 확장을 위해, 딕셔너리의 다른 키는 무시됩니다. 경로를 처리할
+      수 없으면, "OSError"가 발생합니다.
+
+      버전 3.3에 추가.
+
+      버전 3.4에서 변경: "NotImplementedError" 대신 "OSError"를 발생시
+      킵니다.
+
+   path_mtime(path)
+
+      지정된 경로의 수정 시간을 반환하는 선택적 추상 메서드.
+
+      버전 3.3부터 폐지: 이 메서드는 폐지되었고 "path_stats()"로 대체
+      되었습니다. 구현할 필요는 없지만, 호환성을 위해 여전히 제공됩니
+      다. 경로를 처리할 수 없으면 "OSError"를 발생시킵니다.
+
+      버전 3.4에서 변경: "NotImplementedError" 대신 "OSError"를 발생시
+      킵니다.
+
+   set_data(path, data)
+
+      지정된 바이트열을 파일 경로에 쓰는 선택적 추상 메서드. 존재하지
+      않는 중간 디렉터리는 자동으로 만들어집니다.
+
+      When writing to the path fails because the path is read-only
+      ("errno.EACCES"/"PermissionError"), do not propagate the
+      exception.
+
+      버전 3.4에서 변경: 호출할 때 더는 "NotImplementedError"를 발생시
+      키지 않습니다.
+
+   get_code(fullname)
+
+      "InspectLoader.get_code()"의 구상 구현.
+
+   exec_module(module)
+
+      "Loader.exec_module()"의 구상 구현.
+
+      버전 3.4에 추가.
+
+   load_module(fullname)
+
+      "Loader.load_module()"의 구상 구현.
+
+      버전 3.4부터 폐지: 대신 "exec_module()"을 사용하십시오.
+
+   get_source(fullname)
+
+      "InspectLoader.get_source()"의 구상 구현.
+
+   is_package(fullname)
+
+      "InspectLoader.is_package()"의 구상 구현.
+      ("ExecutionLoader.get_filename()"에서 제공되는) 파일 경로가 파일
+      확장자를 제거했을 때 "__init__"라는 이름의 파일이고 *동시에* 모
+      듈 이름 자체가 "__init__"로 끝나지 않으면 모듈은 패키지로 결정됩
+      니다.
+
+class importlib.abc.Traversable
+
+   디렉터리를 탐색하고 파일을 여는 데 적합한 "pathlib.Path" 메서드의
+   부분집합이 있는 객체.
+
+   For a representation of the object on the file-system, use
+   "importlib.resources.as_file()".
+
+   버전 3.9에 추가.
+
+   abstractmethod name()
+
+      The base name of this object without any parent references.
+
+   abstractmethod iterdir()
+
+      Yield Traversable objects in self.
+
+   abstractmethod is_dir()
+
+      Return True if self is a directory.
+
+   abstractmethod is_file()
+
+      Return True if self is a file.
+
+   abstractmethod joinpath(child)
+
+      Return Traversable child in self.
+
+   abstractmethod __truediv__(child)
+
+      Return Traversable child in self.
+
+   abstractmethod open(mode='r', *args, **kwargs)
+
+      *mode* may be 'r' or 'rb' to open as text or binary. Return a
+      handle suitable for reading (same as "pathlib.Path.open").
+
+      When opening as text, accepts encoding parameters such as those
+      accepted by "io.TextIOWrapper".
+
+   read_bytes()
+
+      Read contents of self as bytes.
+
+   read_text(encoding=None)
+
+      Read contents of self as text.
+
+   Note: In Python 3.11 and later, this class is found in
+   "importlib.resources.abc".
+
+class importlib.abc.TraversableResources
+
+   An abstract base class for resource readers capable of serving the
+   "files" interface. Subclasses ResourceReader and provides concrete
+   implementations of the ResourceReader's abstract methods.
+   Therefore, any loader supplying TraversableResources also supplies
+   ResourceReader.
+
+   Loaders that wish to support resource reading are expected to
+   implement this interface.
+
+   버전 3.9에 추가.
+
+   Note: In Python 3.11 and later, this class is found in
+   "importlib.resources.abc".
+
+
+"importlib.resources" -- Resources
+==================================
+
+**Source code:** Lib/importlib/resources.py
+
+======================================================================
+
+버전 3.7에 추가.
+
+This module leverages Python's import system to provide access to
+*resources* within *packages*.  If you can import a package, you can
+access resources within that package.  Resources can be opened or
+read, in either binary or text mode.
+
+Resources are roughly akin to files inside directories, though it's
+important to keep in mind that this is just a metaphor.  Resources and
+packages **do not** have to exist as physical files and directories on
+the file system.
+
+참고:
+
+  This module provides functionality similar to pkg_resources Basic
+  Resource Access without the performance overhead of that package.
+  This makes reading resources included in packages easier, with more
+  stable and consistent semantics.The standalone backport of this
+  module provides more information on using importlib.resources and
+  migrating from pkg_resources to importlib.resources.
+
+Loaders that wish to support resource reading should implement a
+"get_resource_reader(fullname)" method as specified by
+"importlib.abc.ResourceReader".
+
+The following types are defined.
+
+importlib.resources.Package
+
+   The "Package" type is defined as "Union[str, ModuleType]".  This
+   means that where the function describes accepting a "Package", you
+   can pass in either a string or a module.  Module objects must have
+   a resolvable "__spec__.submodule_search_locations" that is not
+   "None".
+
+importlib.resources.Resource
+
+   This type describes the resource names passed into the various
+   functions in this package.  This is defined as "Union[str,
+   os.PathLike]".
+
+The following functions are available.
+
+importlib.resources.files(package)
+
+   Returns an "importlib.abc.Traversable" object representing the
+   resource container for the package (think directory) and its
+   resources (think files). A Traversable may contain other containers
+   (think subdirectories).
+
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.
+
+   버전 3.9에 추가.
+
+importlib.resources.as_file(traversable)
+
+   Given a "importlib.abc.Traversable" object representing a file,
+   typically from "importlib.resources.files()", return a context
+   manager for use in a "with" statement. The context manager provides
+   a "pathlib.Path" object.
+
+   Exiting the context manager cleans up any temporary file created
+   when the resource was extracted from e.g. a zip file.
+
+   Use "as_file" when the Traversable methods ("read_text", etc) are
+   insufficient and an actual file on the file system is required.
+
+   버전 3.9에 추가.
+
+importlib.resources.open_binary(package, resource)
+
+   Open for binary reading the *resource* within *package*.
+
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.  *resource* is the name of the resource to
+   open within *package*; it may not contain path separators and it
+   may not have sub-resources (i.e. it cannot be a directory).  This
+   function returns a "typing.BinaryIO" instance, a binary I/O stream
+   open for reading.
+
+importlib.resources.open_text(package, resource, encoding='utf-8', errors='strict')
+
+   Open for text reading the *resource* within *package*.  By default,
+   the resource is opened for reading as UTF-8.
+
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.  *resource* is the name of the resource to
+   open within *package*; it may not contain path separators and it
+   may not have sub-resources (i.e. it cannot be a directory).
+   *encoding* and *errors* have the same meaning as with built-in
+   "open()".
+
+   This function returns a "typing.TextIO" instance, a text I/O stream
+   open for reading.
+
+importlib.resources.read_binary(package, resource)
+
+   Read and return the contents of the *resource* within *package* as
+   "bytes".
+
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.  *resource* is the name of the resource to
+   open within *package*; it may not contain path separators and it
+   may not have sub-resources (i.e. it cannot be a directory).  This
+   function returns the contents of the resource as "bytes".
+
+importlib.resources.read_text(package, resource, encoding='utf-8', errors='strict')
+
+   Read and return the contents of *resource* within *package* as a
+   "str". By default, the contents are read as strict UTF-8.
+
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.  *resource* is the name of the resource to
+   open within *package*; it may not contain path separators and it
+   may not have sub-resources (i.e. it cannot be a directory).
+   *encoding* and *errors* have the same meaning as with built-in
+   "open()".  This function returns the contents of the resource as
+   "str".
+
+importlib.resources.path(package, resource)
+
+   Return the path to the *resource* as an actual file system path.
+   This function returns a context manager for use in a "with"
+   statement. The context manager provides a "pathlib.Path" object.
+
+   Exiting the context manager cleans up any temporary file created
+   when the resource needs to be extracted from e.g. a zip file.
+
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.  *resource* is the name of the resource to
+   open within *package*; it may not contain path separators and it
+   may not have sub-resources (i.e. it cannot be a directory).
+
+importlib.resources.is_resource(package, name)
+
+   Return "True" if there is a resource named *name* in the package,
+   otherwise "False".  Remember that directories are *not* resources!
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.
+
+importlib.resources.contents(package)
+
+   Return an iterable over the named items within the package.  The
+   iterable returns "str" resources (e.g. files) and non-resources
+   (e.g. directories).  The iterable does not recurse into
+   subdirectories.
+
+   *package* is either a name or a module object which conforms to the
+   "Package" requirements.
+
+
+"importlib.machinery" -- 임포터와 경로 훅
+=========================================
+
+**소스 코드:** Lib/importlib/machinery.py
+
+======================================================================
+
+이 모듈에는 "import"가 모듈을 찾고 로드하는 데 도움이 되는 다양한 객체
+가 포함되어 있습니다.
+
+importlib.machinery.SOURCE_SUFFIXES
+
+   소스 모듈로 인식되는 파일 접미사를 나타내는 문자열 리스트.
+
+   버전 3.3에 추가.
+
+importlib.machinery.DEBUG_BYTECODE_SUFFIXES
+
+   최적화되지 않은 바이트 코드 모듈의 파일 접미사를 나타내는 문자열 리
+   스트.
+
+   버전 3.3에 추가.
+
+   버전 3.5부터 폐지: Use "BYTECODE_SUFFIXES" instead.
+
+importlib.machinery.OPTIMIZED_BYTECODE_SUFFIXES
+
+   최적화된 바이트 코드 모듈의 파일 접미사를 나타내는 문자열 리스트.
+
+   버전 3.3에 추가.
+
+   버전 3.5부터 폐지: Use "BYTECODE_SUFFIXES" instead.
+
+importlib.machinery.BYTECODE_SUFFIXES
+
+   바이트 코드 모듈로 인식되는 파일 접미사를 나타내는 문자열 리스트 (
+   앞의 점을 포함합니다).
+
+   버전 3.3에 추가.
+
+   버전 3.5에서 변경: 이 값은 더는 "__debug__"에 의존하지 않습니다.
+
+importlib.machinery.EXTENSION_SUFFIXES
+
+   확장 모듈로 인식되는 파일 접미사를 나타내는 문자열 리스트.
+
+   버전 3.3에 추가.
+
+importlib.machinery.all_suffixes()
+
+   표준 임포트 절차가 인식하는 모듈의 모든 파일 접미사를 나타내는 문자
+   열의 결합한 리스트를 반환합니다. 이것은 모듈 종류에 대한 세부 정보
+   없이 파일 시스템 경로가 잠재적으로 모듈을 참조하는지를 알아야 하는
+   코드(예를 들어, "inspect.getmodulename()")를 위한 도우미입니다.
+
+   버전 3.3에 추가.
+
+class importlib.machinery.BuiltinImporter
+
+   내장 모듈용 *임포터*. 알려진 모든 내장 모듈은
+   "sys.builtin_module_names"에 나열되어 있습니다. 이 클래스는
+   "importlib.abc.MetaPathFinder"와 "importlib.abc.InspectLoader" ABC
+   를 구현합니다.
+
+   이 클래스는 인스턴스 화의 필요성을 완화하기 위해 클래스 메서드만 정
+   의합니다.
+
+   버전 3.5에서 변경: **PEP 489**의 일부로, 내장 임포터는 이제
+   "Loader.create_module()"과 "Loader.exec_module()"을 구현합니다.
+
+class importlib.machinery.FrozenImporter
+
+   프로즌(frozen) 모듈용 *임포터*. 이 클래스는
+   "importlib.abc.MetaPathFinder"와 "importlib.abc.InspectLoader" ABC
+   를 구현합니다.
+
+   이 클래스는 인스턴스 화의 필요성을 완화하기 위해 클래스 메서드만 정
+   의합니다.
+
+   버전 3.4에서 변경: "Loader.create_module()"과
+   "Loader.exec_module()" 메서드를 얻었습니다.
+
+class importlib.machinery.WindowsRegistryFinder
+
+   윈도우 레지스트리에 선언된 모듈용 *파인더*. 이 클래스는
+   "importlib.abc.MetaPathFinder" ABC를 구현합니다.
+
+   이 클래스는 인스턴스 화의 필요성을 완화하기 위해 클래스 메서드만 정
+   의합니다.
+
+   버전 3.3에 추가.
+
+   버전 3.6부터 폐지: 대신 "site" 구성을 사용하십시오. 이후 버전의 파
+   이썬은 기본적으로 이 파인더를 활성화하지 않을 수 있습니다.
+
+class importlib.machinery.PathFinder
+
+   "sys.path"와 패키지 "__path__" 어트리뷰트용 *파인더*. 이 클래스는
+   "importlib.abc.MetaPathFinder" ABC를 구현합니다.
+
+   이 클래스는 인스턴스 화의 필요성을 완화하기 위해 클래스 메서드만 정
+   의합니다.
+
+   classmethod find_spec(fullname, path=None, target=None)
+
+      "sys.path" 또는, 정의되었다면, *path*에서 *fullname*에 의해 지정
+      된 모듈에 대한 *스펙*을 찾으려고 시도하는 클래스 메서드. 검색된
+      각 경로 엔트리에 대해, "sys.path_importer_cache"가 확인됩니다.
+      거짓이 아닌 객체를 찾으면 검색 중인 모듈을 찾기 위한 *경로 엔트
+      리 파인더*로 사용됩니다. "sys.path_importer_cache"에 엔트리가 없
+      으면, "sys.path_hooks"에서 경로 엔트리를 위한 파인더를 검색하고,
+      발견되면, 모듈에 대해 조회되는 것과 동시에
+      "sys.path_importer_cache"에 저장됩니다. 파인더가 아예 발견되지
+      않으면 "None"이 캐시에 저장되고 반환됩니다.
+
+      버전 3.4에 추가.
+
+      버전 3.5에서 변경: 현재 작업 디렉터리 -- 빈 문자열로 표현됩니다
+      -- 가 더는 유효하지 않으면 "None"이 반환되지만
+      "sys.path_importer_cache"에 값이 캐시 되지는 않습니다.
+
+   classmethod find_module(fullname, path=None)
+
+      A legacy wrapper around "find_spec()".
+
+      버전 3.4부터 폐지: Use "find_spec()" instead.
+
+   classmethod invalidate_caches()
+
+      메서드를 정의하는 "sys.path_importer_cache"에 저장된 모든 파인더
+      에 대해 "importlib.abc.PathEntryFinder.invalidate_caches()"를 호
+      출합니다. "sys.path_importer_cache"에 "None"으로 설정된 엔트리가
+      삭제됩니다.
+
+      버전 3.7에서 변경: "sys.path_importer_cache"에서 "None"의 엔트리
+      가 삭제됩니다.
+
+   버전 3.4에서 변경: "''"(즉 빈 문자열)에 대해서는 현재 작업 디렉터리
+   로 "sys.path_hooks"의 객체를 호출합니다.
+
+class importlib.machinery.FileFinder(path, *loader_details)
+
+   파일 시스템에서의 결과를 캐시 하는 "importlib.abc.PathEntryFinder"
+   의 구상 구현.
+
+   *path* 인자는 파인더가 검색을 담당하는 디렉터리입니다.
+
+   *loader_details* 인자는 각각 로더와 로더가 인식하는 파일 접미사의
+   시퀀스를 포함하는 가변 개수의 2개 항목 튜플입니다. 로더는 모듈 이름
+   과 찾은 파일의 경로로 구성되는 두 인자를 받아들이는 콜러블일 것으로
+   기대됩니다.
+
+   파인더는 필요에 따라 디렉터리 내용을 캐시 하여, 각 모듈 검색에서
+   stat 호출을 수행하여 캐시가 시효가 지나지 않았는지 확인합니다. 캐시
+   만료는 파일 시스템의 운영 체제 상태 정보의 세분성에 의존하기 때문에
+   , 모듈 검색, 새 파일 생성 및 새 파일이 나타내는 모듈 검색의 잠재적
+   경쟁 조건이 있습니다. stat 호출의 세분성 이하로 연산이 아주 빠르게
+   수행되면, 모듈 검색이 실패합니다. 이를 방지하려면, 모듈을 동적으로
+   만들 때, "importlib.invalidate_caches()"를 호출해야 합니다.
+
+   버전 3.3에 추가.
+
+   path
+
+      파인더가 검색할 경로.
+
+   find_spec(fullname, target=None)
+
+      "path" 내에서 *fullname*을 처리할 스펙을 찾으려고 합니다.
+
+      버전 3.4에 추가.
+
+   find_loader(fullname)
+
+      Attempt to find the loader to handle *fullname* within "path".
+
+      버전 3.10부터 폐지: Use "find_spec()" instead.
+
+   invalidate_caches()
+
+      내부 캐시를 지웁니다.
+
+   classmethod path_hook(*loader_details)
+
+      A class method which returns a closure for use on
+      "sys.path_hooks". An instance of "FileFinder" is returned by the
+      closure using the path argument given to the closure directly
+      and *loader_details* indirectly.
+
+      클로저에 대한 인자가 기존 디렉터리가 아니면, "ImportError"가 발
+      생합니다.
+
+class importlib.machinery.SourceFileLoader(fullname, path)
+
+   "importlib.abc.FileLoader"를 서브 클래싱하고 다른 메서드의 구상 구
+   현을 제공하는 "importlib.abc.SourceLoader"의 구상 구현.
+
+   버전 3.3에 추가.
+
+   name
+
+      이 로더가 처리할 모듈의 이름.
+
+   path
+
+      소스 파일의 경로.
+
+   is_package(fullname)
+
+      "path"가 패키지에 대한 것으로 드러나면 "True"를 반환합니다.
+
+   path_stats(path)
+
+      "importlib.abc.SourceLoader.path_stats()"의 구상 구현.
+
+   set_data(path, data)
+
+      "importlib.abc.SourceLoader.set_data()"의 구상 구현.
+
+   load_module(name=None)
+
+      로드할 모듈 이름을 지정하는 것이 선택적인
+      "importlib.abc.Loader.load_module()"의 구상 구현.
+
+      버전 3.6부터 폐지: 대신 "importlib.abc.Loader.exec_module()"을
+      사용하십시오.
+
+class importlib.machinery.SourcelessFileLoader(fullname, path)
+
+   바이트 코드 파일을 (즉, 소스 코드 파일 없이) 임포트 할 수 있는
+   "importlib.abc.FileLoader"의 구상 구현.
+
+   바이트 코드 파일(그래서 소스 코드 파일이 아닌)을 직접 사용하면 모든
+   파이썬 구현이나 바이트 코드 형식을 변경하는 새 버전의 파이썬에서 모
+   듈을 사용할 수 없게 됨에 유의하십시오.
+
+   버전 3.3에 추가.
+
+   name
+
+      로더가 처리할 모듈의 이름.
+
+   path
+
+      바이트 코드 파일의 경로.
+
+   is_package(fullname)
+
+      "path"를 기반으로 모듈이 패키지인지 판단합니다.
+
+   get_code(fullname)
+
+      "path"에서 만들어진 "name"의 코드 객체를 반환합니다.
+
+   get_source(fullname)
+
+      이 로더가 사용될 때는 바이트 코드 파일에 소스가 없어서 "None"을
+      반환합니다.
+
+   load_module(name=None)
+
+   로드할 모듈 이름을 지정하는 것이 선택적인
+   "importlib.abc.Loader.load_module()"의 구상 구현.
+
+   버전 3.6부터 폐지: 대신 "importlib.abc.Loader.exec_module()"을 사용
+   하십시오.
+
+class importlib.machinery.ExtensionFileLoader(fullname, path)
+
+   확장 모듈을 위한 "importlib.abc.ExecutionLoader"의 구상 구현.
+
+   *fullname* 인자는 로더가 지원할 모듈의 이름을 지정합니다. *path* 인
+   자는 확장 모듈 파일의 경로입니다.
+
+   버전 3.3에 추가.
+
+   name
+
+      로더가 지원하는 모듈의 이름.
+
+   path
+
+      확장 모듈의 경로.
+
+   create_module(spec)
+
+      **PEP 489**에 따라 지정된 명세에서 모듈 객체를 만듭니다.
+
+      버전 3.5에 추가.
+
+   exec_module(module)
+
+      **PEP 489**에 따라 주어진 모듈 객체를 초기화합니다.
+
+      버전 3.5에 추가.
+
+   is_package(fullname)
+
+      Returns "True" if the file path points to a package's "__init__"
+      module based on "EXTENSION_SUFFIXES".
+
+   get_code(fullname)
+
+      확장 모듈에는 코드 객체가 없어서 "None"을 반환합니다.
+
+   get_source(fullname)
+
+      확장 모듈에는 소스 코드가 없어서 "None"을 반환합니다.
+
+   get_filename(fullname)
+
+      "path"를 반환합니다.
+
+      버전 3.4에 추가.
+
+class importlib.machinery.ModuleSpec(name, loader, *, origin=None, loader_state=None, is_package=None)
+
+   A specification for a module's import-system-related state.  This
+   is typically exposed as the module's "__spec__" attribute.  In the
+   descriptions below, the names in parentheses give the corresponding
+   attribute available directly on the module object. E.g.
+   "module.__spec__.origin == module.__file__".  Note however that
+   while the *values* are usually equivalent, they can differ since
+   there is no synchronization between the two objects.  Thus it is
+   possible to update the module's "__path__" at runtime, and this
+   will not be automatically reflected in
+   "__spec__.submodule_search_locations".
+
+   버전 3.4에 추가.
+
+   name
+
+   ("__name__")
+
+   A string for the fully qualified name of the module.
+
+   loader
+
+   ("__loader__")
+
+   The *Loader* that should be used when loading the module.
+   *Finders* should always set this.
+
+   origin
+
+   ("__file__")
+
+   Name of the place from which the module is loaded, e.g. "builtin"
+   for built-in modules and the filename for modules loaded from
+   source. Normally "origin" should be set, but it may be "None" (the
+   default) which indicates it is unspecified (e.g. for namespace
+   packages).
+
+   submodule_search_locations
+
+   ("__path__")
+
+   List of strings for where to find submodules, if a package ("None"
+   otherwise).
+
+   loader_state
+
+   Container of extra module-specific data for use during loading (or
+   "None").
+
+   cached
+
+   ("__cached__")
+
+   String for where the compiled module should be stored (or "None").
+
+   parent
+
+   ("__package__")
+
+   (Read-only) The fully qualified name of the package under which the
+   module should be loaded as a submodule (or the empty string for
+   top-level modules). For packages, it is the same as "__name__".
+
+   has_location
+
+   Boolean indicating whether or not the module's "origin" attribute
+   refers to a loadable location.
+
+
+"importlib.util" -- 임포터를 위한 유틸리티 코드
+===============================================
+
+**소스 코드:** Lib/importlib/util.py
+
+======================================================================
+
+이 모듈에는 *임포터* 구성에 도움이 되는 다양한 객체가 포함되어 있습니
+다.
+
+importlib.util.MAGIC_NUMBER
+
+   바이트 코드 버전 번호를 나타내는 바이트열. 바이트 코드의 로드/쓰기
+   에 도움이 필요하면 "importlib.abc.SourceLoader"를 고려하십시오.
+
+   버전 3.4에 추가.
+
+importlib.util.cache_from_source(path, debug_override=None, *, optimization=None)
+
+   소스 *path*와 연관된 바이트 컴파일된 파일의 **PEP 3147**/**PEP
+   488** 경로를 반환합니다. 예를 들어, *path*가 "/foo/bar/baz.py"이면
+   반환값은 파이썬 3.2의 경우
+   "/foo/bar/__pycache__/baz.cpython-32.pyc"입니다. "cpython-32" 문자
+   열은 현재 매직 태그에서 온 것입니다 ("get_tag()"를 참조하십시오;
+   "sys.implementation.cache_tag"가 정의되지 않으면
+   "NotImplementedError" 가 발생합니다).
+
+   *optimization* 매개 변수는 바이트 코드 파일의 최적화 수준을 지정하
+   는 데 사용됩니다. 빈 문자열은 최적화하지 않음을 나타내므로,
+   *optimization*이 "''" 인 "/foo/bar/baz.py"는 바이트 코드 경로가
+   "/foo/bar/__pycache__/baz.cpython-32.pyc"가 됩니다. "None"은 인터프
+   리터의 최적화 수준이 사용되도록 합니다. 다른 값의 문자열 표현은 사
+   용되므로, *optimization*이 "2"인 "/foo/bar/baz.py"는 바이트 코드 경
+   로가 "/foo/bar/__pycache__/baz.cpython-32.opt-2.pyc"가 됩니다.
+   *optimization*의 문자열 표현은 영숫자만 가능하며, 그렇지 않으면
+   "ValueError"가 발생합니다.
+
+   *debug_override* 매개 변수는 폐지되었고 "__debug__"의 시스템값을 대
+   체하는 데 사용할 수 있습니다. "True" 값은 *optimization*을 빈 문자
+   열로 설정하는 것과 등등합니다. "False" 값은 *optimization*을 "1"로
+   설정하는 것과 같습니다. *debug_override*와 *optimization*이 모두
+   "None"이 아니면 "TypeError"가 발생합니다.
+
+   버전 3.4에 추가.
+
+   버전 3.5에서 변경: *optimization* 매개 변수가 추가되었고
+   *debug_override* 매개 변수는 폐지되었습니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+importlib.util.source_from_cache(path)
+
+   *path*에 **PEP 3147** 파일 이름이 주어지면, 연관된 소스 코드 파일
+   경로를 반환합니다. 예를 들어, *path*가
+   "/foo/bar/__pycache__/baz.cpython-32.pyc"이면 반환된 경로는
+   "/foo/bar/baz.py"입니다. *path*는 존재할 필요는 없지만, **PEP
+   3147**이나 **PEP 488** 형식을 준수하지 않으면, "ValueError"가 발생
+   합니다. "sys.implementation.cache_tag"가 정의되지 않으면,
+   "NotImplementedError" 가 발생합니다.
+
+   버전 3.4에 추가.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+importlib.util.decode_source(source_bytes)
+
+   소스 코드를 나타내는 주어진 바이트열을 디코딩하고 유니버설 줄 넘김
+   이 적용된 문자열로 반환합니다
+   ("importlib.abc.InspectLoader.get_source()"에 필요한 대로).
+
+   버전 3.4에 추가.
+
+importlib.util.resolve_name(name, package)
+
+   상대 모듈 이름을 절대 이름으로 결정합니다.
+
+   **name** 선두에 점이 없으면, **name**이 단순히 반환됩니다. 이를 통
+   해 **package** 인자가 필요한지 확인하지 않고
+   "importlib.util.resolve_name('sys', __spec__.parent)"와 같은 사용이
+   가능합니다.
+
+   "ImportError" is raised if **name** is a relative module name but
+   **package** is a false value (e.g. "None" or the empty string).
+   "ImportError" is also raised a relative name would escape its
+   containing package (e.g. requesting "..bacon" from within the
+   "spam" package).
+
+   버전 3.3에 추가.
+
+   버전 3.9에서 변경: import 문과의 일관성을 개선하기 위해, 잘못된 상
+   대 임포트 시도에 대해 "ValueError" 대신 "ImportError"를 발생시킵니
+   다.
+
+importlib.util.find_spec(name, package=None)
+
+   Find the *spec* for a module, optionally relative to the specified
+   **package** name. If the module is in "sys.modules", then
+   "sys.modules[name].__spec__" is returned (unless the spec would be
+   "None" or is not set, in which case "ValueError" is raised).
+   Otherwise a search using "sys.meta_path" is done. "None" is
+   returned if no spec is found.
+
+   **name**이 서브 모듈에 관한 것이면 (점을 포함하면), 부모 모듈은 자
+   동으로 임포트 됩니다.
+
+   **name**과 **package**는 "import_module()"과 같게 작동합니다.
+
+   버전 3.4에 추가.
+
+   버전 3.7에서 변경: Raises "ModuleNotFoundError" instead of
+   "AttributeError" if **package** is in fact not a package (i.e.
+   lacks a "__path__" attribute).
+
+importlib.util.module_from_spec(spec)
+
+   **spec**과 "spec.loader.create_module"을 기반으로 새 모듈을 만듭니
+   다.
+
+   "spec.loader.create_module"이 "None"을 반환하지 않으면, 어떤 기존
+   어트리뷰트도 재설정되지 않습니다. 또한 **spec**에 액세스하거나 모듈
+   에서 어트리뷰트를 설정하는 동안 트리거 되면 "AttributeError"가 발생
+   하지 않습니다.
+
+   **spec**은 모듈에서 가능한 많은 임포트 제어 어트리뷰트를 설정하는
+   데 사용되므로 새 모듈을 작성하는 데 "types.ModuleType"을 사용하는
+   것보다 이 함수가 선호됩니다.
+
+   버전 3.5에 추가.
+
+@importlib.util.module_for_loader
+
+   A *decorator* for "importlib.abc.Loader.load_module()" to handle
+   selecting the proper module object to load with. The decorated
+   method is expected to have a call signature taking two positional
+   arguments (e.g. "load_module(self, module)") for which the second
+   argument will be the module **object** to be used by the loader.
+   Note that the decorator will not work on static methods because of
+   the assumption of two arguments.
+
+   The decorated method will take in the **name** of the module to be
+   loaded as expected for a *loader*. If the module is not found in
+   "sys.modules" then a new one is constructed. Regardless of where
+   the module came from, "__loader__" set to **self** and
+   "__package__" is set based on what
+   "importlib.abc.InspectLoader.is_package()" returns (if available).
+   These attributes are set unconditionally to support reloading.
+
+   If an exception is raised by the decorated method and a module was
+   added to "sys.modules", then the module will be removed to prevent
+   a partially initialized module from being in left in "sys.modules".
+   If the module was already in "sys.modules" then it is left alone.
+
+   버전 3.3에서 변경: "__loader__" and "__package__" are automatically
+   set (when possible).
+
+   버전 3.4에서 변경: Set "__name__", "__loader__" "__package__"
+   unconditionally to support reloading.
+
+   버전 3.4부터 폐지: The import machinery now directly performs all
+   the functionality provided by this function.
+
+@importlib.util.set_loader
+
+   A *decorator* for "importlib.abc.Loader.load_module()" to set the
+   "__loader__" attribute on the returned module. If the attribute is
+   already set the decorator does nothing. It is assumed that the
+   first positional argument to the wrapped method (i.e. "self") is
+   what "__loader__" should be set to.
+
+   버전 3.4에서 변경: Set "__loader__" if set to "None", as if the
+   attribute does not exist.
+
+   버전 3.4부터 폐지: The import machinery takes care of this
+   automatically.
+
+@importlib.util.set_package
+
+   A *decorator* for "importlib.abc.Loader.load_module()" to set the
+   "__package__" attribute on the returned module. If "__package__" is
+   set and has a value other than "None" it will not be changed.
+
+   버전 3.4부터 폐지: The import machinery takes care of this
+   automatically.
+
+importlib.util.spec_from_loader(name, loader, *, origin=None, is_package=None)
+
+   로더(loader)를 기반으로 "ModuleSpec" 인스턴스를 만들기 위한 팩토리
+   함수. 매개 변수는 ModuleSpec에서와 같은 의미입니다. 이 함수는
+   "InspectLoader.is_package()"와 같은 사용 가능한 *로더* API를 사용하
+   여 스펙에 빠진 정보를 채웁니다.
+
+   버전 3.4에 추가.
+
+importlib.util.spec_from_file_location(name, location, *, loader=None, submodule_search_locations=None)
+
+   파일 경로를 기반으로 "ModuleSpec" 인스턴스를 만드는 팩토리 함수. 로
+   더 API를 사용하고 모듈이 파일 기반일 것이라는 것이 뜻하는 것으로 누
+   락된 정보가 스펙에 채워집니다.
+
+   버전 3.4에 추가.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+importlib.util.source_hash(source_bytes)
+
+   *source_bytes*의 해시를 바이트열로 반환합니다. 해시 기반 ".pyc" 파
+   일은 해당 소스 파일 내용의 "source_hash()"를 헤더에 포함합니다.
+
+   버전 3.7에 추가.
+
+class importlib.util.LazyLoader(loader)
+
+   모듈이 어트리뷰트에 액세스할 때까지 모듈 로더의 실행을 연기하는 클
+   래스.
+
+   This class **only** works with loaders that define "exec_module()"
+   as control over what module type is used for the module is
+   required. For those same reasons, the loader's "create_module()"
+   method must return "None" or a type for which its "__class__"
+   attribute can be mutated along with not using *slots*. Finally,
+   modules which substitute the object placed into "sys.modules" will
+   not work as there is no way to properly replace the module
+   references throughout the interpreter safely; "ValueError" is
+   raised if such a substitution is detected.
+
+   참고:
+
+     시작 시간이 중요한 프로젝트의 경우, 이 클래스를 사용하면 사용하지
+     않을 모듈을 로드하는 데 드는 비용을 최소화할 수 있습니다. 시작 시
+     간이 핵심이 아닌 프로젝트의 경우 로딩이 지연되는 동안 만들어진,
+     따라서 문맥을 벗어난 에러 메시지 때문에, 이 클래스를 사용하지 말
+     것을 **강하게** 권고합니다.
+
+   버전 3.5에 추가.
+
+   버전 3.6에서 변경: "importlib.machinery.BuiltinImporter"와
+   "importlib.machinery.ExtensionFileLoader" 에 대한 호환성 경고를 제
+   거하고, "create_module()"을 호출하기 시작했습니다.
+
+   classmethod factory(loader)
+
+      지연된 로더(lazy loader)를 만드는 콜러블을 반환하는 클래스 메서
+      드. 이것은 로더가 인스턴스가 아닌 클래스로 전달되는 상황에서 사
+      용하려는 것입니다.
+
+         suffixes = importlib.machinery.SOURCE_SUFFIXES
+         loader = importlib.machinery.SourceFileLoader
+         lazy_loader = importlib.util.LazyLoader.factory(loader)
+         finder = importlib.machinery.FileFinder(path, (lazy_loader, suffixes))
+
+
+예
+==
+
+
+프로그래밍 방식으로 임포트 하기
+-------------------------------
+
+프로그래밍 방식으로 모듈을 임포트 하려면, "importlib.import_module()"
+을 사용하십시오.
+
+   import importlib
+
+   itertools = importlib.import_module('itertools')
+
+
+모듈을 임포트 할 수 있는지 확인하기
+-----------------------------------
+
+실제로 임포트를 수행하지 않고 모듈을 임포트 할 수 있는지 확인해야 하면
+, "importlib.util.find_spec()"을 사용해야 합니다.
+
+Note that if "name" is a submodule (contains a dot),
+"importlib.util.find_spec()" will import the parent module.
+
+   import importlib.util
+   import sys
+
+   # For illustrative purposes.
+   name = 'itertools'
+
+   if name in sys.modules:
+       print(f"{name!r} already in sys.modules")
+   elif (spec := importlib.util.find_spec(name)) is not None:
+       # If you chose to perform the actual import ...
+       module = importlib.util.module_from_spec(spec)
+       sys.modules[name] = module
+       spec.loader.exec_module(module)
+       print(f"{name!r} has been imported")
+   else:
+       print(f"can't find the {name!r} module")
+
+
+소스 파일을 직접 임포트 하기
+----------------------------
+
+To import a Python source file directly, use the following recipe
+(Python 3.5 and newer only):
+
+   import importlib.util
+   import sys
+
+   # For illustrative purposes.
+   import tokenize
+   file_path = tokenize.__file__
+   module_name = tokenize.__name__
+
+   spec = importlib.util.spec_from_file_location(module_name, file_path)
+   module = importlib.util.module_from_spec(spec)
+   sys.modules[module_name] = module
+   spec.loader.exec_module(module)
+
+
+Implementing lazy imports
+-------------------------
+
+The example below shows how to implement lazy imports:
+
+   >>> import importlib.util
+   >>> import sys
+   >>> def lazy_import(name):
+   ...     spec = importlib.util.find_spec(name)
+   ...     loader = importlib.util.LazyLoader(spec.loader)
+   ...     spec.loader = loader
+   ...     module = importlib.util.module_from_spec(spec)
+   ...     sys.modules[name] = module
+   ...     loader.exec_module(module)
+   ...     return module
+   ...
+   >>> lazy_typing = lazy_import("typing")
+   >>> #lazy_typing is a real module object,
+   >>> #but it is not loaded in memory yet.
+   >>> lazy_typing.TYPE_CHECKING
+   False
+
+
+임포터 설정하기
+---------------
+
+For deep customizations of import, you typically want to implement an
+*importer*. This means managing both the *finder* and *loader* side of
+things. For finders there are two flavours to choose from depending on
+your needs: a *meta path finder* or a *path entry finder*. The former
+is what you would put on "sys.meta_path" while the latter is what you
+create using a *path entry hook* on "sys.path_hooks" which works with
+"sys.path" entries to potentially create a finder. This example will
+show you how to register your own importers so that import will use
+them (for creating an importer for yourself, read the documentation
+for the appropriate classes defined within this package):
+
+   import importlib.machinery
+   import sys
+
+   # For illustrative purposes only.
+   SpamMetaPathFinder = importlib.machinery.PathFinder
+   SpamPathEntryFinder = importlib.machinery.FileFinder
+   loader_details = (importlib.machinery.SourceFileLoader,
+                     importlib.machinery.SOURCE_SUFFIXES)
+
+   # Setting up a meta path finder.
+   # Make sure to put the finder in the proper location in the list in terms of
+   # priority.
+   sys.meta_path.append(SpamMetaPathFinder)
+
+   # Setting up a path entry finder.
+   # Make sure to put the path hook in the proper location in the list in terms
+   # of priority.
+   sys.path_hooks.append(SpamPathEntryFinder.path_hook(loader_details))
+
+
+"importlib.import_module()" 근사하기
+------------------------------------
+
+Import itself is implemented in Python code, making it possible to
+expose most of the import machinery through importlib. The following
+helps illustrate the various APIs that importlib exposes by providing
+an approximate implementation of "importlib.import_module()" (Python
+3.4 and newer for the importlib usage, Python 3.6 and newer for other
+parts of the code).
+
+   import importlib.util
+   import sys
+
+   def import_module(name, package=None):
+       """An approximate implementation of import."""
+       absolute_name = importlib.util.resolve_name(name, package)
+       try:
+           return sys.modules[absolute_name]
+       except KeyError:
+           pass
+
+       path = None
+       if '.' in absolute_name:
+           parent_name, _, child_name = absolute_name.rpartition('.')
+           parent_module = import_module(parent_name)
+           path = parent_module.__spec__.submodule_search_locations
+       for finder in sys.meta_path:
+           spec = finder.find_spec(absolute_name, path)
+           if spec is not None:
+               break
+       else:
+           msg = f'No module named {absolute_name!r}'
+           raise ModuleNotFoundError(msg, name=absolute_name)
+       module = importlib.util.module_from_spec(spec)
+       sys.modules[absolute_name] = module
+       spec.loader.exec_module(module)
+       if path is not None:
+           setattr(parent_module, child_name, module)
+       return module

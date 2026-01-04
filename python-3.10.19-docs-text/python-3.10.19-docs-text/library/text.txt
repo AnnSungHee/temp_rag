@@ -1,0 +1,99 @@
+텍스트 처리 서비스
+******************
+
+이 장에서 설명하는 모듈은 광범위한 문자열 조작 연산과 기타 텍스트 처리
+서비스를 제공합니다.
+
+바이너리 데이터 서비스 에 기술되어 있는 "codecs" 모듈 또한 텍스트 처리
+와 밀접한 관련이 있습니다. 또한, 텍스트 시퀀스 형 --- str 에 있는 파이
+썬의 내장 문자열형에 대한 설명서를 참조하십시오.
+
+* "string" --- Common string operations
+
+  * 문자열 상수
+
+  * 사용자 지정 문자열 포매팅
+
+  * 포맷 문자열 문법
+
+    * 포맷 명세 미니 언어
+
+    * 포맷 예제
+
+  * 템플릿 문자열
+
+  * 도움 함수
+
+* "re" --- Regular expression operations
+
+  * 정규식 문법
+
+  * 모듈 내용
+
+    * Flags
+
+    * Functions
+
+    * Exceptions
+
+  * 정규식 객체
+
+  * 일치 객체
+
+  * 정규식 예제
+
+    * 쌍 검사하기
+
+    * scanf() 시뮬레이션
+
+    * search() 대 match()
+
+    * 전화번호부 만들기
+
+    * 텍스트 뒤섞기
+
+    * 모든 부사 찾기
+
+    * 모든 부사와 그 위치 찾기
+
+    * 날 문자열 표기법
+
+    * 토크나이저 작성하기
+
+* "difflib" --- Helpers for computing deltas
+
+  * SequenceMatcher 객체
+
+  * SequenceMatcher 예제
+
+  * Differ 객체
+
+  * Differ 예제
+
+  * difflib의 명령 줄 인터페이스
+
+* "textwrap" --- Text wrapping and filling
+
+* "unicodedata" --- Unicode Database
+
+* "stringprep" --- Internet String Preparation
+
+* "readline" --- GNU readline interface
+
+  * 초기화 파일
+
+  * 줄 버퍼
+
+  * 히스토리 파일
+
+  * 히스토리 목록
+
+  * 시동 훅
+
+  * 완성
+
+  * 예제
+
+* "rlcompleter" --- Completion function for GNU readline
+
+  * Completer Objects

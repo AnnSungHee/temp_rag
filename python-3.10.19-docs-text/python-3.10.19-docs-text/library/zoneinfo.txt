@@ -1,0 +1,381 @@
+"zoneinfo" --- IANA time zone support
+*************************************
+
+버전 3.9에 추가.
+
+**소스 코드:** Lib/zoneinfo
+
+======================================================================
+
+The "zoneinfo" module provides a concrete time zone implementation to
+support the IANA time zone database as originally specified in **PEP
+615**. By default, "zoneinfo" uses the system's time zone data if
+available; if no system time zone data is available, the library will
+fall back to using the first-party tzdata package available on PyPI.
+
+더 보기:
+
+  모듈: "datetime"
+     "ZoneInfo" 클래스가 사용되도록 설계된 "time"과 "datetime" 형을 제
+     공합니다.
+
+  Package tzdata
+     PyPI를 통해 시간대 데이터를 제공하기 위해 CPython 핵심 개발자가
+     유지 보수하는 자사(first-party) 패키지.
+
+
+"ZoneInfo" 사용하기
+===================
+
+"ZoneInfo"는 "datetime.tzinfo" 추상 베이스 클래스의 구상 구현이며, 생
+성자, "datetime.replace" 메서드 또는 "datetime.astimezone"을 통해
+"tzinfo"에 연결하려는 것입니다:
+
+   >>> from zoneinfo import ZoneInfo
+   >>> from datetime import datetime, timedelta
+
+   >>> dt = datetime(2020, 10, 31, 12, tzinfo=ZoneInfo("America/Los_Angeles"))
+   >>> print(dt)
+   2020-10-31 12:00:00-07:00
+
+   >>> dt.tzname()
+   'PDT'
+
+이 방식으로 구성된 datetime들은 datetime 산술과 호환되며 추가 개입 없
+이 일광 절약 시간제 전환을 처리합니다:
+
+   >>> dt_add = dt + timedelta(days=1)
+
+   >>> print(dt_add)
+   2020-11-01 12:00:00-08:00
+
+   >>> dt_add.tzname()
+   'PST'
+
+이 시간대는 **PEP 495**에 도입된 "fold" 어트리뷰트도 지원합니다. 모호
+한 시간을 유발하는 오프셋 전환(가령 일광 절약 시간에서 표준 시간으로의
+전환) 중, 전환 *전*의 오프셋이 "fold=0"일 때 사용되며, 전환 *후*의 오
+프셋은 "fold=1"일 때 사용됩니다, 예를 들어:
+
+   >>> dt = datetime(2020, 11, 1, 1, tzinfo=ZoneInfo("America/Los_Angeles"))
+   >>> print(dt)
+   2020-11-01 01:00:00-07:00
+
+   >>> print(dt.replace(fold=1))
+   2020-11-01 01:00:00-08:00
+
+다른 시간대에서 변환할 때, fold는 올바른 값으로 설정됩니다:
+
+   >>> from datetime import timezone
+   >>> LOS_ANGELES = ZoneInfo("America/Los_Angeles")
+   >>> dt_utc = datetime(2020, 11, 1, 8, tzinfo=timezone.utc)
+
+   >>> # Before the PDT -> PST transition
+   >>> print(dt_utc.astimezone(LOS_ANGELES))
+   2020-11-01 01:00:00-07:00
+
+   >>> # After the PDT -> PST transition
+   >>> print((dt_utc + timedelta(hours=1)).astimezone(LOS_ANGELES))
+   2020-11-01 01:00:00-08:00
+
+
+데이터 소스
+===========
+
+The "zoneinfo" module does not directly provide time zone data, and
+instead pulls time zone information from the system time zone database
+or the first-party PyPI package tzdata, if available. Some systems,
+including notably Windows systems, do not have an IANA database
+available, and so for projects targeting cross-platform compatibility
+that require time zone data, it is recommended to declare a dependency
+on tzdata. If neither system data nor tzdata are available, all calls
+to "ZoneInfo" will raise "ZoneInfoNotFoundError".
+
+
+데이터 소스 구성
+----------------
+
+"ZoneInfo(key)"가 호출될 때, 생성자는 먼저 "TZPATH"에 지정된 디렉터리
+에서 "key"와 일치하는 파일을 검색하고, 실패하면 tzdata 패키지에서 일치
+하는 것을 찾습니다. 이 동작은 세 가지 방법으로 구성할 수 있습니다:
+
+1. 달리 지정되지 않을 때의 기본 "TZPATH"는 컴파일 시간에 구성할 수 있
+   습니다.
+
+2. "TZPATH"는 환경 변수를 사용하여 구성할 수 있습니다.
+
+3. 실행 시간에는, "reset_tzpath()" 함수를 사용하여 검색 경로를 조작할
+   수 있습니다.
+
+
+컴파일 시간 구성
+~~~~~~~~~~~~~~~~
+
+기본 "TZPATH"에는 시간대 데이터베이스에 대한 몇 가지 일반적인 배포 위
+치가 포함되어 있습니다 (윈도우는 예외인데, 시간대 데이터에 대한 "잘 알
+려진" 위치가 없습니다). POSIX 시스템에서, 시스템 시간대 데이터가 배치
+된 위치를 알고 있는 다운 스트림 배포자와 소스에서 파이썬을 빌드하는 사
+람은 컴파일 시간 옵션 "TZPATH"(또는, 더 가능성 있는, "configure flag
+--with-tzpath")를 지정하여 기본 시간대 경로를 변경할 수 있습니다.
+"os.pathsep"으로 구분된 문자열이어야 합니다.
+
+모든 플랫폼에서, 구성된 값은 "sysconfig.get_config_var()"에서 "TZPATH"
+키로 사용 가능합니다.
+
+
+환경 구성
+~~~~~~~~~
+
+"TZPATH"를 초기화할 때 (임포트 시점이나 인자 없이 "reset_tzpath()"가
+호출될 때마다) "zoneinfo" 모듈은 환경 변수 "PYTHONTZPATH"(있다면)를 사
+용하여 검색 경로를 설정합니다.
+
+PYTHONTZPATH
+
+   사용할 시간대 검색 경로를 포함하는 "os.pathsep"으로 구분된 문자열입
+   니다. 상대 경로가 아닌 절대 경로로만 구성되어야 합니다.
+   "PYTHONTZPATH"에 지정된 상대 컴포넌트는 사용되지 않지만, 그 밖의 상
+   대 경로가 지정된 경우의 동작은 구현이 정의합니다; CPython은
+   "InvalidTZPathWarning"을 발생시키지만, 다른 구현에서는 잘못된 구성
+   요소를 조용히 무시하거나 예외를 발생시킬 수 있습니다.
+
+시스템이 시스템 데이터를 무시하고 tzdata 패키지를 대신 사용하도록 설정
+하려면, "PYTHONTZPATH="""를 설정하십시오.
+
+
+실행 시간 구성
+~~~~~~~~~~~~~~
+
+"reset_tzpath()" 함수를 사용하여 실행 시간에 TZ 검색 경로를 구성할 수
+도 있습니다. 일반적으로 권장되는 작업은 아닙니다만, 특정 시간대 경로를
+사용해야 하는 (또는 시스템 시간대에 대한 액세스를 비활성화해야 하는)
+테스트 함수에 사용하는 것은 합리적입니다.
+
+
+"ZoneInfo" 클래스
+=================
+
+class zoneinfo.ZoneInfo(key)
+
+   문자열 "key"로 지정된 IANA 시간대를 나타내는 구상 "datetime.tzinfo"
+   서브 클래스. 기본 생성자에 대한 호출은 항상 동일하다고 비교되는 객
+   체를 반환합니다; 다르게 말하면, "ZoneInfo.clear_cache()"를 통한 캐
+   시 무효화를 방지한다면, 다음 어서션이 항상 참입니다:
+
+      a = ZoneInfo(key)
+      b = ZoneInfo(key)
+      assert a is b
+
+   "key"는 상위 수준 참조가 없는 상대적인 정규화된 POSIX 경로의 형식이
+   어야 합니다. 적합하지 않은 key가 전달되면 생성자가 "ValueError"를
+   발생시킵니다.
+
+   "key"와 일치하는 파일이 없으면, 생성자는 "ZoneInfoNotFoundError"를
+   발생시킵니다.
+
+"ZoneInfo" 클래스에는 두 개의 대체 생성자가 있습니다:
+
+classmethod ZoneInfo.from_file(fobj, /, key=None)
+
+   바이트열을 반환하는 파일류 객체(예를 들어 바이너리 모드로 열린 파일
+   이나 "io.BytesIO" 객체)에서 "ZoneInfo" 객체를 생성합니다. 기본 생성
+   자와 달리, 항상 새로운 객체를 생성합니다.
+
+   "key" 매개 변수는 "__str__()"과 "__repr__()"를 위해 시간대 이름을
+   설정합니다.
+
+   이 생성자를 통해 만들어진 객체는 피클 할 수 없습니다 (피클 직렬화를
+   참조하십시오).
+
+classmethod ZoneInfo.no_cache(key)
+
+   생성자의 캐시를 우회하는 대체 생성자. 기본 생성자와 동일하지만, 호
+   출마다 새 객체를 반환합니다. 이것은 테스트나 데모 목적으로 유용 할
+   수 있지만, 다른 캐시 무효화 전략을 갖는 시스템을 만드는 데 사용될
+   수도 있습니다.
+
+   이 생성자를 통해 만들어진 객체는 역 피클 될 때 역 직렬화 프로세스의
+   캐시도 우회합니다.
+
+   조심:
+
+     이 생성자를 사용하면 예기치 못한 방식으로 날짜 시간의 의미가 변경
+     될 수 있기 때문에, 필요한 경우에만 사용하십시오.
+
+다음과 같은 클래스 메서드도 사용할 수 있습니다:
+
+classmethod ZoneInfo.clear_cache(*, only_keys=None)
+
+   "ZoneInfo" 클래스에서 캐시를 무효로 하는 메서드. 인자가 전달되지 않
+   으면, 모든 캐시가 무효가 되고 각 키의 기본 생성자에 대한 다음 호출
+   은 새 인스턴스를 반환합니다.
+
+   키 이름의 이터러블이 "only_keys" 매개 변수에 전달되면, 지정된 키만
+   캐시에서 제거됩니다. "only_keys"에 전달되었지만, 캐시에서 찾을 수
+   없는 키는 무시됩니다.
+
+   경고:
+
+     Invoking this function may change the semantics of datetimes
+     using "ZoneInfo" in surprising ways; this modifies process-wide
+     global state and thus may have wide-ranging effects. Only use it
+     if you know that you need to.
+
+이 클래스에는 하나의 어트리뷰트가 있습니다:
+
+ZoneInfo.key
+
+   이것은 읽기 전용 *어트리뷰트*이며 생성자에 전달된 "key"의 값을 반환
+   하는데, IANA 시간대 데이터베이스의 조회 키이어야 합니다 (예를 들어
+   "America/New_York", "Europe/Paris" 또는 "Asia/Tokyo").
+
+   "key" 매개 변수를 지정하지 않고 파일에서 생성된 시간대의 경우,
+   "None"으로 설정됩니다.
+
+   참고:
+
+     이들을 최종 사용자에게 노출하는 것이 다소 일반적인 관행이지만, 이
+     값들은 관련 시간대를 나타내는 기본 키로 설계되었을 뿐, 사용자 대
+     면 요소일 필요는 없습니다. CLDR (the Unicode Common Locale Data
+     Repository)과 같은 프로젝트를 사용하면 이러한 키에서 더 사용자 친
+     화적인 문자열을 얻을 수 있습니다.
+
+
+문자열 표현
+-----------
+
+"ZoneInfo" 객체에 대해 "str"을 호출할 때 반환되는 문자열 표현은 기본적
+으로 "ZoneInfo.key" 어트리뷰트를 사용합니다 (어트리뷰트 설명서의 사용
+법에 관한 참고를 보십시오):
+
+   >>> zone = ZoneInfo("Pacific/Kwajalein")
+   >>> str(zone)
+   'Pacific/Kwajalein'
+
+   >>> dt = datetime(2020, 4, 1, 3, 15, tzinfo=zone)
+   >>> f"{dt.isoformat()} [{dt.tzinfo}]"
+   '2020-04-01T03:15:00+12:00 [Pacific/Kwajalein]'
+
+"key" 매개 변수를 지정하지 않고 파일에서 생성된 객체의 경우, "str"은
+"repr()" 호출로 대체됩니다. "ZoneInfo"의 "repr"은 구현 정의이며 버전
+간에 반드시 안정적일 필요는 없지만, 유효한 "ZoneInfo" 키가 될 수는 없
+음이 보장됩니다.
+
+
+피클 직렬화
+-----------
+
+모든 전환 데이터를 직렬화하는 대신, "ZoneInfo" 객체는 키로 직렬화되며
+파일에서 생성된 "ZoneInfo" 객체는 (지정된 "key" 값을 가진 객체조차) 피
+클 할 수 없습니다.
+
+"ZoneInfo" 파일의 동작은 파일 생성 방식에 따라 다릅니다:
+
+1. "ZoneInfo(key)": 기본 생성자로 생성될 때, "ZoneInfo" 객체는 키로 직
+   렬화되며, 역 직렬화할 때, 역 직렬화 프로세스는 기본 생성자를 사용해
+   서 같은 시간대에 대한 다른 참조와 같은 객체가 될 것으로 예상됩니다.
+   예를 들어, "europe_berlin_pkl"이 "ZoneInfo("Europe/Berlin")"에서 생
+   성된 피클을 포함하는 문자열이면, 다음과 같은 동작이 예상됩니다:
+
+      >>> a = ZoneInfo("Europe/Berlin")
+      >>> b = pickle.loads(europe_berlin_pkl)
+      >>> a is b
+      True
+
+2. "ZoneInfo.no_cache(key)": 캐시 우회 생성자에서 생성될 때, 이
+   "ZoneInfo" 객체도 키로 직렬화되지만, 역 직렬화할 때, 역 직렬화 프로
+   세스는 캐시 우회 생성자를 사용합니다. "europe_berlin_pkl_nc"가
+   "ZoneInfo.no_cache("Europe/Berlin")"에서 생성된 피클을 포함하는 문
+   자열이면, 다음과 같은 동작이 예상됩니다:
+
+      >>> a = ZoneInfo("Europe/Berlin")
+      >>> b = pickle.loads(europe_berlin_pkl_nc)
+      >>> a is b
+      False
+
+3. "ZoneInfo.from_file(fobj, /, key=None)": 파일에서 생성될 때,
+   "ZoneInfo" 객체는 피클 하려고 하면 예외를 발생시킵니다. 최종 사용자
+   가 파일에서 생성된 "ZoneInfo"를 피클 하길 원하면, 래퍼 형이나 사용
+   자 정의 직렬화 함수를 사용하는 것이 좋습니다: 키로 직렬화하거나 파
+   일 객체의 내용을 저장하고 직렬화합니다.
+
+이 직렬화 방법에서는 직렬화와 역 직렬화 환경 모두에서 클래스와 함수에
+대한 참조가 존재해야 하는 방식과 유사하게, 직렬화와 역 직렬화 측 모두
+에서 필요한 키의 시간대 데이터를 사용할 수 있어야 합니다. 또한 다른 버
+전의 시간대 데이터가 있는 환경에서 피클링 된 "ZoneInfo"를 역 피클링 할
+때 결과의 일관성에 대해 보장되지 않습니다.
+
+
+함수
+====
+
+zoneinfo.available_timezones()
+
+   시간대 경로의 어느 곳에서건 사용 가능한 IANA 시간대에 유효한 모든
+   키가 포함된 집합을 가져옵니다. 이것은 함수를 호출할 때마다 다시 계
+   산됩니다.
+
+   이 함수는 규범적(canonical) 시간대 이름 만 포함하고 "posix/"와
+   "right/" 디렉터리에 있는 것이나 "posixrules" 시간대와 같은 "특수"
+   시간대는 포함하지 않습니다.
+
+   조심:
+
+     시간대 경로에 있는 파일이 유효한 시간대인지 확인하는 가장 좋은 방
+     법은 시작 부분에 나오는 "매직 문자열"을 읽는 것이라서, 이 함수는
+     많은 파일을 열 수 있습니다.
+
+   참고:
+
+     이 값은 최종 사용자에게 노출되도록 설계되지 않았습니다; 사용자 대
+     면 요소의 경우, 응용 프로그램은 CLDR (the Unicode Common Locale
+     Data Repository)과 같은 것을 사용하여 더 사용자 친화적인 문자열을
+     가져와야 합니다. "ZoneInfo.key"에 있는 주의 사항도 참조하십시오.
+
+zoneinfo.reset_tzpath(to=None)
+
+   모듈의 시간대 검색 경로("TZPATH")를 설정하거나 재설정합니다. 인자
+   없이 호출하면, "TZPATH"가 기본값으로 설정됩니다.
+
+   "reset_tzpath"를 호출해도 "ZoneInfo" 캐시가 무효가 되지 않아서, 기
+   본 "ZoneInfo" 생성자에 대한 호출은 캐시 누락의 경우에만 새 "TZPATH"
+   를 사용합니다.
+
+   "to" 매개 변수는 문자열이나 "os.PathLike"의 *시퀀스*이어야 하며 문
+   자열이 아닙니다. 모두 절대 경로여야 합니다. 절대 경로 이외의 것이
+   전달되면 "ValueError"가 발생합니다.
+
+
+전역
+====
+
+zoneinfo.TZPATH
+
+   시간대 검색 경로를 나타내는 읽기 전용 시퀀스 -- 키에서 "ZoneInfo"를
+   생성할 때, 키는 "TZPATH"의 각 항목에 결합하며, 발견된 첫 번째 파일
+   이 사용됩니다.
+
+   "TZPATH"는 구성 방법과 관계없이 절대 경로만 포함할 수 있고, 상대 경
+   로는 절대 포함하지 않습니다.
+
+   "zoneinfo.TZPATH"가 가리키는 객체는 "reset_tzpath()"에 대한 호출에
+   따라 변경될 수 있어서, "zoneinfo"에서 "TZPATH"를 임포트 하거나 수명
+   이 긴 변수에 "zoneinfo.TZPATH"를 대입하는 대신 "zoneinfo.TZPATH"를
+   사용하는 것이 좋습니다.
+
+   시간대 검색 경로 구성에 대한 자세한 정보는 데이터 소스 구성을 참조
+   하십시오.
+
+
+예외와 경고
+===========
+
+exception zoneinfo.ZoneInfoNotFoundError
+
+   지정된 키를 시스템에서 찾을 수 없어서 "ZoneInfo" 객체 생성에 실패할
+   때 발생합니다. 이것은 "KeyError"의 서브 클래스입니다.
+
+exception zoneinfo.InvalidTZPathWarning
+
+   "PYTHONTZPATH"에 상대 경로와 같이 필터링 될 유효하지 않은 구성 요소
+   가 포함되어있을 때 발생합니다.

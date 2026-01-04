@@ -1,0 +1,2618 @@
+"datetime" --- Basic date and time types
+****************************************
+
+**소스 코드:** Lib/datetime.py
+
+======================================================================
+
+The "datetime" module supplies classes for manipulating dates and
+times.
+
+날짜와 시간 산술이 지원되지만, 구현의 초점은 출력 포매팅과 조작을 위한
+효율적인 어트리뷰트 추출입니다.
+
+더 보기:
+
+  모듈 "calendar"
+     일반 달력 관련 함수들.
+
+  모듈 "time"
+     시간 액세스와 변환.
+
+  Module "zoneinfo"
+     Concrete time zones representing the IANA time zone database.
+
+  패키지 dateutil
+     시간대와 구문 분석 지원이 확장된 제삼자 라이브러리.
+
+
+어웨어와 나이브 객체
+====================
+
+Date and time objects may be categorized as "aware" or "naive"
+depending on whether or not they include timezone information.
+
+시간대와 일광 절약 시간 정보와 같은 적용 가능한 알고리즘과 정치적 시간
+조정에 대한 충분한 지식을 통해, **어웨어** 객체는 다른 어웨어 객체와의
+상대적인 위치를 파악할 수 있습니다. 어웨어 객체는 자의적으로 해석할 여
+지 없는 특정 시간을 나타냅니다. [1]
+
+A **naive** object does not contain enough information to
+unambiguously locate itself relative to other date/time objects.
+Whether a naive object represents Coordinated Universal Time (UTC),
+local time, or time in some other timezone is purely up to the
+program, just like it is up to the program whether a particular number
+represents metres, miles, or mass. Naive objects are easy to
+understand and to work with, at the cost of ignoring some aspects of
+reality.
+
+어웨어 객체가 필요한 응용 프로그램을 위해, "datetime" 과 "time" 객체에
+는 추상 "tzinfo" 클래스의 서브 클래스 인스턴스로 설정할 수 있는 선택적
+시간대 정보 어트리뷰트인 "tzinfo"가 있습니다. 이러한 "tzinfo" 객체는
+UTC 시간으로부터의 오프셋, 시간대 이름 및 일광 절약 시간이 적용되는지
+에 대한 정보를 보관합니다.
+
+Only one concrete "tzinfo" class, the "timezone" class, is supplied by
+the "datetime" module. The "timezone" class can represent simple
+timezones with fixed offsets from UTC, such as UTC itself or North
+American EST and EDT timezones. Supporting timezones at deeper levels
+of detail is up to the application. The rules for time adjustment
+across the world are more political than rational, change frequently,
+and there is no standard suitable for every application aside from
+UTC.
+
+
+상수
+====
+
+The "datetime" module exports the following constants:
+
+datetime.MINYEAR
+
+   The smallest year number allowed in a "date" or "datetime" object.
+   "MINYEAR" is "1".
+
+datetime.MAXYEAR
+
+   The largest year number allowed in a "date" or "datetime" object.
+   "MAXYEAR" is "9999".
+
+
+사용 가능한 형
+==============
+
+class datetime.date
+
+   현재의 그레고리력이 언제나 적용되어왔고, 앞으로도 그럴 것이라는 가
+   정하에 이상적인 나이브 날짜. 어트리뷰트: "year", "month" 및 "day".
+
+class datetime.time
+
+   특정 날짜와 관계없이, 하루가 정확히 24*60*60초를 갖는다는 가정하에
+   이상적인 시간. (여기에는 "윤초"라는 개념이 없습니다.) 어트리뷰트:
+   "hour", "minute", "second", "microsecond" 및 "tzinfo".
+
+class datetime.datetime
+
+   날짜와 시간의 조합. 어트리뷰트: "year", "month", "day", "hour",
+   "minute", "second", "microsecond" 및 "tzinfo".
+
+class datetime.timedelta
+
+   A duration expressing the difference between two "date", "time", or
+   "datetime" instances to microsecond resolution.
+
+class datetime.tzinfo
+
+   시간대 정보 객체의 추상 베이스 클래스. 이것들은 "datetime"과 "time"
+   클래스에서 사용자 정의할 수 있는 시간 조정 개념(예를 들어, 시간대와
+   /나 일광 절약 시간을 다루는 것)을 제공하기 위해 사용됩니다.
+
+class datetime.timezone
+
+   "tzinfo" 추상 베이스 클래스를 구현하는 클래스로, UTC로부터의 고정
+   오프셋을 나타냅니다.
+
+   버전 3.2에 추가.
+
+이러한 형의 객체는 불변입니다.
+
+서브 클래스 관계:
+
+   object
+       timedelta
+       tzinfo
+           timezone
+       time
+       date
+           datetime
+
+
+공통 속성
+---------
+
+"date", "datetime", "time" 및 "timezone" 형은 다음과 같은 공통 기능을
+공유합니다:
+
+* 이러한 형의 객체는 불변입니다.
+
+* Objects of these types are *hashable*, meaning that they can be used
+  as dictionary keys.
+
+* 이러한 형의 객체는 "pickle" 모듈을 통한 효율적인 피클링을 지원합니다
+  .
+
+
+객체가 어웨어한지 나이브한지 판단하기
+-------------------------------------
+
+"date" 형의 객체는 항상 나이브합니다.
+
+"time"이나 "datetime" 형의 객체는 어웨어할 수도 나이브할 수도 있습니다
+.
+
+A "datetime" object *d* is aware if both of the following hold:
+
+1. "d.tzinfo"가 "None"이 아닙니다
+
+2. "d.tzinfo.utcoffset(d)"가 "None"을 반환하지 않습니다
+
+Otherwise, *d* is naive.
+
+A "time" object *t* is aware if both of the following hold:
+
+1. "t.tzinfo"가 "None"이 아닙니다
+
+2. "t.tzinfo.utcoffset(None)"이 "None"을 반환하지 않습니다
+
+Otherwise, *t* is naive.
+
+어웨어와 나이브 간의 차이점은 "timedelta" 객체에는 적용되지 않습니다.
+
+
+"timedelta" 객체
+================
+
+A "timedelta" object represents a duration, the difference between two
+dates or times.
+
+class datetime.timedelta(days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)
+
+   All arguments are optional and default to "0". Arguments may be
+   integers or floats, and may be positive or negative.
+
+   *days*, *seconds* 및 *microseconds*만 내부적으로 저장됩니다. 인자는
+   이 단위로 변환됩니다:
+
+   * 밀리 초는 1000마이크로초로 변환됩니다.
+
+   * 분은 60초로 변환됩니다.
+
+   * 시간은 3600초로 변환됩니다.
+
+   * 주는 7일로 변환됩니다.
+
+   그런 다음 days, seconds 및 microseconds를 다음처럼 정규화하여 표현
+   이 고유하도록 만듭니다
+
+   * "0 <= microseconds < 1000000"
+
+   * "0 <= seconds < 3600*24" (하루 내의 초 수)
+
+   * "-999999999 <= days <= 999999999"
+
+   다음 예는 *days*, *seconds* 및 *microseconds* 이외의 인자가 어떻게
+   "병합" 되어 세 개의 결과 어트리뷰트로 정규화되는지를 보여줍니다:
+
+      >>> from datetime import timedelta
+      >>> delta = timedelta(
+      ...     days=50,
+      ...     seconds=27,
+      ...     microseconds=10,
+      ...     milliseconds=29000,
+      ...     minutes=5,
+      ...     hours=8,
+      ...     weeks=2
+      ... )
+      >>> # Only days, seconds, and microseconds remain
+      >>> delta
+      datetime.timedelta(days=64, seconds=29156, microseconds=10)
+
+   인자가 float이고 부분 마이크로초가 있으면, 모든 인자의 남은 부분 마
+   이크로초가 합쳐지고, 그 합은 동률일 때 짝수로 반올림하는 방식으로
+   가장 가까운 마이크로초로 반올림됩니다. float 인자가 없으면, 변환과
+   정규화 프로세스는 정확합니다 (정보가 손실되지 않습니다).
+
+   정규화된 days 값이 표시된 범위를 벗어나면, "OverflowError"가 발생합
+   니다.
+
+   음수 값의 정규화는 처음 보면 놀라울 수 있습니다. 예를 들어:
+
+      >>> from datetime import timedelta
+      >>> d = timedelta(microseconds=-1)
+      >>> (d.days, d.seconds, d.microseconds)
+      (-1, 86399, 999999)
+
+클래스 어트리뷰트:
+
+timedelta.min
+
+   가장 음수인 "timedelta" 객체, "timedelta(-999999999)".
+
+timedelta.max
+
+   가장 양수인 "timedelta" 객체, "timedelta(days=999999999, hours=23,
+   minutes=59, seconds=59, microseconds=999999)".
+
+timedelta.resolution
+
+   같지 않은 "timedelta" 객체 간의 가능한 가장 작은 차이,
+   "timedelta(microseconds=1)".
+
+Note that, because of normalization, "timedelta.max" >
+"-timedelta.min". "-timedelta.max" is not representable as a
+"timedelta" object.
+
+인스턴스 어트리뷰트 (읽기 전용):
+
++--------------------+----------------------------------------------+
+| Attribute          | Value                                        |
+|====================|==============================================|
+| "days"             | Between -999999999 and 999999999 inclusive   |
++--------------------+----------------------------------------------+
+| "seconds"          | Between 0 and 86399 inclusive                |
++--------------------+----------------------------------------------+
+| "microseconds"     | Between 0 and 999999 inclusive               |
++--------------------+----------------------------------------------+
+
+지원되는 연산:
+
++----------------------------------+-------------------------------------------------+
+| 연산                             | 결과                                            |
+|==================================|=================================================|
+| "t1 = t2 + t3"                   | Sum of *t2* and *t3*. Afterwards *t1*-*t2* ==   |
+|                                  | *t3* and *t1*-*t3* == *t2* are true. (1)        |
++----------------------------------+-------------------------------------------------+
+| "t1 = t2 - t3"                   | Difference of *t2* and *t3*. Afterwards *t1* == |
+|                                  | *t2* - *t3* and *t2* == *t1* + *t3* are true.   |
+|                                  | (1)(6)                                          |
++----------------------------------+-------------------------------------------------+
+| "t1 = t2 * i 또는 t1 = i * t2"   | Delta multiplied by an integer. Afterwards *t1* |
+|                                  | // i == *t2* is true, provided "i != 0".        |
++----------------------------------+-------------------------------------------------+
+|                                  | In general, *t1* * i == *t1* * (i-1) + *t1* is  |
+|                                  | true. (1)                                       |
++----------------------------------+-------------------------------------------------+
+| "t1 = t2 * f 또는 t1 = f * t2"   | 델타에 float를 곱합니다. 결과는 동률일 때 짝수  |
+|                                  | 로 반올림하는 방식으로 timedelta.resolution의   |
+|                                  | 가장 가까운 배수로 자리 올림 됩니다.            |
++----------------------------------+-------------------------------------------------+
+| "f = t2 / t3"                    | Division (3) of overall duration *t2* by        |
+|                                  | interval unit *t3*. Returns a "float" object.   |
++----------------------------------+-------------------------------------------------+
+| "t1 = t2 / f 또는 t1 = t2 / i"   | 델타를 float나 int로 나눈 값. 결과는 동률일 때  |
+|                                  | 짝수로 반올림하는 방식 으로                     |
+|                                  | timedelta.resolution의 가장 가까운 배수로 자리  |
+|                                  | 올림 됩니다.                                    |
++----------------------------------+-------------------------------------------------+
+| "t1 = t2 // i" 또는 "t1 = t2 //  | floor가 계산되고 나머지(있다면)를 버립니다. 두  |
+| t3"                              | 번째 경우에는, 정수가 반환됩니다. (3)           |
++----------------------------------+-------------------------------------------------+
+| "t1 = t2 % t3"                   | 나머지가 "timedelta" 객체로 계산됩니다. (3)     |
++----------------------------------+-------------------------------------------------+
+| "q, r = divmod(t1, t2)"          | Computes the quotient and the remainder: "q =   |
+|                                  | t1 // t2" (3) and "r = t1 % t2". q is an        |
+|                                  | integer and r is a "timedelta" object.          |
++----------------------------------+-------------------------------------------------+
+| "+t1"                            | 같은 값을 갖는 "timedelta" 객체를 반환합니다.   |
+|                                  | (2)                                             |
++----------------------------------+-------------------------------------------------+
+| "-t1"                            | equivalent to "timedelta"(-*t1.days*,           |
+|                                  | -*t1.seconds*, -*t1.microseconds*), and to      |
+|                                  | *t1** -1. (1)(4)                                |
++----------------------------------+-------------------------------------------------+
+| "abs(t)"                         | equivalent to +*t* when "t.days >= 0", and to   |
+|                                  | -*t* when "t.days < 0". (2)                     |
++----------------------------------+-------------------------------------------------+
+| "str(t)"                         | "[D day[s], ][H]H:MM:SS[.UUUUUU]" 형식의 문자열 |
+|                                  | 을 반환합니다. 여기서 D 는 음의 "t"일 때 음수입 |
+|                                  | 니다. (5)                                       |
++----------------------------------+-------------------------------------------------+
+| "repr(t)"                        | 규범적 어트리뷰트 값을 가진 생성자 호출로 표현  |
+|                                  | 한 "timedelta" 객체의 문 자열 표현을 반환합니다 |
+|                                  | .                                               |
++----------------------------------+-------------------------------------------------+
+
+노트:
+
+1. 이것은 정확하지만, 오버플로 할 수 있습니다.
+
+2. 이것은 정확하고, 오버플로 할 수 없습니다.
+
+3. Division by 0 raises "ZeroDivisionError".
+
+4. -*timedelta.max* is not representable as a "timedelta" object.
+
+5. "timedelta" 객체의 문자열 표현은 내부 표현과 유사하게 정규화됩니다.
+   이것은 음의 timedelta가 다소 이상하게 표현되는 결과로 이어집니다.
+   예를 들어:
+
+      >>> timedelta(hours=-5)
+      datetime.timedelta(days=-1, seconds=68400)
+      >>> print(_)
+      -1 day, 19:00:00
+
+6. "t2 - t3" 표현식은 항상 "t2 + (-t3)" 표현식과 같아지는데, t3이
+   "timedelta.max"일 때만 예외입니다; 이때는 앞에 있는 것은 결과를 만
+   들지만, 뒤에 있는 것은 오버플로를 일으킵니다.
+
+위에 나열된 연산 외에도, "timedelta" 객체는 "date"와 "datetime" 객체와
+의 어떤 합과 차를 지원합니다 (아래를 참조하세요).
+
+버전 3.2에서 변경: 나머지 연산과 "divmod()" 함수와 마찬가지로,
+"timedelta" 객체를 다른 "timedelta" 객체로 정수 나누기(floor division)
+와 실수 나누기(true division)가 이제 지원됩니다. "timedelta" 객체를
+"float" 객체로 실수 나누기와 곱셈도 이제 이제 지원됩니다.
+
+Comparisons of "timedelta" objects are supported, with some caveats.
+
+The comparisons "==" or "!=" *always* return a "bool", no matter the
+type of the compared object:
+
+   >>> from datetime import timedelta
+   >>> delta1 = timedelta(seconds=57)
+   >>> delta2 = timedelta(hours=25, seconds=2)
+   >>> delta2 != delta1
+   True
+   >>> delta2 == 5
+   False
+
+For all other comparisons (such as "<" and ">"), when a "timedelta"
+object is compared to an object of a different type, "TypeError" is
+raised:
+
+   >>> delta2 > delta1
+   True
+   >>> delta2 > 5
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: '>' not supported between instances of 'datetime.timedelta' and 'int'
+
+불리언 문맥에서 "timedelta" 객체는 "timedelta(0)"와 같지 않을 때만 참
+으로 간주합니다.
+
+인스턴스 메서드:
+
+timedelta.total_seconds()
+
+   기간에 포함된 총 시간을 초(seconds)로 반환합니다. "td /
+   timedelta(seconds=1)"와 동등합니다. 초 이외의 구간 단위에는, 나누기
+   형식을 직접 사용하십시오 (예를 들어, "td /
+   timedelta(microseconds=1)").
+
+   매우 큰 시간 구간에서는 (대부분 플랫폼에서 270년 이상), 이 메서드는
+   마이크로초의 정확도를 잃게 됩니다.
+
+   버전 3.2에 추가.
+
+
+사용 예: "timedelta"
+--------------------
+
+정규화의 추가 예:
+
+   >>> # Components of another_year add up to exactly 365 days
+   >>> from datetime import timedelta
+   >>> year = timedelta(days=365)
+   >>> another_year = timedelta(weeks=40, days=84, hours=23,
+   ...                          minutes=50, seconds=600)
+   >>> year == another_year
+   True
+   >>> year.total_seconds()
+   31536000.0
+
+"timedelta" 산술의 예:
+
+   >>> from datetime import timedelta
+   >>> year = timedelta(days=365)
+   >>> ten_years = 10 * year
+   >>> ten_years
+   datetime.timedelta(days=3650)
+   >>> ten_years.days // 365
+   10
+   >>> nine_years = ten_years - year
+   >>> nine_years
+   datetime.timedelta(days=3285)
+   >>> three_years = nine_years // 3
+   >>> three_years, three_years.days // 365
+   (datetime.timedelta(days=1095), 3)
+
+
+"date" 객체
+===========
+
+"date" 객체는 현재의 그레고리력을 무한히 양방향으로 확장한, 이상적인
+달력에서의 날짜(년, 월, 일)를 나타냅니다.
+
+1년 1월 1일을 날 번호 1, 1년 1월 2일을 날 번호 2라고 부르고, 이런 식으
+로 계속됩니다. [2]
+
+class datetime.date(year, month, day)
+
+   모든 인자가 필수입니다. 인자는 다음 범위에 있는 정수이어야 합니다:
+
+   * "MINYEAR <= year <= MAXYEAR"
+
+   * "1 <= month <= 12"
+
+   * "1 <= day <= 주어진 month와 year에서의 날 수"
+
+   이 범위를 벗어나는 인자가 주어지면, "ValueError"가 발생합니다.
+
+다른 생성자, 모든 클래스 메서드:
+
+classmethod date.today()
+
+   현재 지역 날짜를 반환합니다.
+
+   이것은 "date.fromtimestamp(time.time())"과 동등합니다.
+
+classmethod date.fromtimestamp(timestamp)
+
+   "time.time()"에 의해 반환된 것과 같은 POSIX 타임스탬프에 해당하는
+   지역 날짜를 반환합니다.
+
+   타임스탬프가 플랫폼 C "localtime()" 함수에서 지원하는 값 범위를 벗
+   어나면 "OverflowError"가 발생하고, "localtime()" 실패 시 "OSError"
+   가 발생합니다. 이것이 1970년에서 2038년으로 제한되는 것이 일반적입
+   니다. 타임스탬프라는 개념에 윤초를 포함하는 POSIX가 아닌 시스템에서
+   는, 윤초가 "fromtimestamp()"에서 무시됨에 유의하십시오.
+
+   버전 3.3에서 변경: timestamp가 플랫폼 C "localtime()" 함수에서 지원
+   하는 값 범위를 벗어나면 "ValueError" 대신 "OverflowError"를 발생시
+   킵니다. "localtime()" 실패 시 "ValueError" 대신 "OSError"를 발생시
+   킵니다.
+
+classmethod date.fromordinal(ordinal)
+
+   역산 그레고리력 서수에 해당하는 date를 반환합니다. 1년 1월 1일이 서
+   수 1입니다.
+
+   "ValueError" is raised unless "1 <= ordinal <=
+   date.max.toordinal()". For any date *d*,
+   "date.fromordinal(d.toordinal()) == d".
+
+classmethod date.fromisoformat(date_string)
+
+   Return a "date" corresponding to a *date_string* given in the
+   format "YYYY-MM-DD":
+
+      >>> from datetime import date
+      >>> date.fromisoformat('2019-12-04')
+      datetime.date(2019, 12, 4)
+
+   This is the inverse of "date.isoformat()". It only supports the
+   format "YYYY-MM-DD".
+
+   버전 3.7에 추가.
+
+classmethod date.fromisocalendar(year, week, day)
+
+   년, 주 및 일로 지정된 ISO 달력 날짜에 해당하는 "date"를 반환합니다.
+   이것은 함수 "date.isocalendar()"의 역입니다.
+
+   버전 3.8에 추가.
+
+클래스 어트리뷰트:
+
+date.min
+
+   표현 가능한 가장 이른 date, "date(MINYEAR, 1, 1)".
+
+date.max
+
+   표현 가능한 가장 늦은 date, "date(MAXYEAR, 12, 31)".
+
+date.resolution
+
+   같지 않은 date 객체 간의 가능한 가장 작은 차이,
+   "timedelta(days=1)".
+
+인스턴스 어트리뷰트 (읽기 전용):
+
+date.year
+
+   "MINYEAR"와 "MAXYEAR" 사이, 경계 포함.
+
+date.month
+
+   1과 12 사이, 경계 포함.
+
+date.day
+
+   1과 주어진 year의 주어진 month의 날 수 사이.
+
+지원되는 연산:
+
++---------------------------------+------------------------------------------------+
+| 연산                            | 결과                                           |
+|=================================|================================================|
+| "date2 = date1 + timedelta"     | *date2* will be "timedelta.days" days after    |
+|                                 | *date1*. (1)                                   |
++---------------------------------+------------------------------------------------+
+| "date2 = date1 - timedelta"     | Computes *date2* such that "date2 + timedelta  |
+|                                 | == date1". (2)                                 |
++---------------------------------+------------------------------------------------+
+| "timedelta = date1 - date2"     | (3)                                            |
++---------------------------------+------------------------------------------------+
+| "date1 < date2"                 | *date1* is considered less than *date2* when   |
+|                                 | *date1* precedes *date2* in time. (4)          |
++---------------------------------+------------------------------------------------+
+
+노트:
+
+1. *date2*는 "timedelta.days > 0"이면 미래로, "timedelta.days < 0"이면
+   과거로 이동합니다. 결국 "date2 - date1 == timedelta.days"이 됩니다.
+   "timedelta.seconds"와 "timedelta.microseconds"는 무시됩니다.
+   "date2.year"가 "MINYEAR"보다 작거나 "MAXYEAR"보다 크게 되려고 하면
+   "OverflowError"가 발생합니다.
+
+2. "timedelta.seconds"와 "timedelta.microseconds"는 무시됩니다.
+
+3. This is exact, and cannot overflow. timedelta.seconds and
+   timedelta.microseconds are 0, and date2 + timedelta == date1 after.
+
+4. In other words, "date1 < date2" if and only if "date1.toordinal() <
+   date2.toordinal()". Date comparison raises "TypeError" if the other
+   comparand isn't also a "date" object. However, "NotImplemented" is
+   returned instead if the other comparand has a "timetuple()"
+   attribute. This hook gives other kinds of date objects a chance at
+   implementing mixed-type comparison. If not, when a "date" object is
+   compared to an object of a different type, "TypeError" is raised
+   unless the comparison is "==" or "!=". The latter cases return
+   "False" or "True", respectively.
+
+불리언 문맥에서, 모든 "date" 객체는 참으로 간주합니다.
+
+인스턴스 메서드:
+
+date.replace(year=self.year, month=self.month, day=self.day)
+
+   Return a date with the same value, except for those parameters
+   given new values by whichever keyword arguments are specified.
+
+   예제:
+
+      >>> from datetime import date
+      >>> d = date(2002, 12, 31)
+      >>> d.replace(day=26)
+      datetime.date(2002, 12, 26)
+
+date.timetuple()
+
+   "time.localtime()"이 반환하는 것과 같은 "time.struct_time"을 반환합
+   니다.
+
+   시, 분 및 초는 0이고, DST 플래그는 -1입니다.
+
+   "d.timetuple()"은 다음과 동등합니다:
+
+      time.struct_time((d.year, d.month, d.day, 0, 0, 0, d.weekday(), yday, -1))
+
+   where "yday = d.toordinal() - date(d.year, 1, 1).toordinal() + 1"
+   is the day number within the current year starting with "1" for
+   January 1st.
+
+date.toordinal()
+
+   Return the proleptic Gregorian ordinal of the date, where January 1
+   of year 1 has ordinal 1. For any "date" object *d*,
+   "date.fromordinal(d.toordinal()) == d".
+
+date.weekday()
+
+   정수로 요일을 반환합니다. 월요일은 0이고 일요일은 6입니다. 예를 들
+   어, "date(2002, 12, 4).weekday() == 2", 수요일. "isoweekday()"도 참
+   조하십시오.
+
+date.isoweekday()
+
+   정수로 요일을 반환합니다. 월요일은 1이고 일요일은 7입니다. 예를 들
+   어, "date(2002, 12, 4).isoweekday() == 3", 수요일. "weekday()",
+   "isocalendar()"도 참조하십시오.
+
+date.isocalendar()
+
+   세 개의 구성 요소가 있는 *네임드 튜플* 객체를 반환합니다: "year",
+   "week" 및 "weekday".
+
+   ISO 달력은 널리 사용되는 그레고리력의 변형입니다. [3]
+
+   ISO 연도는 52나 53개의 완전한 주로 구성되고, 주는 월요일에 시작하여
+   일요일에 끝납니다. ISO 연도의 첫 번째 주는 그 해의 (그레고리) 달력
+   에서 목요일이 들어있는 첫 번째 주입니다. 이것을 주 번호 1이라고 하
+   며, 그 목요일의 ISO 연도는 그레고리 연도와 같습니다.
+
+   예를 들어, 2004년은 목요일에 시작되므로, ISO 연도 2004의 첫 주는 월
+   요일, 2003년 12월 29일에 시작하고, 일요일, 2004년 1월 4일에 끝납니
+   다:
+
+      >>> from datetime import date
+      >>> date(2003, 12, 29).isocalendar()
+      datetime.IsoCalendarDate(year=2004, week=1, weekday=1)
+      >>> date(2004, 1, 4).isocalendar()
+      datetime.IsoCalendarDate(year=2004, week=1, weekday=7)
+
+   버전 3.9에서 변경: 결과가 튜플에서 *네임드 튜플*로 변경되었습니다.
+
+date.isoformat()
+
+   ISO 8601 형식으로 날짜를 나타내는 문자열을 반환합니다, "YYYY-MM-
+   DD":
+
+      >>> from datetime import date
+      >>> date(2002, 12, 4).isoformat()
+      '2002-12-04'
+
+   This is the inverse of "date.fromisoformat()".
+
+date.__str__()
+
+   For a date *d*, "str(d)" is equivalent to "d.isoformat()".
+
+date.ctime()
+
+   날짜를 나타내는 문자열을 반환합니다:
+
+      >>> from datetime import date
+      >>> date(2002, 12, 4).ctime()
+      'Wed Dec  4 00:00:00 2002'
+
+   "d.ctime()"은 다음과:
+
+      time.ctime(time.mktime(d.timetuple()))
+
+   네이티브 C "ctime()" 함수("time.ctime()"은 호출하지만
+   "date.ctime()"은 호출하지 않습니다)가 C 표준을 준수하는 플랫폼에서
+   동등합니다.
+
+date.strftime(format)
+
+   Return a string representing the date, controlled by an explicit
+   format string. Format codes referring to hours, minutes or seconds
+   will see 0 values. For a complete list of formatting directives,
+   see strftime() and strptime() Behavior.
+
+date.__format__(format)
+
+   Same as "date.strftime()". This makes it possible to specify a
+   format string for a "date" object in formatted string literals and
+   when using "str.format()". For a complete list of formatting
+   directives, see strftime() and strptime() Behavior.
+
+
+사용 예: "date"
+---------------
+
+이벤트까지 남은 날 수 계산 예:
+
+   >>> import time
+   >>> from datetime import date
+   >>> today = date.today()
+   >>> today
+   datetime.date(2007, 12, 5)
+   >>> today == date.fromtimestamp(time.time())
+   True
+   >>> my_birthday = date(today.year, 6, 24)
+   >>> if my_birthday < today:
+   ...     my_birthday = my_birthday.replace(year=today.year + 1)
+   >>> my_birthday
+   datetime.date(2008, 6, 24)
+   >>> time_to_birthday = abs(my_birthday - today)
+   >>> time_to_birthday.days
+   202
+
+"date"로 작업하는 추가 예:
+
+   >>> from datetime import date
+   >>> d = date.fromordinal(730920) # 730920th day after 1. 1. 0001
+   >>> d
+   datetime.date(2002, 3, 11)
+
+   >>> # Methods related to formatting string output
+   >>> d.isoformat()
+   '2002-03-11'
+   >>> d.strftime("%d/%m/%y")
+   '11/03/02'
+   >>> d.strftime("%A %d. %B %Y")
+   'Monday 11. March 2002'
+   >>> d.ctime()
+   'Mon Mar 11 00:00:00 2002'
+   >>> 'The {1} is {0:%d}, the {2} is {0:%B}.'.format(d, "day", "month")
+   'The day is 11, the month is March.'
+
+   >>> # Methods for to extracting 'components' under different calendars
+   >>> t = d.timetuple()
+   >>> for i in t:     
+   ...     print(i)
+   2002                # year
+   3                   # month
+   11                  # day
+   0
+   0
+   0
+   0                   # weekday (0 = Monday)
+   70                  # 70th day in the year
+   -1
+   >>> ic = d.isocalendar()
+   >>> for i in ic:    
+   ...     print(i)
+   2002                # ISO year
+   11                  # ISO week number
+   1                   # ISO day number ( 1 = Monday )
+
+   >>> # A date object is immutable; all operations produce a new object
+   >>> d.replace(year=2005)
+   datetime.date(2005, 3, 11)
+
+
+"datetime" 객체
+===============
+
+"datetime" 객체는 "date" 객체와 "time" 객체의 모든 정보를 포함하는 단
+일 객체입니다.
+
+"date" 객체와 마찬가지로, "datetime"은 현재의 그레고리력을 양방향으로
+확장한다고 가정합니다; "time" 객체와 마찬가지로, "datetime"은 하루가
+정확히 3600*24초인 것으로 가정합니다.
+
+생성자:
+
+class datetime.datetime(year, month, day, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)
+
+   *year*, *month*, *day* 인자는 필수입니다. *tzinfo*는 "None"이거나
+   "tzinfo" 서브 클래스의 인스턴스일 수 있습니다. 나머지 인자는 다음
+   범위의 정수이어야 합니다:
+
+   * "MINYEAR <= year <= MAXYEAR",
+
+   * "1 <= month <= 12",
+
+   * "1 <= day <= 주어진 month와 year에서의 날 수",
+
+   * "0 <= hour < 24",
+
+   * "0 <= minute < 60",
+
+   * "0 <= second < 60",
+
+   * "0 <= microsecond < 1000000",
+
+   * "fold in [0, 1]".
+
+   이 범위를 벗어나는 인자가 주어지면, "ValueError"가 발생합니다.
+
+   버전 3.6에 추가: Added the "fold" argument.
+
+다른 생성자, 모든 클래스 메서드:
+
+classmethod datetime.today()
+
+   Return the current local datetime, with "tzinfo" "None".
+
+   다음과 동등합니다:
+
+      datetime.fromtimestamp(time.time())
+
+   "now()", "fromtimestamp()"를 참조하십시오.
+
+   이 메서드는 기능적으로 "now()"와 동등하지만, "tz" 매개 변수는 없습
+   니다.
+
+classmethod datetime.now(tz=None)
+
+   현재의 지역 날짜와 시간을 반환합니다.
+
+   선택적 인자 *tz*가 "None"이거나 지정되지 않으면, "today()"와 유사합
+   니다. 하지만, 가능하면 "time.time()" 타임스탬프를 통해 얻을 수 있는
+   것보다 더 높은 정밀도를 제공합니다 (예를 들어, C "gettimeofday()"
+   함수를 제공하는 플랫폼에서 가능합니다).
+
+   *tz*가 "None"이 아니면, "tzinfo" 서브 클래스의 인스턴스여야 하며,
+   현재 날짜와 시간이 *tz*의 시간대로 변환됩니다.
+
+   이 함수는 "today()"와 "utcnow()"보다 선호됩니다.
+
+classmethod datetime.utcnow()
+
+   "tzinfo"가 "None"인 현재 UTC 날짜와 시간을 반환합니다.
+
+   이것은 "now()"와 비슷하지만, 현재의 UTC 날짜와 시간을 나이브
+   "datetime" 객체로 반환합니다. 현재 어웨어 UTC datetime은
+   "datetime.now(timezone.utc)"를 호출하여 얻을 수 있습니다. "now()"도
+   참조하십시오.
+
+   경고:
+
+     나이브 "datetime" 객체는 많은 "datetime" 메서드에 의해 지역 시간
+     으로 취급되므로, UTC로 시간을 나타내는 어웨어 datetime을 사용하는
+     것이 좋습니다. 따라서 UTC로 현재 시간을 나타내는 객체를 만드는 권
+     장 방법은 "datetime.now(timezone.utc)"를 호출하는 것입니다.
+
+classmethod datetime.fromtimestamp(timestamp, tz=None)
+
+   "time.time()"가 반환하는 것과 같은, POSIX timestamp에 해당하는 지역
+   날짜와 시간을 반환합니다. 선택적 인자 *tz*가 "None"이거나 지정되지
+   않으면 timestamp는 플랫폼의 지역 날짜와 시간으로 변환되며, 반환된
+   "datetime" 객체는 나이브합니다.
+
+   *tz*가 "None"이 아니면, "tzinfo" 서브 클래스의 인스턴스여야 하며,
+   timestamp는 *tz*의 시간대로 변환됩니다.
+
+   timestamp가 플랫폼 C "localtime()" 이나 "gmtime()" 함수에서 지원하
+   는 값 범위를 벗어나면 "fromtimestamp()"가 "OverflowError"를 발생시
+   킬 수 있고, "localtime()" 이나 "gmtime()"이 실패하면 "OSError"를 발
+   생시킬 수 있습니다. 1970년에서 2038년까지로 제한되는 것이 일반적입
+   니다. 타임스탬프에 윤초 개념을 포함하는 비 POSIX 시스템에서,
+   "fromtimestamp()"는 윤초를 무시하므로, 1초 차이가 나는 두 개의 타임
+   스탬프가 같은 "datetime" 객체를 산출할 수 있습니다. 이 방법은
+   "utcfromtimestamp()"보다 선호됩니다.
+
+   버전 3.3에서 변경: timestamp가 플랫폼 C "localtime()" 이나
+   "gmtime()" 함수에서 지원하는 값 범위를 벗어나면 "ValueError" 대신
+   "OverflowError"를 발생시킵니다. "localtime()" 이나 "gmtime()"이 실
+   패하면 "ValueError" 대신 "OSError"를 발생시킵니다.
+
+   버전 3.6에서 변경: "fromtimestamp()"는 "fold"가 1로 설정된 인스턴스
+   를 반환할 수 있습니다.
+
+classmethod datetime.utcfromtimestamp(timestamp)
+
+   "tzinfo"가 "None"인 POSIX timestamp에 해당하는 UTC "datetime"을 반
+   환합니다. (결과 객체는 나이브합니다.)
+
+   timestamp가 플랫폼 C "gmtime()" 함수에서 지원하는 값 범위를 벗어나
+   면 "OverflowError"가 발생하고, "gmtime()"이 실패하면 "OSError"가 발
+   생합니다. 1970년에서 2038년까지로 제한되는 것이 일반적입니다.
+
+   어웨어 "datetime" 객체를 얻으려며, "fromtimestamp()"를 호출하십시오
+   :
+
+      datetime.fromtimestamp(timestamp, timezone.utc)
+
+   POSIX 호환 플랫폼에서, 다음 표현식과 동등합니다:
+
+      datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=timestamp)
+
+   단, 후자의 식은 항상 전체 연도 범위를 지원합니다: "MINYEAR"와
+   "MAXYEAR" 사이, 경계 포함.
+
+   경고:
+
+     나이브 "datetime" 객체는 많은 "datetime" 메서드에 의해 지역 시간
+     으로 취급되므로. UTC로 시간을 나타내는 어웨어 datetime을 사용하는
+     것이 좋습니다. 따라서 UTC로 특정 timestamp를 나타내는 객체를 만드
+     는 권장 방법은 "datetime.fromtimestamp(timestamp,
+     tz=timezone.utc)"를 호출하는 것입니다.
+
+   버전 3.3에서 변경: timestamp가 플랫폼 C "gmtime()" 함수에서 지원하
+   는 값 범위를 벗어나면 "ValueError" 대신 "OverflowError"를 발생시킵
+   니다. "gmtime()"이 실패하면 "ValueError" 대신 "OSError"를 발생시킵
+   니다.
+
+classmethod datetime.fromordinal(ordinal)
+
+   역산 그레고리력 서수(ordinal)에 해당하는 "datetime"을 반환합니다. 1
+   년 1월 1일이 서수 1입니다. "1 <= ordinal <=
+   datetime.max.toordinal()"이 아니면 "ValueError"가 발생합니다. 결과
+   의 hour, minute, second 및 microsecond는 모두 0이고, "tzinfo"는
+   "None"입니다.
+
+classmethod datetime.combine(date, time, tzinfo=self.tzinfo)
+
+   Return a new "datetime" object whose date components are equal to
+   the given "date" object's, and whose time components are equal to
+   the given "time" object's. If the *tzinfo* argument is provided,
+   its value is used to set the "tzinfo" attribute of the result,
+   otherwise the "tzinfo" attribute of the *time* argument is used.
+
+   For any "datetime" object *d*, "d == datetime.combine(d.date(),
+   d.time(), d.tzinfo)". If date is a "datetime" object, its time
+   components and "tzinfo" attributes are ignored.
+
+   버전 3.6에서 변경: *tzinfo* 인자가 추가되었습니다.
+
+classmethod datetime.fromisoformat(date_string)
+
+   Return a "datetime" corresponding to a *date_string* in one of the
+   formats emitted by "date.isoformat()" and "datetime.isoformat()".
+
+   Specifically, this function supports strings in the format:
+
+      YYYY-MM-DD[*HH[:MM[:SS[.fff[fff]]]][+HH:MM[:SS[.ffffff]]]]
+
+   where "*" can match any single character.
+
+   조심:
+
+     This does *not* support parsing arbitrary ISO 8601 strings - it
+     is only intended as the inverse operation of
+     "datetime.isoformat()". A more full-featured ISO 8601 parser,
+     "dateutil.parser.isoparse" is available in the third-party
+     package dateutil.
+
+   예제:
+
+      >>> from datetime import datetime
+      >>> datetime.fromisoformat('2011-11-04')
+      datetime.datetime(2011, 11, 4, 0, 0)
+      >>> datetime.fromisoformat('2011-11-04T00:05:23')
+      datetime.datetime(2011, 11, 4, 0, 5, 23)
+      >>> datetime.fromisoformat('2011-11-04 00:05:23.283')
+      datetime.datetime(2011, 11, 4, 0, 5, 23, 283000)
+      >>> datetime.fromisoformat('2011-11-04 00:05:23.283+00:00')
+      datetime.datetime(2011, 11, 4, 0, 5, 23, 283000, tzinfo=datetime.timezone.utc)
+      >>> datetime.fromisoformat('2011-11-04T00:05:23+04:00')   
+      datetime.datetime(2011, 11, 4, 0, 5, 23,
+          tzinfo=datetime.timezone(datetime.timedelta(seconds=14400)))
+
+   버전 3.7에 추가.
+
+classmethod datetime.fromisocalendar(year, week, day)
+
+   년, 주 및 일로 지정된 ISO 달력 날짜에 해당하는 "datetime"을 반환합
+   니다. datetime의 날짜가 아닌 구성 요소는 일반적인 기본값으로 채워집
+   니다. 이것은 함수 "datetime.isocalendar()"의 역입니다.
+
+   버전 3.8에 추가.
+
+classmethod datetime.strptime(date_string, format)
+
+   *format*에 따라 구문 분석된, *date_string*에 해당하는 "datetime"를
+   반환합니다.
+
+   This is equivalent to:
+
+      datetime(*(time.strptime(date_string, format)[0:6]))
+
+   "ValueError" is raised if the date_string and format can't be
+   parsed by "time.strptime()" or if it returns a value which isn't a
+   time tuple. For a complete list of formatting directives, see
+   strftime() and strptime() Behavior.
+
+클래스 어트리뷰트:
+
+datetime.min
+
+   표현 가능한 가장 이른 "datetime", "datetime(MINYEAR, 1, 1,
+   tzinfo=None)".
+
+datetime.max
+
+   표현 가능한 가장 늦은 "datetime", "datetime(MAXYEAR, 12, 31, 23,
+   59, 59, 999999, tzinfo=None)".
+
+datetime.resolution
+
+   같지 않은 "datetime" 객체 간의 가능한 가장 작은 차이,
+   "timedelta(microseconds=1)".
+
+인스턴스 어트리뷰트 (읽기 전용):
+
+datetime.year
+
+   "MINYEAR"와 "MAXYEAR" 사이, 경계 포함.
+
+datetime.month
+
+   1과 12 사이, 경계 포함.
+
+datetime.day
+
+   1과 주어진 year의 주어진 month의 날 수 사이.
+
+datetime.hour
+
+   범위 "range(24)".
+
+datetime.minute
+
+   범위 "range(60)".
+
+datetime.second
+
+   범위 "range(60)".
+
+datetime.microsecond
+
+   범위 "range(1000000)".
+
+datetime.tzinfo
+
+   "datetime" 생성자에 *tzinfo* 인자로 전달된 객체이거나, 전달되지 않
+   았으면 "None"입니다.
+
+datetime.fold
+
+   In "[0, 1]". Used to disambiguate wall times during a repeated
+   interval. (A repeated interval occurs when clocks are rolled back
+   at the end of daylight saving time or when the UTC offset for the
+   current zone is decreased for political reasons.) The value 0 (1)
+   represents the earlier (later) of the two moments with the same
+   wall time representation.
+
+   버전 3.6에 추가.
+
+지원되는 연산:
+
++-----------------------------------------+----------------------------------+
+| 연산                                    | 결과                             |
+|=========================================|==================================|
+| "datetime2 = datetime1 + timedelta"     | (1)                              |
++-----------------------------------------+----------------------------------+
+| "datetime2 = datetime1 - timedelta"     | (2)                              |
++-----------------------------------------+----------------------------------+
+| "timedelta = datetime1 - datetime2"     | (3)                              |
++-----------------------------------------+----------------------------------+
+| "datetime1 < datetime2"                 | Compares "datetime" to           |
+|                                         | "datetime". (4)                  |
++-----------------------------------------+----------------------------------+
+
+1. datetime2 is a duration of timedelta removed from datetime1, moving
+   forward in time if "timedelta.days" > 0, or backward if
+   "timedelta.days" < 0. The result has the same "tzinfo" attribute as
+   the input datetime, and datetime2 - datetime1 == timedelta after.
+   "OverflowError" is raised if datetime2.year would be smaller than
+   "MINYEAR" or larger than "MAXYEAR". Note that no time zone
+   adjustments are done even if the input is an aware object.
+
+2. Computes the datetime2 such that datetime2 + timedelta ==
+   datetime1. As for addition, the result has the same "tzinfo"
+   attribute as the input datetime, and no time zone adjustments are
+   done even if the input is aware.
+
+3. "datetime"에서 "datetime"을 빼는 것은 두 피연산자 모두 나이브하거나
+   , 모두 어웨어할 때만 정의됩니다. 하나가 어웨어이고 다른 하나가 나이
+   브면, "TypeError"가 발생합니다.
+
+   If both are naive, or both are aware and have the same "tzinfo"
+   attribute, the "tzinfo" attributes are ignored, and the result is a
+   "timedelta" object *t* such that "datetime2 + t == datetime1". No
+   time zone adjustments are done in this case.
+
+   If both are aware and have different "tzinfo" attributes, "a-b"
+   acts as if *a* and *b* were first converted to naive UTC datetimes
+   first. The result is "(a.replace(tzinfo=None) - a.utcoffset()) -
+   (b.replace(tzinfo=None) - b.utcoffset())" except that the
+   implementation never overflows.
+
+4. *datetime1* is considered less than *datetime2* when *datetime1*
+   precedes *datetime2* in time.
+
+   If one comparand is naive and the other is aware, "TypeError" is
+   raised if an order comparison is attempted. For equality
+   comparisons, naive instances are never equal to aware instances.
+
+   If both comparands are aware, and have the same "tzinfo" attribute,
+   the common "tzinfo" attribute is ignored and the base datetimes are
+   compared. If both comparands are aware and have different "tzinfo"
+   attributes, the comparands are first adjusted by subtracting their
+   UTC offsets (obtained from "self.utcoffset()").
+
+   버전 3.3에서 변경: 어웨어와 나이브 "datetime" 인스턴스 간의 동등 비
+   교는 "TypeError"를 발생시키지 않습니다.
+
+   참고:
+
+     In order to stop comparison from falling back to the default
+     scheme of comparing object addresses, datetime comparison
+     normally raises "TypeError" if the other comparand isn't also a
+     "datetime" object. However, "NotImplemented" is returned instead
+     if the other comparand has a "timetuple()" attribute. This hook
+     gives other kinds of date objects a chance at implementing mixed-
+     type comparison. If not, when a "datetime" object is compared to
+     an object of a different type, "TypeError" is raised unless the
+     comparison is "==" or "!=". The latter cases return "False" or
+     "True", respectively.
+
+인스턴스 메서드:
+
+datetime.date()
+
+   같은 year, month, day의 "date" 객체를 반환합니다.
+
+datetime.time()
+
+   같은 hour, minute, second, microsecond 및 fold의 "time" 객체를 반환
+   합니다. "tzinfo"는 "None"입니다. 메서드 "timetz()"도 참조하십시오.
+
+   버전 3.6에서 변경: fold 값은 반환된 "time" 객체에 복사됩니다.
+
+datetime.timetz()
+
+   같은 hour, minute, second, microsecond, fold 및 tzinfo 어트리뷰트의
+   "time" 객체를 반환합니다. 메서드 "time()"도 참조하십시오.
+
+   버전 3.6에서 변경: fold 값은 반환된 "time" 객체에 복사됩니다.
+
+datetime.replace(year=self.year, month=self.month, day=self.day, hour=self.hour, minute=self.minute, second=self.second, microsecond=self.microsecond, tzinfo=self.tzinfo, *, fold=0)
+
+   Return a datetime with the same attributes, except for those
+   attributes given new values by whichever keyword arguments are
+   specified. Note that "tzinfo=None" can be specified to create a
+   naive datetime from an aware datetime with no conversion of date
+   and time data.
+
+   버전 3.6에 추가: Added the "fold" argument.
+
+datetime.astimezone(tz=None)
+
+   새로운 "tzinfo" 어트리뷰트 *tz*를 갖는 "datetime" 객체를 반환하는데
+   , 결과가 *self*와 같은 UTC 시간이지만 *tz*의 지역 시간이 되도록 날
+   짜와 시간 데이터를 조정합니다.
+
+   If provided, *tz* must be an instance of a "tzinfo" subclass, and
+   its "utcoffset()" and "dst()" methods must not return "None". If
+   *self* is naive, it is presumed to represent time in the system
+   timezone.
+
+   If called without arguments (or with "tz=None") the system local
+   timezone is assumed for the target timezone. The ".tzinfo"
+   attribute of the converted datetime instance will be set to an
+   instance of "timezone" with the zone name and offset obtained from
+   the OS.
+
+   If "self.tzinfo" is *tz*, "self.astimezone(tz)" is equal to *self*:
+   no adjustment of date or time data is performed. Else the result is
+   local time in the timezone *tz*, representing the same UTC time as
+   *self*:  after "astz = dt.astimezone(tz)", "astz -
+   astz.utcoffset()" will have the same date and time data as "dt -
+   dt.utcoffset()".
+
+   If you merely want to attach a time zone object *tz* to a datetime
+   *dt* without adjustment of date and time data, use
+   "dt.replace(tzinfo=tz)". If you merely want to remove the time zone
+   object from an aware datetime *dt* without conversion of date and
+   time data, use "dt.replace(tzinfo=None)".
+
+   기본 "tzinfo.fromutc()" 메서드는 "astimezone()"에 의해 반환된 결과
+   에 영향을 주도록 "tzinfo" 서브 클래스에서 재정의할 수 있습니다. 에
+   러가 발생하는 경우를 무시하고, "astimezone()"는 다음과 같이 작동합
+   니다:
+
+      def astimezone(self, tz):
+          if self.tzinfo is tz:
+              return self
+          # Convert self to UTC, and attach the new time zone object.
+          utc = (self - self.utcoffset()).replace(tzinfo=tz)
+          # Convert from UTC to tz's local time.
+          return tz.fromutc(utc)
+
+   버전 3.3에서 변경: 이제 *tz*를 생략할 수 있습니다.
+
+   버전 3.6에서 변경: 이제 "astimezone()" 메서드는 이제 나이브 인스턴
+   스에서 호출될 수 있는데, 시스템 지역 시간을 나타내는 것으로 간주합
+   니다.
+
+datetime.utcoffset()
+
+   "tzinfo"가 "None"이면, "None"을 반환하고, 그렇지 않으면
+   "self.tzinfo.utcoffset(self)"를 반환하고, 후자가 "None"이나 하루 미
+   만의 크기를 가진 "timedelta" 객체를 반환하지 않으면 예외를 발생시킵
+   니다.
+
+   버전 3.7에서 변경: UTC 오프셋은 분 단위로 제한되지 않습니다.
+
+datetime.dst()
+
+   "tzinfo"가 "None"이면, "None"을 반환하고, 그렇지 않으면
+   "self.tzinfo.dst(self)"를 반환하고, 후자가 "None"이나 하루 미만의
+   크기를 가진 "timedelta" 객체를 반환하지 않으면 예외를 발생시킵니다.
+
+   버전 3.7에서 변경: DST 오프셋은 분 단위로 제한되지 않습니다.
+
+datetime.tzname()
+
+   "tzinfo"가 "None"이면, "None"을 반환하고, 그렇지 않으면
+   "self.tzinfo.tzname(self)"를 반환하고, 후자가 "None"이나 문자열 객
+   체를 반환하지 않으면 예외를 발생시킵니다.
+
+datetime.timetuple()
+
+   "time.localtime()"이 반환하는 것과 같은 "time.struct_time"을 반환합
+   니다.
+
+   "d.timetuple()"은 다음과 동등합니다:
+
+      time.struct_time((d.year, d.month, d.day,
+                        d.hour, d.minute, d.second,
+                        d.weekday(), yday, dst))
+
+   where "yday = d.toordinal() - date(d.year, 1, 1).toordinal() + 1"
+   is the day number within the current year starting with "1" for
+   January 1st. The "tm_isdst" flag of the result is set according to
+   the "dst()" method: "tzinfo" is "None" or "dst()" returns "None",
+   "tm_isdst" is set to "-1"; else if "dst()" returns a non-zero
+   value, "tm_isdst" is set to "1"; else "tm_isdst" is set to "0".
+
+datetime.utctimetuple()
+
+   If "datetime" instance *d* is naive, this is the same as
+   "d.timetuple()" except that "tm_isdst" is forced to 0 regardless of
+   what "d.dst()" returns. DST is never in effect for a UTC time.
+
+   If *d* is aware, *d* is normalized to UTC time, by subtracting
+   "d.utcoffset()", and a "time.struct_time" for the normalized time
+   is returned. "tm_isdst" is forced to 0. Note that an
+   "OverflowError" may be raised if *d*.year was "MINYEAR" or
+   "MAXYEAR" and UTC adjustment spills over a year boundary.
+
+   경고:
+
+     Because naive "datetime" objects are treated by many "datetime"
+     methods as local times, it is preferred to use aware datetimes to
+     represent times in UTC; as a result, using
+     "datetime.utctimetuple()" may give misleading results. If you
+     have a naive "datetime" representing UTC, use
+     "datetime.replace(tzinfo=timezone.utc)" to make it aware, at
+     which point you can use "datetime.timetuple()".
+
+datetime.toordinal()
+
+   날짜의 역산 그레고리력 서수를 반환합니다. "self.date().toordinal()"
+   과 같습니다.
+
+datetime.timestamp()
+
+   "datetime" 인스턴스에 해당하는 POSIX 타임스탬프를 반환합니다. 반환
+   값은 "time.time()"이 반환하는 것과 비슷한 "float"입니다.
+
+   Naive "datetime" instances are assumed to represent local time and
+   this method relies on the platform C "mktime()" function to perform
+   the conversion. Since "datetime" supports wider range of values
+   than "mktime()" on many platforms, this method may raise
+   "OverflowError" for times far in the past or far in the future.
+
+   어웨어 "datetime" 인스턴스의 경우, 반환 값은 다음과 같이 계산됩니다
+   :
+
+      (dt - datetime(1970, 1, 1, tzinfo=timezone.utc)).total_seconds()
+
+   버전 3.3에 추가.
+
+   버전 3.6에서 변경: "timestamp()" 메서드는 "fold" 어트리뷰트를 사용
+   하여 반복되는 구간의 시간을 구분합니다.
+
+   참고:
+
+     There is no method to obtain the POSIX timestamp directly from a
+     naive "datetime" instance representing UTC time. If your
+     application uses this convention and your system timezone is not
+     set to UTC, you can obtain the POSIX timestamp by supplying
+     "tzinfo=timezone.utc":
+
+        timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
+
+     또는 직접 타임스탬프를 계산할 수 있습니다:
+
+        timestamp = (dt - datetime(1970, 1, 1)) / timedelta(seconds=1)
+
+datetime.weekday()
+
+   정수로 요일을 반환합니다. 월요일은 0이고 일요일은 6입니다.
+   "self.date().weekday()"와 같습니다. "isoweekday()"도 참조하십시오.
+
+datetime.isoweekday()
+
+   정수로 요일을 반환합니다. 월요일은 1이고 일요일은 7입니다.
+   "self.date().isoweekday()" 와 같습니다. "weekday()",
+   "isocalendar()"도 참조하십시오.
+
+datetime.isocalendar()
+
+   세 개의 컴포넌트를 가진 *네임드 튜플*을 반환합니다: "year", "week"
+   및 "weekday". "self.date().isocalendar()"와 같습니다.
+
+datetime.isoformat(sep='T', timespec='auto')
+
+   ISO 8601 형식으로 날짜와 시간을 나타내는 문자열을 반환합니다:
+
+   * "YYYY-MM-DDTHH:MM:SS.ffffff", "microsecond"가 0이 아니면
+
+   * "YYYY-MM-DDTHH:MM:SS", "microsecond"가 0이면
+
+   "utcoffset()"이 "None"을 반환하지 않으면, UTC 오프셋을 제공하는 문
+   자열을 덧붙입니다:
+
+   * "YYYY-MM-DDTHH:MM:SS.ffffff+HH:MM[:SS[.ffffff]]", "microsecond"가
+     0이 아니면
+
+   * "YYYY-MM-DDTHH:MM:SS+HH:MM[:SS[.ffffff]]", "microsecond"가 0이면
+
+   예제:
+
+      >>> from datetime import datetime, timezone
+      >>> datetime(2019, 5, 18, 15, 17, 8, 132263).isoformat()
+      '2019-05-18T15:17:08.132263'
+      >>> datetime(2019, 5, 18, 15, 17, tzinfo=timezone.utc).isoformat()
+      '2019-05-18T15:17:00+00:00'
+
+   선택적 인자 *sep*(기본값 "'T'")은 한 문자 구분자로, 결과의 날짜와
+   시간 부분 사이에 배치됩니다. 예를 들어:
+
+      >>> from datetime import tzinfo, timedelta, datetime
+      >>> class TZ(tzinfo):
+      ...     """A time zone with an arbitrary, constant -06:39 offset."""
+      ...     def utcoffset(self, dt):
+      ...         return timedelta(hours=-6, minutes=-39)
+      ...
+      >>> datetime(2002, 12, 25, tzinfo=TZ()).isoformat(' ')
+      '2002-12-25 00:00:00-06:39'
+      >>> datetime(2009, 11, 27, microsecond=100, tzinfo=TZ()).isoformat()
+      '2009-11-27T00:00:00.000100-06:39'
+
+   선택적 인자 *timespec*은 포함할 시간의 추가 구성 요소 수를 지정합니
+   다 (기본값은 "'auto'"입니다). 다음 중 하나일 수 있습니다:
+
+   * "'auto'": "microsecond"가 0이면 "'seconds'"와 같고, 그렇지 않으면
+     "'microseconds'"와 같습니다.
+
+   * "'hours'": "hour"를 두 자리 숫자 "HH" 형식으로 포함합니다.
+
+   * "'minutes'": "hour"와 "minute"를 "HH:MM" 형식으로 포함합니다.
+
+   * "'seconds'": "hour", "minute" 및 "second"를 "HH:MM:SS" 형식으로
+     포함합니다.
+
+   * "'milliseconds'": 전체 시간을 포함하지만, 초 미만은 밀리초 단위로
+     자릅니다. "HH:MM:SS.sss" 형식입니다.
+
+   * "'microseconds'": 전체 시간을 "HH:MM:SS.ffffff" 형식으로 포함합니
+     다.
+
+   참고:
+
+     제외된 시간 구성 요소는 반올림되지 않고 잘립니다.
+
+   잘못된 *timespec* 인자는 "ValueError"를 발생시킵니다:
+
+      >>> from datetime import datetime
+      >>> datetime.now().isoformat(timespec='minutes')   
+      '2002-12-25T00:00'
+      >>> dt = datetime(2015, 1, 1, 12, 30, 59, 0)
+      >>> dt.isoformat(timespec='microseconds')
+      '2015-01-01T12:30:59.000000'
+
+   버전 3.6에 추가: Added the *timespec* argument.
+
+datetime.__str__()
+
+   For a "datetime" instance *d*, "str(d)" is equivalent to
+   "d.isoformat(' ')".
+
+datetime.ctime()
+
+   날짜와 시간을 나타내는 문자열을 반환합니다:
+
+      >>> from datetime import datetime
+      >>> datetime(2002, 12, 4, 20, 30, 40).ctime()
+      'Wed Dec  4 20:30:40 2002'
+
+   출력 문자열은 입력이 어웨어인지 나이브인지와 관계없이 시간대 정보를
+   포함하지 *않습니다*.
+
+   "d.ctime()"은 다음과:
+
+      time.ctime(time.mktime(d.timetuple()))
+
+   네이티브 C "ctime()" 함수("time.ctime()"이 호출하지만,
+   "datetime.ctime()"은 호출하지 않습니다)가 C 표준을 준수하는 플랫폼
+   에서 동등합니다.
+
+datetime.strftime(format)
+
+   Return a string representing the date and time, controlled by an
+   explicit format string. For a complete list of formatting
+   directives, see strftime() and strptime() Behavior.
+
+datetime.__format__(format)
+
+   Same as "datetime.strftime()". This makes it possible to specify a
+   format string for a "datetime" object in formatted string literals
+   and when using "str.format()". For a complete list of formatting
+   directives, see strftime() and strptime() Behavior.
+
+
+사용 예: "datetime"
+-------------------
+
+Examples of working with "datetime" objects:
+
+   >>> from datetime import datetime, date, time, timezone
+
+   >>> # Using datetime.combine()
+   >>> d = date(2005, 7, 14)
+   >>> t = time(12, 30)
+   >>> datetime.combine(d, t)
+   datetime.datetime(2005, 7, 14, 12, 30)
+
+   >>> # Using datetime.now()
+   >>> datetime.now()   
+   datetime.datetime(2007, 12, 6, 16, 29, 43, 79043)   # GMT +1
+   >>> datetime.now(timezone.utc)   
+   datetime.datetime(2007, 12, 6, 15, 29, 43, 79060, tzinfo=datetime.timezone.utc)
+
+   >>> # Using datetime.strptime()
+   >>> dt = datetime.strptime("21/11/06 16:30", "%d/%m/%y %H:%M")
+   >>> dt
+   datetime.datetime(2006, 11, 21, 16, 30)
+
+   >>> # Using datetime.timetuple() to get tuple of all attributes
+   >>> tt = dt.timetuple()
+   >>> for it in tt:   
+   ...     print(it)
+   ...
+   2006    # year
+   11      # month
+   21      # day
+   16      # hour
+   30      # minute
+   0       # second
+   1       # weekday (0 = Monday)
+   325     # number of days since 1st January
+   -1      # dst - method tzinfo.dst() returned None
+
+   >>> # Date in ISO format
+   >>> ic = dt.isocalendar()
+   >>> for it in ic:   
+   ...     print(it)
+   ...
+   2006    # ISO year
+   47      # ISO week
+   2       # ISO weekday
+
+   >>> # Formatting a datetime
+   >>> dt.strftime("%A, %d. %B %Y %I:%M%p")
+   'Tuesday, 21. November 2006 04:30PM'
+   >>> 'The {1} is {0:%d}, the {2} is {0:%B}, the {3} is {0:%I:%M%p}.'.format(dt, "day", "month", "time")
+   'The day is 21, the month is November, the time is 04:30PM.'
+
+아래 예제는 1945년까지 +4 UTC를 사용한 후 +4:30 UTC로 변경한 아프가니
+스탄 카불의 시간대 정보를 캡처하는 "tzinfo" 서브 클래스를 정의합니다:
+
+   from datetime import timedelta, datetime, tzinfo, timezone
+
+   class KabulTz(tzinfo):
+       # Kabul used +4 until 1945, when they moved to +4:30
+       UTC_MOVE_DATE = datetime(1944, 12, 31, 20, tzinfo=timezone.utc)
+
+       def utcoffset(self, dt):
+           if dt.year < 1945:
+               return timedelta(hours=4)
+           elif (1945, 1, 1, 0, 0) <= dt.timetuple()[:5] < (1945, 1, 1, 0, 30):
+               # An ambiguous ("imaginary") half-hour range representing
+               # a 'fold' in time due to the shift from +4 to +4:30.
+               # If dt falls in the imaginary range, use fold to decide how
+               # to resolve. See PEP495.
+               return timedelta(hours=4, minutes=(30 if dt.fold else 0))
+           else:
+               return timedelta(hours=4, minutes=30)
+
+       def fromutc(self, dt):
+           # Follow same validations as in datetime.tzinfo
+           if not isinstance(dt, datetime):
+               raise TypeError("fromutc() requires a datetime argument")
+           if dt.tzinfo is not self:
+               raise ValueError("dt.tzinfo is not self")
+
+           # A custom implementation is required for fromutc as
+           # the input to this function is a datetime with utc values
+           # but with a tzinfo set to self.
+           # See datetime.astimezone or fromtimestamp.
+           if dt.replace(tzinfo=timezone.utc) >= self.UTC_MOVE_DATE:
+               return dt + timedelta(hours=4, minutes=30)
+           else:
+               return dt + timedelta(hours=4)
+
+       def dst(self, dt):
+           # Kabul does not observe daylight saving time.
+           return timedelta(0)
+
+       def tzname(self, dt):
+           if dt >= self.UTC_MOVE_DATE:
+               return "+04:30"
+           return "+04"
+
+위의 "KabulTz" 사용법:
+
+   >>> tz1 = KabulTz()
+
+   >>> # Datetime before the change
+   >>> dt1 = datetime(1900, 11, 21, 16, 30, tzinfo=tz1)
+   >>> print(dt1.utcoffset())
+   4:00:00
+
+   >>> # Datetime after the change
+   >>> dt2 = datetime(2006, 6, 14, 13, 0, tzinfo=tz1)
+   >>> print(dt2.utcoffset())
+   4:30:00
+
+   >>> # Convert datetime to another time zone
+   >>> dt3 = dt2.astimezone(timezone.utc)
+   >>> dt3
+   datetime.datetime(2006, 6, 14, 8, 30, tzinfo=datetime.timezone.utc)
+   >>> dt2
+   datetime.datetime(2006, 6, 14, 13, 0, tzinfo=KabulTz())
+   >>> dt2 == dt3
+   True
+
+
+"time" 객체
+===========
+
+A "time" object represents a (local) time of day, independent of any
+particular day, and subject to adjustment via a "tzinfo" object.
+
+class datetime.time(hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)
+
+   모든 인자는 선택적입니다. *tzinfo*는 "None", 또는 "tzinfo" 서브 클
+   래스의 인스턴스일 수 있습니다. 나머지 인자는 다음 범위의 정수이어야
+   합니다:
+
+   * "0 <= hour < 24",
+
+   * "0 <= minute < 60",
+
+   * "0 <= second < 60",
+
+   * "0 <= microsecond < 1000000",
+
+   * "fold in [0, 1]".
+
+   If an argument outside those ranges is given, "ValueError" is
+   raised. All default to "0" except *tzinfo*, which defaults to
+   "None".
+
+클래스 어트리뷰트:
+
+time.min
+
+   표현 가능한 가장 이른 "time", "time(0, 0, 0, 0)".
+
+time.max
+
+   표현 가능한 가장 늦은 "time", "time(23, 59, 59, 999999)".
+
+time.resolution
+
+   같지 않은 "time" 객체 간의 가능한 가장 작은 차이,
+   "timedelta(microseconds=1)", 하지만 "time" 객체에 대한 산술은 지원
+   되지 않습니다.
+
+인스턴스 어트리뷰트 (읽기 전용):
+
+time.hour
+
+   범위 "range(24)".
+
+time.minute
+
+   범위 "range(60)".
+
+time.second
+
+   범위 "range(60)".
+
+time.microsecond
+
+   범위 "range(1000000)".
+
+time.tzinfo
+
+   "time" 생성자에 *tzinfo* 인자로 전달된 객체이거나, 전달되지 않았으
+   면 "None"입니다.
+
+time.fold
+
+   In "[0, 1]". Used to disambiguate wall times during a repeated
+   interval. (A repeated interval occurs when clocks are rolled back
+   at the end of daylight saving time or when the UTC offset for the
+   current zone is decreased for political reasons.) The value 0 (1)
+   represents the earlier (later) of the two moments with the same
+   wall time representation.
+
+   버전 3.6에 추가.
+
+"time" objects support comparison of "time" to "time", where *a* is
+considered less than *b* when *a* precedes *b* in time. If one
+comparand is naive and the other is aware, "TypeError" is raised if an
+order comparison is attempted. For equality comparisons, naive
+instances are never equal to aware instances.
+
+If both comparands are aware, and have the same "tzinfo" attribute,
+the common "tzinfo" attribute is ignored and the base times are
+compared. If both comparands are aware and have different "tzinfo"
+attributes, the comparands are first adjusted by subtracting their UTC
+offsets (obtained from "self.utcoffset()"). In order to stop mixed-
+type comparisons from falling back to the default comparison by object
+address, when a "time" object is compared to an object of a different
+type, "TypeError" is raised unless the comparison is "==" or "!=". The
+latter cases return "False" or "True", respectively.
+
+버전 3.3에서 변경: Equality comparisons between aware and naive "time"
+instances don't raise "TypeError".
+
+불리언 문맥에서, "time" 객체는 항상 참으로 간주합니다.
+
+버전 3.5에서 변경: 파이썬 3.5 이전에, "time" 객체는 UTC 자정을 나타낼
+때 거짓으로 간주했습니다. 이 동작은 애매하고 에러가 발생하기 쉬운 것으
+로 간주하여 파이썬 3.5에서 제거되었습니다. 자세한 내용은 bpo-13936을
+참조하십시오.
+
+기타 생성자:
+
+classmethod time.fromisoformat(time_string)
+
+   Return a "time" corresponding to a *time_string* in one of the
+   formats emitted by "time.isoformat()". Specifically, this function
+   supports strings in the format:
+
+      HH[:MM[:SS[.fff[fff]]]][+HH:MM[:SS[.ffffff]]]
+
+   조심:
+
+     This does *not* support parsing arbitrary ISO 8601 strings. It is
+     only intended as the inverse operation of "time.isoformat()".
+
+   예제:
+
+      >>> from datetime import time
+      >>> time.fromisoformat('04:23:01')
+      datetime.time(4, 23, 1)
+      >>> time.fromisoformat('04:23:01.000384')
+      datetime.time(4, 23, 1, 384)
+      >>> time.fromisoformat('04:23:01+04:00')
+      datetime.time(4, 23, 1, tzinfo=datetime.timezone(datetime.timedelta(seconds=14400)))
+
+   버전 3.7에 추가.
+
+인스턴스 메서드:
+
+time.replace(hour=self.hour, minute=self.minute, second=self.second, microsecond=self.microsecond, tzinfo=self.tzinfo, *, fold=0)
+
+   Return a "time" with the same value, except for those attributes
+   given new values by whichever keyword arguments are specified. Note
+   that "tzinfo=None" can be specified to create a naive "time" from
+   an aware "time", without conversion of the time data.
+
+   버전 3.6에 추가: Added the "fold" argument.
+
+time.isoformat(timespec='auto')
+
+   ISO 8601 형식으로 시간을 나타내는 문자열을 반환합니다, 다음 중 한가
+   지입니다:
+
+   * "HH:MM:SS.ffffff", "microsecond"가 0이 아니면
+
+   * "HH:MM:SS", "microsecond"가 0이면
+
+   * "HH:MM:SS.ffffff+HH:MM[:SS[.ffffff]]", "utcoffset()"이 "None"을
+     반환하지 않으면
+
+   * "HH:MM:SS+HH:MM[:SS[.ffffff]]", "microsecond"가 0이고
+     "utcoffset()"이 "None"을 반환하지 않으면
+
+   선택적 인자 *timespec*은 포함할 시간의 추가 구성 요소 수를 지정합니
+   다 (기본값은 "'auto'"입니다). 다음 중 하나일 수 있습니다:
+
+   * "'auto'": "microsecond"가 0이면 "'seconds'"와 같고, 그렇지 않으면
+     "'microseconds'"와 같습니다.
+
+   * "'hours'": "hour"를 두 자리 숫자 "HH" 형식으로 포함합니다.
+
+   * "'minutes'": "hour"와 "minute"를 "HH:MM" 형식으로 포함합니다.
+
+   * "'seconds'": "hour", "minute" 및 "second"를 "HH:MM:SS" 형식으로
+     포함합니다.
+
+   * "'milliseconds'": 전체 시간을 포함하지만, 초 미만은 밀리초 단위로
+     자릅니다. "HH:MM:SS.sss" 형식입니다.
+
+   * "'microseconds'": 전체 시간을 "HH:MM:SS.ffffff" 형식으로 포함합니
+     다.
+
+   참고:
+
+     제외된 시간 구성 요소는 반올림되지 않고 잘립니다.
+
+   잘못된 *timespec* 인자는 "ValueError"를 발생시킵니다.
+
+   예제:
+
+      >>> from datetime import time
+      >>> time(hour=12, minute=34, second=56, microsecond=123456).isoformat(timespec='minutes')
+      '12:34'
+      >>> dt = time(hour=12, minute=34, second=56, microsecond=0)
+      >>> dt.isoformat(timespec='microseconds')
+      '12:34:56.000000'
+      >>> dt.isoformat(timespec='auto')
+      '12:34:56'
+
+   버전 3.6에 추가: Added the *timespec* argument.
+
+time.__str__()
+
+   For a time *t*, "str(t)" is equivalent to "t.isoformat()".
+
+time.strftime(format)
+
+   Return a string representing the time, controlled by an explicit
+   format string. For a complete list of formatting directives, see
+   strftime() and strptime() Behavior.
+
+time.__format__(format)
+
+   Same as "time.strftime()". This makes it possible to specify a
+   format string for a "time" object in formatted string literals and
+   when using "str.format()". For a complete list of formatting
+   directives, see strftime() and strptime() Behavior.
+
+time.utcoffset()
+
+   "tzinfo"가 "None"이면, "None"을 반환하고, 그렇지 않으면
+   "self.tzinfo.utcoffset(None)"를 반환하고, 후자가 "None"이나 하루 미
+   만의 크기를 가진 "timedelta" 객체를 반환하지 않으면 예외를 발생시킵
+   니다.
+
+   버전 3.7에서 변경: UTC 오프셋은 분 단위로 제한되지 않습니다.
+
+time.dst()
+
+   "tzinfo"가 "None"이면, "None"을 반환하고, 그렇지 않으면
+   "self.tzinfo.dst(None)"를 반환하고, 후자가 "None"이나 하루 미만의
+   크기를 가진 "timedelta" 객체를 반환하지 않으면 예외를 발생시킵니다.
+
+   버전 3.7에서 변경: DST 오프셋은 분 단위로 제한되지 않습니다.
+
+time.tzname()
+
+   "tzinfo"가 "None"이면, "None"을 반환하고, 그렇지 않으면
+   "self.tzinfo.tzname(None)"를 반환하고, 후자가 "None"이나 문자열 객
+   체를 반환하지 않으면 예외를 발생시킵니다.
+
+
+사용 예: "time"
+---------------
+
+"time" 객체로 작업하는 예제:
+
+   >>> from datetime import time, tzinfo, timedelta
+   >>> class TZ1(tzinfo):
+   ...     def utcoffset(self, dt):
+   ...         return timedelta(hours=1)
+   ...     def dst(self, dt):
+   ...         return timedelta(0)
+   ...     def tzname(self,dt):
+   ...         return "+01:00"
+   ...     def  __repr__(self):
+   ...         return f"{self.__class__.__name__}()"
+   ...
+   >>> t = time(12, 10, 30, tzinfo=TZ1())
+   >>> t
+   datetime.time(12, 10, 30, tzinfo=TZ1())
+   >>> t.isoformat()
+   '12:10:30+01:00'
+   >>> t.dst()
+   datetime.timedelta(0)
+   >>> t.tzname()
+   '+01:00'
+   >>> t.strftime("%H:%M:%S %Z")
+   '12:10:30 +01:00'
+   >>> 'The {} is {:%H:%M}.'.format("time", t)
+   'The time is 12:10.'
+
+
+"tzinfo" 객체
+=============
+
+class datetime.tzinfo
+
+   이것은 추상 베이스 클래스입니다. 즉, 이 클래스를 직접 인스턴스로 만
+   들면 안 됩니다. 특정 시간대에 대한 정보를 캡처하려면 "tzinfo"의 서
+   브 클래스를 정의하십시오.
+
+   "tzinfo"의 (구상 서브 클래스의) 인스턴스는 "datetime"과 "time" 객체
+   의 생성자에 전달될 수 있습니다. 이 객체들은 자신의 어트리뷰트를 지
+   역 시간으로 간주하며, "tzinfo" 객체는 지역 시간의 UTC로부터의 오프
+   셋, 시간대 이름 및 DST 오프셋을 모두 전달된 날짜나 시간 객체에 상대
+   적으로 얻는 메서드들을 지원합니다.
+
+   You need to derive a concrete subclass, and (at least) supply
+   implementations of the standard "tzinfo" methods needed by the
+   "datetime" methods you use. The "datetime" module provides
+   "timezone", a simple concrete subclass of "tzinfo" which can
+   represent timezones with fixed offset from UTC such as UTC itself
+   or North American EST and EDT.
+
+   Special requirement for pickling:  A "tzinfo" subclass must have an
+   "__init__()" method that can be called with no arguments, otherwise
+   it can be pickled but possibly not unpickled again. This is a
+   technical requirement that may be relaxed in the future.
+
+   A concrete subclass of "tzinfo" may need to implement the following
+   methods. Exactly which methods are needed depends on the uses made
+   of aware "datetime" objects. If in doubt, simply implement all of
+   them.
+
+tzinfo.utcoffset(dt)
+
+   지역 시간의 UTC로부터의 오프셋을 UTC의 동쪽에 있을 때 양의 값을 갖
+   는 "timedelta" 객체로 반환합니다. 지역 시간이 UTC의 서쪽이면 이 값
+   은 음수여야 합니다.
+
+   이것은 UTC로부터의 총 오프셋을 나타냅니다; 예를 들어, "tzinfo" 객체
+   가 시간대와 DST 조정을 모두 나타내면, "utcoffset()"은 그들의 합계를
+   반환해야 합니다. UTC 오프셋을 알 수 없으면, "None"을 반환합니다. 그
+   렇지 않으면 반환되는 값은 반드시 "-timedelta(hours=24)"와
+   "timedelta(hours=24)" 사이의 "timedelta" 객체여야 합니다 (오프셋의
+   크기는 하루 미만이어야 합니다). "utcoffset()"의 대부분 구현은 아마
+   도 이 두 가지 중 하나일 것입니다:
+
+      return CONSTANT                 # fixed-offset class
+      return CONSTANT + self.dst(dt)  # daylight-aware class
+
+   "utcoffset()"이 "None"을 반환하지 않으면, "dst()"도 "None"을 반환하
+   지 않아야 합니다.
+
+   "utcoffset()"의 기본 구현은 "NotImplementedError"를 발생시킵니다.
+
+   버전 3.7에서 변경: UTC 오프셋은 분 단위로 제한되지 않습니다.
+
+tzinfo.dst(dt)
+
+   일광 절약 시간 (DST) 조정을 "timedelta" 객체로, 또는 DST 정보를 모
+   르면 "None"을 반환합니다.
+
+   Return "timedelta(0)" if DST is not in effect. If DST is in effect,
+   return the offset as a "timedelta" object (see "utcoffset()" for
+   details). Note that DST offset, if applicable, has already been
+   added to the UTC offset returned by "utcoffset()", so there's no
+   need to consult "dst()" unless you're interested in obtaining DST
+   info separately. For example, "datetime.timetuple()" calls its
+   "tzinfo" attribute's "dst()" method to determine how the "tm_isdst"
+   flag should be set, and "tzinfo.fromutc()" calls "dst()" to account
+   for DST changes when crossing time zones.
+
+   표준과 일광 절약 시간을 모두 모형화하는 "tzinfo" 서브 클래스의 인스
+   턴스 *tz*는 다음과 같은 의미에서 일관되어야 합니다:
+
+   "tz.utcoffset(dt) - tz.dst(dt)"
+
+   must return the same result for every "datetime" *dt* with
+   "dt.tzinfo == tz"  For sane "tzinfo" subclasses, this expression
+   yields the time zone's "standard offset", which should not depend
+   on the date or the time, but only on geographic location. The
+   implementation of "datetime.astimezone()" relies on this, but
+   cannot detect violations; it's the programmer's responsibility to
+   ensure it. If a "tzinfo" subclass cannot guarantee this, it may be
+   able to override the default implementation of "tzinfo.fromutc()"
+   to work correctly with "astimezone()" regardless.
+
+   "dst()"의 대부분 구현은 아마도 이 두 가지 중 하나일 것입니다:
+
+      def dst(self, dt):
+          # a fixed-offset class:  doesn't account for DST
+          return timedelta(0)
+
+   또는:
+
+      def dst(self, dt):
+          # Code to set dston and dstoff to the time zone's DST
+          # transition times based on the input dt.year, and expressed
+          # in standard local time.
+
+          if dston <= dt.replace(tzinfo=None) < dstoff:
+              return timedelta(hours=1)
+          else:
+              return timedelta(0)
+
+   "dst()"의 기본 구현은 "NotImplementedError"를 발생시킵니다.
+
+   버전 3.7에서 변경: DST 오프셋은 분 단위로 제한되지 않습니다.
+
+tzinfo.tzname(dt)
+
+   Return the time zone name corresponding to the "datetime" object
+   *dt*, as a string. Nothing about string names is defined by the
+   "datetime" module, and there's no requirement that it mean anything
+   in particular. For example, "GMT", "UTC", "-500", "-5:00", "EDT",
+   "US/Eastern", "America/New York" are all valid replies. Return
+   "None" if a string name isn't known. Note that this is a method
+   rather than a fixed string primarily because some "tzinfo"
+   subclasses will wish to return different names depending on the
+   specific value of *dt* passed, especially if the "tzinfo" class is
+   accounting for daylight time.
+
+   "tzname()"의 기본 구현은 "NotImplementedError"를 발생시킵니다.
+
+이 메서드들은 "datetime"나 "time" 객체에서 같은 이름의 메서드에 대한
+응답으로 호출됩니다. "datetime" 객체는 자신을 인자로 전달하고, "time"
+객체는 인자로 "None"을 전달합니다. 따라서 "tzinfo" 서브 클래스의 메서
+드는 "None"이나 "datetime" 클래스의 *dt* 인자를 받아들일 준비가 되어
+있어야 합니다.
+
+"None"이 전달되면, 최선의 응답을 결정하는 것은 클래스 설계자에게 달려
+있습니다. 예를 들어, 클래스가 "tzinfo" 프로토콜에 time 객체가 참여하지
+않는다고 말하고 싶다면 "None"을 반환하는 것이 적절합니다. 표준 오프셋
+을 발견하는 다른 규칙이 없으므로, "utcoffset(None)"이 표준 UTC 오프셋
+을 반환하는 것이 더 유용할 수 있습니다.
+
+When a "datetime" object is passed in response to a "datetime" method,
+"dt.tzinfo" is the same object as *self*. "tzinfo" methods can rely on
+this, unless user code calls "tzinfo" methods directly. The intent is
+that the "tzinfo" methods interpret *dt* as being in local time, and
+not need worry about objects in other timezones.
+
+서브 클래스가 재정의할 수 있는 "tzinfo" 메서드가 하나 더 있습니다:
+
+tzinfo.fromutc(dt)
+
+   This is called from the default "datetime.astimezone()"
+   implementation. When called from that, "dt.tzinfo" is *self*, and
+   *dt*'s date and time data are to be viewed as expressing a UTC
+   time. The purpose of "fromutc()" is to adjust the date and time
+   data, returning an equivalent datetime in *self*'s local time.
+
+   Most "tzinfo" subclasses should be able to inherit the default
+   "fromutc()" implementation without problems. It's strong enough to
+   handle fixed-offset time zones, and time zones accounting for both
+   standard and daylight time, and the latter even if the DST
+   transition times differ in different years. An example of a time
+   zone the default "fromutc()" implementation may not handle
+   correctly in all cases is one where the standard offset (from UTC)
+   depends on the specific date and time passed, which can happen for
+   political reasons. The default implementations of "astimezone()"
+   and "fromutc()" may not produce the result you want if the result
+   is one of the hours straddling the moment the standard offset
+   changes.
+
+   에러가 발생하는 경우를 위한 코드를 생략하면, 기본 "fromutc()" 구현
+   은 다음과 같이 동작합니다:
+
+      def fromutc(self, dt):
+          # raise ValueError error if dt.tzinfo is not self
+          dtoff = dt.utcoffset()
+          dtdst = dt.dst()
+          # raise ValueError if dtoff is None or dtdst is None
+          delta = dtoff - dtdst  # this is self's standard offset
+          if delta:
+              dt += delta   # convert to standard local time
+              dtdst = dt.dst()
+              # raise ValueError if dtdst is None
+          if dtdst:
+              return dt + dtdst
+          else:
+              return dt
+
+다음 "tzinfo_examples.py" 파일에는 "tzinfo" 클래스의 몇 가지 예가 나와
+있습니다:
+
+   from datetime import tzinfo, timedelta, datetime
+
+   ZERO = timedelta(0)
+   HOUR = timedelta(hours=1)
+   SECOND = timedelta(seconds=1)
+
+   # A class capturing the platform's idea of local time.
+   # (May result in wrong values on historical times in
+   #  timezones where UTC offset and/or the DST rules had
+   #  changed in the past.)
+   import time as _time
+
+   STDOFFSET = timedelta(seconds = -_time.timezone)
+   if _time.daylight:
+       DSTOFFSET = timedelta(seconds = -_time.altzone)
+   else:
+       DSTOFFSET = STDOFFSET
+
+   DSTDIFF = DSTOFFSET - STDOFFSET
+
+   class LocalTimezone(tzinfo):
+
+       def fromutc(self, dt):
+           assert dt.tzinfo is self
+           stamp = (dt - datetime(1970, 1, 1, tzinfo=self)) // SECOND
+           args = _time.localtime(stamp)[:6]
+           dst_diff = DSTDIFF // SECOND
+           # Detect fold
+           fold = (args == _time.localtime(stamp - dst_diff))
+           return datetime(*args, microsecond=dt.microsecond,
+                           tzinfo=self, fold=fold)
+
+       def utcoffset(self, dt):
+           if self._isdst(dt):
+               return DSTOFFSET
+           else:
+               return STDOFFSET
+
+       def dst(self, dt):
+           if self._isdst(dt):
+               return DSTDIFF
+           else:
+               return ZERO
+
+       def tzname(self, dt):
+           return _time.tzname[self._isdst(dt)]
+
+       def _isdst(self, dt):
+           tt = (dt.year, dt.month, dt.day,
+                 dt.hour, dt.minute, dt.second,
+                 dt.weekday(), 0, 0)
+           stamp = _time.mktime(tt)
+           tt = _time.localtime(stamp)
+           return tt.tm_isdst > 0
+
+   Local = LocalTimezone()
+
+
+   # A complete implementation of current DST rules for major US time zones.
+
+   def first_sunday_on_or_after(dt):
+       days_to_go = 6 - dt.weekday()
+       if days_to_go:
+           dt += timedelta(days_to_go)
+       return dt
+
+
+   # US DST Rules
+   #
+   # This is a simplified (i.e., wrong for a few cases) set of rules for US
+   # DST start and end times. For a complete and up-to-date set of DST rules
+   # and timezone definitions, visit the Olson Database (or try pytz):
+   # http://www.twinsun.com/tz/tz-link.htm
+   # https://sourceforge.net/projects/pytz/ (might not be up-to-date)
+   #
+   # In the US, since 2007, DST starts at 2am (standard time) on the second
+   # Sunday in March, which is the first Sunday on or after Mar 8.
+   DSTSTART_2007 = datetime(1, 3, 8, 2)
+   # and ends at 2am (DST time) on the first Sunday of Nov.
+   DSTEND_2007 = datetime(1, 11, 1, 2)
+   # From 1987 to 2006, DST used to start at 2am (standard time) on the first
+   # Sunday in April and to end at 2am (DST time) on the last
+   # Sunday of October, which is the first Sunday on or after Oct 25.
+   DSTSTART_1987_2006 = datetime(1, 4, 1, 2)
+   DSTEND_1987_2006 = datetime(1, 10, 25, 2)
+   # From 1967 to 1986, DST used to start at 2am (standard time) on the last
+   # Sunday in April (the one on or after April 24) and to end at 2am (DST time)
+   # on the last Sunday of October, which is the first Sunday
+   # on or after Oct 25.
+   DSTSTART_1967_1986 = datetime(1, 4, 24, 2)
+   DSTEND_1967_1986 = DSTEND_1987_2006
+
+   def us_dst_range(year):
+       # Find start and end times for US DST. For years before 1967, return
+       # start = end for no DST.
+       if 2006 < year:
+           dststart, dstend = DSTSTART_2007, DSTEND_2007
+       elif 1986 < year < 2007:
+           dststart, dstend = DSTSTART_1987_2006, DSTEND_1987_2006
+       elif 1966 < year < 1987:
+           dststart, dstend = DSTSTART_1967_1986, DSTEND_1967_1986
+       else:
+           return (datetime(year, 1, 1), ) * 2
+
+       start = first_sunday_on_or_after(dststart.replace(year=year))
+       end = first_sunday_on_or_after(dstend.replace(year=year))
+       return start, end
+
+
+   class USTimeZone(tzinfo):
+
+       def __init__(self, hours, reprname, stdname, dstname):
+           self.stdoffset = timedelta(hours=hours)
+           self.reprname = reprname
+           self.stdname = stdname
+           self.dstname = dstname
+
+       def __repr__(self):
+           return self.reprname
+
+       def tzname(self, dt):
+           if self.dst(dt):
+               return self.dstname
+           else:
+               return self.stdname
+
+       def utcoffset(self, dt):
+           return self.stdoffset + self.dst(dt)
+
+       def dst(self, dt):
+           if dt is None or dt.tzinfo is None:
+               # An exception may be sensible here, in one or both cases.
+               # It depends on how you want to treat them.  The default
+               # fromutc() implementation (called by the default astimezone()
+               # implementation) passes a datetime with dt.tzinfo is self.
+               return ZERO
+           assert dt.tzinfo is self
+           start, end = us_dst_range(dt.year)
+           # Can't compare naive to aware objects, so strip the timezone from
+           # dt first.
+           dt = dt.replace(tzinfo=None)
+           if start + HOUR <= dt < end - HOUR:
+               # DST is in effect.
+               return HOUR
+           if end - HOUR <= dt < end:
+               # Fold (an ambiguous hour): use dt.fold to disambiguate.
+               return ZERO if dt.fold else HOUR
+           if start <= dt < start + HOUR:
+               # Gap (a non-existent hour): reverse the fold rule.
+               return HOUR if dt.fold else ZERO
+           # DST is off.
+           return ZERO
+
+       def fromutc(self, dt):
+           assert dt.tzinfo is self
+           start, end = us_dst_range(dt.year)
+           start = start.replace(tzinfo=self)
+           end = end.replace(tzinfo=self)
+           std_time = dt + self.stdoffset
+           dst_time = std_time + HOUR
+           if end <= dst_time < end + HOUR:
+               # Repeated hour
+               return std_time.replace(fold=1)
+           if std_time < start or dst_time >= end:
+               # Standard time
+               return std_time
+           if start <= std_time < end - HOUR:
+               # Daylight saving time
+               return dst_time
+
+
+   Eastern  = USTimeZone(-5, "Eastern",  "EST", "EDT")
+   Central  = USTimeZone(-6, "Central",  "CST", "CDT")
+   Mountain = USTimeZone(-7, "Mountain", "MST", "MDT")
+   Pacific  = USTimeZone(-8, "Pacific",  "PST", "PDT")
+
+DST 전환점에서 표준 시간과 일광 절약 시간을 모두 고려하는 "tzinfo" 서
+브 클래스에는 일 년에 두 번 불가피한 미묘함이 있음에 유의하십시오. 구
+체적으로, 3월 두 번째 일요일의 1:59 (EST) 다음 분에 시작하고, 11월 첫
+번째 일요일 1:59 (EDT) 다음 분에 끝나는 미국 Eastern(UTC -0500)을 고려
+하십시오:
+
+     UTC   3:MM  4:MM  5:MM  6:MM  7:MM  8:MM
+     EST  22:MM 23:MM  0:MM  1:MM  2:MM  3:MM
+     EDT  23:MM  0:MM  1:MM  2:MM  3:MM  4:MM
+
+   start  22:MM 23:MM  0:MM  1:MM  3:MM  4:MM
+
+     end  23:MM  0:MM  1:MM  1:MM  2:MM  3:MM
+
+DST가 시작할 때 ("start" 줄), 지역 벽시계는 1:59에서 3:00로 도약합니다
+. 그날에는 2:MM 형식의 벽 시간은 실질적인 의미가 없으므로,
+"astimezone(Eastern)"은 DST가 시작하는 날에 "hour == 2"인 결과를 전달
+하지 않습니다. 예를 들어, 2016년 봄의 전진 전환(forward transition)에
+서, 다음과 같은 결과를 얻습니다:
+
+   >>> from datetime import datetime, timezone
+   >>> from tzinfo_examples import HOUR, Eastern
+   >>> u0 = datetime(2016, 3, 13, 5, tzinfo=timezone.utc)
+   >>> for i in range(4):
+   ...     u = u0 + i*HOUR
+   ...     t = u.astimezone(Eastern)
+   ...     print(u.time(), 'UTC =', t.time(), t.tzname())
+   ...
+   05:00:00 UTC = 00:00:00 EST
+   06:00:00 UTC = 01:00:00 EST
+   07:00:00 UTC = 03:00:00 EDT
+   08:00:00 UTC = 04:00:00 EDT
+
+When DST ends (the "end" line), there's a potentially worse problem:
+there's an hour that can't be spelled unambiguously in local wall
+time: the last hour of daylight time. In Eastern, that's times of the
+form 5:MM UTC on the day daylight time ends. The local wall clock
+leaps from 1:59 (daylight time) back to 1:00 (standard time) again.
+Local times of the form 1:MM are ambiguous. "astimezone()" mimics the
+local clock's behavior by mapping two adjacent UTC hours into the same
+local hour then. In the Eastern example, UTC times of the form 5:MM
+and 6:MM both map to 1:MM when converted to Eastern, but earlier times
+have the "fold" attribute set to 0 and the later times have it set to
+1. For example, at the Fall back transition of 2016, we get:
+
+   >>> u0 = datetime(2016, 11, 6, 4, tzinfo=timezone.utc)
+   >>> for i in range(4):
+   ...     u = u0 + i*HOUR
+   ...     t = u.astimezone(Eastern)
+   ...     print(u.time(), 'UTC =', t.time(), t.tzname(), t.fold)
+   ...
+   04:00:00 UTC = 00:00:00 EDT 0
+   05:00:00 UTC = 01:00:00 EDT 0
+   06:00:00 UTC = 01:00:00 EST 1
+   07:00:00 UTC = 02:00:00 EST 0
+
+Note that the "datetime" instances that differ only by the value of
+the "fold" attribute are considered equal in comparisons.
+
+Applications that can't bear wall-time ambiguities should explicitly
+check the value of the "fold" attribute or avoid using hybrid "tzinfo"
+subclasses; there are no ambiguities when using "timezone", or any
+other fixed-offset "tzinfo" subclass (such as a class representing
+only EST (fixed offset -5 hours), or only EDT (fixed offset -4
+hours)).
+
+더 보기:
+
+     "zoneinfo"
+        The "datetime" module has a basic "timezone" class (for
+        handling arbitrary fixed offsets from UTC) and its
+        "timezone.utc" attribute (a UTC timezone instance).
+
+        "zoneinfo" brings the *IANA timezone database* (also known as
+        the Olson database) to Python, and its usage is recommended.
+
+  IANA timezone database
+     시간대 데이터베이스 (종종 tz, tzdata 또는 zoneinfo라고 합니다)에
+     는 전 세계 여러 지역에서 지역 시간의 히스토리를 표현하는 코드와
+     데이터가 포함되어 있습니다. 정치 단체가 변경 한 시간대 경계, UTC
+     오프셋 및 일광 절약 시간 규칙을 반영하기 위해 주기적으로 갱신됩니
+     다.
+
+
+"timezone" 객체
+===============
+
+The "timezone" class is a subclass of "tzinfo", each instance of which
+represents a timezone defined by a fixed offset from UTC.
+
+Objects of this class cannot be used to represent timezone information
+in the locations where different offsets are used in different days of
+the year or where historical changes have been made to civil time.
+
+class datetime.timezone(offset, name=None)
+
+   *offset* 인자는 지역 시간과 UTC 간의 차이를 나타내는 "timedelta" 객
+   체로 지정해야 합니다. 엄격히(경계를 포함하지 않는)
+   "-timedelta(hours=24)"와 "timedelta(hours=24)" 사이여야 합니다. 그
+   렇지 않으면 "ValueError"가 발생합니다.
+
+   *name* 인자는 선택적입니다. 지정되면 "datetime.tzname()" 메서드가
+   반환하는 값으로 사용될 문자열이어야 합니다.
+
+   버전 3.2에 추가.
+
+   버전 3.7에서 변경: UTC 오프셋은 분 단위로 제한되지 않습니다.
+
+timezone.utcoffset(dt)
+
+   "timezone" 인스턴스가 구축될 때 지정된 고정값을 반환합니다.
+
+   *dt* 인자는 무시됩니다. 반환 값은 지역 시간과 UTC 간의 차이와 같은
+   "timedelta" 인스턴스입니다.
+
+   버전 3.7에서 변경: UTC 오프셋은 분 단위로 제한되지 않습니다.
+
+timezone.tzname(dt)
+
+   "timezone" 인스턴스가 구축될 때 지정된 고정값을 반환합니다.
+
+   *name*을 생성자에 제공하지 않았으면, "tzname(dt)"에 의해 반환되는
+   이름은 다음과 같이 "offset" 값으로부터 생성됩니다. *offset*이
+   "timedelta(0)"이면, 이름은 "UTC"이고, 그렇지 않으면 문자열
+   "UTC±HH:MM"입니다. 여기서 ±는 "offset"의 부호이고, HH와 MM은 각각
+   "offset.hours"와 "offset.minutes"의 두 자리 숫자입니다.
+
+   버전 3.6에서 변경: Name generated from "offset=timedelta(0)" is now
+   plain "'UTC'", not "'UTC+00:00'".
+
+timezone.dst(dt)
+
+   항상 "None"을 반환합니다.
+
+timezone.fromutc(dt)
+
+   "dt + offset"을 반환합니다. *dt* 인자는 "tzinfo"가 "self"로 설정된
+   어웨어 "datetime" 인스턴스여야 합니다.
+
+클래스 어트리뷰트:
+
+timezone.utc
+
+   The UTC timezone, "timezone(timedelta(0))".
+
+
+"strftime()" and "strptime()" Behavior
+======================================
+
+"date", "datetime" 및 "time" 객체는 모두 "strftime(format)" 메서드를
+지원하여, 명시적 포맷 문자열로 제어된 시간을 나타내는 문자열을 만듭니
+다.
+
+반대로, "datetime.strptime()" 클래스 메서드는 날짜와 시간을 나타내는
+문자열과 해당 포맷 문자열로 "datetime" 객체를 만듭니다.
+
+The table below provides a high-level comparison of "strftime()"
+versus "strptime()":
+
++------------------+----------------------------------------------------------+--------------------------------------------------------------------------------+
+|                  | "strftime"                                               | "strptime"                                                                     |
+|==================|==========================================================|================================================================================|
+| 용도             | 주어진 포맷에 따라 객체를 문자열로 변환합니다            | 주어진 해당 포맷으로 문자열을 "datetime" 객체로 구문 분석합니다                |
++------------------+----------------------------------------------------------+--------------------------------------------------------------------------------+
+| 메서드의 형      | 인스턴스 메서드                                          | 클래스 메서드                                                                  |
++------------------+----------------------------------------------------------+--------------------------------------------------------------------------------+
+| 메서드가 제공되  | "date"; "datetime"; "time"                               | "datetime"                                                                     |
+| 는 곳            |                                                          |                                                                                |
++------------------+----------------------------------------------------------+--------------------------------------------------------------------------------+
+| 서명             | "strftime(format)"                                       | "strptime(date_string, format)"                                                |
++------------------+----------------------------------------------------------+--------------------------------------------------------------------------------+
+
+
+"strftime()" and "strptime()" Format Codes
+------------------------------------------
+
+다음은 1989 C 표준이 요구하는 모든 포맷 코드 목록이며, 표준 C 구현이
+있는 모든 플랫폼에서 작동합니다.
+
++-------------+----------------------------------+--------------------------+---------+
+| 지시자      | 의미                             | 예                       | 노트    |
+|=============|==================================|==========================|=========|
+| "%a"        | 요일을 로케일의 축약된 이름으로. | Sun, Mon, ..., Sat       | (1)     |
+|             |                                  | (en_US); So, Mo, ..., Sa |         |
+|             |                                  | (de_DE)                  |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%A"        | 요일을 로케일의 전체 이름으로.   | Sunday, Monday, ...,     | (1)     |
+|             |                                  | Saturday (en_US);        |         |
+|             |                                  | Sonntag, Montag, ...,    |         |
+|             |                                  | Samstag (de_DE)          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%w"        | 요일을 10진수로, 0은 일요일이고  | 0, 1, ..., 6             |         |
+|             | 6은 토요일입니다.                |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%d"        | 월중 일(day of the month)을 0으  | 01, 02, ..., 31          | (9)     |
+|             | 로 채워진 10진수로.              |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%b"        | 월을 로케일의 축약된 이름으로.   | Jan, Feb, ..., Dec       | (1)     |
+|             |                                  | (en_US); Jan, Feb, ...,  |         |
+|             |                                  | Dez (de_DE)              |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%B"        | 월을 로케일의 전체 이름으로.     | January, February, ...,  | (1)     |
+|             |                                  | December (en_US);        |         |
+|             |                                  | Januar, Februar, ...,    |         |
+|             |                                  | Dezember (de_DE)         |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%m"        | 월을 0으로 채워진 10진수로.      | 01, 02, ..., 12          | (9)     |
++-------------+----------------------------------+--------------------------+---------+
+| "%y"        | 세기가 없는 해(year)를 0으로 채  | 00, 01, ..., 99          | (9)     |
+|             | 워진 10진수로.                   |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%Y"        | 세기가 있는 해(year)를 10진수로. | 0001, 0002, ..., 2013,   | (2)     |
+|             |                                  | 2014, ..., 9998, 9999    |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%H"        | 시(24시간제)를 0으로 채워진 십진 | 00, 01, ..., 23          | (9)     |
+|             | 수로.                            |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%I"        | 시(12시간제)를 0으로 채워진 십진 | 01, 02, ..., 12          | (9)     |
+|             | 수로.                            |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%p"        | 로케일의 오전이나 오후에 해당하  | AM, PM (en_US); am, pm   | (1),    |
+|             | 는 것.                           | (de_DE)                  | (3)     |
++-------------+----------------------------------+--------------------------+---------+
+| "%M"        | 분을 0으로 채워진 십진수로.      | 00, 01, ..., 59          | (9)     |
++-------------+----------------------------------+--------------------------+---------+
+| "%S"        | 초를 0으로 채워진 10진수로.      | 00, 01, ..., 59          | (4),    |
+|             |                                  |                          | (9)     |
++-------------+----------------------------------+--------------------------+---------+
+| "%f"        | Microsecond as a decimal number, | 000000, 000001, ...,     | (5)     |
+|             | zero-padded to 6 digits.         | 999999                   |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%z"        | "±HHMM[SS[.ffffff]]" 형태의 UTC  | (비어 있음), +0000,      | (6)     |
+|             | 오프셋 (객체가 나이브하면 빈 문  | -0400, +1030, +063415,   |         |
+|             | 자열).                           | -030712.345216           |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%Z"        | 시간대 이름 (객체가 나이브하면   | (비어 있음), UTC, GMT    | (6)     |
+|             | 빈 문자열).                      |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%j"        | 연중 일(day of the year)을 0으로 | 001, 002, ..., 366       | (9)     |
+|             | 채워진 십진수로.                 |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%U"        | Week number of the year (Sunday  | 00, 01, ..., 53          | (7),    |
+|             | as the first day of the week) as |                          | (9)     |
+|             | a zero-padded decimal number.    |                          |         |
+|             | All days in a new year preceding |                          |         |
+|             | the first Sunday are considered  |                          |         |
+|             | to be in week 0.                 |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%W"        | Week number of the year (Monday  | 00, 01, ..., 53          | (7),    |
+|             | as the first day of the week) as |                          | (9)     |
+|             | a zero-padded decimal number.    |                          |         |
+|             | All days in a new year preceding |                          |         |
+|             | the first Monday are considered  |                          |         |
+|             | to be in week 0.                 |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%c"        | 로케일의 적절한 날짜와 시간 표현 | Tue Aug 16 21:30:00 1988 | (1)     |
+|             | .                                | (en_US); Di 16 Aug       |         |
+|             |                                  | 21:30:00 1988 (de_DE)    |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%x"        | 로케일의 적절한 날짜 표현.       | 08/16/88 (None);         | (1)     |
+|             |                                  | 08/16/1988 (en_US);      |         |
+|             |                                  | 16.08.1988 (de_DE)       |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%X"        | 로케일의 적절한 시간 표현.       | 21:30:00 (en_US);        | (1)     |
+|             |                                  | 21:30:00 (de_DE)         |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%%"        | 리터럴 "'%'" 문자.               | %                        |         |
++-------------+----------------------------------+--------------------------+---------+
+
+C89 표준에서 요구하지 않는 몇 가지 추가 지시자가 편의상 포함되어 있습
+니다. 이 파라미터들은 모두 ISO 8601 날짜 값에 해당합니다.
+
++-------------+----------------------------------+--------------------------+---------+
+| 지시자      | 의미                             | 예                       | 노트    |
+|=============|==================================|==========================|=========|
+| "%G"        | ISO 주("%V")의 더 큰 부분을 포함 | 0001, 0002, ..., 2013,   | (8)     |
+|             | 하는 연도를 나타내는 세기가 있는 | 2014, ..., 9998, 9999    |         |
+|             | ISO 8601 연도.                   |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%u"        | ISO 8601 요일을 10진수로, 1은 월 | 1, 2, ..., 7             |         |
+|             | 요일입니다.                      |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+| "%V"        | ISO 8601 주를 월요일을 주의 시작 | 01, 02, ..., 53          | (8),    |
+|             | 으로 하는 십진수로. 주 01은 1월  |                          | (9)     |
+|             | 4일을 포함하는 주입니다.         |                          |         |
++-------------+----------------------------------+--------------------------+---------+
+
+These may not be available on all platforms when used with the
+"strftime()" method. The ISO 8601 year and ISO 8601 week directives
+are not interchangeable with the year and week number directives
+above. Calling "strptime()" with incomplete or ambiguous ISO 8601
+directives will raise a "ValueError".
+
+The full set of format codes supported varies across platforms,
+because Python calls the platform C library's "strftime()" function,
+and platform variations are common. To see the full set of format
+codes supported on your platform, consult the *strftime(3)*
+documentation. There are also differences between platforms in
+handling of unsupported format specifiers.
+
+버전 3.6에 추가: "%G", "%u" 및 "%V"가 추가되었습니다.
+
+
+기술적 세부 사항
+----------------
+
+Broadly speaking, "d.strftime(fmt)" acts like the "time" module's
+"time.strftime(fmt, d.timetuple())" although not all objects support a
+"timetuple()" method.
+
+For the "datetime.strptime()" class method, the default value is
+"1900-01-01T00:00:00.000": any components not specified in the format
+string will be pulled from the default value. [4]
+
+"datetime.strptime(date_string, format)"은 다음과 동등합니다:
+
+   datetime(*(time.strptime(date_string, format)[0:6]))
+
+except when the format includes sub-second components or timezone
+offset information, which are supported in "datetime.strptime" but are
+discarded by "time.strptime".
+
+For "time" objects, the format codes for year, month, and day should
+not be used, as "time" objects have no such values. If they're used
+anyway, "1900" is substituted for the year, and "1" for the month and
+day.
+
+For "date" objects, the format codes for hours, minutes, seconds, and
+microseconds should not be used, as "date" objects have no such
+values. If they're used anyway, "0" is substituted for them.
+
+같은 이유로, 현재 로케일의 문자 집합으로는 표현할 수 없는 유니코드 코
+드 포인트를 포함하는 포맷 문자열의 처리도 플랫폼에 따라 다릅니다. 일부
+플랫폼에서는 이러한 코드 포인트가 그대로 출력에 보존되지만, 다른 곳에
+서는 "strftime"이 "UnicodeError"를 발생시키거나 대신 빈 문자열을 반환
+할 수 있습니다.
+
+노트:
+
+1. Because the format depends on the current locale, care should be
+   taken when making assumptions about the output value. Field
+   orderings will vary (for example, "month/day/year" versus
+   "day/month/year"), and the output may contain Unicode characters
+   encoded using the locale's default encoding (for example, if the
+   current locale is "ja_JP", the default encoding could be any one of
+   "eucJP", "SJIS", or "utf-8"; use "locale.getlocale()" to determine
+   the current locale's encoding).
+
+2. The "strptime()" method can parse years in the full [1, 9999]
+   range, but years < 1000 must be zero-filled to 4-digit width.
+
+   버전 3.2에서 변경: In previous versions, "strftime()" method was
+   restricted to years >= 1900.
+
+   버전 3.3에서 변경: In version 3.2, "strftime()" method was
+   restricted to years >= 1000.
+
+3. When used with the "strptime()" method, the "%p" directive only
+   affects the output hour field if the "%I" directive is used to
+   parse the hour.
+
+4. Unlike the "time" module, the "datetime" module does not support
+   leap seconds.
+
+5. When used with the "strptime()" method, the "%f" directive accepts
+   from one to six digits and zero pads on the right. "%f" is an
+   extension to the set of format characters in the C standard (but
+   implemented separately in datetime objects, and therefore always
+   available).
+
+6. For a naive object, the "%z" and "%Z" format codes are replaced by
+   empty strings.
+
+   어웨어 객체의 경우:
+
+   "%z"
+      "utcoffset()" is transformed into a string of the form
+      "±HHMM[SS[.ffffff]]", where "HH" is a 2-digit string giving the
+      number of UTC offset hours, "MM" is a 2-digit string giving the
+      number of UTC offset minutes, "SS" is a 2-digit string giving
+      the number of UTC offset seconds and "ffffff" is a 6-digit
+      string giving the number of UTC offset microseconds. The
+      "ffffff" part is omitted when the offset is a whole number of
+      seconds and both the "ffffff" and the "SS" part is omitted when
+      the offset is a whole number of minutes. For example, if
+      "utcoffset()" returns "timedelta(hours=-3, minutes=-30)", "%z"
+      is replaced with the string "'-0330'".
+
+   버전 3.7에서 변경: UTC 오프셋은 분 단위로 제한되지 않습니다.
+
+   버전 3.7에서 변경: When the "%z" directive is provided to the
+   "strptime()" method, the UTC offsets can have a colon as a
+   separator between hours, minutes and seconds. For example,
+   "'+01:00:00'" will be parsed as an offset of one hour. In addition,
+   providing "'Z'" is identical to "'+00:00'".
+
+   "%Z"
+      In "strftime()", "%Z" is replaced by an empty string if
+      "tzname()" returns "None"; otherwise "%Z" is replaced by the
+      returned value, which must be a string.
+
+      "strptime()" only accepts certain values for "%Z":
+
+      1. 컴퓨터의 로케일에 대한 "time.tzname"의 모든 값
+
+      2. 하드 코딩된 값 "UTC"와 "GMT"
+
+      따라서 일본에 거주하는 사람은 "JST", "UTC" 및 "GMT"를 유효한 값
+      으로 가질 수 있지만, 아마도 "EST"는 아닙니다. 유효하지 않은 값에
+      대해서는 "ValueError"가 발생합니다.
+
+   버전 3.2에서 변경: When the "%z" directive is provided to the
+   "strptime()" method, an aware "datetime" object will be produced.
+   The "tzinfo" of the result will be set to a "timezone" instance.
+
+7. When used with the "strptime()" method, "%U" and "%W" are only used
+   in calculations when the day of the week and the calendar year
+   ("%Y") are specified.
+
+8. Similar to "%U" and "%W", "%V" is only used in calculations when
+   the day of the week and the ISO year ("%G") are specified in a
+   "strptime()" format string. Also note that "%G" and "%Y" are not
+   interchangeable.
+
+9. When used with the "strptime()" method, the leading zero is
+   optional for  formats "%d", "%m", "%H", "%I", "%M", "%S", "%j",
+   "%U", "%W", and "%V". Format "%y" does require a leading zero.
+
+-[ 각주 ]-
+
+[1] 즉, 상대론적 효과를 무시한다면
+
+[2] 이것은 Dershowitz와 Reingold의 책 *Calendrical Calculations*에 나
+    오는 "역산 그레고리(proleptic Gregorian)" 달력의 정의와 일치합니다
+    . 이 달력은 모든 계산의 기본 달력입니다. 역산 그레고리력 서수
+    (ordinal)와 다른 많은 달력 시스템 사이의 변환을 위한 알고리즘에 관
+    해서는 이 책을 참조하십시오.
+
+[3] See R. H. van Gent's guide to the mathematics of the ISO 8601
+    calendar for a good explanation.
+
+[4] Passing "datetime.strptime('Feb 29', '%b %d')" will fail since
+    "1900" is not a leap year.

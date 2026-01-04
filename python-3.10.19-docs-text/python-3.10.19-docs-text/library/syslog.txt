@@ -1,0 +1,115 @@
+"syslog" --- Unix syslog library routines
+*****************************************
+
+======================================================================
+
+이 모듈은 유닉스 "syslog" 라이브러리 루틴에 대한 인터페이스를 제공합니
+다. "syslog" 기능에 대한 자세한 설명은 유닉스 매뉴얼 페이지를 참조하십
+시오.
+
+This module wraps the system "syslog" family of routines.  A pure
+Python library that can speak to a syslog server is available in the
+"logging.handlers" module as "SysLogHandler".
+
+모듈은 다음 함수를 정의합니다:
+
+syslog.syslog(message)
+syslog.syslog(priority, message)
+
+   *message* 문자열을 시스템 로거로 보냅니다. 필요하면 끝에 줄 넘김이
+   추가됩니다. 각 메시지에는 *시설(facility)* 과 *수준(level)*으로 구
+   성된 우선순위(priority)로 꼬리표가 붙습니다. 선택적 *priority* 인자
+   (기본값은 "LOG_INFO")는 메시지 우선순위를 결정합니다. 시설이 논리합
+   ("LOG_INFO | LOG_USER")을 사용하여 *priority*로 인코딩되지 않으면,
+   "openlog()" 호출에 지정된 값이 사용됩니다.
+
+   "syslog()" 호출 이전에 "openlog()"가 호출되지 않았으면, 인자 없이
+   "openlog()"가 호출됩니다.
+
+   인자 "priority", "message"로 감사 이벤트 "syslog.syslog"를 발생시킵
+   니다.
+
+   버전 3.2에서 변경: In previous versions, "openlog()" would not be
+   called automatically if it wasn't called prior to the call to
+   "syslog()", deferring to the syslog implementation to call
+   "openlog()".
+
+syslog.openlog([ident[, logoption[, facility]]])
+
+   후속 "syslog()" 호출의 로깅 옵션은 "openlog()"를 호출하여 설정할 수
+   있습니다. 로그가 현재 열려 있지 않으면 "syslog()"는 인자 없이
+   "openlog()"를 호출합니다.
+
+   선택적 *ident* 키워드 인자는 모든 메시지 앞에 추가되는 문자열이며,
+   기본값은 선행 경로 구성 요소가 제거된 "sys.argv[0]"입니다. 선택적
+   *logoption* 키워드 인자(기본값은 0)는 비트 필드입니다 -- 결합할 수
+   있는 가능한 값은 아래를 보십시오. 선택적 *facility* 키워드 인자(기
+   본값은 "LOG_USER")는 명시적으로 인코드 된 시설이 없는 메시지에 대한
+   기본 시설을 설정합니다.
+
+   인자 "ident", "logoption", "facility"로 감사 이벤트
+   "syslog.openlog"를 발생시킵니다.
+
+   버전 3.2에서 변경: 이전 버전에서는, 키워드 인자가 허용되지 않았고,
+   *ident*가 필수였습니다.
+
+syslog.closelog()
+
+   syslog 모듈값을 재설정하고 시스템 라이브러리 "closelog()"를 호출합
+   니다.
+
+   이것은 모듈이 처음 임포트될 때처럼 작동하도록 합니다. 예를 들어,
+   "openlog()"는 첫 번째 "syslog()" 호출에서 호출되며("openlog()"가 아
+   직 호출되지 않았다면), *ident* 와 기타 "openlog()" 매개 변수가 기본
+   값으로 재설정됩니다.
+
+   인자 없이 감사 이벤트 "syslog.closelog"를 발생시킵니다.
+
+syslog.setlogmask(maskpri)
+
+   우선순위 마스크를 *maskpri*로 설정하고 이전 마스크값을 반환합니다.
+   *maskpri*에 설정되지 않은 우선순위 수준으로 "syslog()"를 호출하면
+   무시됩니다. 기본값은 모든 우선순위를 로그 하는 것입니다. 함수
+   "LOG_MASK(pri)"는 개별 우선순위 *pri*에 대한 마스크를 계산합니다.
+   함수 "LOG_UPTO(pri)"는 *pri*까지의 모든 우선순위에 대한 마스크를 계
+   산합니다.
+
+   인자 "maskpri"로 감사 이벤트 "syslog.setlogmask"를 발생시킵니다.
+
+모듈은 다음 상수를 정의합니다:
+
+Priority levels (high to low):
+   "LOG_EMERG", "LOG_ALERT", "LOG_CRIT", "LOG_ERR", "LOG_WARNING",
+   "LOG_NOTICE", "LOG_INFO", "LOG_DEBUG".
+
+Facilities:
+   "LOG_KERN", "LOG_USER", "LOG_MAIL", "LOG_DAEMON", "LOG_AUTH",
+   "LOG_LPR", "LOG_NEWS", "LOG_UUCP", "LOG_CRON", "LOG_SYSLOG",
+   "LOG_LOCAL0" to "LOG_LOCAL7", and, if defined in "<syslog.h>",
+   "LOG_AUTHPRIV".
+
+Log options:
+   "LOG_PID", "LOG_CONS", "LOG_NDELAY", and, if defined in
+   "<syslog.h>", "LOG_ODELAY", "LOG_NOWAIT", and "LOG_PERROR".
+
+
+예제
+====
+
+
+간단한 예제
+-----------
+
+간단한 예제 집합:
+
+   import syslog
+
+   syslog.syslog('Processing started')
+   if error:
+       syslog.syslog(syslog.LOG_ERR, 'Processing started')
+
+일부 로그 옵션 설정의 예, 이것은 로그 메시지에 프로세스 ID를 포함하며,
+메일 로깅에 사용되는 대상 시설로 메시지를 기록합니다:
+
+   syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_MAIL)
+   syslog.syslog('E-mail processing initiated...')

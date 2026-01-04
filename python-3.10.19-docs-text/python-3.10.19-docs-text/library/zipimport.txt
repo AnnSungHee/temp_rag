@@ -1,0 +1,183 @@
+"zipimport" --- Import modules from Zip archives
+************************************************
+
+**소스 코드:** Lib/zipimport.py
+
+======================================================================
+
+이 모듈은 파이썬 모듈("*.py", "*.pyc")과 패키지를 ZIP-형식 저장소에서
+임포트하는 기능을 추가합니다. 일반적으로 "zipimport" 모듈을 명시적으로
+사용할 필요는 없습니다; ZIP 저장소 경로가 "sys.path" 항목에 있으면 내
+장 "import" 메커니즘에 의해 자동으로 사용됩니다.
+
+일반적으로, "sys.path"는 문자열 디렉터리 이름의 리스트입니다. 이 모듈
+은 또한 "sys.path" 항목이 ZIP 파일 저장소를 명명하는 문자열이 될 수 있
+도록 합니다. ZIP 저장소에는 패키지 임포트를 지원하는 하위 디렉터리 구
+조가 포함될 수 있으며, 저장소 내의 경로를 지정하여 하위 디렉터리에서만
+임포트 되도록 할 수 있습니다. 예를 들어, 경로 "example.zip/lib/"는 저
+장소 내의 "lib/" 서브 디렉터리에서만 임포트하도록 합니다.
+
+어떤 파일이든 ZIP 저장소에 있을 수 있지만, 임포터는 ".py" 와 ".pyc" 파
+일에 대해서만 호출됩니다. 동적 모듈(".pyd", ".so")의 ZIP 임포트는 허용
+되지 않습니다. 저장소에 ".py" 파일만 포함되어있으면, 파이썬은 해당
+".pyc" 파일을 추가하여 저장소를 수정하지 않습니다. 즉, ZIP 저장소에
+".pyc" 파일이 포함되어 있지 않으면, 임포트가 다소 느릴 수 있습니다.
+
+버전 3.8에서 변경: 전에는, 저장소 주석이 포함된 ZIP 저장소는 지원되지
+않았습니다.
+
+더 보기:
+
+  PKZIP Application Note
+     사용된 형식과 알고리즘 저자인 Phil Katz의 ZIP 파일 형식에 관한 설
+     명서.
+
+  **PEP 273** - Zip 저장소에서 모듈 임포트
+     구현도 제공한 James C. Ahlstrom이 작성했습니다. 파이썬 2.3은
+     **PEP 273**의 명세를 따르지만, Just van Rossum이 작성한 구현을 사
+     용하는데 **PEP 302**에 설명된 임포트 훅을 사용합니다.
+
+  "importlib" - The implementation of the import machinery
+     Package providing the relevant protocols for all importers to
+     implement.
+
+이 모듈은 예외를 정의합니다:
+
+exception zipimport.ZipImportError
+
+   zipimporter 객체가 발생시키는 예외. "ImportError"의 서브 클래스이므
+   로, "ImportError"로도 잡힐 수 있습니다.
+
+
+zipimporter 객체
+================
+
+"zipimporter"는 ZIP 파일을 임포트하는 클래스입니다.
+
+class zipimport.zipimporter(archivepath)
+
+   새로운 zipimporter 인스턴스를 만듭니다. *archivepath*는 ZIP 파일의
+   경로이거나, ZIP 파일 내의 특정 경로여야 합니다. 예를 들어,
+   *archivepath* "foo/bar.zip/lib"는 ZIP 파일 "foo/bar.zip" 내의 "lib"
+   디렉터리에 있는 모듈을 찾습니다 (존재한다면).
+
+   *archivepath*가 유효한 ZIP 저장소를 가리키지 않으면
+   "ZipImportError"가 발생합니다.
+
+   create_module(spec)
+
+      Implementation of "importlib.abc.Loader.create_module()" that
+      returns "None" to explicitly request the default semantics.
+
+      버전 3.10에 추가.
+
+   exec_module(module)
+
+      Implementation of "importlib.abc.Loader.exec_module()".
+
+      버전 3.10에 추가.
+
+   find_loader(fullname, path=None)
+
+      An implementation of
+      "importlib.abc.PathEntryFinder.find_loader()".
+
+      버전 3.10부터 폐지: Use "find_spec()" instead.
+
+   find_module(fullname, path=None)
+
+      Search for a module specified by *fullname*. *fullname* must be
+      the fully qualified (dotted) module name. It returns the
+      zipimporter instance itself if the module was found, or "None"
+      if it wasn't. The optional *path* argument is ignored---it's
+      there for compatibility with the importer protocol.
+
+      버전 3.10부터 폐지: Use "find_spec()" instead.
+
+   find_spec(fullname, target=None)
+
+      An implementation of
+      "importlib.abc.PathEntryFinder.find_spec()".
+
+      버전 3.10에 추가.
+
+   get_code(fullname)
+
+      지정된 모듈의 코드 객체를 반환합니다. 모듈을 임포트할 수 없으면
+      "ZipImportError"를 발생시킵니다.
+
+   get_data(pathname)
+
+      *pathname*와 관련된 데이터를 반환합니다. 파일을 찾을 수 없으면
+      "OSError"를 발생시킵니다.
+
+      버전 3.3에서 변경: "IOError" used to be raised instead of
+      "OSError".
+
+   get_filename(fullname)
+
+      지정한 모듈이 임포트될 때 설정될 "__file__"의 값을 반환합니다.
+      모듈을 임포트할 수 없으면 "ZipImportError"를 발생시킵니다.
+
+      버전 3.1에 추가.
+
+   get_source(fullname)
+
+      지정된 모듈의 소스 코드를 반환합니다. 모듈을 찾을 수 없으면
+      "ZipImportError"를 발생시키고, 저장소에 모듈이 있지만, 소스가 없
+      으면 "None"을 반환합니다.
+
+   is_package(fullname)
+
+      *fullname*으로 지정된 모듈이 패키지면 "True"를 반환합니다. 모듈
+      을 찾을 수 없으면 "ZipImportError"를 발생시킵니다.
+
+   load_module(fullname)
+
+      *fullname*으로 지정된 모듈을 로드 합니다. *fullname*은 완전히 정
+      규화된 (점으로 구분된) 모듈 이름이어야 합니다. 성공하면 임포트
+      된 모듈을 반환하고, 실패하면 "ZipImportError"를 발생시킵니다.
+
+      버전 3.10부터 폐지: Use "exec_module()" instead.
+
+   invalidate_caches()
+
+      Clear out the internal cache of information about files found
+      within the ZIP archive.
+
+      버전 3.10에 추가.
+
+   archive
+
+      있을 수도 있는 하위 경로를 제외한, 임포터와 연결된 ZIP 파일의 파
+      일 이름.
+
+   prefix
+
+      모듈이 검색되는 ZIP 파일 내의 하위 경로. ZIP 파일의 루트를 가리
+      키는 zipimporter 객체에서는 빈 문자열입니다.
+
+   "archive"와 "prefix" 어트리뷰트는, 슬래시로 결합 될 때,
+   "zipimporter" 생성자에 지정된 원래 *archivepath* 인자와 같습니다.
+
+
+예제
+====
+
+다음은 ZIP 저장소에서 모듈을 임포트하는 예제입니다 - "zipimport" 모듈
+이 명시적으로 사용되지 않음에 유의하십시오.
+
+   $ unzip -l example.zip
+   Archive:  example.zip
+     Length     Date   Time    Name
+    --------    ----   ----    ----
+        8467  11-26-02 22:30   jwzthreading.py
+    --------                   -------
+        8467                   1 file
+   $ ./python
+   Python 2.3 (#1, Aug 1 2003, 19:54:32)
+   >>> import sys
+   >>> sys.path.insert(0, 'example.zip')  # Add .zip file to front of path
+   >>> import jwzthreading
+   >>> jwzthreading.__file__
+   'example.zip/jwzthreading.py'

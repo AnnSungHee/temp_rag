@@ -1,0 +1,250 @@
+퓨처
+****
+
+**소스 코드:** Lib/asyncio/futures.py, Lib/asyncio/base_futures.py
+
+======================================================================
+
+*Future* 객체는 **저수준 콜백 기반 코드**와 고수준 async/await 코드 간
+에 다리를 놓는 데 사용됩니다.
+
+
+퓨처 함수
+=========
+
+asyncio.isfuture(obj)
+
+   *obj*가 다음 중 하나면 "True"를 반환합니다:
+
+   * "asyncio.Future"의 인스턴스,
+
+   * "asyncio.Task"의 인스턴스,
+
+   * "_asyncio_future_blocking" 어트리뷰트를 가진 퓨처류 객체.
+
+   버전 3.5에 추가.
+
+asyncio.ensure_future(obj, *, loop=None)
+
+   다음을 반환합니다:
+
+   * *obj*가 "Future", "Task" 또는 퓨처류 객체면, *obj* 인자를 있는 그
+     대로 ("isfuture()"로 검사합니다.)
+
+   * *obj*가 코루틴이면, *obj*를 감싸는 "Task" 객체 ("iscoroutine()"로
+     검사합니다); 이 경우 코루틴은 "ensure_future()"로 예약됩니다.
+
+   * *obj*가 어웨이터블이면, *obj*를 기다릴 "Task" 객체
+     ("inspect.isawaitable()"로 검사합니다.)
+
+   *obj*가 이 중 어느 것도 아니면, "TypeError"가 발생합니다.
+
+   중요:
+
+     새 태스크를 만드는 데 선호되는 "create_task()" 함수도 참조하십시
+     오.Save a reference to the result of this function, to avoid a
+     task disappearing mid-execution.
+
+   버전 3.5.1에서 변경: 함수는 모든 *어웨이터블* 객체를 받아들입니다.
+
+   버전 3.10부터 폐지: Deprecation warning is emitted if *obj* is not
+   a Future-like object and *loop* is not specified and there is no
+   running event loop.
+
+asyncio.wrap_future(future, *, loop=None)
+
+   "concurrent.futures.Future" 객체를 "asyncio.Future" 객체로 감쌉니다
+   .
+
+   버전 3.10부터 폐지: Deprecation warning is emitted if *future* is
+   not a Future-like object and *loop* is not specified and there is
+   no running event loop.
+
+
+Future 객체
+===========
+
+class asyncio.Future(*, loop=None)
+
+   Future는 비동기 연산의 최종 결과를 나타냅니다. 스레드 안전하지 않습
+   니다.
+
+   Future는 *어웨이터블* 객체입니다. 코루틴은 결과나 예외가 설정되거나
+   취소될 때까지 Future 객체를 기다릴 수 있습니다. Future는 여러번 어
+   웨이트할 수 있으며 결과는 같습니다.
+
+   일반적으로 퓨처는 저수준 콜백 기반 코드(예를 들어, asyncio 트랜스포
+   트를 사용하여 구현된 프로토콜에서)가 고수준 async/await 코드와 상호
+   운용되도록 하는 데 사용됩니다.
+
+   간단한 규칙은 사용자가 만나는 API에서 Future 객체를 절대 노출하지
+   않는 것이며, Future 객체를 만드는 권장 방법은
+   "loop.create_future()"를 호출하는 것입니다. 이런 식으로 대체 이벤트
+   루프 구현이 자신의 최적화된 Future 객체 구현을 주입할 수 있습니다.
+
+   버전 3.7에서 변경: "contextvars" 모듈에 대한 지원이 추가되었습니다.
+
+   버전 3.10부터 폐지: Deprecation warning is emitted if *loop* is not
+   specified and there is no running event loop.
+
+   result()
+
+      Future의 결과를 반환합니다.
+
+      Future가 *완료(done)*했고 "set_result()" 메서드로 결과가 설정되
+      었으면, 결괏값이 반환됩니다.
+
+      Future가 *완료(done)*했고 "set_exception()" 메서드로 예외가 설정
+      되었으면, 이 메서드는 예외를 발생시킵니다.
+
+      Future가 *취소(cancelled)*되었으면, 이 메서드는 "CancelledError"
+      예외를 발생시킵니다.
+
+      If the Future's result isn't yet available, this method raises a
+      "InvalidStateError" exception.
+
+   set_result(result)
+
+      Future를 *완료(done)*로 표시하고, 그 결과를 설정합니다.
+
+      Raises a "InvalidStateError" error if the Future is already
+      *done*.
+
+   set_exception(exception)
+
+      Future를 *완료(done)*로 표시하고, 예외를 설정합니다.
+
+      Raises a "InvalidStateError" error if the Future is already
+      *done*.
+
+   done()
+
+      Future가 *완료(done)*했으면 "True"를 반환합니다.
+
+      Future는 *취소(cancelled)*되었거나 "set_result()" 나
+      "set_exception()" 호출로 결과나 예외가 설정되면 *완료(done)*됩니
+      다.
+
+   cancelled()
+
+      Future가 *최소(cancelled)*되었으면, "True"를 반환합니다.
+
+      이 메서드는 대개 결과나 예외를 설정하기 전에 Future가 *취소
+      (cancelled)*되었는지 확인하는 데 사용됩니다:
+
+         if not fut.cancelled():
+             fut.set_result(42)
+
+   add_done_callback(callback, *, context=None)
+
+      Future가 *완료(done)*될 때 실행할 콜백을 추가합니다.
+
+      *callback*는 유일한 인자인 Future 객체로 호출됩니다.
+
+      이 메서드가 호출될 때 Future가 이미 *완료(done)*되었으면, 콜백이
+      "loop.call_soon()"으로 예약됩니다.
+
+      선택적 키워드 전용 *context* 인자는 *callback*이 실행될 사용자
+      정의 "contextvars.Context"를 지정할 수 있도록 합니다. *context*
+      가 제공되지 않으면 현재 컨텍스트가 사용됩니다.
+
+      "functools.partial()"을 사용하여 매개 변수를 callback에 전달할
+      수 있습니다, 예를 들어:
+
+         # Call 'print("Future:", fut)' when "fut" is done.
+         fut.add_done_callback(
+             functools.partial(print, "Future:"))
+
+      버전 3.7에서 변경: *context* 키워드 전용 매개 변수가 추가되었습
+      니다. 자세한 내용은 **PEP 567**을 참조하십시오.
+
+   remove_done_callback(callback)
+
+      콜백 목록에서 *callback*을 제거합니다.
+
+      제거된 콜백 수를 반환합니다. 콜백이 두 번 이상 추가되지 않는 한
+      일반적으로 1입니다.
+
+   cancel(msg=None)
+
+      Future를 취소하고 콜백을 예약합니다.
+
+      Future가 이미 *완료(done)*했거나 *취소(cancelled)*되었으면,
+      "False"를 반환합니다. 그렇지 않으면 Future의 상태를 *취소
+      (cancelled)*로 변경하고, 콜백을 예약한 다음 "True"를 반환합니다.
+
+      버전 3.9에서 변경: *msg* 매개 변수를 추가했습니다.
+
+   exception()
+
+      이 Future에 설정된 예외를 반환합니다.
+
+      Future가 *완료(done)*했을 때만 예외(또는 예외가 설정되지 않았으
+      면 "None")가 반환됩니다.
+
+      Future가 *취소(cancelled)*되었으면, 이 메서드는 "CancelledError"
+      예외를 발생시킵니다.
+
+      Future가 아직 *완료(done)*하지 않았으면, 이 메서드는
+      "InvalidStateError" 예외를 발생시킵니다.
+
+   get_loop()
+
+      Future 객체가 연결된 이벤트 루프를 반환합니다.
+
+      버전 3.7에 추가.
+
+이 예제는 Future 객체를 만들고, Future에 결과를 설정하는 비동기 Task를
+만들고 예약하며, Future가 결과를 얻을 때까지 기다립니다:
+
+   async def set_after(fut, delay, value):
+       # Sleep for *delay* seconds.
+       await asyncio.sleep(delay)
+
+       # Set *value* as a result of *fut* Future.
+       fut.set_result(value)
+
+   async def main():
+       # Get the current event loop.
+       loop = asyncio.get_running_loop()
+
+       # Create a new Future object.
+       fut = loop.create_future()
+
+       # Run "set_after()" coroutine in a parallel Task.
+       # We are using the low-level "loop.create_task()" API here because
+       # we already have a reference to the event loop at hand.
+       # Otherwise we could have just used "asyncio.create_task()".
+       loop.create_task(
+           set_after(fut, 1, '... world'))
+
+       print('hello ...')
+
+       # Wait until *fut* has a result (1 second) and print it.
+       print(await fut)
+
+   asyncio.run(main())
+
+중요:
+
+  Future 객체는 "concurrent.futures.Future"를 흉내 내도록 설계되었습니
+  다. 주요 차이점은 다음과 같습니다:
+
+  * asyncio 퓨처와는 달리, "concurrent.futures.Future" 인스턴스는
+    await 할 수 없습니다.
+
+  * "asyncio.Future.result()" 와 "asyncio.Future.exception()"은
+    *timeout* 인자를 받아들이지 않습니다.
+
+  * "asyncio.Future.result()" 와 "asyncio.Future.exception()"는 Future
+    가 *완료(done)*하지 않았을 때 "InvalidStateError" 예외를 발생시킵
+    니다.
+
+  * "asyncio.Future.add_done_callback()"으로 등록된 콜백은 즉시 호출되
+    지 않습니다. 대신 "loop.call_soon()"로 예약됩니다.
+
+  * asyncio Future는 "concurrent.futures.wait()" 와
+    "concurrent.futures.as_completed()" 함수와 호환되지 않습니다.
+
+  * "asyncio.Future.cancel()" accepts an optional "msg" argument, but
+    "concurrent.futures.cancel()" does not.

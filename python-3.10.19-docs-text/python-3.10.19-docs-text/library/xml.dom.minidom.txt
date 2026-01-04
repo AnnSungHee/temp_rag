@@ -1,0 +1,302 @@
+"xml.dom.minidom" --- Minimal DOM implementation
+************************************************
+
+**소스 코드:** Lib/xml/dom/minidom.py
+
+======================================================================
+
+"xml.dom.minidom"은 다른 언어와 유사한 API를 갖는 문서 객체 모델 인터
+페이스의 최소 구현입니다. 전체(full) DOM보다 단순하고 훨씬 작고자 합니
+다. DOM에 아직 능숙하지 않은 사용자는 XML 처리에 대신
+"xml.etree.ElementTree" 모듈을 사용하는 것을 고려해야 합니다.
+
+경고:
+
+  "xml.dom.minidom" 모듈은 악의적으로 구성된 데이터로부터 안전하지 않
+  습니다. 신뢰할 수 없거나 인증되지 않은 데이터를 구문 분석해야 하면
+  XML 취약점를 참조하십시오.
+
+DOM 응용 프로그램은 일반적으로 일부 XML을 DOM으로 구문 분석하는 것으로
+시작합니다. "xml.dom.minidom"에서는, 구문 분석 함수를 통해 수행됩니다:
+
+   from xml.dom.minidom import parse, parseString
+
+   dom1 = parse('c:\\temp\\mydata.xml')  # parse an XML file by name
+
+   datasource = open('c:\\temp\\mydata.xml')
+   dom2 = parse(datasource)  # parse an open file
+
+   dom3 = parseString('<myxml>Some data<empty/> some more data</myxml>')
+
+"parse()" 함수는 파일명이나 열린 파일 객체를 취할 수 있습니다.
+
+xml.dom.minidom.parse(filename_or_file, parser=None, bufsize=None)
+
+   주어진 입력에서 "Document"를 반환합니다. *filename_or_file*은 파일
+   명이나 파일류 객체일 수 있습니다. 제공되면, *parser*는 SAX2 구문 분
+   석기 객체여야 합니다. 이 함수는 구문 분석기의 문서 처리기를 변경하
+   고 이름 공간 지원을 활성화합니다; 다른 구문 분석기 구성(엔티티 해석
+   기 설정과 같은)은 미리 수행되어 있어야 합니다.
+
+문자열로 XML을 갖고 있다면, "parseString()" 함수를 대신 사용할 수 있습
+니다:
+
+xml.dom.minidom.parseString(string, parser=None)
+
+   *string*을 표현하는 "Document"를 반환합니다. 이 메서드는 문자열에
+   대한 "io.StringIO" 객체를 만들고 이를 "parse()"에 전달합니다.
+
+두 함수 모두 문서의 내용을 표현하는 "Document" 객체를 반환합니다.
+
+"parse()"와 "parseString()" 함수가 하는 일은 임의의 SAX 구문 분석기에
+서 구문 분석 이벤트를 받아들일 수 있고 이를 DOM 트리로 변환하는 "DOM
+구축기(builder)"를 XML 구문 분석기와 연결하는 것입니다. 함수의 이름은
+오해의 소지가 있지만, 인터페이스를 배울 때 이해하기 쉽습니다. 이 함수
+가 반환되기 전에 문서 구문 분석이 완료됩니다; 단지 이 함수들이 구문 분
+석기 구현 자체를 제공하지는 않을 뿐입니다.
+
+"DOM 구현" 객체의 메서드를 호출하여 "Document"를 만들 수도 있습니다.
+"xml.dom" 패키지나 "xml.dom.minidom" 모듈에 있는
+"getDOMImplementation()" 함수를 호출하여 이 객체를 얻을 수 있습니다.
+일단 "Document"를 얻으면, 자식 노드를 추가하여 DOM을 채울 수 있습니다:
+
+   from xml.dom.minidom import getDOMImplementation
+
+   impl = getDOMImplementation()
+
+   newdoc = impl.createDocument(None, "some_tag", None)
+   top_element = newdoc.documentElement
+   text = newdoc.createTextNode('Some textual content.')
+   top_element.appendChild(text)
+
+일단 DOM 문서 객체를 얻으면, 프로퍼티와 메서드를 통해 XML 문서의 일부
+에 액세스 할 수 있습니다. 이러한 프로퍼티들은 DOM 명세에 정의되어 있습
+니다. 문서 객체의 주 프로퍼티는 "documentElement" 프로퍼티입니다. XML
+문서의 메인 엘리먼트를 제공합니다: 모든 다른 것들을 담는 것. 예제 프로
+그램은 다음과 같습니다:
+
+   dom3 = parseString("<myxml>Some data</myxml>")
+   assert dom3.documentElement.tagName == "myxml"
+
+DOM 트리로의 작업이 끝나면, "unlink()" 메서드를 선택적으로 호출하여 필
+요 없는 객체를 조기에 정리할 수 있습니다. "unlink()"는 DOM API에 대한
+"xml.dom.minidom"만의 확장이며 그 노드와 자손들을 실질적으로 쓸모없게
+만듭니다. 그렇지 않으면, 파이썬의 가비지 수집기가 결국 트리의 객체를
+처리하게 될 것입니다.
+
+더 보기:
+
+  Document Object Model (DOM) Level 1 Specification
+     "xml.dom.minidom"이 지원하는 DOM에 대한 W3C 권장 사항.
+
+
+DOM 객체
+========
+
+파이썬 용 DOM API의 정의는 "xml.dom" 모듈 설명서의 일부로 제공됩니다.
+이 절은 그 API와 "xml.dom.minidom"의 차이점을 나열합니다.
+
+Node.unlink()
+
+   순환 GC가 없는 파이썬 버전에서 가비지 수집되도록 DOM 내의 내부 참조
+   를 끊습니다. 순환 GC를 사용할 수 있더라도, 이를 사용하면 대량의 메
+   모리를 더 빨리 사용할 수 있도록 하므로, 더 필요 없게 되는 즉시 DOM
+   객체에 대해 이를 호출하는 것이 좋습니다. "Document" 객체에서만 호출
+   하면 되지만, 해당 노드의 자식을 삭제하기 위해 자식 노드에서 호출할
+   수 있습니다.
+
+   "with" 문을 사용하면 이 메서드를 명시적으로 호출하지 않아도 됩니다.
+   다음 코드는 "with" 블록이 종료될 때 *dom*을 자동으로 unlink 합니다:
+
+      with xml.dom.minidom.parse(datasource) as dom:
+          ... # Work with dom.
+
+Node.writexml(writer, indent='', addindent='', newl='', encoding=None, standalone=None)
+
+   기록기(writer) 객체에 XML을 씁니다. 기록기는 입력으로 텍스트를 받지
+   만 바이트열은 받지 않습니다, 파일 객체 인터페이스와 일치하는
+   "write()" 메서드를 가져야 합니다. *indent* 매개 변수는 현재 노드의
+   들여쓰기입니다. *addindent* 매개 변수는 현재 노드의 서브 노드에 사
+   용할 증분(incremental) 들여쓰기입니다. *newl* 매개 변수는 개행을 끝
+   내는 데 사용할 문자열을 지정합니다.
+
+   "Document" 노드의 경우, 추가 키워드 인자 *encoding*을 사용하여 XML
+   헤더의 인코딩 필드를 지정할 수 있습니다.
+
+   유사하게, *standalone* 인자를 명시적으로 지정하면 standalone 문서
+   선언이 XML 문서의 프롤로그에 추가됩니다. 값이 "True"로 설정되면
+   "standalone="yes""가 추가되고, 그렇지 않으면 ""no""로 설정됩니다.
+   인자를 명시하지 않으면 문서에서 선언을 생략합니다.
+
+   버전 3.8에서 변경: "writexml()" 메서드는 이제 사용자가 지정한 어트
+   리뷰트 순서를 유지합니다.
+
+   버전 3.9에서 변경: *standalone* 매개 변수를 추가했습니다.
+
+Node.toxml(encoding=None, standalone=None)
+
+   DOM 노드가 나타내는 XML이 포함된 문자열이나 바이트열을 반환합니다.
+
+   명시적인 *encoding* [1] 인자를 사용하면, 결과는 지정된 인코딩의 바
+   이트열 입니다. *encoding* 인자가 없으면, 결과는 유니코드 문자열이며
+   , 결과 문자열의 XML 선언은 인코딩을 지정하지 않습니다. UTF-8이 XML
+   의 기본 인코딩이기 때문에, UTF-8 이외의 인코딩으로 이 문자열을 인코
+   딩하는 것은 올바르지 않습니다.
+
+   *standalone* 인자는 "writexml()"에서와 동일하게 동작합니다.
+
+   버전 3.8에서 변경: "toxml()" 메서드는 이제 사용자가 지정한 어트리뷰
+   트 순서를 유지합니다.
+
+   버전 3.9에서 변경: *standalone* 매개 변수를 추가했습니다.
+
+Node.toprettyxml(indent='\t', newl='\n', encoding=None, standalone=None)
+
+   문서의 예쁘게 인쇄된 버전을 반환합니다. *indent*는 들여쓰기 문자열
+   을 지정하고 기본값은 탭입니다; *newl*은 각 줄의 끝에서 방출되는 문
+   자열을 지정하고 기본값은 "\n"입니다.
+
+   *encoding* 인자는 "toxml()"의 해당 인자처럼 동작합니다.
+
+   *standalone* 인자는 "writexml()"에서와 동일하게 동작합니다.
+
+   버전 3.8에서 변경: "toprettyxml()" 메서드는 이제 사용자가 지정한 어
+   트리뷰트 순서를 유지합니다.
+
+   버전 3.9에서 변경: *standalone* 매개 변수를 추가했습니다.
+
+
+DOM 예제
+========
+
+이 예제 프로그램은 간단한 프로그램의 상당히 현실적인 예입니다. 이 특별
+한 경우에, 우리는 DOM의 유연성을 크게 활용하지 않습니다.
+
+   import xml.dom.minidom
+
+   document = """\
+   <slideshow>
+   <title>Demo slideshow</title>
+   <slide><title>Slide title</title>
+   <point>This is a demo</point>
+   <point>Of a program for processing slides</point>
+   </slide>
+
+   <slide><title>Another demo slide</title>
+   <point>It is important</point>
+   <point>To have more than</point>
+   <point>one slide</point>
+   </slide>
+   </slideshow>
+   """
+
+   dom = xml.dom.minidom.parseString(document)
+
+   def getText(nodelist):
+       rc = []
+       for node in nodelist:
+           if node.nodeType == node.TEXT_NODE:
+               rc.append(node.data)
+       return ''.join(rc)
+
+   def handleSlideshow(slideshow):
+       print("<html>")
+       handleSlideshowTitle(slideshow.getElementsByTagName("title")[0])
+       slides = slideshow.getElementsByTagName("slide")
+       handleToc(slides)
+       handleSlides(slides)
+       print("</html>")
+
+   def handleSlides(slides):
+       for slide in slides:
+           handleSlide(slide)
+
+   def handleSlide(slide):
+       handleSlideTitle(slide.getElementsByTagName("title")[0])
+       handlePoints(slide.getElementsByTagName("point"))
+
+   def handleSlideshowTitle(title):
+       print("<title>%s</title>" % getText(title.childNodes))
+
+   def handleSlideTitle(title):
+       print("<h2>%s</h2>" % getText(title.childNodes))
+
+   def handlePoints(points):
+       print("<ul>")
+       for point in points:
+           handlePoint(point)
+       print("</ul>")
+
+   def handlePoint(point):
+       print("<li>%s</li>" % getText(point.childNodes))
+
+   def handleToc(slides):
+       for slide in slides:
+           title = slide.getElementsByTagName("title")[0]
+           print("<p>%s</p>" % getText(title.childNodes))
+
+   handleSlideshow(dom)
+
+
+minidom과 DOM 표준
+==================
+
+"xml.dom.minidom" 모듈은 본질적으로 일부 DOM 2 기능(주로 이름 공간 기
+능)이 있는 DOM 1.0 호환 DOM입니다.
+
+파이썬에서 DOM 인터페이스의 사용법은 간단합니다. 다음과 같은 매핑 규칙
+이 적용됩니다:
+
+* 인터페이스는 인스턴스 객체를 통해 액세스 됩니다. 응용 프로그램은 클
+  래스를 직접 인스턴스로 만들어서는 안 됩니다; "Document" 객체에서 제
+  공되는 생성자 함수를 사용해야 합니다. 파생 인터페이스는 베이스 인터
+  페이스의 모든 연산(및 어트리뷰트)과 새로운 연산을 지원합니다.
+
+* 연산은 메서드로 사용됩니다. DOM은 "in" 매개 변수만 사용하므로, 인자
+  는 정상적인 순서(왼쪽에서 오른쪽으로)로 전달됩니다. 선택적 인자가 없
+  습니다. "void" 연산은 "None"을 반환합니다.
+
+* IDL 어트리뷰트는 인스턴스 어트리뷰트에 매핑됩니다. 파이썬 용 OMG IDL
+  언어 매핑과의 호환성을 위해, 접근자 메서드 "_get_foo()"와
+  "_set_foo()"를 통해 어트리뷰트 "foo"에 액세스할 수도 있습니다.
+  "readonly" 어트리뷰트는 변경하지 않아야 합니다; 실행 시간에 강제되지
+  는 않습니다.
+
+* "short int", "unsigned int", "unsigned long long" 및 "boolean" 형은
+  모두 파이썬 정수 객체에 매핑됩니다.
+
+* "DOMString" 형은 파이썬 문자열에 매핑됩니다. "xml.dom.minidom"은 바
+  이트열이나 문자열을 지원하지만, 일반적으로 문자열을 생성합니다.
+  "DOMString" 형의 값은 W3C의 DOM 명세에 의해 IDL "null" 값을 가질 수
+  있을 때 "None"일 수도 있습니다.
+
+* "const" 선언은 해당 스코프에 있는 변수에 매핑됩니다 (예를 들어
+  "xml.dom.minidom.Node.PROCESSING_INSTRUCTION_NODE"); 변경되지 않아야
+  합니다.
+
+* "DOMException"은 현재 "xml.dom.minidom"에서 지원되지 않습니다. 대신,
+  "xml.dom.minidom"은 "TypeError"와 "AttributeError"와 같은 표준 파이
+  썬 예외를 사용합니다.
+
+* "NodeList" 객체는 파이썬의 내장 리스트 형을 사용하여 구현됩니다. 이
+  러한 객체는 DOM 명세에 정의된 인터페이스를 제공하지만, 이전 버전의
+  파이썬에서는 공식 API를 지원하지 않습니다. 그러나 W3C 권장 사항에 정
+  의된 인터페이스보다 훨씬 "파이썬답습니다".
+
+다음 인터페이스는 "xml.dom.minidom"에서 구현되지 않습니다:
+
+* "DOMTimeStamp"
+
+* "EntityReference"
+
+이들 대부분은 대부분의 DOM 사용자에게 일반적인 쓸모를 제공하지 않는
+XML 문서의 정보를 반영합니다.
+
+-[ 각주 ]-
+
+[1] XML 출력에 포함된 인코딩 이름은 적절한 표준을 준수해야 합니다. 예
+    를 들어, XML 문서의 선언에서 "UTF-8"은 유효하지만, "UTF8"은 파이썬
+    이 이를 인코딩 이름으로 받아들이더라도 유효하지 않습니다.
+    https://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl 과
+    https://www.iana.org/assignments/character-sets/character-
+    sets.xhtml 을 참조하십시오.

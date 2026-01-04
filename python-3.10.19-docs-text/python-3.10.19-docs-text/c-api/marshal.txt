@@ -1,0 +1,88 @@
+데이터 마샬링 지원
+******************
+
+이러한 루틴은 C 코드가 "marshal" 모듈과 같은 데이터 형식을 사용하여 직
+렬화된 객체로 작업 할 수 있도록 합니다. 직렬화 형식으로 데이터를 쓰는
+함수와 데이터를 다시 읽는 데 사용할 수 있는 추가 함수가 있습니다. 마샬
+링 된 데이터를 저장하는 데 사용되는 파일은 바이너리 모드로 열어야 합니
+다.
+
+숫자 값은 최하위 바이트가 먼저 저장됩니다.
+
+The module supports two versions of the data format: version 0 is the
+historical version, version 1 shares interned strings in the file, and
+upon unmarshalling.  Version 2 uses a binary format for floating point
+numbers. "Py_MARSHAL_VERSION" indicates the current file format
+(currently 2).
+
+void PyMarshal_WriteLongToFile(long value, FILE *file, int version)
+
+   "long" 정수 *value*를 *file*로 마샬합니다. *value*의 최하위 32비트
+   만 기록합니다; 기본 "long" 형의 크기와 관계없이. *version*은 파일
+   형식을 나타냅니다.
+
+   This function can fail, in which case it sets the error indicator.
+   Use "PyErr_Occurred()" to check for that.
+
+void PyMarshal_WriteObjectToFile(PyObject *value, FILE *file, int version)
+
+   파이썬 객체 *value*를 *file*로 마샬합니다. *version*은 파일 형식을
+   나타냅니다.
+
+   This function can fail, in which case it sets the error indicator.
+   Use "PyErr_Occurred()" to check for that.
+
+PyObject *PyMarshal_WriteObjectToString(PyObject *value, int version)
+    *반환값: 새 참조.*
+
+   마샬된 *value* 표현을 포함한 바이트열 객체를 반환합니다. *version*
+   은 파일 형식을 나타냅니다.
+
+다음 함수를 사용하면 마샬된 값을 다시 읽을 수 있습니다.
+
+long PyMarshal_ReadLongFromFile(FILE *file)
+
+   읽기 위해 열린 "FILE*"의 데이터 스트림에서 C "long"을 반환합니다.
+   이 함수를 사용하면 "long"의 기본 크기와 관계없이 32비트 값만 읽을
+   수 있습니다.
+
+   에러 시, 적절한 예외("EOFError")를 설정하고 "-1"을 반환합니다.
+
+int PyMarshal_ReadShortFromFile(FILE *file)
+
+   읽기 위해 열린 "FILE*"의 데이터 스트림에서 C "short"를 반환합니다.
+   이 함수를 사용하면 "short"의 기본 크기와 관계없이 16비트 값만 읽을
+   수 있습니다.
+
+   에러 시, 적절한 예외("EOFError")를 설정하고 "-1"을 반환합니다.
+
+PyObject *PyMarshal_ReadObjectFromFile(FILE *file)
+    *반환값: 새 참조.*
+
+   읽기 위해 열린 "FILE*"의 데이터 스트림에서 파이썬 객체를 반환합니다
+   .
+
+   에러 시, 적절한 예외("EOFError", "ValueError" 또는 "TypeError")를
+   설정하고 "NULL"을 반환합니다.
+
+PyObject *PyMarshal_ReadLastObjectFromFile(FILE *file)
+    *반환값: 새 참조.*
+
+   읽기 위해 열린 "FILE*"의 데이터 스트림에서 파이썬 객체를 반환합니다
+   . "PyMarshal_ReadObjectFromFile()"와 달리, 이 함수는 더는 파일에서
+   객체를 읽지 않을 것이라고 가정함으로써, 파일 데이터를 메모리에 적극
+   적으로 로드 할 수 있고, 파일에서 한 바이트씩 읽는 대신 메모리에 있
+   는 데이터에서 역 직렬화가 작동할 수 있습니다. 파일에서 어떤 것도 읽
+   지 않을 것이라는 확신이 들 경우에만 이 변형을 사용하십시오.
+
+   에러 시, 적절한 예외("EOFError", "ValueError" 또는 "TypeError")를
+   설정하고 "NULL"을 반환합니다.
+
+PyObject *PyMarshal_ReadObjectFromString(const char *data, Py_ssize_t len)
+    *반환값: 새 참조.*
+
+   *data*가 가리키는 *len* 바이트를 포함하는 바이트 버퍼의 데이터 스트
+   림에서 파이썬 객체를 반환합니다.
+
+   에러 시, 적절한 예외("EOFError", "ValueError" 또는 "TypeError")를
+   설정하고 "NULL"을 반환합니다.

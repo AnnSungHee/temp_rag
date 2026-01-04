@@ -1,0 +1,149 @@
+파이썬 실행시간 서비스
+**********************
+
+이 장에서 설명하는 모듈들은 파이썬 인터프리터와 그 환경과의 상호 작용
+과 관련된 다양한 서비스를 제공합니다. 다음은 개요입니다:
+
+* "sys" --- System-specific parameters and functions
+
+* "sysconfig" --- Provide access to Python's configuration information
+
+  * 구성 변수
+
+  * 설치 경로
+
+  * 기타 함수
+
+  * "sysconfig" 를 스크립트로 사용하기
+
+* "builtins" --- Built-in objects
+
+* "__main__" --- Top-level code environment
+
+  * "__name__ == '__main__'"
+
+    * "최상위 코드 환경" 이란 무엇인가요?
+
+    * 관용적 사용법
+
+    * 패키징 고려 사항
+
+  * 파이썬 패키지의 "__main__.py"
+
+    * 관용적 사용법
+
+  * "import __main__"
+
+* "warnings" --- Warning control
+
+  * 경고 범주
+
+  * 경고 필터
+
+    * 경고 필터 설명
+
+    * 기본 경고 필터
+
+    * 기본 필터 재정의
+
+  * 일시적인 경고 억제
+
+  * 경고 테스트
+
+  * 새 버전의 종속성에 대한 코드 갱신
+
+  * 사용 가능한 함수
+
+  * 사용 가능한 컨텍스트 관리자
+
+* "dataclasses" --- Data Classes
+
+  * Module contents
+
+  * 초기화 후처리
+
+  * 클래스 변수
+
+  * 초기화 전용 변수
+
+  * 고정 인스턴스
+
+  * 계승
+
+  * Re-ordering of keyword-only parameters in "__init__()"
+
+  * 기본 팩토리 함수
+
+  * 가변 기본값
+
+  * Descriptor-typed fields
+
+* "contextlib" --- "with" 문 컨텍스트를 위한 유틸리티
+
+  * 유틸리티
+
+  * 예제와 조리법
+
+    * 일정하지 않은 수의 컨텍스트 관리자 지원
+
+    * "__enter__" 메서드에서 발생하는 예외 잡기
+
+    * "__enter__" 구현에서 정리하기
+
+    * "try-finally"와 플래그 변수 사용 교체하기
+
+    * 함수 데코레이터로 컨텍스트 관리자 사용하기
+
+  * 일회용, 재사용 가능 및 재진입 가능 컨텍스트 관리자
+
+    * 재진입 가능 컨텍스트 관리자
+
+    * 재사용 가능 컨텍스트 관리자
+
+* "abc" --- Abstract Base Classes
+
+* "atexit" --- Exit handlers
+
+  * "atexit" 예제
+
+* "traceback" --- Print or retrieve a stack traceback
+
+  * "TracebackException" Objects
+
+  * "StackSummary" Objects
+
+  * "FrameSummary" Objects
+
+  * Traceback Examples
+
+* "__future__" --- Future statement definitions
+
+* "gc" --- Garbage Collector interface
+
+* "inspect" --- Inspect live objects
+
+  * 형과 멤버
+
+  * 소스 코드 가져오기
+
+  * Signature 객체로 콜러블 검사하기
+
+  * 클래스와 함수
+
+  * 인터프리터 스택
+
+  * 정적으로 어트리뷰트 가져오기
+
+  * Current State of Generators and Coroutines
+
+  * 코드 객체 비트 플래그
+
+  * 명령 줄 인터페이스
+
+* "site" --- Site-specific configuration hook
+
+  * Readline 구성
+
+  * 모듈 내용
+
+  * 명령 줄 인터페이스

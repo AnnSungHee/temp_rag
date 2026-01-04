@@ -1,0 +1,649 @@
+"functools" --- Higher-order functions and operations on callable objects
+*************************************************************************
+
+**소스 코드:** Lib/functools.py
+
+======================================================================
+
+"functools" 모듈은 고차 함수를 위한 것입니다: 다른 함수에 작용하거나
+다른 함수를 반환하는 함수. 일반적으로, 모든 콜러블 객체는 이 모듈의 목
+적상 함수로 취급될 수 있습니다.
+
+"functools" 모듈은 다음 함수를 정의합니다:
+
+@functools.cache(user_function)
+
+   단순하고 가벼운 무제한 함수 캐시. 때때로 "memoize"라고도 합니다.
+
+   Returns the same as "lru_cache(maxsize=None)", creating a thin
+   wrapper around a dictionary lookup for the function arguments.
+   Because it never needs to evict old values, this is smaller and
+   faster than "lru_cache()" with a size limit.
+
+   예를 들면:
+
+      @cache
+      def factorial(n):
+          return n * factorial(n-1) if n else 1
+
+      >>> factorial(10)      # no previously cached result, makes 11 recursive calls
+      3628800
+      >>> factorial(5)       # just looks up cached value result
+      120
+      >>> factorial(12)      # makes two new recursive calls, the other 10 are cached
+      479001600
+
+   버전 3.9에 추가.
+
+@functools.cached_property(func)
+
+   클래스의 메서드를 값이 한 번 계산된 다음 인스턴스 수명 동안 일반 어
+   트리뷰트로 캐시 되는 프로퍼티로 변환합니다. "property()"와 유사하고
+   , 캐싱이 추가되었습니다. 비싸게 계산되고 그 외에는 사실상 불변인 인
+   스턴스의 프로퍼티에 유용합니다.
+
+   예:
+
+      class DataSet:
+
+          def __init__(self, sequence_of_numbers):
+              self._data = tuple(sequence_of_numbers)
+
+          @cached_property
+          def stdev(self):
+              return statistics.stdev(self._data)
+
+   "cached_property()"의 메커니즘은 "property()"와 다소 다릅니다. 일반
+   프로퍼티는 setter가 정의되지 않은 경우 어트리뷰트 쓰기를 차단합니다
+   . 이와는 달리, *cached_property*는 쓰기를 허용합니다.
+
+   *cached_property* 데코레이터는 조회 시에만, 같은 이름의 어트리뷰트
+   가 존재하지 않을 때만 실행됩니다. 실행되면, *cached_property*는 같
+   은 이름의 어트리뷰트에 기록합니다. 후속 어트리뷰트 읽기와 쓰기는
+   *cached_property* 메서드보다 우선하며 일반 어트리뷰트처럼 작동합니
+   다.
+
+   캐시 된 값은 어트리뷰트를 삭제하여 지울 수 있습니다. 이렇게 하면
+   *cached_property* 메서드가 다시 실행됩니다.
+
+   이 데코레이터는 **PEP 412** 키 공유 딕셔너리의 작동을 방해함에 유의
+   하십시오. 이는 인스턴스 딕셔너리가 평소보다 더 많은 공간을 차지할
+   수 있음을 의미합니다.
+
+   또한, 이 데코레이터는 각 인스턴스의 "__dict__" 어트리뷰트가 가변 매
+   핑일 것을 요구합니다. 이는 메타 클래스(형 인스턴스의 "__dict__" 어
+   트리뷰트가 클래스 이름 공간에 대한 읽기 전용 프락시이기 때문에)와
+   "__dict__"를 정의된 슬롯 중 하나로 포함하지 않고 "__slots__"를 지정
+   하는 것(이러한 클래스는 "__dict__" 어트리뷰트를 전혀 제공하지 않기
+   때문에)과 같은 일부 형에서 작동하지 않음을 의미합니다.
+
+   If a mutable mapping is not available or if space-efficient key
+   sharing is desired, an effect similar to "cached_property()" can be
+   achieved by a stacking "property()" on top of "cache()":
+
+      class DataSet:
+          def __init__(self, sequence_of_numbers):
+              self._data = sequence_of_numbers
+
+          @property
+          @cache
+          def stdev(self):
+              return statistics.stdev(self._data)
+
+   버전 3.8에 추가.
+
+functools.cmp_to_key(func)
+
+   구식 비교 함수를 *키 함수*로 변환합니다. ("sorted()", "min()",
+   "max()", "heapq.nlargest()", "heapq.nsmallest()",
+   "itertools.groupby()"와 같은) 키 함수를 받아들이는 도구와 함께 사용
+   됩니다. 이 함수는 주로 비교 함수 사용을 지원하는 파이썬 2에서 변환
+   되는 프로그램의 전이 도구로 사용됩니다.
+
+   비교 함수는 두 개의 인자를 받아들이고, 그들을 비교하여, 작으면 음수
+   , 같으면 0, 크면 양수를 반환하는 콜러블입니다. 키 함수는 하나의 인
+   자를 받아들이고 정렬 키로 사용할 다른 값을 반환하는 콜러블입니다.
+
+   예:
+
+      sorted(iterable, key=cmp_to_key(locale.strcoll))  # locale-aware sort order
+
+   정렬 예제와 간략한 정렬 자습서는 Sorting HOW TO를 참조하십시오.
+
+   버전 3.2에 추가.
+
+@functools.lru_cache(user_function)
+@functools.lru_cache(maxsize=128, typed=False)
+
+   가장 최근의 *maxsize* 호출까지 저장하는 기억하는(memoizing) 콜러블
+   함수를 감싸는 데코레이터. 비싸거나 I/O 병목 함수가 같은 인자로 주기
+   적으로 호출될 때 시간을 절약할 수 있습니다.
+
+   결과를 캐시 하는 데 딕셔너리가 사용되기 때문에, 함수에 대한 위치와
+   키워드 인자는 *해시 가능*해야 합니다.
+
+   Distinct argument patterns may be considered to be distinct calls
+   with separate cache entries.  For example, *f(a=1, b=2)* and
+   *f(b=2, a=1)* differ in their keyword argument order and may have
+   two separate cache entries.
+
+   *user_function*이 지정되면, 콜러블이어야 합니다. 이는 *lru_cache*
+   데코레이터를 사용자 함수에 직접 적용 할 수 있도록 하며, *maxsize*를
+   기본값 128로 유지합니다:
+
+      @lru_cache
+      def count_vowels(sentence):
+          return sum(sentence.count(vowel) for vowel in 'AEIOUaeiou')
+
+   *maxsize*가 "None"으로 설정되면, LRU 기능이 비활성화되고 캐시가 제
+   한 없이 커질 수 있습니다.
+
+   If *typed* is set to true, function arguments of different types
+   will be cached separately.  If *typed* is false, the implementation
+   will usually regard them as equivalent calls and only cache a
+   single result. (Some types such as *str* and *int* may be cached
+   separately even when *typed* is false.)
+
+   Note, type specificity applies only to the function's immediate
+   arguments rather than their contents.  The scalar arguments,
+   "Decimal(42)" and "Fraction(42)" are be treated as distinct calls
+   with distinct results. In contrast, the tuple arguments "('answer',
+   Decimal(42))" and "('answer', Fraction(42))" are treated as
+   equivalent.
+
+   The wrapped function is instrumented with a "cache_parameters()"
+   function that returns a new "dict" showing the values for *maxsize*
+   and *typed*.  This is for information purposes only.  Mutating the
+   values has no effect.
+
+   캐시의 효과를 측정하고 *maxsize* 매개 변수를 조정하는 것을 돕기 위
+   해, 래핑 된 함수는 *hits*, *misses*, *maxsize* 및 *currsize*를 표시
+   하는 *네임드 튜플*을 반환하는 "cache_info()" 함수로 인스트루먼트 됩
+   니다.
+
+   데코레이터는 캐시를 지우거나 무효로 하기 위한 "cache_clear()" 함수
+   도 제공합니다.
+
+   원래의 하부 함수는 "__wrapped__" 어트리뷰트를 통해 액세스 할 수 있
+   습니다. 이것은 인트로스펙션, 캐시 우회 또는 다른 캐시로 함수를 다시
+   래핑하는 데 유용합니다.
+
+   The cache keeps references to the arguments and return values until
+   they age out of the cache or until the cache is cleared.
+
+   An LRU (least recently used) cache works best when the most recent
+   calls are the best predictors of upcoming calls (for example, the
+   most popular articles on a news server tend to change each day).
+   The cache's size limit assures that the cache does not grow without
+   bound on long-running processes such as web servers.
+
+   In general, the LRU cache should only be used when you want to
+   reuse previously computed values.  Accordingly, it doesn't make
+   sense to cache functions with side-effects, functions that need to
+   create distinct mutable objects on each call, or impure functions
+   such as time() or random().
+
+   정적 웹 콘텐츠를 위한 LRU 캐시의 예:
+
+      @lru_cache(maxsize=32)
+      def get_pep(num):
+          'Retrieve text of a Python Enhancement Proposal'
+          resource = 'https://www.python.org/dev/peps/pep-%04d/' % num
+          try:
+              with urllib.request.urlopen(resource) as s:
+                  return s.read()
+          except urllib.error.HTTPError:
+              return 'Not Found'
+
+      >>> for n in 8, 290, 308, 320, 8, 218, 320, 279, 289, 320, 9991:
+      ...     pep = get_pep(n)
+      ...     print(n, len(pep))
+
+      >>> get_pep.cache_info()
+      CacheInfo(hits=3, misses=8, maxsize=32, currsize=8)
+
+   동적 프로그래밍(dynamic programming) 기법을 구현하기 위해 캐시를 사
+   용하여 피보나치 수를 효율적으로 계산하는 예:
+
+      @lru_cache(maxsize=None)
+      def fib(n):
+          if n < 2:
+              return n
+          return fib(n-1) + fib(n-2)
+
+      >>> [fib(n) for n in range(16)]
+      [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610]
+
+      >>> fib.cache_info()
+      CacheInfo(hits=28, misses=16, maxsize=None, currsize=16)
+
+   버전 3.2에 추가.
+
+   버전 3.3에서 변경: *typed* 옵션을 추가했습니다.
+
+   버전 3.8에서 변경: *user_function* 옵션을 추가했습니다.
+
+   버전 3.9에 추가: Added the function "cache_parameters()"
+
+@functools.total_ordering
+
+   하나 이상의 풍부한 비교(rich comparison) 순서 메서드를 정의하는 클
+   래스를 주면, 이 클래스 데코레이터가 나머지를 제공합니다. 가능한 모
+   든 풍부한 비교 연산을 지정하는 데 드는 노력이 단순화됩니다:
+
+   클래스는 "__lt__()", "__le__()", "__gt__()" 또는 "__ge__()" 중 하나
+   를 정의해야 합니다. 또한, 클래스는 "__eq__()" 메서드를 제공해야 합
+   니다.
+
+   예를 들면:
+
+      @total_ordering
+      class Student:
+          def _is_valid_operand(self, other):
+              return (hasattr(other, "lastname") and
+                      hasattr(other, "firstname"))
+          def __eq__(self, other):
+              if not self._is_valid_operand(other):
+                  return NotImplemented
+              return ((self.lastname.lower(), self.firstname.lower()) ==
+                      (other.lastname.lower(), other.firstname.lower()))
+          def __lt__(self, other):
+              if not self._is_valid_operand(other):
+                  return NotImplemented
+              return ((self.lastname.lower(), self.firstname.lower()) <
+                      (other.lastname.lower(), other.firstname.lower()))
+
+   참고:
+
+     이 데코레이터를 사용하면 올바르게 동작하는 전 순서(totally
+     ordered) 형을 쉽게 만들 수 있지만, 파생된 비교 메서드에서 실행 속
+     도가 느려지고 스택 트레이스가 더 복잡해지는 대가를 지불합니다. 성
+     능 벤치마킹이 이것이 특정 응용 프로그램의 병목임을 가리키면, 6가
+     지의 풍부한 비교 메서드를 모두 구현하여 속도를 쉽게 높일 수 있습
+     니다.
+
+   참고:
+
+     This decorator makes no attempt to override methods that have
+     been declared in the class *or its superclasses*. Meaning that if
+     a superclass defines a comparison operator, *total_ordering* will
+     not implement it again, even if the original method is abstract.
+
+   버전 3.2에 추가.
+
+   버전 3.4에서 변경: Returning NotImplemented from the underlying
+   comparison function for unrecognised types is now supported.
+
+functools.partial(func, /, *args, **keywords)
+
+   호출될 때 위치 인자 *args*와 키워드 인자 *keywords*로 호출된 *func*
+   처럼 동작하는 새 partial 객체를 반환합니다. 더 많은 인자가 호출에
+   제공되면, *args*에 추가됩니다. 추가 키워드 인자가 제공되면,
+   *keywords*를 확장하고 대체합니다. 대략 다음과 동등합니다:
+
+      def partial(func, /, *args, **keywords):
+          def newfunc(*fargs, **fkeywords):
+              newkeywords = {**keywords, **fkeywords}
+              return func(*args, *fargs, **newkeywords)
+          newfunc.func = func
+          newfunc.args = args
+          newfunc.keywords = keywords
+          return newfunc
+
+   "partial()"은 함수의 인자 및/또는 키워드의 일부를 "고정"하여 서명이
+   단순화된 새 객체를 생성하는 부분 함수 응용에 사용됩니다. 예를 들어,
+   "partial()"을 사용하여 *base* 인자의 기본값이 2이면서 "int()" 함수
+   같은 동작을 하는 콜러블을 만들 수 있습니다:
+
+   >>> from functools import partial
+   >>> basetwo = partial(int, base=2)
+   >>> basetwo.__doc__ = 'Convert base 2 string to an int.'
+   >>> basetwo('10010')
+   18
+
+class functools.partialmethod(func, /, *args, **keywords)
+
+   직접 호출하기보다는 메서드 정의로 사용되도록 설계된 것을 제외하고는
+   "partial"과 같이 동작하는 새 "partialmethod" 디스크립터를 반환합니
+   다.
+
+   *func*는 *디스크립터*나 콜러블이어야 합니다 (일반 함수처럼 둘 모두
+   인 객체는 디스크립터로 처리됩니다).
+
+   *func*가 디스크립터(가령 일반 파이썬 함수, "classmethod()",
+   "staticmethod()", "abstractmethod()" 또는 "partialmethod"의 다른 인
+   스턴스)이면, "__get__"에 대한 호출은 하부 디스크립터에 위임되고, 적
+   절한 partial 객체가 결과로 반환됩니다.
+
+   *func*가 디스크립터가 아닌 콜러블이면, 적절한 연결된 메서드가 동적
+   으로 만들어집니다. 이것은 메서드로 사용될 때 일반 파이썬 함수처럼
+   작동합니다: "partialmethod" 생성자에 제공된 *args*와 *keywords*보다
+   도 전에 *self* 인자가 첫 번째 위치 인자로 삽입됩니다.
+
+   예:
+
+      >>> class Cell:
+      ...     def __init__(self):
+      ...         self._alive = False
+      ...     @property
+      ...     def alive(self):
+      ...         return self._alive
+      ...     def set_state(self, state):
+      ...         self._alive = bool(state)
+      ...     set_alive = partialmethod(set_state, True)
+      ...     set_dead = partialmethod(set_state, False)
+      ...
+      >>> c = Cell()
+      >>> c.alive
+      False
+      >>> c.set_alive()
+      >>> c.alive
+      True
+
+   버전 3.4에 추가.
+
+functools.reduce(function, iterable[, initializer])
+
+   Apply *function* of two arguments cumulatively to the items of
+   *iterable*, from left to right, so as to reduce the iterable to a
+   single value.  For example, "reduce(lambda x, y: x+y, [1, 2, 3, 4,
+   5])" calculates "((((1+2)+3)+4)+5)". The left argument, *x*, is the
+   accumulated value and the right argument, *y*, is the update value
+   from the *iterable*.  If the optional *initializer* is present, it
+   is placed before the items of the iterable in the calculation, and
+   serves as a default when the iterable is empty.  If *initializer*
+   is not given and *iterable* contains only one item, the first item
+   is returned.
+
+   대략 다음과 동등합니다:
+
+      def reduce(function, iterable, initializer=None):
+          it = iter(iterable)
+          if initializer is None:
+              value = next(it)
+          else:
+              value = initializer
+          for element in it:
+              value = function(value, element)
+          return value
+
+   모든 중간값을 산출하는 이터레이터는 "itertools.accumulate()"를 참조
+   하십시오.
+
+@functools.singledispatch
+
+   함수를 *싱글 디스패치* *제네릭 함수*로 변환합니다.
+
+   제네릭 함수를 정의하려면, "@singledispatch" 데코레이터로 데코레이트
+   하십시오. "@singledispatch"를 사용해서 함수를 정의할 때, 디스패치는
+   첫 번째 인자의 형으로 일어남에 유의하십시오:
+
+      >>> from functools import singledispatch
+      >>> @singledispatch
+      ... def fun(arg, verbose=False):
+      ...     if verbose:
+      ...         print("Let me just say,", end=" ")
+      ...     print(arg)
+
+   오버로드 된 구현을 함수에 추가하려면, 제네릭 함수의 "register()" 어
+   트리뷰트를 사용하십시오. 데코레이터로 사용할 수 있습니다. 형으로 어
+   노테이트 된 함수의 경우, 데코레이터는 첫 번째 인자의 형을 자동으로
+   유추합니다:
+
+      >>> @fun.register
+      ... def _(arg: int, verbose=False):
+      ...     if verbose:
+      ...         print("Strength in numbers, eh?", end=" ")
+      ...     print(arg)
+      ...
+      >>> @fun.register
+      ... def _(arg: list, verbose=False):
+      ...     if verbose:
+      ...         print("Enumerate this:")
+      ...     for i, elem in enumerate(arg):
+      ...         print(i, elem)
+
+   형 어노테이션을 사용하지 않는 코드의 경우, 적절한 형 인자를 데코레
+   이터 자체에 명시적으로 전달할 수 있습니다:
+
+      >>> @fun.register(complex)
+      ... def _(arg, verbose=False):
+      ...     if verbose:
+      ...         print("Better than complicated.", end=" ")
+      ...     print(arg.real, arg.imag)
+      ...
+
+   *람다*와 사전에 존재하는 함수를 등록할 수 있도록, "register()" 어트
+   리뷰트를 다음과 같은 함수적인 형태로도 사용할 수 있습니다:
+
+      >>> def nothing(arg, verbose=False):
+      ...     print("Nothing.")
+      ...
+      >>> fun.register(type(None), nothing)
+
+   "register()" 어트리뷰트는 데코레이트 되지 않은 함수를 반환합니다.
+   이는 데코레이터 스태킹, "피클링" 그리고 각 변형에 대한 단위 테스트
+   를 독립적으로 만드는 것을 가능하게 합니다:
+
+      >>> @fun.register(float)
+      ... @fun.register(Decimal)
+      ... def fun_num(arg, verbose=False):
+      ...     if verbose:
+      ...         print("Half of your number:", end=" ")
+      ...     print(arg / 2)
+      ...
+      >>> fun_num is fun
+      False
+
+   호출되면, 제네릭 함수는 첫 번째 인자의 형에 따라 디스패치 합니다:
+
+      >>> fun("Hello, world.")
+      Hello, world.
+      >>> fun("test.", verbose=True)
+      Let me just say, test.
+      >>> fun(42, verbose=True)
+      Strength in numbers, eh? 42
+      >>> fun(['spam', 'spam', 'eggs', 'spam'], verbose=True)
+      Enumerate this:
+      0 spam
+      1 spam
+      2 eggs
+      3 spam
+      >>> fun(None)
+      Nothing.
+      >>> fun(1.23)
+      0.615
+
+   특정 형에 대해 등록된 구현이 없으면, 더 일반적인 구현을 찾는 데 메
+   서드 결정 순서가 사용됩니다. "@singledispatch"로 데코레이트 된 원래
+   함수는 베이스 "object" 형으로 등록되어서, 더 나은 구현이 발견되지
+   않으면 사용됩니다.
+
+   구현이 *추상 베이스 클래스*에 등록되면, 베이스 클래스의 가상 서브
+   클래스는 그 구현으로 디스패치 됩니다:
+
+      >>> from collections.abc import Mapping
+      >>> @fun.register
+      ... def _(arg: Mapping, verbose=False):
+      ...     if verbose:
+      ...         print("Keys & Values")
+      ...     for key, value in arg.items():
+      ...         print(key, "=>", value)
+      ...
+      >>> fun({"a": "b"})
+      a => b
+
+   제네릭 함수가 주어진 형에 대해 어떤 구현을 선택하는지 확인하려면
+   "dispatch()" 어트리뷰트를 사용하십시오:
+
+      >>> fun.dispatch(float)
+      <function fun_num at 0x1035a2840>
+      >>> fun.dispatch(dict)    # note: default implementation
+      <function fun at 0x103fe0000>
+
+   등록된 모든 구현에 액세스하려면, 읽기 전용 "registry" 어트리뷰트를
+   사용하십시오:
+
+      >>> fun.registry.keys()
+      dict_keys([<class 'NoneType'>, <class 'int'>, <class 'object'>,
+                <class 'decimal.Decimal'>, <class 'list'>,
+                <class 'float'>])
+      >>> fun.registry[float]
+      <function fun_num at 0x1035a2840>
+      >>> fun.registry[object]
+      <function fun at 0x103fe0000>
+
+   버전 3.4에 추가.
+
+   버전 3.7에서 변경: "register()" 어트리뷰트는 이제 형 어노테이션 사
+   용을 지원합니다.
+
+class functools.singledispatchmethod(func)
+
+   메서드를 *싱글 디스패치* *제네릭 함수*로 변환합니다.
+
+   제네릭 메서드를 정의하려면, "@singledispatchmethod" 데코레이터로 장
+   식하십시오. "@singledispatchmethod"를 사용해서 함수를 정의할 때, 디
+   스패치는 첫 번째 *self*나 *cls*가 아닌 인자의 형에 따라 일어남에 유
+   의하십시오:
+
+      class Negator:
+          @singledispatchmethod
+          def neg(self, arg):
+              raise NotImplementedError("Cannot negate a")
+
+          @neg.register
+          def _(self, arg: int):
+              return -arg
+
+          @neg.register
+          def _(self, arg: bool):
+              return not arg
+
+   "@singledispatchmethod"는 "@classmethod"와 같은 다른 데코레이터와의
+   중첩을 지원합니다. "dispatcher.register"를 허용하기 위해,
+   "singledispatchmethod"는 *가장 바깥* 데코레이터이어야 함에 유의하십
+   시오. 다음은 "neg" 메서드가 클래스의 인스턴스가 아니라 클래스에 연
+   결되는 "Negator" 클래스입니다:
+
+      class Negator:
+          @singledispatchmethod
+          @classmethod
+          def neg(cls, arg):
+              raise NotImplementedError("Cannot negate a")
+
+          @neg.register
+          @classmethod
+          def _(cls, arg: int):
+              return -arg
+
+          @neg.register
+          @classmethod
+          def _(cls, arg: bool):
+              return not arg
+
+   다른 유사한 데코레이터에도 같은 패턴을 사용할 수 있습니다:
+   "@staticmethod", "@abstractmethod" 및 기타.
+
+   버전 3.8에 추가.
+
+functools.update_wrapper(wrapper, wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES)
+
+   Update a *wrapper* function to look like the *wrapped* function.
+   The optional arguments are tuples to specify which attributes of
+   the original function are assigned directly to the matching
+   attributes on the wrapper function and which attributes of the
+   wrapper function are updated with the corresponding attributes from
+   the original function. The default values for these arguments are
+   the module level constants "WRAPPER_ASSIGNMENTS" (which assigns to
+   the wrapper function's "__module__", "__name__", "__qualname__",
+   "__annotations__" and "__doc__", the documentation string) and
+   "WRAPPER_UPDATES" (which updates the wrapper function's "__dict__",
+   i.e. the instance dictionary).
+
+   내부 검사와 기타 목적(예를 들어 "lru_cache()"와 같은 캐싱 데코레이
+   터 우회)을 위해 원래 함수에 액세스 할 수 있도록, 이 함수는 래핑 되
+   는 함수를 가리키는 "__wrapped__" 어트리뷰트를 wrapper에 자동으로 추
+   가합니다.
+
+   이 함수의 주요 용도는 데코레이트 된 함수를 래핑하고 wrapper를 반환
+   하는 *데코레이터* 함수에서 사용하는 것입니다. wrapper 함수가 갱신되
+   지 않으면, 반환된 함수의 메타 데이터는 원래 함수 정의가 아닌
+   wrapper 정의를 반영하게 되어 일반적으로 도움이 되지 않습니다.
+
+   "update_wrapper()"는 함수 이외의 콜러블과 함께 사용할 수 있습니다.
+   래핑 되는 객체에서 누락된 *assigned*나 *updated*로 이름 지정된 어트
+   리뷰트는 무시됩니다 (즉, 이 함수는 wrapper 함수에서 그 어트리뷰트를
+   설정하려고 시도하지 않습니다). wrapper 함수 자체에 *updated*에 이름
+   지정된 어트리뷰트가 없으면 여전히 "AttributeError"가 발생합니다.
+
+   버전 3.2에 추가: Automatic addition of the "__wrapped__" attribute.
+
+   버전 3.2에 추가: Copying of the "__annotations__" attribute by
+   default.
+
+   버전 3.2에서 변경: Missing attributes no longer trigger an
+   "AttributeError".
+
+   버전 3.4에서 변경: "__wrapped__" 어트리뷰트는 이제 해당 함수가
+   "__wrapped__" 어트리뷰트를 정의한 경우에도 항상 래핑 된 함수를 참조
+   합니다. (bpo-17482를 참조하십시오)
+
+@functools.wraps(wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES)
+
+   래퍼 함수를 정의할 때 함수 데코레이터로 "update_wrapper()"를 호출하
+   기 위한 편의 함수입니다. "partial(update_wrapper, wrapped=wrapped,
+   assigned=assigned, updated=updated)"와 동등합니다. 예를 들면:
+
+      >>> from functools import wraps
+      >>> def my_decorator(f):
+      ...     @wraps(f)
+      ...     def wrapper(*args, **kwds):
+      ...         print('Calling decorated function')
+      ...         return f(*args, **kwds)
+      ...     return wrapper
+      ...
+      >>> @my_decorator
+      ... def example():
+      ...     """Docstring"""
+      ...     print('Called example function')
+      ...
+      >>> example()
+      Calling decorated function
+      Called example function
+      >>> example.__name__
+      'example'
+      >>> example.__doc__
+      'Docstring'
+
+   이 데코레이터 팩토리를 사용하지 않으면, example 함수의 이름은
+   "'wrapper'"가 되고, 원래 "example()"의 독스트링은 잃어버리게 됩니다
+   .
+
+
+"partial" 객체
+==============
+
+"partial" 객체는 "partial()"이 만든 콜러블 객체입니다. 세 가지 읽기 전
+용 어트리뷰트가 있습니다:
+
+partial.func
+
+   콜러블 객체나 함수. "partial" 객체에 대한 호출은 새로운 인자와 키워
+   드와 함께 "func"로 전달됩니다.
+
+partial.args
+
+   "partial" 객체 호출에 제공되는 위치 인자 앞에 추가될 가장 왼쪽 위치
+   인자들입니다.
+
+partial.keywords
+
+   "partial" 객체가 호출될 때 제공될 키워드 인자들입니다.
+
+"partial" objects are like "function" objects in that they are
+callable, weak referencable, and can have attributes.  There are some
+important differences.  For instance, the "__name__" and "__doc__"
+attributes are not created automatically.  Also, "partial" objects
+defined in classes behave like static methods and do not transform
+into bound methods during instance attribute look-up.

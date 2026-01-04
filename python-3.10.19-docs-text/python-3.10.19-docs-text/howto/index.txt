@@ -1,0 +1,44 @@
+파이썬 HOWTO
+************
+
+Python HOWTOs are documents that cover a single, specific topic, and
+attempt to cover it fairly completely. Modelled on the Linux
+Documentation Project's HOWTO collection, this collection is an effort
+to foster documentation that's more detailed than the Python Library
+Reference.
+
+Currently, the HOWTOs are:
+
+* Porting Python 2 Code to Python 3
+
+* 확장 모듈을 파이썬 3에 이식하기
+
+* 파이썬 curses 프로그래밍
+
+* Descriptor HowTo Guide
+
+* 함수형 프로그래밍 HOWTO
+
+* 로깅 HOWTO
+
+* 로깅 요리책
+
+* 정규식 HOWTO
+
+* 소켓 프로그래밍 HOWTO
+
+* Sorting HOW TO
+
+* 유니코드 HOWTO
+
+* urllib 패키지를 사용하여 인터넷 리소스를 가져오는 방법
+
+* Argparse 자습서
+
+* ipaddress 모듈에 대한 소개
+
+* 인자 클리닉 How-To
+
+* DTrace와 SystemTap으로 CPython 계측하기
+
+* Annotations Best Practices

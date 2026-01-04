@@ -1,0 +1,107 @@
+"pty" --- Pseudo-terminal utilities
+***********************************
+
+**소스 코드:** Lib/pty.py
+
+======================================================================
+
+"pty" 모듈은 의사 터미널 개념을 처리하기 위한 연산을 정의합니다: 다른
+프로세스를 시작하고, 그것의 제어 터미널에 프로그래밍 방식으로 쓰고 읽
+습니다.
+
+의사 터미널 처리는 플랫폼에 따라 매우 다릅니다. 이 코드는 주로 리눅스,
+FreeBSD, macOS 에서 테스트 되었습니다 (다른 POSIX 플랫폼에서도 작동하
+리라고 기대되지만, 충분히 테스트 되지는 않았습니다).
+
+"pty" 모듈은 다음 함수를 정의합니다:
+
+pty.fork()
+
+   포크. 자식의 제어 터미널을 의사 터미널에 연결합니다. 반환 값은
+   "(pid, fd)"입니다. 자식은 *pid* 0을 받고, *fd*는 *유효하지 않음*에
+   유의하십시오. 부모의 반환 값은 자식의 *pid*이고, *fd*는 자식의 제어
+   터미널(또한, 자식의 표준 입력과 출력)에 연결된 파일 기술자입니다.
+
+pty.openpty()
+
+   가능하면 "os.openpty()"를 사용하고, 그렇지 않으면 일반 유닉스 시스
+   템을 위한 에뮬레이션 코드를 사용해서 새로운 의사 터미널 쌍을 엽니다
+   . 각각 마스터와 슬레이브인 파일 기술자 쌍 "(master, slave)"를 반환
+   합니다.
+
+pty.spawn(argv[, master_read[, stdin_read]])
+
+   프로세스를 스폰하고, 그것의 제어 터미널을 현재 프로세스의 표준 입출
+   력과 연결합니다. 이것은 종종 제어 터미널에서 읽으려고 하는 프로그램
+   을 조절하는 데 사용됩니다. pty 뒤에 스폰된 프로세스가 결국 종료할
+   것으로 기대하고, 그 때 *spawn*이 반환됩니다.
+
+   A loop copies STDIN of the current process to the child and data
+   received from the child to STDOUT of the current process. It is not
+   signaled to the child if STDIN of the current process closes down.
+
+   함수 *master_read*와 *stdin_read*는 그들이 읽어야 할 파일 기술자를
+   전달받고, 항상 바이트열을 반환해야 합니다. 자식 프로세스가 종료하기
+   전에 spawn이 강제로 반환되게 하려면 파일의 끝을 알리기 위해 빈 바이
+   트열을 반환해야 합니다.
+
+   두 함수의 기본 구현은 함수가 호출될 때마다 최대 1024바이트를 읽고
+   반환합니다. *master_read* 콜백으로 의사 터미널의 마스터 파일 기술자
+   가 전달되어 자식 프로세스의 출력을 읽으며, *stdin_read*는 파일 기술
+   자 0을 전달받아, 부모 프로세스의 표준 입력을 읽습니다.
+
+   두 콜백 중 하나가 빈 바이트열을 반환하는 것은 파일 끝(EOF) 조건으로
+   해석되며, 그 이후로 해당 콜백은 호출되지 않습니다. *stdin_read*가
+   EOF 신호를 보내면 제어 터미널은 더는 부모 프로세스나 자식 프로세스
+   와 통신할 수 없습니다. 자식 프로세스가 입력 없이 종료하지 않는 한,
+   *spawn*은 영원히 반복됩니다. *master_read*가 EOF 신호를 보내면 같은
+   동작으로 이어집니다 (적어도 리눅스에서는).
+
+   자식 프로세스에 대한 "os.waitpid()"로부터 온 종료 상태 값을 반환합
+   니다.
+
+   "waitstatus_to_exitcode()" can be used to convert the exit status
+   into an exit code.
+
+   인자 "argv"로 감사 이벤트 "pty.spawn"을 발생시킵니다.
+
+   버전 3.4에서 변경: 이제 "spawn()"은 자식 프로세스에 대한
+   "os.waitpid()"로부터 온 상태 값을 반환합니다.
+
+
+예제
+====
+
+다음 프로그램은 유닉스 명령 *script(1)*과 유사하게 동작하며, 의사 터미
+널을 사용하여 터미널 세션의 모든 입력과 출력을 "typescript"에 기록합니
+다.
+
+   import argparse
+   import os
+   import pty
+   import sys
+   import time
+
+   parser = argparse.ArgumentParser()
+   parser.add_argument('-a', dest='append', action='store_true')
+   parser.add_argument('-p', dest='use_python', action='store_true')
+   parser.add_argument('filename', nargs='?', default='typescript')
+   options = parser.parse_args()
+
+   shell = sys.executable if options.use_python else os.environ.get('SHELL', 'sh')
+   filename = options.filename
+   mode = 'ab' if options.append else 'wb'
+
+   with open(filename, mode) as script:
+       def read(fd):
+           data = os.read(fd, 1024)
+           script.write(data)
+           return data
+
+       print('Script started, file is', filename)
+       script.write(('Script started on %s\n' % time.asctime()).encode())
+
+       pty.spawn(shell, read)
+
+       script.write(('Script done on %s\n' % time.asctime()).encode())
+       print('Script done, file is', filename)

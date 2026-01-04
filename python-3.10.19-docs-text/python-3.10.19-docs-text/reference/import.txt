@@ -1,0 +1,953 @@
+5. 임포트 시스템
+****************
+
+한 *모듈* 에 있는 파이썬 코드는 *임포팅* 이라는 프로세스를 통해 다른
+모듈에 있는 코드들에 대한 접근권을 얻습니다. "import" 문은 임포트 절차
+를 일으키는 가장 흔한 방법이지만, 유일한 방법은 아닙니다.
+"importlib.import_module()" 같은 함수나 내장 "__import__()" 도 임포트
+절차를 일으키는데 사용될 수 있습니다.
+
+"import" 문은 두 가지 연산을 합친 것입니다; 먼저 이름이 가리키는 모듈
+을 찾은 후에, 그 검색의 결과를 지역 스코프의 이름에 연결합니다.
+"import" 문의 검색 연산은 적절한 인자들로 "__import__()" 함수를 호출하
+는 것으로 정의됩니다. "__import__()" 의 반환 값은 "import" 문의 이름
+연결 연산을 수행하는 데 사용됩니다. 이 이름 연결 연산의 정확한 세부사
+항에 대해서는 "import" 문을 보세요.
+
+"__import__()" 의 직접 호출은 모듈을 찾고, 발견된다면, 모듈을 만드는
+연산만을 수행합니다. 부모 패키지를 임포트하거나 여러 캐시
+("sys.modules" 를 포함합니다)를 갱신하는 것과 같은 부수적인 효과들이
+일어날 수 있기는 하지만, 오직 "import" 문만이 이름 연결 연산을 수행합
+니다.
+
+"import" 문이 실행될 때, 표준 내장 "__import__()" 가 호출됩니다. 임포
+트 시스템을 호출하는 다른 메커니즘 ("importlib.import_module()" 같은)
+은 "__import__()" 를 사용하지 않고 임포트 개념을 구현하기 위한 자신의
+방법을 사용할 수 있습니다.
+
+모듈이 처음 임포트 될 때, 파이썬은 모듈을 검색하고, 발견된다면, 모듈
+객체를 만들고 [1], 초기화합니다. 만약 그 이름의 모듈을 발견할 수 없다
+면, "ModuleNotFoundError" 를 일으킵니다. 파이썬은 임포트 절차가 호출될
+때 이름 붙여진 모듈을 찾는 다양한 전략을 구현합니다. 이 전략들은 다음
+섹션에서 설명하는 여러 가지 훅을 통해 수정되고 확장될 수 있습니다.
+
+버전 3.3에서 변경: 임포트 시스템은 **PEP 302** 의 두 번째 단계를 완전
+히 구현하도록 개정되었습니다. 이제 묵시적인 임포트 절차는 없습니다 -
+전체 임포트 시스템이 "sys.meta_path" 을 통해 노출됩니다. 여기에 더해,
+네이티브(native) 이름 공간 패키지의 지원이 구현되었습니다 (**PEP 420**
+을 보세요).
+
+
+5.1. "importlib"
+================
+
+"importlib" 모듈은 임포트 시스템과 상호 작용하기 위한 풍부한 API를 제
+공합니다. 예를 들어, "importlib.import_module()" 는 임포트 절차를 구동
+하는 데 있어 내장 "__import__()" 에 비해 권장되고, 더 간단한 API를 제
+공합니다. 더 상세한 내용은 "importlib" 라이브러리 설명서를 참조하십시
+오.
+
+
+5.2. 패키지(package)
+====================
+
+파이썬은 한 가지 종류의 모듈 객체만 갖고 있고, 모든 모듈은 모듈이 파이
+썬이나 C나 그 밖의 다른 어떤 방법으로 구현되었는지와 상관없이 이 형입
+니다. 모듈을 조직화하고 이름 계층구조를 제공하기 위해, 파이썬은 *패키
+지* 라는 개념을 갖고 있습니다.
+
+패키지를 파일 시스템에 있는 디렉터리라고 생각할 수 있지만, 패키지와 모
+듈이 파일시스템으로부터 올 필요는 없으므로 이 비유를 너무 문자 그대로
+해석하지 말아야 합니다. 이 문서의 목적상, 디렉터리와 파일이라는 비유를
+사용할 것입니다. 파일 시스템 디렉터리처럼, 패키지는 계층적으로 조직화
+하고, 패키지는 보통 모듈뿐만 아니라 서브 패키지도 포함할 수 있습니다.
+
+모든 패키지가 모듈이라는 것을 기억하는 것이 중요합니다. 하지만 모든 모
+듈이 패키지인 것은 아닙니다. 다른 식으로 표현하면, 패키지는 특별한 종
+류의 모듈입니다. 구체적으로, "__path__" 어트리뷰트를 포함하는 모든 모
+듈은 패키지로 취급됩니다.
+
+모든 모듈은 이름이 있습니다. 서브 패키지 이름은 파이썬의 표준 어트리뷰
+트 액세스 문법을 따라, 부모 패키지 이름과 점(dot)으로 구분됩니다. 그래
+서 "email" 이라고 불리는 패키지가 있을 수 있습니다. email 은 다시 서브
+패키지 "email.mime" 을 갖고, 이 서브 패키지 내에 모듈
+"email.mime.text" 가 있을 수 있습니다.
+
+
+5.2.1. 정규 패키지
+------------------
+
+파이썬은 두 가지 종류의 패키지를 정의합니다, *정규 패키지* 와 *이름 공
+간 패키지*. 정규 패키지는 파이썬 3.2와 그 이전에 존재하던 전통적인 패
+키지입니다. 정규 패키지는 보통 "__init__.py" 파일을 가진 디렉터리로 구
+현됩니다. 정규 패키지가 임포트될 때, 이 "__init__.py" 파일이 묵시적으
+로 실행되고, 그것이 정의하는 객체들이 패키지의 이름 공간의 이름들도 연
+결됩니다. "__init__.py" 파일은 다른 모듈들이 가질 수 있는 것과 같은 파
+이썬 코드를 포함할 수 있고, 파이썬은 임포트될 때 모듈에 몇 가지 어트리
+뷰트를 추가합니다.
+
+예를 들어, 다음과 같은 파일시스템 배치는 최상위 "parent" 패키지와 세
+개의 서브 패키지를 정의합니다:
+
+   parent/
+       __init__.py
+       one/
+           __init__.py
+       two/
+           __init__.py
+       three/
+           __init__.py
+
+"parent.one" 을 임포트하면 "parent/__init__.py" 과
+"parent/one/__init__.py" 을 묵시적으로 실행합니다. 뒤이은 "parent.two"
+와 "parent.three" 의 임포트는 각각 "parent/two/__init__.py" 와
+"parent/three/__init__.py" 를 실행합니다.
+
+
+5.2.2. 이름 공간 패키지
+-----------------------
+
+이름 공간 패키지는 여러 가지 *포션* 들의 복합체인데, 각 포션들은 부모
+패키지의 서브 패키지로 이바지합니다. 포션들은 파일시스템의 다른 위치에
+놓일 수 있습니다. 포션들은 zip 파일이나 네트워크나 파이썬이 임포트 할
+때 검색하는 어떤 다른 장소에서 발견될 수 있습니다. 이름 공간 패키지는
+파일시스템의 객체와 직접적인 상관관계가 있을 수도 있고 그렇지 않을 수
+도 있습니다; 구체적인 형태가 없는 가상 모듈일 수도 있습니다.
+
+이름 공간 패키지는 "__path__" 어트리뷰트로 일반적인 리스트를 사용하지
+않습니다. 대신에 특별한 이터러블 형을 사용하는데, 그 패키지 내의 다음
+임포트 시도에서 그것의 부모 패키지(또는 최상위 패키지의 경우
+"sys.path") 의 경로가 변했으면 패키지 포션에 대한 새 검색을 자동으로
+수행하게 됩니다.
+
+이름 공간 패키지의 경우, "parent/__init__.py" 파일이 없습니다. 사실,
+임포트 검색 동안 여러 개의 "parent" 디렉터리가 발견될 수 있고, 각각의
+것은 다른 포션들에 의해 제공됩니다. 그래서 "parent/one" 은 물리적으로
+"parent/two" 옆에 위치하지 않을 수 있습니다. 이 경우, 파이썬은 자신 또
+는 서브 패키지 중 어느 하나가 임포트 될 때마다 최상위 "parent" 패키지
+를 위한 이름 공간 패키지를 만듭니다.
+
+이름 공간 패키지의 규격은 **PEP 420** 을 참조하세요.
+
+
+5.3. 검색
+=========
+
+검색을 시작하기 위해, 파이썬은 임포트될 모듈(또는 패키지, 하지만 이 논
+의에서 차이점은 중요하지 않다)의 완전히 *정규화된 이름* 을 필요로 합니
+다. 이 이름은 "import" 문으로 제공된 여러 인자나,
+"importlib.import_module()" 나 "__import__()" 함수로 전달된 매개변수들
+로부터 옵니다.
+
+이 이름은 임포트 검색의 여러 단계에서 사용되는데, 서브 모듈로 가는 점
+으로 구분된 경로일 수 있습니다, 예를 들어 "foo.bar.baz". 이 경우에, 파
+이썬은 먼저 "foo" 를, 그다음에 "foo.bar" 를, 마지막으로 "foo.bar.baz"
+를 임포트하려고 시도합니다. 만약 중간 임포트가 어느 하나라도 실패한다
+면 "ModuleNotFoundError" 가 발생합니다.
+
+
+5.3.1. 모듈 캐시
+----------------
+
+임포트 검색 도중 처음으로 검사되는 장소는 "sys.modules" 입니다. 이 매
+핑은 중간 경로들을 포함해서 전에 임포트 된 모든 모듈의 캐시로 기능합니
+다. 그래서 만약 "foo.bar.baz" 가 앞서 임포트 되었다면, "sys.modules"
+는 "foo", "foo.bar", "foo.bar.baz" 항목들을 포함합니다. 각 키에 대응하
+는 값들은 모듈 객체입니다.
+
+임포트하는 동안, 모듈 이름을 "sys.modules" 에서 찾고, 만약 있다면 해당
+값이 임포트를 만족하는 모듈이고, 프로세스는 완료됩니다. 하지만 값이
+"None" 이면, "ModuleNotFoundError"  를 일으킵니다. 만약 모듈 이름이 없
+다면, 파이썬은 모듈 검색을 계속 진행합니다.
+
+"sys.modules" 은 쓰기가 허락됩니다. 키를 삭제해도 해당 모듈을 파괴하지
+는 않지만(다른 모듈들이 아직 그 모듈에 대한 참조를 유지하고 있을 수 있
+으므로), 해당 이름의 모듈에 대한 캐시를 무효화해서, 다음 임포트때 파이
+썬으로 하여금 그 모듈을 다시 찾도록 만듭니다. 키에는 "None" 을 대입할
+수도 있는데, 다음 임포트 때 "ModuleNotFoundError" 가 일어나도록 만듭니
+다.
+
+모듈 객체에 대한 참조를 유지한다면, "sys.modules" 의 캐시 항목을 무효
+로 한 후 다시 임포트하면 두 모듈 객체는 같은 것이 아니게 됨에 주의해야
+합니다. 반면에 "importlib.reload()" 는 같은 모듈 객체를 재사용하고, 간
+단하게 모듈의 코드를 다시 실행해서 모듈의 내용을 다시 초기화합니다.
+
+
+5.3.2. 파인더(finder)와 로더(loader)
+------------------------------------
+
+모듈이 "sys.modules" 에서 발견되지 않으면, 모듈을 찾아서 로드하기 위해
+파이썬의 임포트 프로토콜이 구동됩니다. 이 프로토콜은 두 개의 개념적 객
+체들로 구성되어 있습니다, *파인더* 와 *로더*. 파인더의 일은 자신이 알
+고 있는 전략을 사용해, 주어진 이름의 모듈을 찾을 수 있는지 결정하는 것
+입니다. 두 인터페이스 모두를 구현한 객체들을 *임포터*라고 부릅니다 -
+요청한 모듈을 로딩할 수 있다고 판단할 때 자신을 돌려줍니다.
+
+파이썬은 여러 가지 기본 파인더들과 임포터들을 포함하고 있습니다. 첫 번
+째 것은 내장 모듈들의 위치를 찾을 수 있고, 두 번째 것은 프로즌 모듈
+(frozen module)의 위치를 찾을 수 있고, 세 번째 것은 모듈을 *임포트 경
+로* 에서 검색합니다. *임포트 경로* 는 파일 시스템의 경로나 zip 파일을
+가리키는 위치들의 목록입니다. 그것은 URL로 식별될 수 있는 것들처럼, 위
+치가 지정될 수 있는 자원들을 검색하도록 확장될 수 있습니다.
+
+임포트 절차는 확장 가능해서, 모듈 검색의 범위를 확대하기 위해 새 파인
+더를 추가할 수 있습니다.
+
+파인더는 실제로 모듈을 로드하지는 않습니다. 주어진 이름의 모듈을 찾으
+면 임포트와 관련된 정보들을 요약한 *모듈 스펙 (module spec)* 을 돌려주
+는데, 임포트 절차는 모듈을 로딩할 때 이것을 사용하게 됩니다.
+
+다음 섹션은 파인더와 로더의 프로토콜에 대해 좀 더 자세히 설명하는데,
+임포트 절차를 확장하기 위해 어떻게 새로운 것들을 만들고 등록하는지를
+포함합니다.
+
+버전 3.4에서 변경: 이전 버전의 파이썬에서, 파인더가 *로더* 를 직접 돌
+려주었지만, 이제는 로더를 *포함하고* 있는 모듈 스펙을 돌려줍니다. 임포
+트 도중 로더가 아직 사용되기는 하지만 그 역할은 축소되었습니다.
+
+
+5.3.3. 임포트 훅(import hooks)
+------------------------------
+
+임포트 절차는 확장할 수 있도록 설계되었습니다; 일차적인 메커니즘은 *임
+포트 훅(import hook)* 입니다. 두 가지 종류의 임포트 훅이 있습니다: *메
+타 훅(meta hook)* 과 *임포트 경로 훅(import path hook)*.
+
+메타 훅은 임포트 처리의 처음에, "sys.modules" 캐시 조회를 제외한 다른
+임포트 처리들이 시작되기 전에 호출됩니다. 이것은 메타 훅이 "sys.path"
+처리, 프로즌 모듈, 내장 모듈들을 재정의할 수 있게 합니다. 다음에 설명
+하듯이, 메타 훅은 "sys.meta_path" 에 새 파인더 객체를 추가하는 방법으
+로 등록할 수 있습니다.
+
+임포트 경로 훅은 "sys.path" (혹은 "package.__path__") 처리 일부로, 관
+련된 경로 항목을 만나는 시점에 호출됩니다. 다음에 설명하듯이, 임포트
+경로 훅은 "sys.path_hooks" 에 새 콜러블을 추가하는 방법으로 등록할 수
+있습니다.
+
+
+5.3.4. 메타 경로(meta path)
+---------------------------
+
+When the named module is not found in "sys.modules", Python next
+searches "sys.meta_path", which contains a list of meta path finder
+objects.  These finders are queried in order to see if they know how
+to handle the named module.  Meta path finders must implement a method
+called "find_spec()" which takes three arguments: a name, an import
+path, and (optionally) a target module.  The meta path finder can use
+any strategy it wants to determine whether it can handle the named
+module or not.
+
+만약 메타 경로 파인더가 주어진 이름의 모듈을 처리하는 법을 안다면, 스
+펙 객체를 돌려줍니다. 그럴 수 없다면 "None" 을 돌려줍니다. 만약
+"sys.meta_path" 처리가 스펙을 돌려주지 못하고 목록의 끝에 도달하면,
+"ModuleNotFoundError" 를 일으킵니다. 발생하는 다른 예외들은 그냥 확산
+시키고, 임포트 프로세스를 중단합니다.
+
+The "find_spec()" method of meta path finders is called with two or
+three arguments.  The first is the fully qualified name of the module
+being imported, for example "foo.bar.baz". The second argument is the
+path entries to use for the module search.  For top-level modules, the
+second argument is "None", but for submodules or subpackages, the
+second argument is the value of the parent package's "__path__"
+attribute. If the appropriate "__path__" attribute cannot be accessed,
+a "ModuleNotFoundError" is raised.  The third argument is an existing
+module object that will be the target of loading later. The import
+system passes in a target module only during reload.
+
+메타 경로는 한 번의 임포트 요청에 대해 여러 번 탐색 될 수 있습니다. 예
+를 들어, 대상 모듈들이 아무것도 캐싱 되지 않았다고 할 때,
+"foo.bar.baz" 를 임포트 하려면, 먼저 각 메타 경로 파인더 ("mpf")들에
+대해 "mpf.find_spec("foo", None, None)" 를 호출해서 최상위 임포트를 수
+행합니다. "foo" 가 임포트 된 후에, 메타 경로를 두 번째 탐색해서
+"foo.bar" 를 임포트 하는데, "mpf.find_spec("foo.bar", foo.__path__,
+None)" 를 호출합니다. 일단 "foo.bar" 가 임포트 되면, 마지막 탐색은
+"mpf.find_spec("foo.bar.baz", foo.bar.__path__, None)" 를 호출합니다.
+
+어떤 메타 경로 파인더들은 오직 최상위 임포트만 지원합니다. 이런 임포터
+들은 두 번째 인자로 "None" 이 아닌 것이 오면 항상 "None" 을 돌려줍니다
+.
+
+파이썬의 기본 "sys.meta_path" 는 세 개의 메타 경로 파인더를 갖고 있습
+니다. 하나는 내장 모듈을 임포트하는 법을 알고, 하나는 프로즌 모듈을 임
+포트하는 법을 알고, 하나는 *임포트 경로* 에서 모듈을 임포트하는 법을
+압니다(즉 *경로 기반 파인더*).
+
+버전 3.4에서 변경: The "find_spec()" method of meta path finders
+replaced "find_module()", which is now deprecated.  While it will
+continue to work without change, the import machinery will try it only
+if the finder does not implement "find_spec()".
+
+버전 3.10에서 변경: Use of "find_module()" by the import system now
+raises "ImportWarning".
+
+
+5.4. 로딩(loading)
+==================
+
+모듈 스펙이 발견되면, 임포트 절차는 모듈을 로딩할 때 그것(그것이 가진
+로더도)을 사용합니다. 여기에 임포트의 로딩 과정 동안 일어나는 일에 대
+한 대략적인 그림이 있습니다:
+
+   module = None
+   if spec.loader is not None and hasattr(spec.loader, 'create_module'):
+       # It is assumed 'exec_module' will also be defined on the loader.
+       module = spec.loader.create_module(spec)
+   if module is None:
+       module = ModuleType(spec.name)
+   # The import-related module attributes get set here:
+   _init_module_attrs(spec, module)
+
+   if spec.loader is None:
+       # unsupported
+       raise ImportError
+   if spec.origin is None and spec.submodule_search_locations is not None:
+       # namespace package
+       sys.modules[spec.name] = module
+   elif not hasattr(spec.loader, 'exec_module'):
+       module = spec.loader.load_module(spec.name)
+       # Set __loader__ and __package__ if missing.
+   else:
+       sys.modules[spec.name] = module
+       try:
+           spec.loader.exec_module(module)
+       except BaseException:
+           try:
+               del sys.modules[spec.name]
+           except KeyError:
+               pass
+           raise
+   return sys.modules[spec.name]
+
+다음과 같은 세부 사항에 주의해야 합니다:
+
+   * 만약 주어진 이름의 모듈이 "sys.modules" 에 있다면, 임포트는 이미
+     그걸 돌려줄 겁니다.
+
+   * 로더가 모듈을 실행하기 전에 모듈은 "sys.modules" 에 자리를 잡습니
+     다. 이것은 필수적인데 모듈이 (직접적 혹은 간접적으로) 자신을 임포
+     트 할 수 있기 때문입니다; 먼저 "sys.modules" 에 추가함으로써 최악
+     의 상황에 제한 없는 재귀(recursion)를 방지하고, 최선의 상황에 여
+     러 번 로딩되는 것을 막습니다.
+
+   * 로딩이 실패하면, 실패한 모듈(오직 실패한 모듈만)은 "sys.modules"
+     에서 삭제됩니다. "sys.modules" 캐시에 이미 있는 모듈과 부수적 효
+     과로 성공적으로 로딩된 모듈들은 캐시에 남아있어야만 합니다. 이는
+     실패한 모듈조차 "sys.modules" 에 남아있게 되는 리로딩과 대비됩니
+     다.
+
+   * 모듈이 만들어졌지만, 아직 실행되기 전에, 뒤의 섹션 에서 요약되듯
+     이, 임포트 절차는 임포트 관련 모듈 어트리뷰트들을 설정합니다(위의
+     의사 코드 예에서 “_init_module_attrs”).
+
+   * 모듈 실행은 로딩에서 모듈의 이름 공간이 채워지는 결정적 순간입니
+     다. 실행은 전적으로 로더에 위임되는데, 로더가 어떤 것이 어떻게 채
+     워져야 하는지 결정합니다.
+
+   * 로딩 동안 만들어지고 exec_module() 로 전달되는 모듈은 임포트의 끝
+     에 반환되는 것이 아닐 수 있습니다 [2].
+
+버전 3.4에서 변경: 임포트 시스템이 기초 공사에 대한 로더의 책임을 들고
+갔습니다. 이것들은 전에는 "importlib.abc.Loader.load_module()" 메서드
+에서 수행되었습니다.
+
+
+5.4.1. 로더
+-----------
+
+모듈 로더는 로딩의 결정적인 기능을 제공합니다: 모듈 실행. 임포트 절차
+는 하나의 인자로 "importlib.abc.Loader.exec_module()" 메서드를 호출하
+는데, 실행할 모듈 객체가 전달됩니다. "exec_module()" 이 돌려주는 값은
+무시됩니다.
+
+로더는 다음과 같은 요구 조건들을 만족해야 합니다:
+
+   * 만약 모듈이 파이썬 모듈(내장 모듈이나 동적으로 로딩되는 확장이 아
+     니라)이면, 로더는 모듈의 코드를 모듈의 전역 이름 공간
+     ("module.__dict__")에서 실행해야 합니다.
+
+   * 만약 로더가 모듈을 실행하지 못하면, "ImportError" 를 일으켜야 합
+     니다. 하지만 "exec_module()" 동안 발생하는 다른 예외도 전파됩니다
+     .
+
+많은 경우에, 파인더와 로더는 같은 객체입니다; 그런 경우 "find_spec()"
+메서드는 로더가 "self" 로 설정된 스펙을 돌려줍니다.
+
+모듈 로더는 "create_module()" 메서드를 구현함으로써 로딩하는 동안 모듈
+객체를 만드는 일에 개입할 수 있습니다. 하나의 인자, 모듈 스펙, 을 받아
+들이고 로딩 중 사용할 모듈 객체를 돌려줍니다. "create_module()" 은 모
+듈 객체의 어트리뷰트를 설정할 필요는 없습니다. 만약 메서드가 "None" 을
+돌려주면, 임포트 절차는 새 모듈을 스스로 만듭니다.
+
+버전 3.4에 추가: 로더의 "create_module()" 메서드.
+
+버전 3.4에서 변경: "load_module()" 메서드는 "exec_module()" 로 대체되
+었고, 임포트 절차가 로딩의 공통 코드(boilerplate)에 대한 책임을 집니다
+.이미 존재하는 로더들과의 호환을 위해, 임포트 절차는 "load_module()"
+메서드가 존재하고, "exec_module()" 을 구현하지 않았으면
+"load_module()" 을 사용합니다. 하지만 "load_module()" 은 폐지되었습니
+다. 로더는 대신 "exec_module()" 를 구현해야 합니다."load_module()" 메
+서드는 모듈을 실행하는 것 외에 위에서 언급한 모든 공통(boilerplate) 로
+딩 기능을 구현해야만 합니다. 같은 제약들이 모두 적용되는데, 추가적인
+설명을 붙여보면:
+
+   * 만약 "sys.modules" 에 주어진 이름의 모듈 객체가 이미 존재하면, 로
+     더는 반드시 그 객체를 사용해야 합니다. (그렇지 않으면,
+     "importlib.reload()" 이 올바로 동작하지 않게 됩니다.) 만약
+     "sys.modules" 에 주어진 이름의 모듈이 없으면, 로더는 새 모듈객체
+     를 만들고 "sys.modules" 에 추가해야 합니다.
+
+   * 제한 없는 재귀와 여러 번 로딩되는 것을 방지하기 위해, 로더가 모듈
+     코드를 실행하기 전에 모듈이 "sys.modules" 에 존재해야 합니다.
+
+   * 만약 로딩이 실패하면, 로더는 "sys.modules" 에 삽입한 모듈들을 제
+     거해야 하는데, 실패한 모듈만을 제거해야 하고, 로더가 그 모듈을 직
+     접 명시적으로 로드한 경우에만 그래야 합니다.
+
+버전 3.5에서 변경: "exec_module()" 이 정의되었지만 "create_module()"
+이 정의되지 않으면 "DeprecationWarning" 이 발생합니다.
+
+버전 3.6에서 변경: "exec_module()" 이 정의되었지만 "create_module()"
+이 정의되지 않으면 "ImportError" 를 일으킵니다.
+
+버전 3.10에서 변경: "load_module()"의 사용은 "ImportWarning"을 발생시
+킵니다.
+
+
+5.4.2. 서브 모듈
+----------------
+
+어떤 메커니즘으로든 (예를 들어, "importlib" API들, "import" 나
+"import-from" 문, 내장 "__import__()") 서브 모듈이 로드될 때, 서브 모
+듈 객체로의 연결은 부모 모듈의 이름 공간에 이루어집니다. 예를 들어, 패
+키지 "spam" 이 서브 모듈 "foo" 를 가지면, "spam.foo" 를 임포트 한 후에
+는 "spam" 이 서브 모듈에 연결된 어트리뷰트 "foo" 를 갖게 됩니다. 다음
+과 같은 디렉터리 구조로 되어 있다고 합시다:
+
+   spam/
+       __init__.py
+       foo.py
+
+그리고 "spam/__init__.py" 가 다음과 같은 줄을 포함한다고 합시다:
+
+   from .foo import Foo
+
+그러면 다음과 같이 실행하면 "spam" 모듈에 "foo" 와 "Foo" 에 대한 이름
+연결이 일어납니다.
+
+   >>> import spam
+   >>> spam.foo
+   <module 'spam.foo' from '/tmp/imports/spam/foo.py'>
+   >>> spam.Foo
+   <class 'spam.foo.Foo'>
+
+파이썬의 익숙한 이름 연결 규칙에서 볼 때 의외의 결과로 보일 수 있습니
+다. 하지만 실제로는 임포트 시스템의 근본적인 기능입니다. 불변의 규칙은
+이렇습니다: 만약 "sys.modules['spam']" 과 "sys.modules['spam.foo']" 가
+있다면 (위의 임포트 이후의 상태가 그러합니다), 뒤에 있는 것은 반드시
+앞에 있는 것의 "foo" 어트리뷰트가 되어야 합니다.
+
+
+5.4.3. Module spec
+------------------
+
+임포트 절차는 임포트 동안 각 모듈에 대한 다양한 정보들을 사용합니다,
+특히 로딩 전에. 대부분 정보는 모든 모듈의 공통이다. 모듈 스펙의 목적은
+이 임포트 관련 정보를 모듈별로 요약하는 것입니다.
+
+임포트 동안 스펙을 사용하면 상태가 임포트 시스템의 구성 요소들로 전달
+될 수 있습니다, 예를 들어 모듈 스펙을 만드는 파인더와 그것을 실행하는
+로더 간에. 가장 중요한 것은, 임포트 절차가 로딩의 공통 연산
+(boilerplate operation)을 수행할 수 있도록 하는 것입니다. 모듈 스펙이
+없다면 로더가 모든 책임을 지게 됩니다.
+
+The module's spec is exposed as the "__spec__" attribute on a module
+object. See "ModuleSpec" for details on the contents of the module
+spec.
+
+버전 3.4에 추가.
+
+
+5.4.4. Import-related module attributes
+---------------------------------------
+
+The import machinery fills in these attributes on each module object
+during loading, based on the module's spec, before the loader executes
+the module.
+
+__name__
+
+   The "__name__" attribute must be set to the fully qualified name of
+   the module.  This name is used to uniquely identify the module in
+   the import system.
+
+__loader__
+
+   The "__loader__" attribute must be set to the loader object that
+   the import machinery used when loading the module.  This is mostly
+   for introspection, but can be used for additional loader-specific
+   functionality, for example getting data associated with a loader.
+
+__package__
+
+   The module's "__package__" attribute must be set.  Its value must
+   be a string, but it can be the same value as its "__name__".  When
+   the module is a package, its "__package__" value should be set to
+   its "__name__".  When the module is not a package, "__package__"
+   should be set to the empty string for top-level modules, or for
+   submodules, to the parent package's name.  See **PEP 366** for
+   further details.
+
+   This attribute is used instead of "__name__" to calculate explicit
+   relative imports for main modules, as defined in **PEP 366**. It is
+   expected to have the same value as "__spec__.parent".
+
+   버전 3.6에서 변경: The value of "__package__" is expected to be the
+   same as "__spec__.parent".
+
+__spec__
+
+   The "__spec__" attribute must be set to the module spec that was
+   used when importing the module. Setting "__spec__" appropriately
+   applies equally to modules initialized during interpreter startup.
+   The one exception is "__main__", where "__spec__" is set to None in
+   some cases.
+
+   When "__package__" is not defined, "__spec__.parent" is used as a
+   fallback.
+
+   버전 3.4에 추가.
+
+   버전 3.6에서 변경: "__spec__.parent" is used as a fallback when
+   "__package__" is not defined.
+
+__path__
+
+   If the module is a package (either regular or namespace), the
+   module object's "__path__" attribute must be set.  The value must
+   be iterable, but may be empty if "__path__" has no further
+   significance. If "__path__" is not empty, it must produce strings
+   when iterated over. More details on the semantics of "__path__" are
+   given below.
+
+   Non-package modules should not have a "__path__" attribute.
+
+__file__
+
+__cached__
+
+   "__file__" is optional. If set, this attribute's value must be a
+   string.  The import system may opt to leave "__file__" unset if it
+   has no semantic meaning (e.g. a module loaded from a database).
+
+   If "__file__" is set, it may also be appropriate to set the
+   "__cached__" attribute which is the path to any compiled version of
+   the code (e.g. byte-compiled file). The file does not need to exist
+   to set this attribute; the path can simply point to where the
+   compiled file would exist (see **PEP 3147**).
+
+   It is also appropriate to set "__cached__" when "__file__" is not
+   set.  However, that scenario is quite atypical.  Ultimately, the
+   loader is what makes use of "__file__" and/or "__cached__".  So if
+   a loader can load from a cached module but otherwise does not load
+   from a file, that atypical scenario may be appropriate.
+
+
+5.4.5. module.__path__
+----------------------
+
+By definition, if a module has a "__path__" attribute, it is a
+package.
+
+A package's "__path__" attribute is used during imports of its
+subpackages. Within the import machinery, it functions much the same
+as "sys.path", i.e. providing a list of locations to search for
+modules during import. However, "__path__" is typically much more
+constrained than "sys.path".
+
+"__path__" must be an iterable of strings, but it may be empty. The
+same rules used for "sys.path" also apply to a package's "__path__",
+and "sys.path_hooks" (described below) are consulted when traversing a
+package's "__path__".
+
+A package's "__init__.py" file may set or alter the package's
+"__path__" attribute, and this was typically the way namespace
+packages were implemented prior to **PEP 420**.  With the adoption of
+**PEP 420**, namespace packages no longer need to supply "__init__.py"
+files containing only "__path__" manipulation code; the import
+machinery automatically sets "__path__" correctly for the namespace
+package.
+
+
+5.4.6. 모듈 repr
+----------------
+
+기본적으로, 모든 모듈은 사용할만한 repr 을 갖고 있습니다. 하지만 위의
+어트리뷰트들과 모듈 스펙에 있는 것들에 따라, 모듈 객체의 repr 을 좀 더
+명시적으로 제어할 수 있습니다.
+
+모듈이 스펙("__spec__")을 가지면, 임포트 절차는 그것으로부터 repr 을
+만들려고 시도합니다. 그것이 실패하거나 스펙이 없으면, 임포트 시스템은
+모듈에서 제공되는 것들로 기본 repr 을 구성합니다. "module.__name__",
+"module.__file__", "module.__loader__" 을 repr 의 입력으로 사용하려고
+시도하는데, 빠진 정보는 기본값으로 채웁니다.
+
+사용되고 있는 정확한 규칙은 이렇습니다:
+
+   * 모듈이 "__spec__" 어트리뷰트를 가지면, 스펙에 있는 정보로 repr 을
+     생성합니다. “name”, “loader”, “origin”, “has_location” 어트리뷰트
+     들이 사용됩니다.
+
+   * 모듈이 "__file__" 어트리뷰트를 가지면, 모듈의 repr 의 일부로 사용
+     됩니다.
+
+   * 모듈이 "__file__" 어트리뷰트를 갖지 않지만 "None" 이 아닌
+     "__loader__" 를 가지면, 로더의 repr 이 모듈의 repr 의 일부로 사용
+     됩니다.
+
+   * 그렇지 않으면, repr 에 모듈의 "__name__" 을 사용합니다.
+
+버전 3.4에서 변경: Use of "loader.module_repr()" has been deprecated
+and the module spec is now used by the import machinery to generate a
+module repr.For backward compatibility with Python 3.3, the module
+repr will be generated by calling the loader's "module_repr()" method,
+if defined, before trying either approach described above.  However,
+the method is deprecated.
+
+버전 3.10에서 변경: Calling "module_repr()" now occurs after trying to
+use a module's "__spec__" attribute but before falling back on
+"__file__". Use of "module_repr()" is slated to stop in Python 3.12.
+
+
+5.4.7. 캐시된 바이트 코드 무효화
+--------------------------------
+
+파이썬이 ".pyc" 파일로부터 캐시 된 바이트 코드를 로드하기 전에, 캐시가
+최신 버전인지 소스 ".py" 파일과 비교합니다. 기본적으로, 파이썬은 소스
+의 최종 수정 타임스탬프와 크기를 캐시 파일을 만들 때 함께 저장해서 이
+작업을 수행합니다. 실행시간에, 임포트 시스템은 캐시 파일에 저장된 메타
+데이터를 소스의 메타 데이터와 대조하여 캐시 파일의 유효성을 검사합니다
+.
+
+파이썬은 또한 "해시 기반" 캐시 파일을 지원하는데, 캐시 파일은 메타 데
+이터 대신에 소스 파일의 내용 해시를 저장합니다. 해시 기반 ".pyc" 파일
+에는 두 가지 변종이 있습니다: 검사형(checked)과 비검사형(unchecked).
+검사형 해시 기반 ".pyc" 파일의 경우, 파이썬은 소스 파일을 해시하고 결
+과 해시를 캐시 파일의 해시와 비교하여 캐시 파일의 유효성을 검사합니다.
+검사형 해시 기반 캐시 파일이 유효하지 않은 것으로 판명되면, 파이썬은
+캐시 파일을 다시 생성하고 새로운 검사형 해시 기반 캐시 파일을 만듭니다
+. 비검사형 해시 기반 ".pyc" 파일의 경우, 파이썬은 단순히 캐시 파일이
+존재할 경우 유효하다고 가정합니다. 해시 기반 ".pyc" 파일 유효성 검사
+동작은 "--check-hash-based-pycs" 플래그로 재정의될 수 있습니다.
+
+버전 3.7에서 변경: 해시 기반 ".pyc" 파일을 추가했습니다. 이전에는, 파
+이썬은 바이트 코드 캐시의 타임스탬프 기반 무효화만 지원했습니다.
+
+
+5.5. 경로 기반 파인더
+=====================
+
+앞에서 언급했듯이, 파이썬은 여러 기본 메타 경로 파인더들을 갖고 있습니
+다. 이 중 하나는, *경로 기반 파인더* ("PathFinder") 로 불리는데, *경로
+엔트리* 들의 목록을 담고 있는 *임포트 경로* 를 검색합니다. 각 경로 엔
+트리는 모듈을 찾을 곳을 가리킵니다.
+
+경로 기반 파인더 자신은 뭔가를 임포트하는 법에 대해서는 아는 것이 없습
+니다. 대신에, 각 경로 엔트리를 탐색하면서, 각각을 구체적인 경로 엔트리
+를 다루는 법을 아는 경로 엔트리 파인더와 관련시킵니다.
+
+경로 엔트리 파인더의 기본 집합은 파일 시스템에서 모듈을 찾는데 필요한
+모든 개념을 구현하는데, 파이썬 소스 코드(".py" 파일들), 파이썬 바이트
+코드(".pyc" 파일들), 공유 라이브러리(예를 들어 ".so" 파일들)와 같은 특
+수 파일형들을 처리합니다. 표준라이브러리의 "zipimport" 모듈의 지원을
+받으면, 기본 경로 엔트리 파인더는 이 모든 파일(공유 라이브러리를 제외
+한 것들)을 zip 파일들로부터 로딩합니다.
+
+경로 엔트리가 파일 시스템의 위치로 제한될 필요는 없습니다. URL이나 데
+이터베이스 조회나 문자열로 지정될 수 있는 어떤 위치도 가능합니다.
+
+경로 기반 파인더는 검색 가능한 경로 엔트리의 유형을 확장하고 커스터마
+이즈할 수 있도록 하는 추가의 훅과 프로토콜을 제공합니다. 예를 들어, 네
+트워크 URL을 경로 엔트리로 지원하고 싶다면, 웹에서 모듈을 찾는 HTTP 개
+념을 구현하는 훅을 작성할 수 있습니다. 이 훅 (콜러블)은 아래에서 설명
+하는 프로토콜을 지원하는 *경로 엔트리 파인더* 를 돌려주는데, 웹에 있는
+모듈을 위한 로더를 얻는 데 사용됩니다.
+
+경고의 글: 이 섹션과 앞에 나온 것들은 모두 파인더라는 용어를 사용하는
+데, *메타 경로 파인더* 와 *경로 엔트리 파인더* 라는 용어를 사용해서 구
+분합니다. 이 두 종류의 파인더는 매우 유사해서 비슷한 프로토콜을 지원하
+고 임포트 절차에서 비슷한 방식으로 기능합니다. 하지만 이것들이 미묘하
+게 다르다는 것을 기억하는 것이 중요합니다. 특히, 메타 경로 파인더는 임
+포트 절차의 처음에 개입하는데, "sys.meta_path" 탐색을 통해 들어옵니다.
+
+반면에, 경로 엔트리 파인더는 경로 기반 파인더의 구현 상세인데, 사실 경
+로 기반 파인더가 "sys.meta_path" 로 부터 제거되면, 경로 엔트리 파인더
+의 개념은 일절 호출되지 않습니다.
+
+
+5.5.1. 경로 엔트리 파인더
+-------------------------
+
+*경로 기반 파인더* 는 위치가 문자열 *경로 엔트리* 로 지정된 파이썬 모
+듈과 패키지를 찾고 로드하는 책임을 집니다. 대부분의 경로 엔트리는 파일
+시스템의 위치를 가리키지만, 이것으로 한정될 필요는 없습니다.
+
+메타 경로 파인더로서, *경로 기반 파인더* 는 앞에서 설명한
+"find_spec()" 프로토콜을 구현합니다. 하지만 모듈이 *임포트 경로* 에서
+어떻게 발견되고 로드되는지는 커스터마이즈하는데 사용될 수 있는 추가의
+훅을 제공합니다.
+
+*경로 기반 파인더* 는 세 개의 변수를 사용합니다, "sys.path",
+"sys.path_hooks", "sys.path_importer_cache". 패키지 객체의 "__path__"
+어트리뷰트 또한 사용된다. 이것들은 임포트 절차를 커스터마이즈할 수 있
+는 추가의 방법을 제공합니다.
+
+"sys.path" contains a list of strings providing search locations for
+modules and packages.  It is initialized from the "PYTHONPATH"
+environment variable and various other installation- and
+implementation-specific defaults.  Entries in "sys.path" can name
+directories on the file system, zip files, and potentially other
+"locations" (see the "site" module) that should be searched for
+modules, such as URLs, or database queries.  Only strings and bytes
+should be present on "sys.path"; all other data types are ignored.
+The encoding of bytes entries is determined by the individual *path
+entry finders*.
+
+*경로 기반 파인더* 는 *메타 경로 파인더* 이기 때문에, 앞에서 설명했듯
+이 임포트 절차는 경로 기반 파인더의 "find_spec()" 메서드를 호출하는 것
+으로 *임포트 경로* 검색을 시작합니다. "find_spec()" 에 제공되는 "path"
+인자는 탐색할 문자열 경로들의 리스트입니다 - 보통 패키지 내에서 임포트
+하면 패키지의 "__path__" 어트리뷰트. "path" 인자가 "None" 이면, 최상위
+임포트를 뜻하고 "sys.path" 가 사용됩니다.
+
+The path based finder iterates over every entry in the search path,
+and for each of these, looks for an appropriate *path entry finder*
+("PathEntryFinder") for the path entry.  Because this can be an
+expensive operation (e.g. there may be "stat()" call overheads for
+this search), the path based finder maintains a cache mapping path
+entries to path entry finders.  This cache is maintained in
+"sys.path_importer_cache" (despite the name, this cache actually
+stores finder objects rather than being limited to *importer*
+objects). In this way, the expensive search for a particular *path
+entry* location's *path entry finder* need only be done once.  User
+code is free to remove cache entries from "sys.path_importer_cache"
+forcing the path based finder to perform the path entry search again
+[3].
+
+경로 엔트리가 캐시에 없으면, 경로 기반 파인더는 "sys.path_hooks" 에 있
+는 모든 콜러블들을 탐색합니다. 이 목록의 각 *경로 엔트리 훅* 은 검색할
+경로 엔트리 인자 한 개를 사용해서 호출됩니다. 이 콜러블은 경로 엔트리
+를 다룰 수 있는 *경로 엔트리 파인더* 를 돌려주거나, "ImportError" 를
+발생시킬 수 있습니다. "ImportError" 는 경로 기반 파인더가 어떤 훅이 주
+어진 *경로 엔트리* 를 위한 *경로 엔트리 파인더* 를 발견할 수 없음을 알
+리는 데 사용합니다. 이 예외는 무시되고 *임포트 경로* 탐색은 계속됩니다
+. 훅은 문자열이나 바이트열을 기대해야 합니다; 바이트열의 인코딩은 훅이
+결정하고(예를 들어, 파일 시스템 인코딩이나 UTF-8 이나 그 밖의 다른 것
+일 수 있습니다), 만약 훅이 인자를 디코딩할 수 없으면 "ImportError" 를
+일으켜야 합니다.
+
+만약 "sys.path_hooks" 탐색이 아무런 *경로 엔트리 파인더* 를 돌려주지
+못하면, 경로 기반 파인더의 "find_spec()" 메서드는
+"sys.path_importer_cache" 에 "None" 을 저장하고(이 경로 엔트리를 위한
+파인더가 없음을 가리키기 위해), "None" 을 돌려줘서 이 *메타 경로 파인
+더* 가 모듈을 찾을 수 없음을 알립니다.
+
+만약 "sys.path_hooks" 에 있는 어느 하나의 *경로 엔트리 훅* 콜러블이 *
+경로 엔트리 파인더* 를 *돌려주면*, 파인더에 모듈 스펙을 요청하기 위해
+다음에 나오는 프로토콜이 사용됩니다. 모듈 스펙은 모듈을 로딩할 때 사용
+됩니다.
+
+현재 작업 디렉터리(current working directory) -- 빈 문자열로 표현된다
+-- 는 "sys.path" 에 있는 다른 엔트리들과 약간 다르게 취급됩니다. 첫째
+로, 현재 작업 디렉터리가 존재하지 않음이 발견되면
+"sys.path_importer_cache" 에는 아무런 값도 저장되지 않습니다. 둘째로,
+현재 작업 디렉터리는 각 모듈 조회 때마다 다시 확인됩니다. 셋째로,
+"sys.path_importer_cache" 에 사용되는 경로와
+"importlib.machinery.PathFinder.find_spec()" 가 돌려주는 경로는 빈 문
+자열이 아니라 실제 현재 작업 디렉터리가 됩니다.
+
+
+5.5.2. 경로 엔트리 파인더 프로토콜
+----------------------------------
+
+모듈과 초기화된 패키지의 임포트를 지원하고 이름 공간 패키지에 포션으로
+이바지하기 위해, 경로 엔트리 파인더는 "find_spec()" 메서드를 구현해야
+합니다.
+
+"find_spec()" 은 두 개의 인자를 받아들입니다: 임포트 할 모듈의 완전히
+정규화된 이름과 (생략 가능한) 타깃 모듈. "find_spec()" 은 값이 완전히
+채워진 모듈의 스펙을 돌려줍니다. 이 스펙은 항상 "loader" 가 설정됩니다
+(한가지 예외가 있습니다).
+
+To indicate to the import machinery that the spec represents a
+namespace *portion*, the path entry finder sets
+"submodule_search_locations" to a list containing the portion.
+
+버전 3.4에서 변경: "find_spec()" replaced "find_loader()" and
+"find_module()", both of which are now deprecated, but will be used if
+"find_spec()" is not defined.예전의 경로 엔트리 파인더는 "find_spec()"
+대신에 이 두 개의 폐지된 메서드들을 구현할 수 있습니다. 이 메서드들은
+과거 호환성 때문에 아직도 사용됩니다. 하지만, "find_spec()" 이 경로 엔
+트리 파인더에 구현되면, 예전 메서드들은 무시됩니다."find_loader()"
+takes one argument, the fully qualified name of the module being
+imported.  "find_loader()" returns a 2-tuple where the first item is
+the loader and the second item is a namespace *portion*.임포트 프로토
+콜의 다른 구현들과의 과거 호환성을 위해, 많은 경로 엔트리 파인더들은
+메타 경로 파인더가 지원하는 것과 같고 전통적인 "find_module()" 메서드
+또한 지원합니다. 하지만 경로 엔트리 파인더 "find_module()" 메서드는 결
+코 "path" 인자로 호출되지 않습니다 (그것들은 경로 훅의 최초 호출 때 적
+절한 경로 정보를 기록해둘 것으로 기대됩니다).경로 엔트리 파인더의
+"find_module()" 메서드는 경로 엔트리 파인더가 이름 공간 패키지에 포션
+으로 이바지하는 것을 허락하지 않기 때문에 폐지되었습니다. 만약 경로 엔
+트리 파인더에 "find_loader()" 와 "find_module()" 이 모두 존재하면, 임
+포트 시스템은 항상 "find_module()" 대신 "find_loader()" 를 호출합니다.
+
+버전 3.10에서 변경: Calls to "find_module()" and "find_loader()" by
+the import system will raise "ImportWarning".
+
+
+5.6. 표준 임포트 시스템 교체하기
+================================
+
+임포트 시스템 전체를 교체하기 위한 가장 신뢰성 있는 메커니즘은
+"sys.meta_path" 의 기본값들을 모두 삭제하고, 새로 만든 메타 경로 훅들
+로 채우는 것입니다.
+
+만약 임포트 시스템을 액세스하는 다른 API들에 영향을 주지 않고, 단지 임
+포트 문의 동작만을 변경해도 좋다면, 내장 "__import__()" 함수를 교체하
+는 것으로 충분할 수도 있습니다. 이 기법은 특정 모듈 내에서의 임포트 문
+의 동작만을 변경하도록 모듈 수준에서 적용될 수도 있습니다.
+
+메타 경로의 앞쪽에 있는 훅에서 어떤 모듈의 임포트를 선택적으로 막으려
+면(표준 임포트 시스템을 완전히 비활성화하는 대신), "find_spec()" 에서
+"None" 을 돌려주는 대신, "ModuleNotFoundError" 를 일으키는 것으로 충분
+합니다. 전자는 메타 경로 검색을 계속해야 한다는 것을 지시하는 반면, 예
+외를 일으키면 즉시 종료시킵니다.
+
+
+5.7. 패키지 상대 임포트
+=======================
+
+상대 임포트는 선행 점을 사용합니다. 단일 선행 점은 현재 패키지에서 시
+작하는 상대 임포트를 나타냅니다. 두 개 이상의 선행 점은 현재 패키지의
+부모(들)에 대한 상대 임포트를 나타내며, 첫 번째 점 다음의 점 하나당 하
+나의 수준을 나타냅니다. 예를 들어, 다음과 같은 패키지 배치가 제공될 때
+:
+
+   package/
+       __init__.py
+       subpackage1/
+           __init__.py
+           moduleX.py
+           moduleY.py
+       subpackage2/
+           __init__.py
+           moduleZ.py
+       moduleA.py
+
+"subpackage1/moduleX.py"나 "subpackage1/__init__.py" 모두에서, 다음은
+유효한 상대 임포트입니다:
+
+   from .moduleY import spam
+   from .moduleY import spam as ham
+   from . import moduleY
+   from ..subpackage1 import moduleY
+   from ..subpackage2.moduleZ import eggs
+   from ..moduleA import foo
+
+절대 임포트는 "import <>" 또는 "from <> import <>" 문법을 사용할 수 있
+지만, 상대 임포트는 두 번째 형식만 사용할 수 있습니다; 그 이유는:
+
+   import XXX.YYY.ZZZ
+
+가 "XXX.YYY.ZZZ"를 사용할 수 있는 표현식으로 노출하지만, .moduleY는 유
+효한 표현식이 아니기 때문입니다.
+
+
+5.8. __main__ 에 대한 특별한 고려
+=================================
+
+"__main__" 모듈은 파이썬의 임포트 시스템에서 특별한 경우입니다. 다른
+곳에서 언급했듯이, "__main__" 모듈은 "sys" 와 "builtins" 처럼 인터프리
+터 시작 때 직접 초기화됩니다. 하지만, 이 두 개와는 다르게, 이것은 엄밀
+하게 내장 모듈로 취급되지 않습니다. 이것은 "__main__" 이 초기화되는 방
+식이 인터프리터를 실행할 때 주는 플래그와 다른 옵션들에 영향을 받기 때
+문입니다.
+
+
+5.8.1. __main__.__spec__
+------------------------
+
+"__main__" 이 어떻게 초기화되는지에 따라, "__main__.__spec__" 은 적절
+히 설정되기도 하고 "None" 으로 설정되기도 합니다.
+
+파이썬이 "-m" 옵션으로 시작하면, "__spec__" 은 해당하는 모듈이나 패키
+지의 모듈 스팩으로 설정됩니다. 또한 "__spec__" 은 "__main__" 모듈이 디
+렉터리나 zip 파일이나 다른 "sys.path" 엔트리를 실행하는 일부로 로드될
+때 그 내용이 채워집니다.
+
+나머지 경우 에는 "__main__.__spec__" 은 "None" 으로 설정되는데,
+"__main__" 을 채우는데 사용된 코드가 임포트 가능한 모듈에 직접 대응하
+지 않기 때문입니다:
+
+* 대화형 프롬프트
+
+* "-c" 옵션
+
+* 표준 입력으로 실행
+
+* 소스 파일이나 바이트 코드 파일로부터 직접 실행
+
+마지막 경우에 "__main__.__spec__" 이 항상 "None" 임에 주의해야 합니다.
+설사 그 파일이 기술적으로 모듈로 임포트 될 수 있어도 그렇습니다.
+"__main__" 에 올바른 모듈 메타데이터가 필요하다면 "-m" 스위치를 사용해
+야 합니다.
+
+또한 "__main__" 이 임포트 가능한 모듈에 대응되고, "__main__.__spec__"
+이 적절히 설정되었다 하더라도, 이 둘은 여전히 *다른* 모듈로 취급됨에
+주의해야 합니다. 이것은 "if __name__ == "__main__":" 검사로 둘러싸인
+블록이 모듈이 "__main__" 이름 공간을 채울 때만 실행되고, 일반적인 임포
+트 때는 실행되지 않는다는 사실 때문입니다.
+
+
+5.9. 참고문헌
+=============
+
+임포트 절차는 파이썬의 초창기부터 상당히 변해왔습니다. 문서를 작성한
+이후에 약간의 세부사항이 변경되었기는 하지만, 최초의 패키지 규격 은 아
+직 읽을 수 있도록 남아있습니다.
+
+"sys.meta_path" 의 최초 규격은 **PEP 302** 이고, 뒤이은 확장은 **PEP
+420** 입니다.
+
+**PEP 420** introduced *namespace packages* for Python 3.3.  **PEP
+420** also introduced the "find_loader()" protocol as an alternative
+to "find_module()".
+
+**PEP 366** 은 메인 모듈에서의 명시적인 상태 임포트를 위한
+"__package__" 어트리뷰트의 추가에 관해 설명하고 있습니다.
+
+**PEP 328** 은 절대와 명시적인 상대 임포트들 도입하고 **PEP 366** 이
+결국 "__package__" 를 지정하게 되는 개념을 초기에 "__name__" 으로 제안
+했습니다.
+
+**PEP 338** 은 모듈을 스크립트로 실행하는 것을 정의합니다.
+
+**PEP 451** 은 스팩 객체에 모듈별 임포트 상태를 요약하는 것을 추가합니
+다. 로더들에 주어졌던 대부분의 공통 코드 책임들을 임포트 절차로 옮기기
+도 했습니다. 이 변경은 임포트 시스템의 여러 API 들을 폐지하도록 만들었
+고, 파인더와 로더에 새 메서드들을 추가하기도 했습니다.
+
+-[ 각주 ]-
+
+[1] "types.ModuleType" 을 보세요.
+
+[2] importlib 구현은 반환 값을 직접 사용하지 않습니다. 대신에,
+    "sys.modules" 에서 모듈 이름을 조회해서 모듈을 얻습니다. 이것의 간
+    접적인 효과는 임포트되는 모듈이 "sys.modules" 에 있는 자신을 바꿀
+    수 있다는 것입니다. 이것은 구현 상세 동작이고 다른 파이썬 구현에서
+    동작한다고 보장되지 않습니다.
+
+[3] In legacy code, it is possible to find instances of
+    "imp.NullImporter" in the "sys.path_importer_cache".  It is
+    recommended that code be changed to use "None" instead.  See
+    Porting Python code for more details.

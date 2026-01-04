@@ -1,0 +1,68 @@
+13. 이제 뭘 하지?
+*****************
+
+이 자습서를 읽어서 아마도 파이썬 사용에 관한 관심이 높아졌을 것입니다
+--- 실제 문제를 해결하기 위해 파이썬을 적용하려고 열망해야 합니다. 더
+배우려면 어디로 가야 할까?
+
+이 자습서는 파이썬의 문서 세트의 일부입니다. 세트의 다른 문서는 다음과
+같습니다:
+
+* 파이썬 표준 라이브러리:
+
+  You should browse through this manual, which gives complete (though
+  terse) reference material about types, functions, and the modules in
+  the standard library.  The standard Python distribution includes a
+  *lot* of additional code. There are modules to read Unix mailboxes,
+  retrieve documents via HTTP, generate random numbers, parse command-
+  line options, write CGI programs, compress data, and many other
+  tasks. Skimming through the Library Reference will give you an idea
+  of what's available.
+
+* 파이썬 모듈 설치하기 는 다른 파이썬 사용자가 작성한 추가 모듈을 설치
+  하는 방법을 설명합니다.
+
+* 파이썬 언어 레퍼런스: 파이썬의 문법과 의미에 대한 자세한 설명. 읽기
+  에 부담스럽지만, 언어 자체에 대한 완전한 안내서로서 유용합니다.
+
+기타 파이썬 자료:
+
+* https://www.python.org: 주요 파이썬 웹 사이트. 여기에는 코드, 문서
+  및 웹에 있는 파이썬 관련 페이지들에 대한 포인터가 들어 있습니다.
+
+* https://docs.python.org: 파이썬의 설명서에 빠르게 액세스할 수 있습니
+  다.
+
+* https://pypi.org: 이전에 치즈 가게(Cheese Shop)로도 불렸던 [1] 파이
+  썬 패키지 인덱스는 내려받을 수 있는 사용자 제작 파이썬 모듈의 색인입
+  니다. 코드를 배포하기 시작하면 다른 사람들이 찾을 수 있도록 여기에
+  코드를 등록할 수 있습니다.
+
+* https://code.activestate.com/recipes/langs/python/: 파이썬 요리책
+  (Python Cookbook)은 많은 코드 예제, 더 큰 모듈 및 유용한 스크립트 모
+  음입니다. 특히 주목할만한 공헌들을 Python Cookbook (O'Reilly &
+  Associates, ISBN 0-596-00797-3)이라는 제목의 책에 모았습니다.
+
+* https://pyvideo.org 는 콘퍼런스 및 사용자 그룹 회의에서 파이썬 관련
+  비디오에 대한 링크들을 수집합니다.
+
+* https://scipy.org: Scientific Python 프로젝트에는 빠른 배열 계산 및
+  조작을 위한 모듈들과 선형 대수, 푸리에 변환, 비선형 솔버, 난수 분포,
+  통계 분석 등과 같은 여러 가지 패키지들이 포함되어 있습니다.
+
+파이썬 관련 질문 및 문제 보고의 경우, 뉴스 그룹 *comp.lang.python* 에
+게시하거나 python-list@python.org 의 메일링 리스트로 보낼 수 있습니다.
+뉴스 그룹과 메일링 리스트는 게이트웨이로 연결되어 있으므로 하나에 게시
+된 메시지는 자동으로 다른 그룹으로 전달됩니다. 하루에 수백 건의 게시물
+이 올라옵니다. 질문하고, 질문에 답변하고, 새로운 기능을 제안하고, 새로
+운 모듈을 발표합니다. 메일링 리스트 저장소는
+https://mail.python.org/pipermail/ 에 있습니다.
+
+게시하기 전에 자주 나오는 질문들 (FAQ라고도 한다) 목록을 확인해야 합니
+다. FAQ는 반복적으로 나타나는 많은 질문에 대한 답을 제공하며, 이미 여
+러분의 문제에 대한 해결 방법을 담고 있을 수 있습니다.
+
+-[ 각주 ]-
+
+[1] "Cheese Shop" 은 Monty Python의 스케치입니다: 고객이 치즈 가게에
+    들어가지만, 찾는 치즈가 무엇이건, 점원은 없다고 말합니다.

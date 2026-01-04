@@ -1,0 +1,214 @@
+"numbers" --- Numeric abstract base classes
+*******************************************
+
+**소스 코드:** Lib/numbers.py
+
+======================================================================
+
+The "numbers" module (**PEP 3141**) defines a hierarchy of numeric
+*abstract base classes* which progressively define more operations.
+None of the types defined in this module are intended to be
+instantiated.
+
+class numbers.Number
+
+   숫자 계층의 최상위 클래스입니다. 형에 상관없이 인자 *x* 가 숫자인지
+   확인하려면 "isinstance(x, Number)" 를 사용하세요.
+
+
+숫자 계층
+=========
+
+class numbers.Complex
+
+   이 서브 클래스는 복소수를 표현하고 내장 "complex" 형에 사용되는 연
+   산을 포함합니다. 여기에는 "complex" 와 "bool" 형으로의 변환과
+   "real", "imag", "+", "-", "*", "/", "**", "abs()", "conjugate()",
+   "==", "!=" 이 포함됩니다. "-" 와 "!=" 를 제외하고는 모두 추상입니다
+   .
+
+   real
+
+      추상. 복소수의 실수부를 반환합니다.
+
+   imag
+
+      추상. 복소수의 허수부를 반환합니다.
+
+   abstractmethod conjugate()
+
+      추상 메서드. 켤레 복소수를 반환합니다. 예를 들어
+      "(1+3j).conjugate() == (1-3j)" 입니다.
+
+class numbers.Real
+
+   To "Complex", "Real" adds the operations that work on real numbers.
+
+   요약하면 "float" 로의 변환과 "math.trunc()", "round()",
+   "math.floor()", "math.ceil()", "divmod()", "//", "%", "<", "<=",
+   ">", ">=" 가 포함됩니다.
+
+   이 클래스는 또한 "complex()", "real", "imag", "conjugate()" 를 위한
+   기본값을 제공합니다.
+
+class numbers.Rational
+
+   "Real" 의 하위 형이고 "numerator" 와 "denominator" 프로퍼티가 추가
+   됩니다. 또한 "float()" 함수를 위한 기본값을 제공합니다.
+
+   The "numerator" and "denominator" values should be instances of
+   "Integral" and should be in lowest terms with "denominator"
+   positive.
+
+   numerator
+
+      프로퍼티(추상 메서드)
+
+   denominator
+
+      프로퍼티(추상 메서드)
+
+class numbers.Integral
+
+   "Rational" 의 하위 형이고 "int" 클래스로 변환 기능이 추가됩니다.
+   "float()", "numerator", "denominator" 를 위한 기본값을 제공합니다.
+   모듈러스가 있는 "pow()"를 위한 추상 메서드와 비트 연산 "<<", ">>",
+   "&", "^", "|", "~" 를 추가합니다.
+
+
+Notes for type implementors
+===========================
+
+Implementors should be careful to make equal numbers equal and hash
+them to the same values. This may be subtle if there are two different
+extensions of the real numbers. For example, "fractions.Fraction"
+implements "hash()" as follows:
+
+   def __hash__(self):
+       if self.denominator == 1:
+           # Get integers right.
+           return hash(self.numerator)
+       # Expensive check, but definitely correct.
+       if self == float(self):
+           return hash(float(self))
+       else:
+           # Use tuple's hash to avoid a high collision rate on
+           # simple fractions.
+           return hash((self.numerator, self.denominator))
+
+
+더 많은 숫자 추상 베이스 클래스(ABC) 추가
+-----------------------------------------
+
+물론 숫자를 위한 ABC를 추가하는 것이 가능합니다. 그렇지 않으면 엉망으
+로 상속 계층이 구현될 것입니다. "Complex" 와 "Real" 사이에 다음과 같이
+"MyFoo" 를 추가할 수 있습니다:
+
+   class MyFoo(Complex): ...
+   MyFoo.register(Real)
+
+
+산술 연산 구현
+--------------
+
+We want to implement the arithmetic operations so that mixed-mode
+operations either call an implementation whose author knew about the
+types of both arguments, or convert both to the nearest built in type
+and do the operation there. For subtypes of "Integral", this means
+that "__add__()" and "__radd__()" should be defined as:
+
+   class MyIntegral(Integral):
+
+       def __add__(self, other):
+           if isinstance(other, MyIntegral):
+               return do_my_adding_stuff(self, other)
+           elif isinstance(other, OtherTypeIKnowAbout):
+               return do_my_other_adding_stuff(self, other)
+           else:
+               return NotImplemented
+
+       def __radd__(self, other):
+           if isinstance(other, MyIntegral):
+               return do_my_adding_stuff(other, self)
+           elif isinstance(other, OtherTypeIKnowAbout):
+               return do_my_other_adding_stuff(other, self)
+           elif isinstance(other, Integral):
+               return int(other) + int(self)
+           elif isinstance(other, Real):
+               return float(other) + float(self)
+           elif isinstance(other, Complex):
+               return complex(other) + complex(self)
+           else:
+               return NotImplemented
+
+"Complex" 클래스의 서브클래스에는 다섯 가지의 서로 다른 혼합형 연산이
+있습니다. 위의 코드에서 "MyIntegral" 와 "OtherTypeIKnowAbout" 를 제외
+한 나머지를 기본구조라고 하겠습니다. "a" 는 "Complex" 의 하위 형인 "A"
+의 인스턴스입니다(즉 "a : A <: Complex" 입니다). 비슷하게 "b : B <:
+Complex" 입니다. "a + b" 인 경우를 생각해 보겠습니다:
+
+   1. If "A" defines an "__add__()" which accepts "b", all is well.
+
+   2. If "A" falls back to the boilerplate code, and it were to return
+      a value from "__add__()", we'd miss the possibility that "B"
+      defines a more intelligent "__radd__()", so the boilerplate
+      should return "NotImplemented" from "__add__()". (Or "A" may not
+      implement "__add__()" at all.)
+
+   3. Then "B"'s "__radd__()" gets a chance. If it accepts "a", all is
+      well.
+
+   4. 기본구조 코드로 돌아온다면 더 시도해 볼 수 있는 메서드가 없으므
+      로 기본적으로 수행될 구현을 작성해야 합니다.
+
+   5. 만약 "B <: A" 라면 파이썬은 "A.__add__" 메서드 전에 "B.__radd__"
+      를 시도합니다. "A" 에 대해서 알고 "B" 가 구현되었기 때문에 이런
+      행동은 문제없습니다. 따라서 "Complex" 에 위임하기 전에 이 인스턴
+      스를 처리할 수 있습니다.
+
+If "A <: Complex" and "B <: Real" without sharing any other knowledge,
+then the appropriate shared operation is the one involving the built
+in "complex", and both "__radd__()" s land there, so "a+b == b+a".
+
+대부분 주어진 어떤 형에 대한 연산은 매우 비슷하므로, 주어진 연산자의
+정방향(forward) 인스턴스와 역방향(reverse) 인스턴스를 생성하는 헬퍼 함
+수를 정의하는 것이 유용합니다. 예를 들어 "fractions.Fraction" 클래스는
+다음과 같이 사용합니다:
+
+   def _operator_fallbacks(monomorphic_operator, fallback_operator):
+       def forward(a, b):
+           if isinstance(b, (int, Fraction)):
+               return monomorphic_operator(a, b)
+           elif isinstance(b, float):
+               return fallback_operator(float(a), b)
+           elif isinstance(b, complex):
+               return fallback_operator(complex(a), b)
+           else:
+               return NotImplemented
+       forward.__name__ = '__' + fallback_operator.__name__ + '__'
+       forward.__doc__ = monomorphic_operator.__doc__
+
+       def reverse(b, a):
+           if isinstance(a, Rational):
+               # Includes ints.
+               return monomorphic_operator(a, b)
+           elif isinstance(a, numbers.Real):
+               return fallback_operator(float(a), float(b))
+           elif isinstance(a, numbers.Complex):
+               return fallback_operator(complex(a), complex(b))
+           else:
+               return NotImplemented
+       reverse.__name__ = '__r' + fallback_operator.__name__ + '__'
+       reverse.__doc__ = monomorphic_operator.__doc__
+
+       return forward, reverse
+
+   def _add(a, b):
+       """a + b"""
+       return Fraction(a.numerator * b.denominator +
+                       b.numerator * a.denominator,
+                       a.denominator * b.denominator)
+
+   __add__, __radd__ = _operator_fallbacks(_add, operator.add)
+
+   # ...

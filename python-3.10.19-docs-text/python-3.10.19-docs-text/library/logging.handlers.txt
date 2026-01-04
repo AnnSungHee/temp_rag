@@ -1,0 +1,1110 @@
+"logging.handlers" --- Logging handlers
+***************************************
+
+**소스 코드:** Lib/logging/handlers.py
+
+
+Important
+^^^^^^^^^
+
+이 페이지에는 레퍼런스 정보만 있습니다. 자습서는 다음을 참조하십시오
+
+* 기초 자습서
+
+* 고급 자습서
+
+* 로깅 요리책
+
+======================================================================
+
+다음과 같은 유용한 처리기가 패키지에서 제공됩니다. 3개의 처리기
+("StreamHandler", "FileHandler", "NullHandler")는 실제로는 "logging"
+모듈 자체에 정의되어 있지만, 다른 처리기들과 함께 여기에서 설명합니다.
+
+
+StreamHandler
+=============
+
+핵심 "logging" 패키지에 있는 "StreamHandler" 클래스는 *sys.stdout*,
+*sys.stderr* 또는 임의의 파일류 객체(또는 더 정확하게, "write()"와
+"flush()" 메서드를 지원하는 모든 객체)와 같은 스트림으로 로깅 출력을
+보냅니다.
+
+class logging.StreamHandler(stream=None)
+
+   "StreamHandler" 클래스의 새로운 인스턴스를 반환합니다. *stream* 이
+   지정되면, 인스턴스는 그것을 로그 출력용으로 사용합니다; 그렇지 않으
+   면, *sys.stderr* 이 사용됩니다.
+
+   emit(record)
+
+      포매터가 지정되면, 레코드를 포맷하는 데 사용됩니다. 그런 다음 레
+      코드는 "terminator"를 붙여 스트림에 기록됩니다. 예외 정보가 있으
+      면, "traceback.print_exception()"을 사용하여 포맷한 후 스트림에
+      덧붙입니다.
+
+   flush()
+
+      스트림의 "flush()" 메서드를 호출해서 플러시 합니다. "close()" 메
+      서드는 "Handler" 에서 상속되고, 출력이 없으므로, 명시적
+      "flush()" 호출이 필요할 수도 있습니다.
+
+   setStream(stream)
+
+      지정한 값이 현재 값과 다르면, 인스턴스의 스트림을 지정된 값으로
+      설정합니다. 새 스트림이 설정되기 전에 이전 스트림이 플러시 됩니
+      다.
+
+      매개변수:
+         **stream** -- 처리기가 사용할 스트림.
+
+      반환값:
+         the old stream, if the stream was changed, or *None* if it
+         wasn't.
+
+      버전 3.7에 추가.
+
+   terminator
+
+      포맷된 레코드를 스트림에 쓸 때 종결자로 사용되는 문자열. 기본값
+      은 "'\n'"입니다.
+
+      줄 바꿈 종료를 원하지 않으면, 처리기 인스턴스의 "terminator" 어
+      트리뷰트를 빈 문자열로 설정할 수 있습니다.
+
+      이전 버전에서는, 종결자가 "'\n'"으로 하드 코딩되었습니다.
+
+      버전 3.2에 추가.
+
+
+FileHandler
+===========
+
+핵심 "logging" 패키지에 있는 "FileHandler" 클래스는 로깅 출력을 디스크
+파일로 보냅니다. "StreamHandler" 에서 출력 기능을 상속받습니다.
+
+class logging.FileHandler(filename, mode='a', encoding=None, delay=False, errors=None)
+
+   Returns a new instance of the "FileHandler" class. The specified
+   file is opened and used as the stream for logging. If *mode* is not
+   specified, "'a'" is used.  If *encoding* is not "None", it is used
+   to open the file with that encoding.  If *delay* is true, then file
+   opening is deferred until the first call to "emit()". By default,
+   the file grows indefinitely. If *errors* is specified, it's used to
+   determine how encoding errors are handled.
+
+   버전 3.6에서 변경: 문자열 값뿐만 아니라, "Path" 객체도 *filename*
+   인자로 허용됩니다.
+
+   버전 3.9에서 변경: *errors* 매개 변수가 추가되었습니다.
+
+   close()
+
+      파일을 닫습니다.
+
+   emit(record)
+
+      레코드를 파일에 출력합니다.
+
+      Note that if the file was closed due to logging shutdown at exit
+      and the file mode is 'w', the record will not be emitted (see
+      bpo-42378).
+
+
+NullHandler
+===========
+
+버전 3.1에 추가.
+
+핵심 "logging" 패키지에 있는 "NullHandler" 클래스는 포맷이나 출력을 일
+절 하지 않습니다. 기본적으로 라이브러리 개발자가 사용하는 'no-op' 처리
+기입니다.
+
+class logging.NullHandler
+
+   "NullHandler" 클래스의 새로운 인스턴스를 반환합니다.
+
+   emit(record)
+
+      이 메서드는 아무것도 하지 않습니다.
+
+   handle(record)
+
+      이 메서드는 아무것도 하지 않습니다.
+
+   createLock()
+
+      액세스를 직렬화해야 하는 하부 I/O가 없으므로, 이 메서드는 록으로
+      "None" 을 반환합니다.
+
+"NullHandler" 사용법에 대한 더 많은 정보는 라이브러리 로깅 구성를 참조
+하세요.
+
+
+WatchedFileHandler
+==================
+
+"logging.handlers" 모듈에 있는 "WatchedFileHandler" 클래스는 로깅 중인
+파일을 감시하는 "FileHandler" 입니다. 파일이 변경되면, 닫은 후에 같은
+이름의 파일을 다시 엽니다.
+
+로그 파일 회전을 수행하는 *newsyslog* 나 *logrotate* 와 같은 프로그램
+의 사용으로 인해 파일이 변경될 수 있습니다. 유닉스/리눅스에서 사용하기
+위한 이 처리기는 마지막 출력 이후에 파일이 변경되었는지 감시합니다. (
+파일의 장치나 inode가 변경되면 파일이 변경된 것으로 간주합니다.) 파일
+이 변경되면, 이전 파일 스트림이 닫히고, 새 스트림을 얻기 위해 파일을
+엽니다.
+
+이 처리기는 윈도우에서 사용하기에 적합하지 않습니다. 윈도우에서는 열린
+로그 파일을 이동하거나 이름을 변경할 수 없어서 - logging은 파일을 배타
+적 록으로 엽니다 - 이런 처리기가 필요하지 않기 때문입니다. 또한
+*ST_INO* 는 윈도우에서 지원되지 않습니다; "stat()"는 항상 이 값에 대해
+0을 반환합니다.
+
+class logging.handlers.WatchedFileHandler(filename, mode='a', encoding=None, delay=False, errors=None)
+
+   Returns a new instance of the "WatchedFileHandler" class. The
+   specified file is opened and used as the stream for logging. If
+   *mode* is not specified, "'a'" is used.  If *encoding* is not
+   "None", it is used to open the file with that encoding.  If *delay*
+   is true, then file opening is deferred until the first call to
+   "emit()".  By default, the file grows indefinitely. If *errors* is
+   provided, it determines how encoding errors are handled.
+
+   버전 3.6에서 변경: 문자열 값뿐만 아니라, "Path" 객체도 *filename*
+   인자로 허용됩니다.
+
+   버전 3.9에서 변경: *errors* 매개 변수가 추가되었습니다.
+
+   reopenIfNeeded()
+
+      파일이 변경되었는지 확인합니다. 그렇다면, 기존 스트림을 플러시
+      한 후 닫고, 파일을 다시 엽니다. 일반적으로 레코드를 파일로 출력
+      하기 전에 수행합니다.
+
+      버전 3.6에 추가.
+
+   emit(record)
+
+      레코드를 파일에 출력하지만, 파일이 변경되었을 때 다시 열기 위해
+      "reopenIfNeeded()"를 먼저 호출합니다.
+
+
+BaseRotatingHandler
+===================
+
+"logging.handlers" 모듈에 있는 "BaseRotatingHandler" 클래스는 회전하는
+파일 처리기들("RotatingFileHandler"와 "TimedRotatingFileHandler")의 베
+이스 클래스입니다. 이 클래스의 인스턴스를 만들 필요는 없지만, 재정의가
+필요할 수 있는 어트리뷰트와 메서드가 있습니다.
+
+class logging.handlers.BaseRotatingHandler(filename, mode, encoding=None, delay=False, errors=None)
+
+   매개 변수는 "FileHandler" 와 같습니다. 어트리뷰트는 다음과 같습니다
+   :
+
+   namer
+
+      이 어트리뷰트가 콜러블로 설정되면, "rotation_filename()" 메서드
+      는 이 콜러블에 위임합니다. 콜러블로 전달되는 매개 변수는
+      "rotation_filename()"로 전달되는 것입니다.
+
+      참고:
+
+        namer 함수는 롤오버 중에 꽤 자주 호출되므로, 가능한 한 간단하
+        고 빨라야 합니다. 또한, 주어진 입력에 대해 매번 같은 출력을 반
+        환해야 합니다, 그렇지 않으면 롤오버 동작이 예상대로 작동하지
+        않을 수 있습니다.It's also worth noting that care should be
+        taken when using a namer to preserve certain attributes in the
+        filename which are used during rotation. For example,
+        "RotatingFileHandler" expects to have a set of log files whose
+        names contain successive integers, so that rotation works as
+        expected, and "TimedRotatingFileHandler" deletes old log files
+        (based on the "backupCount" parameter passed to the handler's
+        initializer) by determining the oldest files to delete. For
+        this to happen, the filenames should be sortable using the
+        date/time portion of the filename, and a namer needs to
+        respect this. (If a namer is wanted that doesn't respect this
+        scheme, it will need to be used in a subclass of
+        "TimedRotatingFileHandler" which overrides the
+        "getFilesToDelete()" method to fit in with the custom naming
+        scheme.)
+
+      버전 3.3에 추가.
+
+   rotator
+
+      이 어트리뷰트가 콜러블로 설정되면, "rotate()" 메서드는 이 콜러블
+      에 위임합니다. 콜러블로 전달되는 매개 변수는 "rotate()"로 전달되
+      는 것입니다.
+
+      버전 3.3에 추가.
+
+   rotation_filename(default_name)
+
+      회전할 때 로그 파일의 파일명을 수정합니다.
+
+      사용자 정의 파일명을 제공할 수 있게 하려고 제공됩니다.
+
+      기본 구현은 처리기의 'namer' 어트리뷰트를(콜러블이라면) 호출하는
+      데, 기본 이름을 전달합니다. 어트리뷰트가 콜러블이 아니면 (기본값
+      은 "None" 입니다), 이름은 변경되지 않고 반환됩니다.
+
+      매개변수:
+         **default_name** -- 로그 파일의 기본 이름.
+
+      버전 3.3에 추가.
+
+   rotate(source, dest)
+
+      회전할 때, 현재 로그를 회전합니다.
+
+      기본 구현은 처리기의 'rotator' 어트리뷰트를(콜러블이라면) 호출하
+      는데, source와 dest 인자를 전달합니다. 어트리뷰트가 콜러블이 아
+      니면 (기본값은 "None" 입니다), source를 dest 로 단순히 이름을 바
+      꿉니다.
+
+      매개변수:
+         * **source** -- 소스 파일명. 이것은 일반적으로 기본 파일명입
+           니다, 예를 들어 'test.log'.
+
+         * **dest** -- 대상 파일명. 이것은 일반적으로 소스가 회전되는
+           곳입니다, 예를 들어 'test.log.1'.
+
+      버전 3.3에 추가.
+
+어트리뷰트가 존재하는 이유는 서브 클래싱해야 할 필요를 줄이는 것입니다
+- "RotatingFileHandler"와 "TimedRotatingFileHandler" 의 인스턴스에 같
+은 콜러블을 사용할 수 있습니다. namer 나 rotator 콜러블이 예외를 발생
+시키면, "emit()" 동안 발생하는 다른 예외와 같은 방식으로 처리됩니다,
+즉 처리기의 "handleError()" 메서드를 통해.
+
+회전 처리를 더 크게 변경해야 하면, 메서드를 재정의할 수 있습니다.
+
+예는 rotator와 namer를 사용해서 로그 회전 처리하기를 보십시오.
+
+
+RotatingFileHandler
+===================
+
+"logging.handlers" 모듈에 있는 "RotatingFileHandler" 클래스는 디스크
+로그 파일 회전을 지원합니다.
+
+class logging.handlers.RotatingFileHandler(filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=False, errors=None)
+
+   "RotatingFileHandler" 클래스의 새로운 인스턴스를 반환합니다. 지정된
+   파일이 열리고 로깅을 위한 스트림으로 사용됩니다. *mode* 가 지정되지
+   않으면, "'a'" 가 사용됩니다. *encoding* 이 "None" 이 아니면,
+   *encoding*을 사용하여 파일을 엽니다. *delay* 가 참이면, 파일 열기는
+   "emit()"의 첫 번째 호출이 있을 때까지 연기됩니다. 기본적으로, 파일
+   은 제한 없이 커집니다. *errors*가 제공되면, 인코딩 에러 처리 방법을
+   결정합니다.
+
+   미리 결정된 크기에서 파일을 *롤오버 (rollover)* 하기 위해
+   *maxBytes* 와 *backupCount* 값을 사용할 수 있습니다. 크기가 초과하
+   려고 할 때, 파일이 닫히고 출력을 위해 새 파일이 조용히 열립니다. 롤
+   오버는 현재 로그 파일이 거의 *maxBytes* 길이일 때마다 발생합니다;
+   그러나 *maxBytes* 나 *backupCount* 가 0이면 롤오버가 발생하지 않으
+   므로, 일반적으로 *backupCount* 를 1 이상으로 설정하고, 0이 아닌
+   *maxBytes*를 사용하기를 원할 겁니다. *backupCount* 가 0이 아니면,
+   시스템은 파일명에 확장자 '.1', '.2' 등을 추가하여 지난 로그 파일을
+   저장합니다. 예를 들어, *backupCount* 가 5이고 기본 파일명이
+   "app.log" 면, "app.log", "app.log.1", "app.log.2"부터 "app.log.5"
+   까지의 파일을 얻게 됩니다. 기록되는 파일은 항상 "app.log" 입니다.
+   이 파일이 채워지면, 닫히고 "app.log.1" 로 이름이 변경됩니다, 그리고
+   파일 "app.log.1", "app.log.2" 등이 존재하면, 이것들도 각기
+   "app.log.2", "app.log.3" 등으로 이름이 변경됩니다.
+
+   버전 3.6에서 변경: 문자열 값뿐만 아니라, "Path" 객체도 *filename*
+   인자로 허용됩니다.
+
+   버전 3.9에서 변경: *errors* 매개 변수가 추가되었습니다.
+
+   doRollover()
+
+      위에서 설명한 대로 롤오버를 수행합니다.
+
+   emit(record)
+
+      앞에서 설명한 대로 롤오버를 처리하면서, 파일에 레코드를 출력합니
+      다.
+
+
+TimedRotatingFileHandler
+========================
+
+"logging.handlers" 모듈에 있는 "TimedRotatingFileHandler" 클래스는 특
+정 시간 간격의 디스크 로그 파일 회전을 지원합니다.
+
+class logging.handlers.TimedRotatingFileHandler(filename, when='h', interval=1, backupCount=0, encoding=None, delay=False, utc=False, atTime=None, errors=None)
+
+   "TimedRotatingFileHandler" 클래스의 새로운 인스턴스를 반환합니다.
+   지정된 파일이 열리고 로깅을 위한 스트림으로 사용됩니다. 회전 시 파
+   일명 접미사도 설정합니다. *when* 과 *interval* 에 따라 회전이 일어
+   납니다.
+
+   *when* 을 사용하여 *interval* 의 유형을 지정할 수 있습니다. 가능한
+   값의 목록은 아래와 같습니다. 대소 문자를 구분하지 않는다는 것에 유
+   의하세요.
+
+   +------------------+------------------------------+---------------------------+
+   | 값               | interval의 유형              | *atTime* 이 사용되는지와  |
+   |                  |                              | 사용되는 방식             |
+   |==================|==============================|===========================|
+   | "'S'"            | 초                           | 무시됩니다                |
+   +------------------+------------------------------+---------------------------+
+   | "'M'"            | 분                           | 무시됩니다                |
+   +------------------+------------------------------+---------------------------+
+   | "'H'"            | 시간                         | 무시됩니다                |
+   +------------------+------------------------------+---------------------------+
+   | "'D'"            | 일                           | 무시됩니다                |
+   +------------------+------------------------------+---------------------------+
+   | "'W0'-'W6'"      | 요일 (0=월요일)              | 최초 롤오버 시간을 계산하 |
+   |                  |                              | 는 데 사용됩니다          |
+   +------------------+------------------------------+---------------------------+
+   | "'midnight'"     | *atTime* 을 지정하지 않으면  | 최초 롤오버 시간을 계산하 |
+   |                  | 자정에, 그렇지 않으면        | 는 데 사용됩니다          |
+   |                  | *atTime* 에 롤오 버 합니다   |                           |
+   +------------------+------------------------------+---------------------------+
+
+   요일 기반 회전을 사용할 때, 월요일은 'W0', 화요일은 'W1', 등등 일요
+   일은 'W6'까지 지정하십시오. 이 경우, *interval* 에 전달된 값은 사용
+   되지 않습니다.
+
+   시스템은 파일명에 확장자를 추가하여 지난 로그 파일을 저장합니다. 확
+   장자는 날짜와 시간 기반이며, 롤오버 간격에 따라 strftime 형식
+   "%Y-%m-%d_%H-%M-%S" 이나 그 앞부분을 사용합니다.
+
+   다음 롤오버 시간을 처음 계산할 때 (처리기가 만들어질 때), 기존 로그
+   파일의 마지막 수정 시간 또는 (없으면) 현재 시각이 다음 회전이 발생
+   할 때를 계산하는 데 사용됩니다.
+
+   *utc* 인자가 참이면, UTC 시간이 사용됩니다; 그렇지 않으면 현지 시간
+   이 사용됩니다.
+
+   *backupCount* 가 0이 아니면, 최대 *backupCount* 개의 파일이 보관되
+   고, 롤오버가 발생할 때 더 많은 파일이 생성되면 가장 오래된 파일이
+   삭제됩니다. 삭제 논리는 interval을 사용하여 삭제할 파일을 결정하므
+   로, interval을 변경하면 오래된 파일이 남아있을 수 있습니다.
+
+   *delay* 가 참이면, 파일 열기는 "emit()"에 대한 첫 번째 호출까지 지
+   연됩니다.
+
+   *atTime* 이 "None" 이 아니면, 반드시 "datetime.time" 인스턴스여야
+   하는데, 롤오버가 "자정에" 또는 "특정 요일에" 발생하도록 설정된 경우
+   에 롤오버가 발생하는 시간을 지정합니다. 이 경우, *atTime* 값은 *최
+   초* 롤오버를 계산하는 데 사용되며, 이후 롤오버는 일반적인 간격 계산
+   을 통해 계산됩니다.
+
+   *errors*가 지정되면, 인코딩 에러 처리 방법을 결정하는 데 사용됩니다
+   .
+
+   참고:
+
+     최초 롤오버 시간의 계산은 처리기가 초기화될 때 수행됩니다. 후속
+     롤오버 시간 계산은 롤오버가 발생하는 경우에만 수행되며, 롤오버는
+     출력을 내보낼 때만 발생합니다. 이것을 명심하지 않으면, 혼란이 생
+     길 수 있습니다. 예를 들어, "매분" 간격을 설정하면, 이것이 항상 1
+     분 간격의 (파일명을 갖는) 로그 파일들을 보게 된다는 것을 뜻하지는
+     않습니다; 응용 프로그램을 실행하는 동안, 로그 출력이 1분당 한 번
+     보다 더 자주 *발생하면*, 1분 간격의 로그 파일을 볼 것으로 예상할
+     수 있습니다. 반면, (가령) 로깅 메시지가 5분마다 한 번만 출력되면,
+     출력이 없는 (따라서 롤오버가 없는) 분에 해당하는 파일 시간의 틈이
+     생깁니다.
+
+   버전 3.4에서 변경: *atTime* 매개 변수가 추가되었습니다.
+
+   버전 3.6에서 변경: 문자열 값뿐만 아니라, "Path" 객체도 *filename*
+   인자로 허용됩니다.
+
+   버전 3.9에서 변경: *errors* 매개 변수가 추가되었습니다.
+
+   doRollover()
+
+      위에서 설명한 대로 롤오버를 수행합니다.
+
+   emit(record)
+
+      위에서 설명한 대로 롤오버를 처리하면서, 파일에 레코드를 출력합니
+      다.
+
+   getFilesToDelete()
+
+      Returns a list of filenames which should be deleted as part of
+      rollover. These are the absolute paths of the oldest backup log
+      files written by the handler.
+
+
+SocketHandler
+=============
+
+"logging.handlers" 모듈에 있는 "SocketHandler" 클래스는 로깅 출력을 네
+트워크 소켓에 보냅니다. 베이스 클래스는 TCP 소켓을 사용합니다.
+
+class logging.handlers.SocketHandler(host, port)
+
+   *host* 와 *port*로 주어진 주소의 원격 기계와 통신하기 위한,
+   "SocketHandler" 클래스의 새로운 인스턴스를 반환합니다.
+
+   버전 3.4에서 변경: "port"가 "None"으로 지정되면, "host"의 값을 사용
+   하여 유닉스 도메인 소켓이 만들어집니다 - 그렇지 않으면 TCP 소켓이
+   만들어집니다.
+
+   close()
+
+      소켓을 닫습니다.
+
+   emit()
+
+      레코드의 어트리뷰트 딕셔너리를 피클하고 바이너리 형식으로 소켓에
+      씁니다. 소켓에 에러가 있으면 조용히 패킷을 버립니다. 이전에 연결
+      이 끊어졌으면, 연결을 다시 맺습니다. 수신 단에서 레코드를
+      "LogRecord"로 역 피클 하려면, "makeLogRecord()" 함수를 사용하십
+      시오.
+
+   handleError()
+
+      "emit()" 중에 발생한 에러를 처리합니다. 가장 큰 원인은 연결이 끊
+      어지는 것입니다. 다음 이벤트에서 다시 시도할 수 있도록 소켓을 닫
+      습니다.
+
+   makeSocket()
+
+      이것은 서브 클래스가 원하는 소켓의 정확한 유형을 정의 할 수 있게
+      하는 팩토리 메서드입니다. 기본 구현은 TCP 소켓
+      ("socket.SOCK_STREAM")을 만듭니다.
+
+   makePickle(record)
+
+      레코드의 어트리뷰트 딕셔너리를 바이너리 형식으로 피클하고 길이를
+      앞에 붙여서, 소켓을 통해 전송할 준비가 된 상태로 반환합니다. 이
+      연산의 세부 사항은 다음과 동등합니다:
+
+         data = pickle.dumps(record_attr_dict, 1)
+         datalen = struct.pack('>L', len(data))
+         return datalen + data
+
+      피클은 완전히 안전하지 않습니다. 보안이 염려되면, 이 메서드를 재
+      정의하여 더욱 안전한 메커니즘을 구현할 수 있습니다. 예를 들어,
+      HMAC를 사용하여 피클에 서명한 다음 수신 단에서 확인하거나, 수신
+      단에서 전역 객체의 역 피클링을 비활성화할 수 있습니다.
+
+   send(packet)
+
+      피클 된 바이트열 *packet* 을 소켓으로 보냅니다. 보내진 바이트열
+      의 형식은 "makePickle()"의 설명서에 있습니다.
+
+      이 함수는 네트워크가 붐빌 때 발생할 수 있는 부분 전송을 허용합니
+      다.
+
+   createSocket()
+
+      소켓을 만들려고 합니다; 실패 시, 지수 백 오프 알고리즘을 사용합
+      니다. 최초 실패 시 처리기는 보내려는 메시지를 버립니다. 후속 메
+      시지가 같은 인스턴스에 의해 처리될 때, 일정한 시간이 지날 때까지
+      연결을 시도하지 않습니다. 기본 파라미터를 쓸 때, 최초 지연은 1초
+      이고, 지연 후에도 연결을 만들 수 없으면, 처리기가 최대 30초가 될
+      때까지 매번 지연 시간을 두 배로 늘립니다.
+
+      이 동작은 다음 처리기 어트리뷰트에 의해 제어됩니다:
+
+      * "retryStart" (최초 지연, 기본값은 1.0 초).
+
+      * "retryFactor" (배율, 기본값은 2.0).
+
+      * "retryMax" (최대 지연, 기본값은 30.0 초).
+
+      이것은, 처리기가 사용된 *후에* 원격 수신기가 시작되면, 메시지가
+      손실될 수 있음을 뜻합니다 (처리기가 지연이 경과 할 때까지 연결을
+      시도하지조차 않고, 지연 기간에 메시지를 조용히 버리기 때문입니다
+      ).
+
+
+DatagramHandler
+===============
+
+"logging.handlers" 모듈에 있는 "DatagramHandler" 클래스는 UDP 소켓을
+통해 로깅 메시지를 보낼 수 있도록 "SocketHandler"를 상속합니다.
+
+class logging.handlers.DatagramHandler(host, port)
+
+   *host* 와 *port*로 주어진 주소의 원격 기계와 통신하기 위한,
+   "DatagramHandler" 클래스의 새로운 인스턴스를 반환합니다.
+
+   참고:
+
+     As UDP is not a streaming protocol, there is no persistent
+     connection between an instance of this handler and *host*. For
+     this reason, when using a network socket, a DNS lookup might have
+     to be made each time an event is logged, which can introduce some
+     latency into the system. If this affects you, you can do a lookup
+     yourself and initialize this handler using the looked-up IP
+     address rather than the hostname.
+
+   버전 3.4에서 변경: "port"가 "None"으로 지정되면, "host"의 값을 사용
+   하여 유닉스 도메인 소켓이 만들어집니다 - 그렇지 않으면 UDP 소켓이
+   만들어집니다.
+
+   emit()
+
+      레코드의 어트리뷰트 딕셔너리를 피클하고 바이너리 형식으로 소켓에
+      씁니다. 소켓에 에러가 있으면 조용히 패킷을 버립니다. 수신 단에서
+      레코드를 "LogRecord"로 역 피클 하려면, "makeLogRecord()" 함수를
+      사용하십시오.
+
+   makeSocket()
+
+      UDP 소켓("socket.SOCK_DGRAM")을 만들기 위해 "SocketHandler"의 팩
+      토리 메서드가 여기에서 재정의되었습니다.
+
+   send(s)
+
+      피클 된 바이트열을 소켓으로 보냅니다. 보낸 바이트열의 형식은
+      "SocketHandler.makePickle()" 설명서에 있습니다.
+
+
+SysLogHandler
+=============
+
+"logging.handlers" 모듈에 있는 "SysLogHandler" 클래스는 원격 또는 로컬
+유닉스 syslog로 로깅 메시지를 보내는 것을 지원합니다.
+
+class logging.handlers.SysLogHandler(address=('localhost', SYSLOG_UDP_PORT), facility=LOG_USER, socktype=socket.SOCK_DGRAM)
+
+   "(host, port)" 튜플 형태의 *address*로 주어진 주소의 원격 유닉스 기
+   계와 통신하기 위한 "SysLogHandler" 클래스의 새 인스턴스를 돌려줍니
+   다. *address* 를 지정하지 않으면 "('localhost', 514)"가 사용됩니다.
+   주소는 소켓을 여는 데 사용됩니다. "(host, port)" 튜플을 제공하는 대
+   신, 주소를 문자열로 제공할 수 있습니다, 예를 들어 '/dev/log'. 이 경
+   우, 메시지를 syslog로 보내는데 유닉스 도메인 소켓이 사용됩니다.
+   *facility* 가 지정되지 않으면, "LOG_USER"가 사용됩니다. 열리는 소켓
+   의 유형은 *socktype* 인자에 따라 달라지며, 기본값은
+   "socket.SOCK_DGRAM"이고, 따라서 UDP 소켓이 열립니다. TCP 소켓을 열
+   려면 (rsyslog와 같은 최신 syslog 데몬을 사용할 때),
+   "socket.SOCK_STREAM" 값을 지정하십시오.
+
+   서버가 UDP 포트 514에서 수신을 기다리지 않으면, "SysLogHandler"가
+   작동하지 않는 것처럼 보일 수 있습니다. 이 경우, 도메인 소켓에 대해
+   사용해야 하는 주소를 확인하십시오 - 이는 시스템에 따라 다릅니다. 예
+   를 들어 리눅스에서는 보통 '/dev/log' 이지만 OS/X에서는
+   '/var/run/syslog' 입니다. 플랫폼을 확인하고 적절한 주소를 사용해야
+   합니다 (응용 프로그램을 여러 플랫폼에서 실행해야 하는 경우 실행 시
+   간에 검사를 수행해야 할 수도 있습니다). 윈도우에서는, UDP 옵션을 사
+   용해야 합니다.
+
+   참고:
+
+     On macOS 12.x (Monterey), Apple has changed the behaviour of
+     their syslog daemon - it no longer listens on a domain socket.
+     Therefore, you cannot expect "SysLogHandler" to work on this
+     system.See gh-91070 for more information.
+
+   버전 3.2에서 변경: *socktype* 이 추가되었습니다.
+
+   close()
+
+      원격 호스트로의 소켓을 닫습니다.
+
+   emit(record)
+
+      레코드가 포맷된 다음, syslog 서버로 전송됩니다. 예외 정보가 있으
+      면, 서버로 보내 지지 *않습니다*.
+
+      버전 3.2.1에서 변경: (bpo-12168를 보세요.) 이전 버전에서, syslog
+      데몬으로 보낸 메시지는 NUL 바이트로 항상 종료되었는데, 이전 버전
+      의 데몬에서 관련 사양(**RFC 5424**)에 없는데도 불구하고 NUL 종료
+      메시지를 요구했기 때문입니다. 최신 버전의 데몬은 NUL 바이트를 기
+      대하지는 않지만, 있는 경우 이를 제거하고, 더 최근의 (RFC 5424와
+      더 가깝게 일치하는) 데몬은 NUL 바이트를 메시지 일부로 전달합니다
+      .이러한 모든 다른 데몬 동작에 직면하여 syslog 메시지를 더욱 쉽게
+      처리할 수 있도록, NUL 바이트를 추가하는 작업은 클래스 수준 어트
+      리뷰트 "append_nul"을 사용하여 구성할 수 있게 만들었습니다. 기본
+      값은 "True"(기존 동작 유지)이지만, 특정 인스턴스가 NUL 종결자를
+      추가하지 *않도록* "SysLogHandler" 인스턴스에서 "False"로 설정할
+      수 있습니다.
+
+      버전 3.3에서 변경: (bpo-12419를 보세요.) 이전 버전에서는, 메시지
+      소스를 식별하는 "ident" 나 "tag" 접두사를 위한 기능이 없었습니다
+      . 이제는 클래스 수준의 어트리뷰트를 사용하여 지정할 수 있습니다,
+      """"을 기본값으로 사용하여 기존 동작을 유지하지만,
+      "SysLogHandler" 인스턴스에서 재정의하여 해당 인스턴스가 처리하는
+      모든 메시지에 ident를 추가하도록 할 수 있습니다. 제공된 ident는
+      바이트열이 아닌 텍스트여야 하며 그대로 메시지 앞에 추가됩니다.
+
+   encodePriority(facility, priority)
+
+      시설(facility)과 우선순위를 정수로 인코딩합니다. 문자열이나 정수
+      를 전달할 수 있습니다 - 문자열이 전달되면, 내부 매핑 딕셔너리를
+      사용하여 정수로 변환합니다.
+
+      "LOG_" 기호 값은 "SysLogHandler"에 정의되고 "sys/syslog.h" 헤더
+      파일에 정의된 값을 그대로 옮깁니다.
+
+      **우선순위**
+
+      +----------------------------+-----------------+
+      | 이름 (문자열)              | 기호 값         |
+      |============================|=================|
+      | "alert"                    | LOG_ALERT       |
+      +----------------------------+-----------------+
+      | "crit" 또는 "critical"     | LOG_CRIT        |
+      +----------------------------+-----------------+
+      | "debug"                    | LOG_DEBUG       |
+      +----------------------------+-----------------+
+      | "emerg" 또는 "panic"       | LOG_EMERG       |
+      +----------------------------+-----------------+
+      | "err" 또는 "error"         | LOG_ERR         |
+      +----------------------------+-----------------+
+      | "info"                     | LOG_INFO        |
+      +----------------------------+-----------------+
+      | "notice"                   | LOG_NOTICE      |
+      +----------------------------+-----------------+
+      | "warn" 또는 "warning"      | LOG_WARNING     |
+      +----------------------------+-----------------+
+
+      **시설**
+
+      +-----------------+-----------------+
+      | 이름 (문자열)   | 기호 값         |
+      |=================|=================|
+      | "auth"          | LOG_AUTH        |
+      +-----------------+-----------------+
+      | "authpriv"      | LOG_AUTHPRIV    |
+      +-----------------+-----------------+
+      | "cron"          | LOG_CRON        |
+      +-----------------+-----------------+
+      | "daemon"        | LOG_DAEMON      |
+      +-----------------+-----------------+
+      | "ftp"           | LOG_FTP         |
+      +-----------------+-----------------+
+      | "kern"          | LOG_KERN        |
+      +-----------------+-----------------+
+      | "lpr"           | LOG_LPR         |
+      +-----------------+-----------------+
+      | "mail"          | LOG_MAIL        |
+      +-----------------+-----------------+
+      | "news"          | LOG_NEWS        |
+      +-----------------+-----------------+
+      | "syslog"        | LOG_SYSLOG      |
+      +-----------------+-----------------+
+      | "user"          | LOG_USER        |
+      +-----------------+-----------------+
+      | "uucp"          | LOG_UUCP        |
+      +-----------------+-----------------+
+      | "local0"        | LOG_LOCAL0      |
+      +-----------------+-----------------+
+      | "local1"        | LOG_LOCAL1      |
+      +-----------------+-----------------+
+      | "local2"        | LOG_LOCAL2      |
+      +-----------------+-----------------+
+      | "local3"        | LOG_LOCAL3      |
+      +-----------------+-----------------+
+      | "local4"        | LOG_LOCAL4      |
+      +-----------------+-----------------+
+      | "local5"        | LOG_LOCAL5      |
+      +-----------------+-----------------+
+      | "local6"        | LOG_LOCAL6      |
+      +-----------------+-----------------+
+      | "local7"        | LOG_LOCAL7      |
+      +-----------------+-----------------+
+
+   mapPriority(levelname)
+
+      로깅 수준 이름을 syslog 우선순위 이름으로 매핑합니다. 사용자 정
+      의 수준을 사용하거나 기본 알고리즘이 여러분의 요구에 적합하지 않
+      으면, 이 값을 재정의해야 할 수 있습니다. 기본 알고리즘은
+      "DEBUG", "INFO", "WARNING", "ERROR" 및 "CRITICAL"을 동등한
+      syslog 이름으로 매핑하고, 다른 모든 수준 이름은 'warning'으로 매
+      핑합니다.
+
+
+NTEventLogHandler
+=================
+
+"logging.handlers" 모듈에 있는 "NTEventLogHandler" 클래스는 로깅 메시
+지를 로컬 윈도우 NT, 윈도우 2000 또는 윈도우 XP 이벤트 로그로 보내는
+것을 지원합니다. 사용할 수 있으려면 먼저 Mark Hammond의 파이썬 용
+Win32 확장이 설치되어 있어야 합니다.
+
+class logging.handlers.NTEventLogHandler(appname, dllname=None, logtype='Application')
+
+   "NTEventLogHandler" 클래스의 새 인스턴스를 반환합니다. *appname* 은
+   이벤트 로그에 나타나는 응용 프로그램 이름을 정의하는 데 사용됩니다.
+   이 이름을 사용하여 적절한 레지스트리 항목이 만들어집니다. *dllname*
+   은 로그에 보관할 메시지 정의를 포함하는 .dll 또는 .exe의 완전히 정
+   규화된 경로명을 제공해야 합니다 (지정되지 않으면,
+   "'win32service.pyd'"이 사용됩니다 - 이것은 Win32 확장과 함께 설치되
+   며 몇 가지 기본 자리 표시자 메시지 정의를 포함합니다. 이 자리 표시
+   자를 사용하면 전체 메시지 소스가 로그에 보관되므로 이벤트 로그가 커
+   진다는 것에 유의하십시오. 간략한 로그를 원하면, 이벤트 로그에서 사
+   용할 원하는 메시지 정의가 포함된 .dll 또는 .exe의 이름을 전달해야
+   합니다). *logtype* 은 "'Application'", "'System'" 또는 "'Security'"
+   중 하나이며, 기본값은 "'Application'"입니다.
+
+   close()
+
+      이 시점에서, 이벤트 로그 항목의 소스로서의 응용 프로그램 이름을
+      레지스트리에서 제거할 수 있습니다. 그러나, 이렇게 하면, 이벤트
+      로그 뷰어에서 의도한 대로 이벤트를 볼 수 없게 됩니다 - 이벤트 로
+      그 뷰어는 .dll 이름을 가져오기 위해 레지스트리에 액세스할 수 있
+      어야 합니다. 현재 버전은 그렇게 하지 않습니다.
+
+   emit(record)
+
+      메시지 ID, 이벤트 범주 및 이벤트 유형을 결정한 다음, 메시지를 NT
+      이벤트 로그에 기록합니다.
+
+   getEventCategory(record)
+
+      레코드의 이벤트 범주를 반환합니다. 여러분 자신의 범주를 지정하려
+      면, 이것을 재정의하십시오. 이 버전은 0을 반환합니다.
+
+   getEventType(record)
+
+      레코드의 이벤트 유형을 반환합니다. 여러분 자신의 유형을 지정하려
+      면, 이것을 재정의하십시오. 이 버전은 처리기의 typemap 어트리뷰트
+      를 사용하여 매핑하는데, "__init__()"에서 "DEBUG", "INFO",
+      "WARNING", "ERROR" 및 "CRITICAL"에 대한 매핑이 포함된 딕셔너리로
+      설정됩니다. 여러분 자신의 수준을 사용한다면, 이 메서드를 재정의
+      하거나 처리기의 *typemap* 어트리뷰트에 적절한 딕셔너리를 배치해
+      야 합니다.
+
+   getMessageID(record)
+
+      레코드의 메시지 ID를 반환합니다. 여러분 자신의 메시지를 사용한다
+      면, 로거에 전달된 *msg*를 포맷 문자열이 아닌 ID로 사용할 수 있습
+      니다. 그런 다음 여기에서 딕셔너리 조회를 사용하여 메시지 ID를 가
+      져올 수 있습니다. 이 버전은 "win32service.pyd"의 기본 메시지 ID
+      인 1을 반환합니다.
+
+
+SMTPHandler
+===========
+
+"logging.handlers" 모듈에 있는 "SMTPHandler" 클래스는 SMTP를 통해 전자
+메일 주소로 로깅 메시지를 보내는 것을 지원합니다.
+
+class logging.handlers.SMTPHandler(mailhost, fromaddr, toaddrs, subject, credentials=None, secure=None, timeout=1.0)
+
+   "SMTPHandler" 클래스의 새 인스턴스를 반환합니다. 인스턴스는 전자 메
+   일의 보내는 주소, 받는 주소와 제목 줄을 사용하여 초기화됩니다.
+   *toaddrs* 는 문자열 리스트여야 합니다. 비표준 SMTP 포트를 지정하려
+   면, *mailhost* 인자에 (host, port) 튜플 형식을 사용하십시오. 문자열
+   을 사용하면 표준 SMTP 포트가 사용됩니다. SMTP 서버가 인증을 요구하
+   면, *credentials* 인자에 (username, password) 튜플을 지정할 수 있습
+   니다.
+
+   보안 프로토콜(TLS)의 사용을 지정하려면, *secure* 인자에 튜플을 전달
+   하십시오. 이것은 인증 자격 증명(credentials)이 제공될 때만 사용됩니
+   다. 튜플은 빈 튜플이거나, 키 파일 이름을 가진 단일 값 튜플이거나,
+   키 파일과 인증서 파일의 이름을 가진 2-튜플이어야 합니다. (이 튜플은
+   "smtplib.SMTP.starttls()" 메서드에 전달됩니다.)
+
+   *timeout* 인자를 사용하여 SMTP 서버와의 통신에 시간제한을 지정할 수
+   있습니다.
+
+   버전 3.3에 추가: The *timeout* argument was added.
+
+   emit(record)
+
+      레코드를 포맷하고 지정된 주소로 보냅니다.
+
+   getSubject(record)
+
+      레코드에 종속적인 제목 줄을 지정하려면, 이 메서드를 재정의하십시
+      오.
+
+
+MemoryHandler
+=============
+
+"logging.handlers" 모듈에 있는 "MemoryHandler" 클래스는 메모리에 로깅
+레코드를 버퍼링하고, 주기적으로 *대상 (target)* 처리기로 플러시 하는
+것을 지원합니다. 플러시는 버퍼가 꽉 찼거나 특정 심각도 이상의 이벤트가
+발생할 때마다 발생합니다.
+
+"MemoryHandler"는 추상 클래스이면서, 더 일반적인 "BufferingHandler"의
+서브 클래스입니다. 이것은 레코드 로깅을 메모리에 버퍼링합니다. 각 레코
+드가 버퍼에 추가될 때마다, "shouldFlush()"를 호출하여 버퍼를 플러시 할
+지 확인합니다. 필요하면, "flush()"가 플러시를 수행할 것으로 기대합니다
+.
+
+class logging.handlers.BufferingHandler(capacity)
+
+   지정된 용량(capacity)의 버퍼로 처리기를 초기화합니다. 여기서
+   *capacity*는 버퍼링 된 로깅 레코드 수를 의미합니다.
+
+   emit(record)
+
+      레코드를 버퍼에 추가합니다. "shouldFlush()"가 참을 반환하면
+      "flush()"를 호출하여 버퍼를 처리합니다.
+
+   flush()
+
+      You can override this to implement custom flushing behavior.
+      This version just zaps the buffer to empty.
+
+   shouldFlush(record)
+
+      버퍼의 용량이 찼으면 "True"를 반환합니다. 이 메서드는 사용자 정
+      의 플러시 전략을 구현하기 위해 재정의될 수 있습니다.
+
+class logging.handlers.MemoryHandler(capacity, flushLevel=ERROR, target=None, flushOnClose=True)
+
+   "MemoryHandler" 클래스의 새 인스턴스를 반환합니다. 인스턴스는
+   *capacity*(버퍼 된 레코드 수)의 버퍼 크기로 초기화됩니다.
+   *flushLevel*을 지정하지 않으면, "ERROR"가 사용됩니다. *target* 이
+   지정되지 않으면, 이 처리기가 유용한 것을 하기 전에, "setTarget()"를
+   사용해 대상을 설정할 필요가 있습니다. *flushOnClose* 가 "False"로
+   지정되면, 처리기가 닫힐 때 버퍼가 플러시 되지 *않습니다*. 지정되지
+   않거나 "True"로 지정되면, 처리기가 닫힐 때 버퍼를 플러시 하는 이전
+   동작이 발생합니다.
+
+   버전 3.6에서 변경: *flushOnClose* 매개 변수가 추가되었습니다.
+
+   close()
+
+      "flush()"를 호출하고, 대상(target)을 "None"으로 설정하고, 버퍼를
+      비웁니다.
+
+   flush()
+
+      For a "MemoryHandler", flushing means just sending the buffered
+      records to the target, if there is one. The buffer is also
+      cleared when this happens. Override if you want different
+      behavior.
+
+   setTarget(target)
+
+      이 처리기의 대상 처리기를 설정합니다.
+
+   shouldFlush(record)
+
+      버퍼 가득 참이나 레코드가 *flushLevel* 이상을 만드는지 확인합니
+      다.
+
+
+HTTPHandler
+===========
+
+"logging.handlers" 모듈에 있는 "HTTPHandler" 클래스는 "GET" 또는
+"POST" 를 사용해서 로깅 메시지를 웹 서버로 보내는 것을 지원합니다.
+
+class logging.handlers.HTTPHandler(host, url, method='GET', secure=False, credentials=None, context=None)
+
+   "HTTPHandler" 클래스의 새 인스턴스를 반환합니다. *host* 는 특정 포
+   트 번호를 사용해야 하면 "host:port" 형식일 수 있습니다. *method* 를
+   지정하지 않으면 "GET"이 사용됩니다. *secure* 가 참이면, HTTPS 연결
+   이 사용됩니다. *context* 매개 변수는 "ssl.SSLContext" 인스턴스로 설
+   정되어, HTTPS 연결에 사용되는 SSL 설정을 구성할 수 있습니다.
+   *credentials* 가 지정되면, 기본 인증을 사용하여 HTTP
+   'Authorization' 헤더에 배치되는 사용자 ID와 암호로 구성된 2-튜플이
+   어야 합니다. credentials를 지정하면, 사용자 ID와 암호가 단순 텍스트
+   로 전달되지 않도록 secure=True를 지정해야 합니다.
+
+   버전 3.5에서 변경: *context* 매개 변수가 추가되었습니다.
+
+   mapLogRecord(record)
+
+      URL 인코딩되어 웹 서버로 전송되는, "record"에 기반한 딕셔너리를
+      제공합니다. 기본 구현은 "record.__dict__"를 반환합니다. 이 메서
+      드는 재정의할 수 있는데, 예를 들어 "LogRecord"의 일부만 웹 서버
+      로 보내지거나, 서버로 보내는 내용에 대한 보다 구체적인 사용자 정
+      의가 필요한 경우입니다.
+
+   emit(record)
+
+      URL 인코딩된 딕셔너리로 웹 서버에 레코드를 보냅니다.
+      "mapLogRecord()" 메서드가 레코드를 전송할 딕셔너리로 변환하는 데
+      사용됩니다.
+
+   참고:
+
+     웹 서버로 보내기 위해 레코드를 준비하는 것은, 일반 포매팅 연산과
+     같지 않으므로, "setFormatter()"를 사용해서 "HTTPHandler"의
+     "Formatter"를 지정하는 것은 효과가 없습니다. "format()"을 호출하
+     는 대신, 이 처리기는 "mapLogRecord()"를 호출한 다음,
+     "urllib.parse.urlencode()"를 호출하여 웹 서버로 보내기에 적합한
+     형식으로 딕셔너리를 인코딩합니다.
+
+
+QueueHandler
+============
+
+버전 3.2에 추가.
+
+"logging.handlers" 모듈에 있는 "QueueHandler" 클래스는, "queue" 나
+"multiprocessing" 모듈에 구현된 것과 같은 큐에 로깅 메시지를 보내는 것
+을 지원합니다.
+
+"QueueListener" 클래스와 함께, "QueueHandler"를 사용하여 처리기가 로깅
+을 수행하는 스레드와 다른 스레드에서 작업을 수행하도록 할 수 있습니다.
+이는 클라이언트를 처리하는 스레드가 가능한 한 신속하게 응답하고, 느린
+작업(가령 "SMTPHandler"를 통해 전자 메일 보내기)은 별도의 스레드에서
+수행되어야 하는 웹 응용 프로그램과 다른 서비스 응용 프로그램에서 중요
+합니다.
+
+class logging.handlers.QueueHandler(queue)
+
+   "QueueHandler" 클래스의 새 인스턴스를 반환합니다. 인스턴스는 메시지
+   를 보낼 큐로 초기화됩니다. *queue*는 임의의 큐류(queue-like) 객체일
+   수 있습니다; 메시지를 보내는 방법을 알아야 하는 "enqueue()" 메서드
+   가 있는 그대로 사용합니다. 큐는 작업 추적 API를 갖도록 *요구되지*
+   않아서, *queue*에 "SimpleQueue" 인스턴스를 사용할 수 있습니다.
+
+   참고:
+
+     If you are using "multiprocessing", you should avoid using
+     "SimpleQueue" and instead use "multiprocessing.Queue".
+
+   emit(record)
+
+      Enqueues the result of preparing the LogRecord. Should an
+      exception occur (e.g. because a bounded queue has filled up),
+      the "handleError()" method is called to handle the error. This
+      can result in the record silently being dropped (if
+      "logging.raiseExceptions" is "False") or a message printed to
+      "sys.stderr" (if "logging.raiseExceptions" is "True").
+
+   prepare(record)
+
+      큐에 넣기 위해 레코드를 준비합니다. 이 메서드에 의해 반환된 객체
+      는 큐에 들어갑니다.
+
+      The base implementation formats the record to merge the message,
+      arguments, exception and stack information, if present.  It also
+      removes unpickleable items from the record in-place.
+      Specifically, it overwrites the record's "msg" and "message"
+      attributes with the merged message (obtained by calling the
+      handler's "format()" method), and sets the "args", "exc_info"
+      and "exc_text" attributes to "None".
+
+      레코드를 dict 나 JSON 문자열로 변환하거나, 원본을 그대로 두고 레
+      코드의 수정 된 복사본을 보내길 원한다면 이 메서드를 재정의할 수
+      있습니다.
+
+      참고:
+
+        The base implementation formats the message with arguments,
+        sets the "message" and "msg" attributes to the formatted
+        message and sets the "args" and "exc_text" attributes to
+        "None" to allow pickling and to prevent further attempts at
+        formatting. This means that a handler on the "QueueListener"
+        side won't have the information to do custom formatting, e.g.
+        of exceptions. You may wish to subclass "QueueHandler" and
+        override this method to e.g. avoid setting "exc_text" to
+        "None". Note that the "message" / "msg" / "args" changes are
+        related to ensuring the record is pickleable, and you might or
+        might not be able to avoid doing that depending on whether
+        your "args" are pickleable. (Note that you may have to
+        consider not only your own code but also code in any libraries
+        that you use.)
+
+   enqueue(record)
+
+      "put_nowait()"를 사용하여 큐에 레코드를 넣습니다; 블로킹 동작이
+      나 시간제한이나, 사용자 정의 큐 구현을 사용하려면 이 메서드를 재
+      정의할 수 있습니다.
+
+   listener
+
+      When created via configuration using "dictConfig()", this
+      attribute will contain a "QueueListener" instance for use with
+      this handler. Otherwise, it will be "None".
+
+      버전 3.12에 추가.
+
+
+QueueListener
+=============
+
+버전 3.2에 추가.
+
+"logging.handlers" 모듈에 있는 "QueueListener" 클래스는 "queue" 나
+"multiprocessing" 모듈에 구현된 것과 같은 큐에서 로깅 메시지를 수신하
+는 것을 지원합니다. 메시지는 내부 스레드의 큐에서 수신되고 처리를 위해
+같은 스레드에서 하나 이상의 처리기로 전달됩니다. "QueueListener" 자체
+는 처리기가 아니지만, "QueueHandler" 와 함께 사용되기 때문에 여기에 설
+명되어 있습니다.
+
+"QueueHandler" 클래스와 함께, "QueueListener"를 사용하여 처리기가 로깅
+을 수행하는 스레드와 다른 스레드에서 작업을 수행하도록 할 수 있습니다.
+이는 클라이언트를 처리하는 스레드가 가능한 한 신속하게 응답하고, 느린
+작업(가령 "SMTPHandler"를 통해 전자 메일 보내기)은 별도의 스레드에서
+수행되어야 하는 웹 응용 프로그램과 다른 서비스 응용 프로그램에서 중요
+합니다.
+
+class logging.handlers.QueueListener(queue, *handlers, respect_handler_level=False)
+
+   "QueueListener" 클래스의 새 인스턴스를 반환합니다. 인스턴스는 메시
+   지를 보내는 큐와 큐에 있는 항목을 처리할 처리기의 리스트로 초기화됩
+   니다. 큐는 임의의 큐류(queue-like) 객체일 수 있습니다; 메시지를 꺼
+   내는 방법을 알아야 하는 "dequeue()" 메서드가 있는 그대로 사용합니다
+   . 큐는 작업 추적 API를 갖도록 *요구되지* 않아서 (가능하면 사용됩니
+   다), *queue*에 "SimpleQueue" 인스턴스를 사용할 수 있습니다.
+
+   참고:
+
+     If you are using "multiprocessing", you should avoid using
+     "SimpleQueue" and instead use "multiprocessing.Queue".
+
+   "respect_handler_level"이 "True" 면, 처리기에 메시지를 전달할지를
+   결정할 때, 처리기의 수준이 존중됩니다 (메시지의 수준과 비교); 그렇
+   지 않으면, 이전 파이썬 버전과 같게 동작합니다 - 항상 각 메시지를 모
+   든 처리기에 전달합니다.
+
+   버전 3.5에서 변경: "respect_handler_level" 인자가 추가되었습니다.
+
+   dequeue(block)
+
+      레코드를 큐에서 꺼내 반환합니다. 선택적으로 블록 됩니다.
+
+      기본 구현은 "get()"을 사용합니다. 시간제한을 사용하거나 사용자
+      정의 큐 구현을 사용하려면 이 메서드를 재정의할 수 있습니다.
+
+   prepare(record)
+
+      처리를 위해 레코드를 준비합니다.
+
+      이 구현은 단지 전달된 레코드를 반환합니다. 사용자 정의 직렬화를
+      수행하거나 처리기에 전달하기 전에 레코드를 조작해야 하면, 이 메
+      서드를 재정의할 수 있습니다.
+
+   handle(record)
+
+      레코드를 처리합니다.
+
+      이것은 단지 모든 처리기로 레코드를 제공합니다. 처리기에 전달되는
+      실제 객체는 "prepare()"에서 반환된 객체입니다.
+
+   start()
+
+      수신기를 시작합니다.
+
+      이것은 처리하기 위해 큐에서 LogRecord를 관찰하는 배경 스레드를
+      시작합니다.
+
+   stop()
+
+      수신기를 정지합니다.
+
+      스레드가 종료하도록 요청한 다음, 스레드가 종료할 때까지 대기합니
+      다. 응용 프로그램이 종료되기 전에 이 함수를 호출하지 않으면, 레
+      코드가 큐에 남아있을 수 있고, 이것들은 처리되지 않습니다.
+
+   enqueue_sentinel()
+
+      수신자에게 종료하도록 알리기 위해 큐에 종료 신호(sentinel)를 씁
+      니다. 이 구현은 "put_nowait()"를 사용합니다. 시간제한을 사용하거
+      나 사용자 정의 큐 구현을 사용하려면 이 메서드를 재정의할 수 있습
+      니다.
+
+      버전 3.3에 추가.
+
+더 보기:
+
+  모듈 "logging"
+     logging 모듈에 관한 API 레퍼런스.
+
+  모듈 "logging.config"
+     logging 모듈용 구성 API.

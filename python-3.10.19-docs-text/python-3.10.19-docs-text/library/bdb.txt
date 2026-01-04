@@ -1,0 +1,435 @@
+"bdb" --- Debugger framework
+****************************
+
+**소스 코드:** Lib/bdb.py
+
+======================================================================
+
+"bdb" 모듈은 중단점 설정이나 디버거를 통한 실행 관리와 같은 기본 디버
+거 기능을 처리합니다.
+
+다음 예외가 정의됩니다:
+
+exception bdb.BdbQuit
+
+   디버거를 종료하기 위해 "Bdb" 클래스가 발생시키는 예외.
+
+"bdb" 모듈은 또한 두 가지 클래스를 정의합니다:
+
+class bdb.Breakpoint(self, file, line, temporary=False, cond=None, funcname=None)
+
+   이 클래스는 임시 중단점, 무시 카운트, 비활성화와 (재) 활성화 및 조
+   건을 구현합니다.
+
+   중단점은 "bpbynumber"라는 리스트를 통해 번호로, "bplist"를 통해
+   "(file, line)" 쌍으로 인덱싱됩니다. 전자는 "Breakpoint" 클래스의 단
+   일 인스턴스를 가리킵니다. 후자는 줄당 하나 이상의 중단점이 있을 수
+   있어서 이러한 인스턴스의 리스트를 가리킵니다.
+
+   중단점을 만들 때, 연관된 "파일명"은 규범적 형식(canonical form)이어
+   야 합니다. "funcname"이 정의되면, 해당 함수의 첫 번째 줄이 실행될
+   때 중단점 "적중"이 카운트됩니다. "조건부" 중단점은 항상 "적중"을 카
+   운트합니다.
+
+   "Breakpoint" 인스턴스에는 다음과 같은 메서드가 있습니다:
+
+   deleteMe()
+
+      file/line과 관련된 리스트에서 중단점을 삭제합니다. 해당 위치의
+      마지막 중단점이면, file/line의 항목도 삭제합니다.
+
+   enable()
+
+      중단점을 활성화된 것으로 표시합니다.
+
+   disable()
+
+      중단점을 비활성화된 것으로 표시합니다.
+
+   bpformat()
+
+      멋지게 포맷된, 중단점에 대한 모든 정보가 포함된 문자열을 반환합
+      니다:
+
+      * 중단점 번호.
+
+      * Temporary status (del or keep).
+
+      * File/line 위치.
+
+      * Break condition.
+
+      * Number of times to ignore.
+
+      * Number of times hit.
+
+      버전 3.2에 추가.
+
+   bpprint(out=None)
+
+      "bpformat()"의 출력을 파일 *out*, 또는 "None"이면 표준 출력으로
+      인쇄합니다.
+
+   "Breakpoint" 인스턴스에는 다음과 같은 어트리뷰트가 있습니다:
+
+   file
+
+      File name of the "Breakpoint".
+
+   line
+
+      Line number of the "Breakpoint" within "file".
+
+   temporary
+
+      True if a "Breakpoint" at (file, line) is temporary.
+
+   cond
+
+      Condition for evaluating a "Breakpoint" at (file, line).
+
+   funcname
+
+      Function name that defines whether a "Breakpoint" is hit upon
+      entering the function.
+
+   enabled
+
+      True if "Breakpoint" is enabled.
+
+   bpbynumber
+
+      Numeric index for a single instance of a "Breakpoint".
+
+   bplist
+
+      Dictionary of "Breakpoint" instances indexed by ("file", "line")
+      tuples.
+
+   ignore
+
+      Number of times to ignore a "Breakpoint".
+
+   hits
+
+      Count of the number of times a "Breakpoint" has been hit.
+
+class bdb.Bdb(skip=None)
+
+   "Bdb" 클래스는 범용 파이썬 디버거 베이스 클래스 역할을 합니다.
+
+   이 클래스는 추적 기능의 세부 사항을 처리합니다; 파생 클래스는 사용
+   자 상호 작용을 구현해야 합니다. 표준 디버거 클래스 ("pdb.Pdb")가 예
+   입니다.
+
+   *skip* 인자는, 주어지면, glob 스타일 모듈 이름 패턴의 이터러블 이어
+   야 합니다. 디버거는 이러한 패턴 중 하나와 일치하는 모듈에서 시작되
+   는 프레임으로 들어가지 않습니다. 프레임을 특정 모듈에서 시작된 것으
+   로 간주하는지는 프레임 전역의 "__name__"에 의해 결정됩니다.
+
+   버전 3.1에 추가: The *skip* argument.
+
+   "Bdb"의 다음 메서드는 일반적으로 재정의할 필요가 없습니다.
+
+   canonic(filename)
+
+      *filename*의 규범적 형식을 반환합니다.
+
+      For real file names, the canonical form is an operating-system-
+      dependent, "case-normalized" "absolute path". A *filename* with
+      angle brackets, such as ""<stdin>"" generated in interactive
+      mode, is returned unchanged.
+
+   reset()
+
+      Set the "botframe", "stopframe", "returnframe" and "quitting"
+      attributes with values ready to start debugging.
+
+   trace_dispatch(frame, event, arg)
+
+      이 함수는 디버그되는 프레임의 추적 함수(trace function)로 설치됩
+      니다. 반환 값은 새로운 추적 함수(대부분 자체)입니다.
+
+      기본 구현은 실행되려고 하는 (문자열로 전달된) 이벤트의 유형에 따
+      라 프레임을 디스패치 하는 방법을 결정합니다. *event*는 다음 중
+      하나일 수 있습니다:
+
+      * ""line"": 새로운 코드 줄이 실행되려고 합니다.
+
+      * ""call"": 함수가 호출되거나, 다른 코드 블록에 진입하려고 합니
+        다.
+
+      * ""return"": 함수나 다른 코드 블록이 반환하려고 합니다.
+
+      * ""exception"": 예외가 발생했습니다.
+
+      * ""c_call"": C 함수가 호출되려고 합니다.
+
+      * ""c_return"": C 함수가 반환했습니다.
+
+      * ""c_exception"": C 함수가 예외를 발생시켰습니다.
+
+      파이썬 이벤트의 경우, 특수 함수(아래를 참조하세요)가 호출됩니다.
+      C 이벤트의 경우, 아무런 액션도 취하지 않습니다.
+
+      *arg* 매개 변수는 앞의 이벤트에 따라 다릅니다.
+
+      추적 함수에 대한 자세한 내용은 "sys.settrace()" 설명서를 참조하
+      십시오. 코드와 프레임 객체에 대한 자세한 내용은 표준형 계층을 참
+      조하십시오.
+
+   dispatch_line(frame)
+
+      If the debugger should stop on the current line, invoke the
+      "user_line()" method (which should be overridden in subclasses).
+      Raise a "BdbQuit" exception if the "Bdb.quitting" flag is set
+      (which can be set from "user_line()").  Return a reference to
+      the "trace_dispatch()" method for further tracing in that scope.
+
+   dispatch_call(frame, arg)
+
+      If the debugger should stop on this function call, invoke the
+      "user_call()" method (which should be overridden in subclasses).
+      Raise a "BdbQuit" exception if the "Bdb.quitting" flag is set
+      (which can be set from "user_call()").  Return a reference to
+      the "trace_dispatch()" method for further tracing in that scope.
+
+   dispatch_return(frame, arg)
+
+      If the debugger should stop on this function return, invoke the
+      "user_return()" method (which should be overridden in
+      subclasses). Raise a "BdbQuit" exception if the "Bdb.quitting"
+      flag is set (which can be set from "user_return()").  Return a
+      reference to the "trace_dispatch()" method for further tracing
+      in that scope.
+
+   dispatch_exception(frame, arg)
+
+      If the debugger should stop at this exception, invokes the
+      "user_exception()" method (which should be overridden in
+      subclasses). Raise a "BdbQuit" exception if the "Bdb.quitting"
+      flag is set (which can be set from "user_exception()").  Return
+      a reference to the "trace_dispatch()" method for further tracing
+      in that scope.
+
+   일반적으로 파생된 클래스는 다음 메서드를 재정의하지 않지만, 중지와
+   중단점의 정의를 재정의하려고 하면 그럴 수 있습니다.
+
+   is_skipped_line(module_name)
+
+      Return True if *module_name* matches any skip pattern.
+
+   stop_here(frame)
+
+      Return True if *frame* is below the starting frame in the stack.
+
+   break_here(frame)
+
+      Return True if there is an effective breakpoint for this line.
+
+      Check whether a line or function breakpoint exists and is in
+      effect.  Delete temporary breakpoints based on information from
+      "effective()".
+
+   break_anywhere(frame)
+
+      Return True if any breakpoint exists for *frame*'s filename.
+
+   파생 클래스는 디버거 연산을 제어하기 위해 이 메서드를 재정의해야 합
+   니다.
+
+   user_call(frame, argument_list)
+
+      호출된 함수 내부에서 중단이 발생할 수 있으면 "dispatch_call()"에
+      서 호출됩니다.
+
+   user_line(frame)
+
+      "stop_here()"나 "break_here()"가 "True"를 반환할 때
+      "dispatch_line()"에서 호출됩니다.
+
+   user_return(frame, return_value)
+
+      "stop_here()"가 "True"를 반환할 때 "dispatch_return()"에서 호출
+      됩니다.
+
+   user_exception(frame, exc_info)
+
+      "stop_here()"가 "True"를 반환할 때 "dispatch_exception()"에서 호
+      출됩니다.
+
+   do_clear(arg)
+
+      중단점이 일시적일 때 중단점을 제거하는 방법을 처리합니다.
+
+      이 메서드는 파생 클래스에서 구현해야 합니다.
+
+   파생 클래스와 클라이언트는 다음 메서드를 호출하여 스테핑(stepping)
+   상태에 영향을 줄 수 있습니다.
+
+   set_step()
+
+      한 줄의 코드 후에 멈춥니다.
+
+   set_next(frame)
+
+      주어진 프레임 내 또는 아래의 다음 줄에서 멈춥니다.
+
+   set_return(frame)
+
+      주어진 프레임에서 반환할 때 멈춥니다.
+
+   set_until(frame, lineno=None)
+
+      현재 줄보다 큰 *lineno*를 갖는 줄에 도달하거나 현재 프레임에서
+      반환할 때 멈춥니다.
+
+   set_trace([frame])
+
+      *frame*에서 디버깅을 시작합니다. *frame*을 지정하지 않으면 호출
+      자의 프레임에서 디버깅을 시작합니다.
+
+   set_continue()
+
+      중단점에서나 완료 시에만 멈춥니다. 중단점이 없으면, 시스템 추적
+      함수를 "None"으로 설정합니다.
+
+   set_quit()
+
+      Set the "quitting" attribute to "True".  This raises "BdbQuit"
+      in the next call to one of the "dispatch_*()" methods.
+
+   파생 클래스와 클라이언트는 다음 메서드를 호출하여 중단점을 조작할
+   수 있습니다. 이 메서드는 문제가 발생하면 에러 메시지가 포함된 문자
+   열을 반환하고, 모두 정상이면 "None"을 반환합니다.
+
+   set_break(filename, lineno, temporary=False, cond=None, funcname=None)
+
+      새로운 중단점을 설정합니다. 인자로 전달된 *filename*에 *lineno*
+      줄이 없으면 에러 메시지를 반환합니다. "canonic()" 메서드에 설명
+      된 대로 *filename*은 규범적 형식이어야 합니다.
+
+   clear_break(filename, lineno)
+
+      *filename*과 *lineno*에서 중단점을 삭제합니다. 설정되지 않았으면
+      , 에러 메시지를 반환합니다.
+
+   clear_bpbynumber(arg)
+
+      "Breakpoint.bpbynumber"에서 인덱스 *arg*인 중단점을 삭제합니다.
+      *arg*가 숫자가 아니거나 범위를 벗어나면, 에러 메시지를 반환합니
+      다.
+
+   clear_all_file_breaks(filename)
+
+      *filename*에서 모든 중단점을 삭제합니다. 설정되지 않았으면, 에러
+      메시지를 반환합니다.
+
+   clear_all_breaks()
+
+      모든 기존 중단점을 삭제합니다. 설정되지 않았으면, 에러 메시지를
+      반환합니다.
+
+   get_bpbynumber(arg)
+
+      주어진 숫자로 지정된 중단점을 반환합니다. *arg*가 문자열이면, 숫
+      자로 변환됩니다. *arg*가 숫자가 아닌 문자열이면, 지정된 중단점이
+      존재하지 않거나 삭제되었으면, "ValueError"가 발생합니다.
+
+      버전 3.2에 추가.
+
+   get_break(filename, lineno)
+
+      Return True if there is a breakpoint for *lineno* in *filename*.
+
+   get_breaks(filename, lineno)
+
+      *filename*의 *lineno*에 있는 모든 중단점을 반환하거나, 없으면 빈
+      리스트를 반환합니다.
+
+   get_file_breaks(filename)
+
+      *filename*의 모든 중단점을 반환하거나, 없으면 빈 리스트를 반환합
+      니다.
+
+   get_all_breaks()
+
+      설정된 모든 중단점을 반환합니다.
+
+   파생 클래스와 클라이언트는 다음 메서드를 호출하여 스택 추적을 나타
+   내는 데이터 구조를 얻을 수 있습니다.
+
+   get_stack(f, t)
+
+      Return a list of (frame, lineno) tuples in a stack trace, and a
+      size.
+
+      The most recently called frame is last in the list. The size is
+      the number of frames below the frame where the debugger was
+      invoked.
+
+   format_stack_entry(frame_lineno, lprefix=': ')
+
+      "(frame, lineno)" 튜플인 스택 항목에 대한 정보가 포함된 문자열을
+      반환합니다. 반환 문자열은 다음을 포함합니다:
+
+      * 프레임을 포함하는 규범적 파일명.
+
+      * 함수 이름이나 ""<lambda>"".
+
+      * 입력 인자.
+
+      * 반환 값.
+
+      * 코드 줄 (있으면).
+
+   클라이언트가 문자열로 지정된 *statement*를 디버깅하기 위해 디버거를
+   사용하려면 다음 두 가지 메서드를 호출할 수 있습니다.
+
+   run(cmd, globals=None, locals=None)
+
+      Debug a statement executed via the "exec()" function.  *globals*
+      defaults to "__main__.__dict__", *locals* defaults to *globals*.
+
+   runeval(expr, globals=None, locals=None)
+
+      "eval()" 함수를 통해 실행된 표현식을 디버그합니다. *globals*와
+      *locals*는 "run()"과 같은 의미입니다.
+
+   runctx(cmd, globals, locals)
+
+      이전 버전과의 호환성을 위해. "run()" 메서드를 호출합니다.
+
+   runcall(func, /, *args, **kwds)
+
+      단일 함수 호출을 디버그하고, 결과를 반환합니다.
+
+마지막으로, 모듈은 다음과 같은 함수를 정의합니다:
+
+bdb.checkfuncname(b, frame)
+
+   Return True if we should break here, depending on the way the
+   "Breakpoint" *b* was set.
+
+   줄 번호를 통해 설정되었으면, "b.line"이 *frame*의 것과 같은지 확인
+   합니다. "함수 이름"을 통해 중단점이 설정되었으면, 우리는 올바른
+   *frame*(올바른 함수)에 있는지와 그것의 첫 번째 실행 가능한 줄에 있
+   는지 확인해야 합니다.
+
+bdb.effective(file, line, frame)
+
+   Return "(active breakpoint, delete temporary flag)" or "(None,
+   None)" as the breakpoint to act upon.
+
+   The *active breakpoint* is the first entry in "bplist" for the
+   ("file", "line") (which must exist) that is "enabled", for which
+   "checkfuncname()" is True, and that has neither a False "condition"
+   nor positive "ignore" count.  The *flag*, meaning that a temporary
+   breakpoint should be deleted, is False only when the "cond" cannot
+   be evaluated (in which case, "ignore" count is ignored).
+
+   If no such entry exists, then (None, None) is returned.
+
+bdb.set_trace()
+
+   호출자의 프레임에서 "Bdb" 인스턴스로 디버깅을 시작합니다.

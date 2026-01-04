@@ -1,0 +1,2393 @@
+"ctypes" --- A foreign function library for Python
+**************************************************
+
+**Source code:** Lib/ctypes
+
+======================================================================
+
+"ctypes"는 파이썬용 외부 함수(foreign function) 라이브러리입니다. C 호
+환 데이터형을 제공하며, DLL 또는 공유 라이브러리에 있는 함수를 호출할
+수 있습니다. 이 라이브러리들을 순수 파이썬으로 감싸는 데 사용할 수 있
+습니다.
+
+
+ctypes 자습서
+=============
+
+Note: The code samples in this tutorial use "doctest" to make sure
+that they actually work.  Since some code samples behave differently
+under Linux, Windows, or macOS, they contain doctest directives in
+comments.
+
+참고: 일부 코드 예제는 ctypes "c_int" 형을 참조합니다. "sizeof(long)
+== sizeof(int)"인 플랫폼에서, 이는 "c_long"의 별칭입니다. 따라서
+"c_int"를 기대할 때 "c_long"가 인쇄되더라도 혼란스러워하지 않아도 됩니
+다 --- 이것들은 실제로 같은 형입니다.
+
+
+동적 링크 라이브러리 로드하기
+-----------------------------
+
+"ctypes"는 동적 링크 라이브러리 로드를 위해 *cdll*을, 그리고 윈도우에
+서는 *windll* 및 *oledll* 객체를, 노출합니다.
+
+You load libraries by accessing them as attributes of these objects.
+*cdll* loads libraries which export functions using the standard
+"cdecl" calling convention, while *windll* libraries call functions
+using the "stdcall" calling convention. *oledll* also uses the
+"stdcall" calling convention, and assumes the functions return a
+Windows "HRESULT" error code. The error code is used to automatically
+raise an "OSError" exception when the function call fails.
+
+버전 3.3에서 변경: 윈도우 에러는 "WindowsError"를 일으켜왔습니다. 이제
+는 "OSError"의 별칭입니다.
+
+Here are some examples for Windows. Note that "msvcrt" is the MS
+standard C library containing most standard C functions, and uses the
+cdecl calling convention:
+
+   >>> from ctypes import *
+   >>> print(windll.kernel32)  
+   <WinDLL 'kernel32', handle ... at ...>
+   >>> print(cdll.msvcrt)      
+   <CDLL 'msvcrt', handle ... at ...>
+   >>> libc = cdll.msvcrt      
+   >>>
+
+윈도우는 일반적인 ".dll" 파일 접미사를 자동으로 추가합니다.
+
+참고:
+
+  "cdll.msvcrt"를 통해 표준 C 라이브러리에 액세스하면 파이썬에서 사용
+  되는 라이브러리와 호환되지 않는 오래된 라이브러리 버전이 사용됩니다.
+  가능하면 파이썬 자체의 기능을 사용하거나, "msvcrt" 모듈을 임포트 해
+  서 사용하십시오.
+
+On Linux, it is required to specify the filename *including* the
+extension to load a library, so attribute access can not be used to
+load libraries. Either the "LoadLibrary()" method of the dll loaders
+should be used, or you should load the library by creating an instance
+of CDLL by calling the constructor:
+
+   >>> cdll.LoadLibrary("libc.so.6")  
+   <CDLL 'libc.so.6', handle ... at ...>
+   >>> libc = CDLL("libc.so.6")       
+   >>> libc                           
+   <CDLL 'libc.so.6', handle ... at ...>
+   >>>
+
+
+로드된 dll에서 함수에 액세스하기
+--------------------------------
+
+함수는 dll 객체의 어트리뷰트로 액세스 됩니다:
+
+   >>> from ctypes import *
+   >>> libc.printf
+   <_FuncPtr object at 0x...>
+   >>> print(windll.kernel32.GetModuleHandleA)  
+   <_FuncPtr object at 0x...>
+   >>> print(windll.kernel32.MyOwnFunction)     
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "ctypes.py", line 239, in __getattr__
+       func = _StdcallFuncPtr(name, self)
+   AttributeError: function 'MyOwnFunction' not found
+   >>>
+
+Note that win32 system dlls like "kernel32" and "user32" often export
+ANSI as well as UNICODE versions of a function. The UNICODE version is
+exported with an "W" appended to the name, while the ANSI version is
+exported with an "A" appended to the name. The win32 "GetModuleHandle"
+function, which returns a *module handle* for a given module name, has
+the following C prototype, and a macro is used to expose one of them
+as "GetModuleHandle" depending on whether UNICODE is defined or not:
+
+   /* ANSI version */
+   HMODULE GetModuleHandleA(LPCSTR lpModuleName);
+   /* UNICODE version */
+   HMODULE GetModuleHandleW(LPCWSTR lpModuleName);
+
+*windll*는 마술적으로 이 중 하나를 선택하려고 하지 않으므로,
+"GetModuleHandleA" 나 "GetModuleHandleW"를 명시적으로 지정하여 필요한
+버전에 액세스해야 하고, 그런 다음 각각 바이트열이나 문자열 객체로 호출
+해야 합니다.
+
+때때로, dll은 ""??2@YAPAXI@Z""와 같은 유효한 파이썬 식별자가 아닌 이름
+으로 함수를 내보냅니다. 이때는 "getattr()"를 사용하여 함수를 조회해야
+합니다:
+
+   >>> getattr(cdll.msvcrt, "??2@YAPAXI@Z")  
+   <_FuncPtr object at 0x...>
+   >>>
+
+윈도우에서, 일부 dll은 이름이 아니라 서수(ordinal)로 함수를 내보냅니다
+. 이 함수는 서수로 dll 객체를 인덱싱하여 액세스할 수 있습니다:
+
+   >>> cdll.kernel32[1]  
+   <_FuncPtr object at 0x...>
+   >>> cdll.kernel32[0]  
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "ctypes.py", line 310, in __getitem__
+       func = _StdcallFuncPtr(name, self)
+   AttributeError: function ordinal 0 not found
+   >>>
+
+
+함수 호출하기
+-------------
+
+You can call these functions like any other Python callable. This
+example uses the "time()" function, which returns system time in
+seconds since the Unix epoch, and the "GetModuleHandleA()" function,
+which returns a win32 module handle.
+
+This example calls both functions with a "NULL" pointer ("None" should
+be used as the "NULL" pointer):
+
+   >>> print(libc.time(None))  
+   1150640792
+   >>> print(hex(windll.kernel32.GetModuleHandleA(None)))  
+   0x1d000000
+   >>>
+
+"cdecl" 호출 규칙을 사용하여 "stdcall" 함수를 호출하면 "ValueError"가
+발생하고, 그 반대도 마찬가지입니다:
+
+   >>> cdll.kernel32.GetModuleHandleA(None)  
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   ValueError: Procedure probably called with not enough arguments (4 bytes missing)
+   >>>
+
+   >>> windll.msvcrt.printf(b"spam")  
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   ValueError: Procedure probably called with too many arguments (4 bytes in excess)
+   >>>
+
+올바른 호출 규칙을 찾으려면 C 헤더 파일이나 호출할 함수에 대한 설명서
+를 살펴봐야 합니다.
+
+윈도우에서, "ctypes"는 함수가 유효하지 않은 인자 값을 사용하여 호출될
+때, 일반적인 보호 오류로 인한 충돌을 방지하기 위해 win32 구조적 예외
+처리를 사용합니다:
+
+   >>> windll.kernel32.GetModuleHandleA(32)  
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   OSError: exception: access violation reading 0x00000020
+   >>>
+
+그러나, "ctypes"로 파이썬을 충돌시킬 방법이 많으므로, 어쨌든 주의해야
+합니다. "faulthandler" 모듈은 충돌을 디버깅하는 데 도움이 될 수 있습니
+다 (예를 들어, 오류가 있는 C 라이브러리 호출로 인한 세그먼트 오류).
+
+"None", integers, bytes objects and (unicode) strings are the only
+native Python objects that can directly be used as parameters in these
+function calls. "None" is passed as a C "NULL" pointer, bytes objects
+and strings are passed as pointer to the memory block that contains
+their data ("char*" or "wchar_t*").  Python integers are passed as the
+platforms default C "int" type, their value is masked to fit into the
+C type.
+
+다른 매개 변수 형으로 함수를 호출하기 전에, "ctypes" 데이터형에 대해
+더 알아야 합니다.
+
+
+기본 데이터형
+-------------
+
+"ctypes"는 많은 기본적인 C 호환 데이터형을 정의합니다.:
+
++------------------------+--------------------------------------------+------------------------------+
+| ctypes 형              | C 형                                       | 파이썬 형                    |
+|========================|============================================|==============================|
+| "c_bool"               | "_Bool"                                    | bool (1)                     |
++------------------------+--------------------------------------------+------------------------------+
+| "c_char"               | "char"                                     | 1-문자 바이트열 객체         |
++------------------------+--------------------------------------------+------------------------------+
+| "c_wchar"              | "wchar_t"                                  | 1-문자 문자열                |
++------------------------+--------------------------------------------+------------------------------+
+| "c_byte"               | "char"                                     | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_ubyte"              | "unsigned char"                            | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_short"              | "short"                                    | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_ushort"             | "unsigned short"                           | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_int"                | "int"                                      | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_uint"               | "unsigned int"                             | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_long"               | "long"                                     | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_ulong"              | "unsigned long"                            | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_longlong"           | "__int64" or "long long"                   | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_ulonglong"          | "unsigned __int64" or "unsigned long long" | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_size_t"             | "size_t"                                   | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_ssize_t"            | "ssize_t" or "Py_ssize_t"                  | int                          |
++------------------------+--------------------------------------------+------------------------------+
+| "c_float"              | "float"                                    | float                        |
++------------------------+--------------------------------------------+------------------------------+
+| "c_double"             | "double"                                   | float                        |
++------------------------+--------------------------------------------+------------------------------+
+| "c_longdouble"         | "long double"                              | float                        |
++------------------------+--------------------------------------------+------------------------------+
+| "c_char_p"             | "char*" (NUL terminated)                   | 바이트열 객체나 "None"       |
++------------------------+--------------------------------------------+------------------------------+
+| "c_wchar_p"            | "wchar_t*" (NUL terminated)                | 문자열이나 "None"            |
++------------------------+--------------------------------------------+------------------------------+
+| "c_void_p"             | "void*"                                    | int 나 "None"                |
++------------------------+--------------------------------------------+------------------------------+
+
+1. 생성자는 논릿값을 가진 모든 객체를 받아들입니다.
+
+이 모든 형은 올바른 형과 값의 선택적 초기화자로 호출해서 만들어질 수
+있습니다:
+
+   >>> c_int()
+   c_long(0)
+   >>> c_wchar_p("Hello, World")
+   c_wchar_p(140018365411392)
+   >>> c_ushort(-3)
+   c_ushort(65533)
+   >>>
+
+이러한 형은 가변이므로, 값을 나중에 변경할 수도 있습니다:
+
+   >>> i = c_int(42)
+   >>> print(i)
+   c_long(42)
+   >>> print(i.value)
+   42
+   >>> i.value = -99
+   >>> print(i.value)
+   -99
+   >>>
+
+Assigning a new value to instances of the pointer types "c_char_p",
+"c_wchar_p", and "c_void_p" changes the *memory location* they point
+to, *not the contents* of the memory block (of course not, because
+Python bytes objects are immutable):
+
+   >>> s = "Hello, World"
+   >>> c_s = c_wchar_p(s)
+   >>> print(c_s)
+   c_wchar_p(139966785747344)
+   >>> print(c_s.value)
+   Hello World
+   >>> c_s.value = "Hi, there"
+   >>> print(c_s)              # the memory location has changed
+   c_wchar_p(139966783348904)
+   >>> print(c_s.value)
+   Hi, there
+   >>> print(s)                # first object is unchanged
+   Hello, World
+   >>>
+
+그러나, 이것들을 가변 메모리에 대한 포인터를 예상하는 함수에 전달하지
+않도록 주의해야 합니다. 가변 메모리 블록이 필요하다면, ctypes에는 다양
+한 방법으로 이를 만드는 "create_string_buffer()" 함수가 있습니다. 현재
+메모리 블록 내용은 "raw" 프로퍼티를 사용하여 액세스(또는 변경)할 수 있
+습니다; NUL 종료 문자열로 액세스하려면 "value" 프로퍼티를 사용하십시오
+:
+
+   >>> from ctypes import *
+   >>> p = create_string_buffer(3)            # create a 3 byte buffer, initialized to NUL bytes
+   >>> print(sizeof(p), repr(p.raw))
+   3 b'\x00\x00\x00'
+   >>> p = create_string_buffer(b"Hello")     # create a buffer containing a NUL terminated string
+   >>> print(sizeof(p), repr(p.raw))
+   6 b'Hello\x00'
+   >>> print(repr(p.value))
+   b'Hello'
+   >>> p = create_string_buffer(b"Hello", 10) # create a 10 byte buffer
+   >>> print(sizeof(p), repr(p.raw))
+   10 b'Hello\x00\x00\x00\x00\x00'
+   >>> p.value = b"Hi"
+   >>> print(sizeof(p), repr(p.raw))
+   10 b'Hi\x00lo\x00\x00\x00\x00\x00'
+   >>>
+
+The "create_string_buffer()" function replaces the "c_buffer()"
+function (which is still available as an alias), as well as the
+"c_string()" function from earlier ctypes releases.  To create a
+mutable memory block containing unicode characters of the C type
+"wchar_t" use the "create_unicode_buffer()" function.
+
+
+함수 호출하기, 계속
+-------------------
+
+printf는 "sys.stdout"이 *아니라* 실제 표준 출력으로 인쇄하므로, 이 예
+제는 콘솔 프롬프트에서만 작동하고 *IDLE* 이나 *PythonWin*에서는 작동하
+지 않음에 유의하십시오:
+
+   >>> printf = libc.printf
+   >>> printf(b"Hello, %s\n", b"World!")
+   Hello, World!
+   14
+   >>> printf(b"Hello, %S\n", "World!")
+   Hello, World!
+   14
+   >>> printf(b"%d bottles of beer\n", 42)
+   42 bottles of beer
+   19
+   >>> printf(b"%f bottles of beer\n", 42.5)
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   ArgumentError: argument 2: TypeError: Don't know how to convert parameter 2
+   >>>
+
+이전에 언급했듯이, 정수, 문자열 및 바이트열 객체를 제외한 모든 파이썬
+형은 필요한 C 데이터형으로 변환될 수 있도록 해당하는 "ctypes" 형으로
+래핑 되어야 합니다:
+
+   >>> printf(b"An int %d, a double %f\n", 1234, c_double(3.14))
+   An int 1234, a double 3.140000
+   31
+   >>>
+
+
+Calling variadic functions
+--------------------------
+
+On a lot of platforms calling variadic functions through ctypes is
+exactly the same as calling functions with a fixed number of
+parameters. On some platforms, and in particular ARM64 for Apple
+Platforms, the calling convention for variadic functions is different
+than that for regular functions.
+
+On those platforms it is required to specify the *argtypes* attribute
+for the regular, non-variadic, function arguments:
+
+   libc.printf.argtypes = [ctypes.c_char_p]
+
+Because specifying the attribute does inhibit portability it is
+advised to always specify "argtypes" for all variadic functions.
+
+
+사용자 정의 데이터형을 사용하여 함수 호출하기
+---------------------------------------------
+
+You can also customize "ctypes" argument conversion to allow instances
+of your own classes be used as function arguments.  "ctypes" looks for
+an "_as_parameter_" attribute and uses this as the function argument.
+Of course, it must be one of integer, string, or bytes:
+
+   >>> class Bottles:
+   ...     def __init__(self, number):
+   ...         self._as_parameter_ = number
+   ...
+   >>> bottles = Bottles(42)
+   >>> printf(b"%d bottles of beer\n", bottles)
+   42 bottles of beer
+   19
+   >>>
+
+If you don't want to store the instance's data in the "_as_parameter_"
+instance variable, you could define a "property" which makes the
+attribute available on request.
+
+
+필수 인자 형 (함수 프로토타입) 지정하기
+---------------------------------------
+
+It is possible to specify the required argument types of functions
+exported from DLLs by setting the "argtypes" attribute.
+
+"argtypes" must be a sequence of C data types (the "printf" function
+is probably not a good example here, because it takes a variable
+number and different types of parameters depending on the format
+string, on the other hand this is quite handy to experiment with this
+feature):
+
+   >>> printf.argtypes = [c_char_p, c_char_p, c_int, c_double]
+   >>> printf(b"String '%s', Int %d, Double %f\n", b"Hi", 10, 2.2)
+   String 'Hi', Int 10, Double 2.200000
+   37
+   >>>
+
+포맷을 지정하면 호환되지 않는 인자 형으로부터 보호하고(C 함수의 프로토
+타입처럼), 유효한 형으로 인자를 변환하려고 시도합니다:
+
+   >>> printf(b"%d %d %d", 1, 2, 3)
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   ArgumentError: argument 2: TypeError: wrong type
+   >>> printf(b"%s %d %f\n", b"X", 2, 3)
+   X 2 3.000000
+   13
+   >>>
+
+If you have defined your own classes which you pass to function calls,
+you have to implement a "from_param()" class method for them to be
+able to use them in the "argtypes" sequence. The "from_param()" class
+method receives the Python object passed to the function call, it
+should do a typecheck or whatever is needed to make sure this object
+is acceptable, and then return the object itself, its "_as_parameter_"
+attribute, or whatever you want to pass as the C function argument in
+this case. Again, the result should be an integer, string, bytes, a
+"ctypes" instance, or an object with an "_as_parameter_" attribute.
+
+
+반환형
+------
+
+By default functions are assumed to return the C "int" type.  Other
+return types can be specified by setting the "restype" attribute of
+the function object.
+
+Here is a more advanced example, it uses the "strchr" function, which
+expects a string pointer and a char, and returns a pointer to a
+string:
+
+   >>> strchr = libc.strchr
+   >>> strchr(b"abcdef", ord("d"))  
+   8059983
+   >>> strchr.restype = c_char_p    # c_char_p is a pointer to a string
+   >>> strchr(b"abcdef", ord("d"))
+   b'def'
+   >>> print(strchr(b"abcdef", ord("x")))
+   None
+   >>>
+
+If you want to avoid the "ord("x")" calls above, you can set the
+"argtypes" attribute, and the second argument will be converted from a
+single character Python bytes object into a C char:
+
+   >>> strchr.restype = c_char_p
+   >>> strchr.argtypes = [c_char_p, c_char]
+   >>> strchr(b"abcdef", b"d")
+   'def'
+   >>> strchr(b"abcdef", b"def")
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   ArgumentError: argument 2: TypeError: one character string expected
+   >>> print(strchr(b"abcdef", b"x"))
+   None
+   >>> strchr(b"abcdef", b"d")
+   'def'
+   >>>
+
+You can also use a callable Python object (a function or a class for
+example) as the "restype" attribute, if the foreign function returns
+an integer.  The callable will be called with the *integer* the C
+function returns, and the result of this call will be used as the
+result of your function call. This is useful to check for error return
+values and automatically raise an exception:
+
+   >>> GetModuleHandle = windll.kernel32.GetModuleHandleA  
+   >>> def ValidHandle(value):
+   ...     if value == 0:
+   ...         raise WinError()
+   ...     return value
+   ...
+   >>>
+   >>> GetModuleHandle.restype = ValidHandle  
+   >>> GetModuleHandle(None)  
+   486539264
+   >>> GetModuleHandle("something silly")  
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "<stdin>", line 3, in ValidHandle
+   OSError: [Errno 126] The specified module could not be found.
+   >>>
+
+"WinError"는 윈도우 "FormatMessage()" api를 호출하여 에러 코드의 문자
+열 표현을 가져오고, 예외를 *반환하는* 함수입니다. "WinError"는 선택적
+에러 코드 매개 변수를 취합니다, 제공하지 않으면 "GetLastError()"를 호
+출하여 에러 코드를 가져옵니다.
+
+Please note that a much more powerful error checking mechanism is
+available through the "errcheck" attribute; see the reference manual
+for details.
+
+
+포인터 전달하기 (또는: 참조로 매개 변수 전달하기)
+-------------------------------------------------
+
+때때로 C api 함수는 매개 변수로 데이터형을 가리키는 *포인터*를 기대합
+니다, 아마도 해당 위치에 쓰기 위해서, 또는 데이터가 너무 커서 값으로
+전달할 수 없어서. 이것은 *참조로 매개 변수 전달하기*로 알려져 있기도
+합니다.
+
+"ctypes"는 매개 변수를 참조로 전달하는 데 사용되는 "byref()" 함수를 내
+보냅니다. 같은 효과를 "pointer()" 함수로도 얻을 수 있습니다. 하지만
+"pointer()"는 실제 포인터 객체를 생성하기 때문에 더 많은 작업을 수행하
+므로, 파이썬 자체에서 포인터 객체가 필요하지 않으면 "byref()"를 사용하
+는 것이 더 빠릅니다.:
+
+   >>> i = c_int()
+   >>> f = c_float()
+   >>> s = create_string_buffer(b'\000' * 32)
+   >>> print(i.value, f.value, repr(s.value))
+   0 0.0 b''
+   >>> libc.sscanf(b"1 3.14 Hello", b"%d %f %s",
+   ...             byref(i), byref(f), s)
+   3
+   >>> print(i.value, f.value, repr(s.value))
+   1 3.1400001049 b'Hello'
+   >>>
+
+
+구조체와 공용체
+---------------
+
+Structures and unions must derive from the "Structure" and "Union"
+base classes which are defined in the "ctypes" module. Each subclass
+must define a "_fields_" attribute.  "_fields_" must be a list of
+*2-tuples*, containing a *field name* and a *field type*.
+
+필드형은 "c_int"와 같은 "ctypes" 형이거나 다른 파생된 "ctypes" 형(구조
+체, 공용체, 배열, 포인터)이어야 합니다.
+
+다음은 *x* 및 *y*라는 두 개의 정수가 포함된 POINT 구조체의 간단한 예제
+이며, 생성자에서 구조체를 초기화하는 방법도 보여줍니다:
+
+   >>> from ctypes import *
+   >>> class POINT(Structure):
+   ...     _fields_ = [("x", c_int),
+   ...                 ("y", c_int)]
+   ...
+   >>> point = POINT(10, 20)
+   >>> print(point.x, point.y)
+   10 20
+   >>> point = POINT(y=5)
+   >>> print(point.x, point.y)
+   0 5
+   >>> POINT(1, 2, 3)
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: too many initializers
+   >>>
+
+그러나, 훨씬 복잡한 구조를 만들 수 있습니다. 구조체는 필드형으로 구조
+체를 사용하여 다른 구조체를 포함할 수 있습니다.
+
+다음은 *upperleft* 및 *lowerright*라는 두 개의 POINT를 포함하는 RECT
+구조체입니다:
+
+   >>> class RECT(Structure):
+   ...     _fields_ = [("upperleft", POINT),
+   ...                 ("lowerright", POINT)]
+   ...
+   >>> rc = RECT(point)
+   >>> print(rc.upperleft.x, rc.upperleft.y)
+   0 5
+   >>> print(rc.lowerright.x, rc.lowerright.y)
+   0 0
+   >>>
+
+중첩된 구조체는 여러 가지 방법으로 생성자에서 초기화할 수 있습니다:
+
+   >>> r = RECT(POINT(1, 2), POINT(3, 4))
+   >>> r = RECT((1, 2), (3, 4))
+
+필드 *디스크립터*는 *클래스*에서 조회할 수 있습니다. 유용한 정보를 제
+공할 수 있으므로 디버깅에 유용합니다:
+
+   >>> print(POINT.x)
+   <Field type=c_long, ofs=0, size=4>
+   >>> print(POINT.y)
+   <Field type=c_long, ofs=4, size=4>
+   >>>
+
+경고:
+
+  "ctypes"는 비트 필드가 있는 공용체나 구조체를 값으로 함수에 전달할
+  수 없습니다. 32비트 x86에서 작동할 수 있지만, 일반적으로 작동은 라이
+  브러리가 보증하지 않습니다. 비트 필드가 있는 공용체와 구조체는 항상
+  포인터로 함수에 전달되어야 합니다.
+
+
+구조체/공용체 정렬과 바이트 순서
+--------------------------------
+
+By default, Structure and Union fields are aligned in the same way the
+C compiler does it. It is possible to override this behavior by
+specifying a "_pack_" class attribute in the subclass definition. This
+must be set to a positive integer and specifies the maximum alignment
+for the fields. This is what "#pragma pack(n)" also does in MSVC.
+
+"ctypes"는 구조체와 공용체에 기본(native) 바이트 순서를 사용합니다. 기
+본이 아닌 바이트 순서로 구조체를 만들려면 "BigEndianStructure",
+"LittleEndianStructure", "BigEndianUnion" 및 "LittleEndianUnion" 베이
+스 클래스 중 하나를 사용할 수 있습니다. 이러한 클래스들은 포인터 필드
+를 포함할 수 없습니다.
+
+
+구조체와 공용체의 비트 필드
+---------------------------
+
+It is possible to create structures and unions containing bit fields.
+Bit fields are only possible for integer fields, the bit width is
+specified as the third item in the "_fields_" tuples:
+
+   >>> class Int(Structure):
+   ...     _fields_ = [("first_16", c_int, 16),
+   ...                 ("second_16", c_int, 16)]
+   ...
+   >>> print(Int.first_16)
+   <Field type=c_long, ofs=0:0, bits=16>
+   >>> print(Int.second_16)
+   <Field type=c_long, ofs=0:16, bits=16>
+   >>>
+
+
+배열
+----
+
+배열은 같은 형의 고정 된 수의 인스턴스를 포함하는 시퀀스입니다.
+
+배열형을 만드는 데 권장되는 방법은 데이터형에 양의 정수를 곱하는 것입
+니다:
+
+   TenPointsArrayType = POINT * 10
+
+다음은 다소 인공적인 데이터형의 예입니다. 다른 항목들과 함께 4개의
+POINT를 포함하는 구조체입니다:
+
+   >>> from ctypes import *
+   >>> class POINT(Structure):
+   ...     _fields_ = ("x", c_int), ("y", c_int)
+   ...
+   >>> class MyStruct(Structure):
+   ...     _fields_ = [("a", c_int),
+   ...                 ("b", c_float),
+   ...                 ("point_array", POINT * 4)]
+   >>>
+   >>> print(len(MyStruct().point_array))
+   4
+   >>>
+
+인스턴스는 클래스를 호출하는 일반적인 방법으로 만들어집니다:
+
+   arr = TenPointsArrayType()
+   for pt in arr:
+       print(pt.x, pt.y)
+
+위 코드는 배열 내용이 0으로 초기화되기 때문에, 일련의 "0 0" 줄을 인쇄
+합니다.
+
+올바른 형의 초기화자를 지정할 수도 있습니다:
+
+   >>> from ctypes import *
+   >>> TenIntegers = c_int * 10
+   >>> ii = TenIntegers(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+   >>> print(ii)
+   <c_long_Array_10 object at 0x...>
+   >>> for i in ii: print(i, end=" ")
+   ...
+   1 2 3 4 5 6 7 8 9 10
+   >>>
+
+
+포인터
+------
+
+포인터 인스턴스는 "ctypes" 형에 "pointer()" 함수를 호출해서 만듭니다:
+
+   >>> from ctypes import *
+   >>> i = c_int(42)
+   >>> pi = pointer(i)
+   >>>
+
+포인터 인스턴스는 포인터가 가리키는 객체(위에서는 "i" 객체)를 반환하는
+"contents" 어트리뷰트를 가집니다:
+
+   >>> pi.contents
+   c_long(42)
+   >>>
+
+"ctypes"에는 OOR(원래 객체 반환, original object return)이 없다는 것에
+유의하십시오. 어트리뷰트를 가져올 때마다 (동등하지만) 새로운 객체를 만
+듭니다:
+
+   >>> pi.contents is i
+   False
+   >>> pi.contents is pi.contents
+   False
+   >>>
+
+다른 "c_int" 인스턴스를 포인터의 contents 어트리뷰트에 대입하면 포인터
+는 이 인스턴스가 저장되어있는 메모리 위치를 가리키게 됩니다:
+
+   >>> i = c_int(99)
+   >>> pi.contents = i
+   >>> pi.contents
+   c_long(99)
+   >>>
+
+포인터 인스턴스는 정수로도 인덱싱할 수 있습니다.:
+
+   >>> pi[0]
+   99
+   >>>
+
+정수 인덱스에 대입하면 가리키고 있는 값이 바뀝니다:
+
+   >>> print(i)
+   c_long(99)
+   >>> pi[0] = 22
+   >>> print(i)
+   c_long(22)
+   >>>
+
+0이 아닌 인덱스를 사용할 수도 있지만, C에서와 마찬가지로 자신이 하는
+일을 알아야 합니다: 임의의 메모리 위치를 액세스하거나 변경할 수 있습니
+다. 일반적으로 C 함수에서 포인터를 받고, 포인터가 실제로 단일 항목 대
+신 배열을 가리키는 것을 *알* 때만 이 기능을 사용합니다.
+
+장막 뒤에서, "pointer()" 함수는 단순히 포인터 인스턴스를 만드는 것 이
+상을 수행합니다. 먼저 포인터 *형*을 만들어야 합니다. 이것은 임의의
+"ctypes" 형을 받아들이고, 새로운 형을 반환하는 "POINTER()" 함수로 수행
+됩니다:
+
+   >>> PI = POINTER(c_int)
+   >>> PI
+   <class 'ctypes.LP_c_long'>
+   >>> PI(42)
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: expected c_long instead of int
+   >>> PI(c_int(42))
+   <ctypes.LP_c_long object at 0x...>
+   >>>
+
+인자 없이 포인터형을 호출하면 "NULL" 포인터가 만들어집니다. "NULL" 포
+인터는 "False" 논릿값을 갖습니다:
+
+   >>> null_ptr = POINTER(c_int)()
+   >>> print(bool(null_ptr))
+   False
+   >>>
+
+"ctypes"는 포인터를 역참조(dereference)할 때 "NULL"인지 확인합니다 (하
+지만 "NULL"이 아닌 잘못된 포인터를 역참조하면 파이썬을 충돌시킵니다):
+
+   >>> null_ptr[0]
+   Traceback (most recent call last):
+       ....
+   ValueError: NULL pointer access
+   >>>
+
+   >>> null_ptr[0] = 1234
+   Traceback (most recent call last):
+       ....
+   ValueError: NULL pointer access
+   >>>
+
+
+형 변환
+-------
+
+Usually, ctypes does strict type checking.  This means, if you have
+"POINTER(c_int)" in the "argtypes" list of a function or as the type
+of a member field in a structure definition, only instances of exactly
+the same type are accepted.  There are some exceptions to this rule,
+where ctypes accepts other objects.  For example, you can pass
+compatible array instances instead of pointer types.  So, for
+"POINTER(c_int)", ctypes accepts an array of c_int:
+
+   >>> class Bar(Structure):
+   ...     _fields_ = [("count", c_int), ("values", POINTER(c_int))]
+   ...
+   >>> bar = Bar()
+   >>> bar.values = (c_int * 3)(1, 2, 3)
+   >>> bar.count = 3
+   >>> for i in range(bar.count):
+   ...     print(bar.values[i])
+   ...
+   1
+   2
+   3
+   >>>
+
+In addition, if a function argument is explicitly declared to be a
+pointer type (such as "POINTER(c_int)") in "argtypes", an object of
+the pointed type ("c_int" in this case) can be passed to the function.
+ctypes will apply the required "byref()" conversion in this case
+automatically.
+
+POINTER 형 필드를 "NULL"로 설정하려면, "None"을 대입할 수 있습니다:
+
+   >>> bar.values = None
+   >>>
+
+때에 따라 호환되지 않는 형의 인스턴스가 있을 수 있습니다. C에서는, 한
+형을 다른 형으로 강제 변환(cast)할 수 있습니다. "ctypes"는 같은 방식으
+로 사용할 수 있는 "cast()" 함수를 제공합니다. 위에 정의된 "Bar" 구조체
+는 "values" 필드에 대해 "POINTER(c_int)" 포인터나 "c_int" 배열을 받아
+들이지만 다른 형의 인스턴스는 허용하지 않습니다:
+
+   >>> bar.values = (c_byte * 4)()
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: incompatible types, c_byte_Array_4 instance instead of LP_c_long instance
+   >>>
+
+이럴 때, "cast()" 함수가 편리합니다.
+
+"cast()" 함수는 ctypes 인스턴스를 다른 ctypes 데이터형에 대한 포인터로
+변환하는 데 사용할 수 있습니다. "cast()"는 두 개의 매개 변수, 어떤 종
+류의 포인터로 변환될 수 있는 ctypes 객체와 ctypes 포인터형을 받아들입
+니다. 첫 번째 인자와 같은 메모리 블록을 참조하는 두 번째 인자의 인스턴
+스를 반환합니다:
+
+   >>> a = (c_byte * 4)()
+   >>> cast(a, POINTER(c_int))
+   <ctypes.LP_c_long object at ...>
+   >>>
+
+따라서, "cast()"는 "Bar" 구조체의 "values" 필드에 대입하는 데 사용할
+수 있습니다:
+
+   >>> bar = Bar()
+   >>> bar.values = cast((c_byte * 4)(), POINTER(c_int))
+   >>> print(bar.values[0])
+   0
+   >>>
+
+
+불완전한 형
+-----------
+
+*불완전한 형*은 멤버가 아직 지정되지 않은 구조체, 공용체 또는 배열입니
+다. C에서, 이것들은 나중에 정의되는 전방 선언(forward declaration)으로
+지정됩니다:
+
+   struct cell; /* forward declaration */
+
+   struct cell {
+       char *name;
+       struct cell *next;
+   };
+
+ctypes 코드로 그대로 옮기면 이렇게 되지만, 작동하지는 않습니다:
+
+   >>> class cell(Structure):
+   ...     _fields_ = [("name", c_char_p),
+   ...                 ("next", POINTER(cell))]
+   ...
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "<stdin>", line 2, in cell
+   NameError: name 'cell' is not defined
+   >>>
+
+because the new "class cell" is not available in the class statement
+itself. In "ctypes", we can define the "cell" class and set the
+"_fields_" attribute later, after the class statement:
+
+   >>> from ctypes import *
+   >>> class cell(Structure):
+   ...     pass
+   ...
+   >>> cell._fields_ = [("name", c_char_p),
+   ...                  ("next", POINTER(cell))]
+   >>>
+
+해 봅시다. 우리는 두 개의 "cell" 인스턴스를 만들고, 서로를 가리키도록
+한 다음, 마지막으로 포인터 체인을 몇 번 따라갑니다:
+
+   >>> c1 = cell()
+   >>> c1.name = b"foo"
+   >>> c2 = cell()
+   >>> c2.name = b"bar"
+   >>> c1.next = pointer(c2)
+   >>> c2.next = pointer(c1)
+   >>> p = c1
+   >>> for i in range(8):
+   ...     print(p.name, end=" ")
+   ...     p = p.next[0]
+   ...
+   foo bar foo bar foo bar foo bar
+   >>>
+
+
+콜백 함수
+---------
+
+"ctypes"는 파이썬 콜러블로부터 C에서 호출 가능한 함수 포인터를 만들 수
+있습니다. 이들은 때로 *콜백 함수(callback functions)*라고 불립니다.
+
+먼저, 콜백 함수를 위한 클래스를 만들어야 합니다. 클래스는 호출 규칙,
+반환형 및 이 함수가 받는 인자의 수와 형을 알고 있습니다.
+
+"CFUNCTYPE()" 팩토리 함수는 "cdecl" 호출 규칙을 사용하여 콜백 함수의
+형을 만듭니다. 윈도우에서, "WINFUNCTYPE()" 팩토리 함수는 "stdcall" 호
+출 규칙을 사용하여 콜백 함수 형을 만듭니다.
+
+이러한 팩토리 함수는 모두 첫 번째 인자로 결과 형을, 나머지 인자로 콜백
+함수가 기대하는 인자 형들로 호출됩니다.
+
+I will present an example here which uses the standard C library's
+"qsort()" function, that is used to sort items with the help of a
+callback function.  "qsort()" will be used to sort an array of
+integers:
+
+   >>> IntArray5 = c_int * 5
+   >>> ia = IntArray5(5, 1, 7, 33, 99)
+   >>> qsort = libc.qsort
+   >>> qsort.restype = None
+   >>>
+
+"qsort()" must be called with a pointer to the data to sort, the
+number of items in the data array, the size of one item, and a pointer
+to the comparison function, the callback. The callback will then be
+called with two pointers to items, and it must return a negative
+integer if the first item is smaller than the second, a zero if they
+are equal, and a positive integer otherwise.
+
+따라서 콜백 함수는 정수에 대한 포인터들을 받고 정수를 반환해야 합니다.
+먼저 콜백 함수를 위한 "형"을 만듭니다:
+
+   >>> CMPFUNC = CFUNCTYPE(c_int, POINTER(c_int), POINTER(c_int))
+   >>>
+
+시작하기 위해, 전달된 값을 보여주는 간단한 콜백이 있습니다:
+
+   >>> def py_cmp_func(a, b):
+   ...     print("py_cmp_func", a[0], b[0])
+   ...     return 0
+   ...
+   >>> cmp_func = CMPFUNC(py_cmp_func)
+   >>>
+
+결과:
+
+   >>> qsort(ia, len(ia), sizeof(c_int), cmp_func)  
+   py_cmp_func 5 1
+   py_cmp_func 33 99
+   py_cmp_func 7 33
+   py_cmp_func 5 7
+   py_cmp_func 1 7
+   >>>
+
+이제 실제로 두 항목을 비교하여 유용한 결과를 반환할 수 있습니다:
+
+   >>> def py_cmp_func(a, b):
+   ...     print("py_cmp_func", a[0], b[0])
+   ...     return a[0] - b[0]
+   ...
+   >>>
+   >>> qsort(ia, len(ia), sizeof(c_int), CMPFUNC(py_cmp_func)) 
+   py_cmp_func 5 1
+   py_cmp_func 33 99
+   py_cmp_func 7 33
+   py_cmp_func 1 7
+   py_cmp_func 5 7
+   >>>
+
+쉽게 확인할 수 있듯이, 배열은 이제 정렬되었습니다:
+
+   >>> for i in ia: print(i, end=" ")
+   ...
+   1 5 7 33 99
+   >>>
+
+함수 팩토리는 데코레이터 팩토리로 사용할 수 있으므로, 다음과 같이 작성
+할 수도 있습니다:
+
+   >>> @CFUNCTYPE(c_int, POINTER(c_int), POINTER(c_int))
+   ... def py_cmp_func(a, b):
+   ...     print("py_cmp_func", a[0], b[0])
+   ...     return a[0] - b[0]
+   ...
+   >>> qsort(ia, len(ia), sizeof(c_int), py_cmp_func)
+   py_cmp_func 5 1
+   py_cmp_func 33 99
+   py_cmp_func 7 33
+   py_cmp_func 1 7
+   py_cmp_func 5 7
+   >>>
+
+참고:
+
+  C 코드에서 사용되는 동안 "CFUNCTYPE()" 객체에 대한 참조를 유지해야
+  합니다. "ctypes"가 참조를 유지하지는 않으며, 여러분이 하지 않는다면
+  가비지 수집되어, 콜백이 발생할 때 프로그램이 충돌할 수 있습니다.또한
+  , 콜백 함수가 파이썬 제어 바깥에서 만들어진 스레드(예를 들어, 콜백을
+  호출하는 외부 코드)에서 호출되면, ctypes는 모든 호출에 대해 새로운
+  더미 파이썬 스레드를 만듭니다. 이 동작은 대부분 적합하지만,
+  "threading.local"에 저장된 값은, 같은 C 스레드에서 호출되는 여러 콜
+  백에서 살아남을 수 *없음*을 뜻합니다.
+
+
+dll에서 내 보낸 값을 액세스하기
+-------------------------------
+
+Some shared libraries not only export functions, they also export
+variables. An example in the Python library itself is the
+"Py_OptimizeFlag", an integer set to 0, 1, or 2, depending on the "-O"
+or "-OO" flag given on startup.
+
+"ctypes" can access values like this with the "in_dll()" class methods
+of the type.  *pythonapi* is a predefined symbol giving access to the
+Python C api:
+
+   >>> opt_flag = c_int.in_dll(pythonapi, "Py_OptimizeFlag")
+   >>> print(opt_flag)
+   c_long(0)
+   >>>
+
+If the interpreter would have been started with "-O", the sample would
+have printed "c_long(1)", or "c_long(2)" if "-OO" would have been
+specified.
+
+포인터의 사용법도 보여주는 확장 예제는 파이썬이 내 보낸
+"PyImport_FrozenModules" 포인터에 액세스합니다.
+
+해당 값에 대한 문서를 인용하면:
+
+   This pointer is initialized to point to an array of "_frozen"
+   records, terminated by one whose members are all "NULL" or zero.
+   When a frozen module is imported, it is searched in this table.
+   Third-party code could play tricks with this to provide a
+   dynamically created collection of frozen modules.
+
+따라서, 이 포인터를 조작하는 것이 유용할 수도 있습니다. 예제 크기를 제
+한하기 위해, "ctypes"로 이 테이블을 읽는 방법만 보여줍니다:
+
+   >>> from ctypes import *
+   >>>
+   >>> class struct_frozen(Structure):
+   ...     _fields_ = [("name", c_char_p),
+   ...                 ("code", POINTER(c_ubyte)),
+   ...                 ("size", c_int)]
+   ...
+   >>>
+
+We have defined the "_frozen" data type, so we can get the pointer to
+the table:
+
+   >>> FrozenTable = POINTER(struct_frozen)
+   >>> table = FrozenTable.in_dll(pythonapi, "PyImport_FrozenModules")
+   >>>
+
+"table"이 "struct_frozen" 레코드의 배열에 대한 "포인터"이므로, 이터레
+이션할 수 있습니다. 하지만 포인터는 크기가 없으므로 루프를 종료하는 방
+법이 필요합니다. 조만간 액세스 위반 등으로 인해 충돌이 발생할 수 있으
+므로, "NULL" 엔트리가 발견되자마자 루프에서 벗어나는 것이 좋습니다:
+
+   >>> for item in table:
+   ...     if item.name is None:
+   ...         break
+   ...     print(item.name.decode("ascii"), item.size)
+   ...
+   _frozen_importlib 31764
+   _frozen_importlib_external 41499
+   __hello__ 161
+   __phello__ -161
+   __phello__.spam 161
+   >>>
+
+표준 파이썬이 프로즌 모듈과 프로즌 패키지(음수 "size" 멤버로 표시됨)를
+가지고 있다는 사실은 잘 알려지지 않았으며, 테스트용으로만 사용됩니다.
+예를 들어 "import __hello__"를 시도해보십시오.
+
+
+의외의 것들
+-----------
+
+"ctypes"에는 여러분이 기대하는 것과 실제로 일어나는 것이 다른 가장자리
+가 있습니다.
+
+다음 예제를 고려해보십시오:
+
+   >>> from ctypes import *
+   >>> class POINT(Structure):
+   ...     _fields_ = ("x", c_int), ("y", c_int)
+   ...
+   >>> class RECT(Structure):
+   ...     _fields_ = ("a", POINT), ("b", POINT)
+   ...
+   >>> p1 = POINT(1, 2)
+   >>> p2 = POINT(3, 4)
+   >>> rc = RECT(p1, p2)
+   >>> print(rc.a.x, rc.a.y, rc.b.x, rc.b.y)
+   1 2 3 4
+   >>> # now swap the two points
+   >>> rc.a, rc.b = rc.b, rc.a
+   >>> print(rc.a.x, rc.a.y, rc.b.x, rc.b.y)
+   3 4 3 4
+   >>>
+
+흠. 아마도 마지막 문장이 "3 4 1 2"를 인쇄할 것으로 기대했을 겁니다. 어
+떻게 된 걸까요? 위의 "rc.a, rc.b = rc.b, rc.a" 줄의 단계는 다음과 같습
+니다:
+
+   >>> temp0, temp1 = rc.b, rc.a
+   >>> rc.a = temp0
+   >>> rc.b = temp1
+   >>>
+
+"temp0" 과 "temp1"은 여전히 위의 "rc" 객체의 내부 버퍼를 사용하는 객체
+입니다. 따라서 "rc.a = temp0"를 실행하면 "temp0"의 버퍼 내용이 "rc"의
+버퍼로 복사됩니다. 이것은, 결과적으로 "temp1"의 내용을 변경합니다. 따
+라서 마지막 대입인 "rc.b = temp1"은 기대하는 효과를 주지 못합니다.
+
+Structure, Union 및 Array에서 서브 객체를 가져오는 것은 서브 객체를 *
+복사*하지 않고, 대신 루트 객체의 하부 버퍼에 액세스하는 래퍼 객체를 가
+져온다는 점에 유의하십시오.
+
+예상과 다른 행동을 하는 또 다른 예는 다음과 같습니다:
+
+   >>> s = c_char_p()
+   >>> s.value = b"abc def ghi"
+   >>> s.value
+   b'abc def ghi'
+   >>> s.value is s.value
+   False
+   >>>
+
+참고:
+
+  "c_char_p"로 인스턴스를 만든 객체는 바이트열이나 정수로 설정된 value
+  만 가질 수 있습니다.
+
+"False"를 인쇄하는 이유는 무엇일까요? ctypes 인스턴스는 메모리 블록과
+메모리 내용에 액세스하는 어떤 *디스크립터*를 포함하는 객체입니다. 메모
+리 블록에 파이썬 객체를 저장하면 객체 자체를 저장하지 않고, 대신 객체
+의 "내용"을 저장합니다. 내용에 다시 액세스하면 매번 새로운 파이썬 객체
+가 생성됩니다!
+
+
+가변 크기 데이터형
+------------------
+
+"ctypes"는 가변 크기 배열과 구조체에 대한 일부 지원을 제공합니다.
+
+"resize()" 함수는 기존 ctypes 객체의 메모리 버퍼 크기를 바꾸는 데 사용
+할 수 있습니다. 이 함수는 객체를 첫 번째 인자로 가져오고, 바이트 단위
+의 요청 된 크기를 두 번째 인자로 가져옵니다. 메모리 블록을 객체 형이
+지정하는 원래 메모리 블록보다 작게 만들 수 없습니다. 시도하면
+"ValueError"가 발생합니다:
+
+   >>> short_array = (c_short * 4)()
+   >>> print(sizeof(short_array))
+   8
+   >>> resize(short_array, 4)
+   Traceback (most recent call last):
+       ...
+   ValueError: minimum size is 8
+   >>> resize(short_array, 32)
+   >>> sizeof(short_array)
+   32
+   >>> sizeof(type(short_array))
+   8
+   >>>
+
+훌륭합니다, 하지만 이 배열에 포함된 추가 요소에 어떻게 액세스할 수 있
+습니까? 형은 여전히 4개의 요소만 알고 있으므로, 다른 요소에 액세스하면
+에러가 발생합니다:
+
+   >>> short_array[:]
+   [0, 0, 0, 0]
+   >>> short_array[7]
+   Traceback (most recent call last):
+       ...
+   IndexError: invalid index
+   >>>
+
+"ctypes"에서 가변 크기 데이터형을 사용하는 또 다른 방법은, 파이썬의 동
+적 특성을 사용하고 필요한 크기가 이미 알려진 후 매번 데이터형을 (재)
+정의하는 것입니다.
+
+
+ctypes 레퍼런스
+===============
+
+
+공유 라이브러리 찾기
+--------------------
+
+컴파일 언어로 프로그래밍할 때, 공유 라이브러리는 프로그램을 컴파일/링
+크할 때와 프로그램을 실행할 때 액세스 됩니다.
+
+The purpose of the "find_library()" function is to locate a library in
+a way similar to what the compiler or runtime loader does (on
+platforms with several versions of a shared library the most recent
+should be loaded), while the ctypes library loaders act like when a
+program is run, and call the runtime loader directly.
+
+The "ctypes.util" module provides a function which can help to
+determine the library to load.
+
+ctypes.util.find_library(name)
+
+   라이브러리를 찾아서 경로명을 반환하려고 시도합니다. *name*은 *lib*
+   같은 접두사, ".so", ".dylib" 또는 버전 번호와 같은 접미사가 없는 라
+   이브러리 이름입니다 (이것은 posix 링커 옵션 "-l"에 사용되는 양식입
+   니다). 라이브러리를 찾을 수 없으면 "None"을 반환합니다.
+
+정확한 기능은 시스템에 따라 다릅니다.
+
+On Linux, "find_library()" tries to run external programs
+("/sbin/ldconfig", "gcc", "objdump" and "ld") to find the library
+file. It returns the filename of the library file.
+
+버전 3.6에서 변경: 리눅스에서, 다른 수단으로 라이브러리를 찾을 수 없으
+면, 라이브러리 검색 시 환경 변수 "LD_LIBRARY_PATH"의 값이 사용됩니다.
+
+여기 예제가 있습니다:
+
+   >>> from ctypes.util import find_library
+   >>> find_library("m")
+   'libm.so.6'
+   >>> find_library("c")
+   'libc.so.6'
+   >>> find_library("bz2")
+   'libbz2.so.1.0'
+   >>>
+
+On macOS, "find_library()" tries several predefined naming schemes and
+paths to locate the library, and returns a full pathname if
+successful:
+
+   >>> from ctypes.util import find_library
+   >>> find_library("c")
+   '/usr/lib/libc.dylib'
+   >>> find_library("m")
+   '/usr/lib/libm.dylib'
+   >>> find_library("bz2")
+   '/usr/lib/libbz2.dylib'
+   >>> find_library("AGL")
+   '/System/Library/Frameworks/AGL.framework/AGL'
+   >>>
+
+On Windows, "find_library()" searches along the system search path,
+and returns the full pathname, but since there is no predefined naming
+scheme a call like "find_library("c")" will fail and return "None".
+
+If wrapping a shared library with "ctypes", it *may* be better to
+determine the shared library name at development time, and hardcode
+that into the wrapper module instead of using "find_library()" to
+locate the library at runtime.
+
+
+공유 라이브러리 로드하기
+------------------------
+
+공유 라이브러리를 파이썬 프로세스에 로드하는 방법에는 여러 가지가 있습
+니다. 한 가지 방법은 다음 클래스 중 하나의 인스턴스를 만드는 것입니다:
+
+class ctypes.CDLL(name, mode=DEFAULT_MODE, handle=None, use_errno=False, use_last_error=False, winmode=None)
+
+   Instances of this class represent loaded shared libraries.
+   Functions in these libraries use the standard C calling convention,
+   and are assumed to return "int".
+
+   윈도우에서는 DLL 이름이 존재하더라도 "CDLL" 인스턴스 생성이 실패할
+   수 있습니다. 로드된 DLL의 종속 DLL을 찾을 수 없을 때, *"[WinError
+   126] The specified module could not be found"* 메시지로 "OSError"
+   에러가 발생합니다. 윈도우 API가 정보를 반환하지 않아서 이 에러 메시
+   지에는 누락된 DLL의 이름이 포함되어 있지 않고, 이 에러를 진단하기
+   어렵게 만듭니다. 이 에러를 해결하고 찾을 수 없는 DLL을 확인하려면,
+   윈도우 디버깅과 추적 도구를 사용하여 종속 DLL 목록을 찾고 찾을 수
+   없는 DLL을 확인해야 합니다.
+
+더 보기: Microsoft DUMPBIN tool -- DLL 종속 항목을 찾는 도구.
+
+class ctypes.OleDLL(name, mode=DEFAULT_MODE, handle=None, use_errno=False, use_last_error=False, winmode=None)
+
+   Windows only: Instances of this class represent loaded shared
+   libraries, functions in these libraries use the "stdcall" calling
+   convention, and are assumed to return the windows specific
+   "HRESULT" code.  "HRESULT" values contain information specifying
+   whether the function call failed or succeeded, together with
+   additional error code.  If the return value signals a failure, an
+   "OSError" is automatically raised.
+
+   버전 3.3에서 변경: "WindowsError" used to be raised.
+
+class ctypes.WinDLL(name, mode=DEFAULT_MODE, handle=None, use_errno=False, use_last_error=False, winmode=None)
+
+   Windows only: Instances of this class represent loaded shared
+   libraries, functions in these libraries use the "stdcall" calling
+   convention, and are assumed to return "int" by default.
+
+파이썬 *전역 인터프리터 록*은, 이 라이브러리들이 내보낸 함수를 호출하
+기 전에 해제되고 나중에 다시 획득됩니다.
+
+class ctypes.PyDLL(name, mode=DEFAULT_MODE, handle=None)
+
+   이 클래스의 인스턴스는 "CDLL" 인스턴스처럼 동작합니다. 단, 파이썬
+   GIL이 함수 호출 중에 릴리스 되지 *않고*, 함수 실행 후 파이썬 에러
+   플래그가 확인된다는 점만 다릅니다. 에러 플래그가 설정되면 파이썬 예
+   외가 발생합니다.
+
+   따라서, 이것은 파이썬 C API 함수를 직접 호출하는 경우에만 유용합니
+   다.
+
+All these classes can be instantiated by calling them with at least
+one argument, the pathname of the shared library.  If you have an
+existing handle to an already loaded shared library, it can be passed
+as the "handle" named parameter, otherwise the underlying platforms
+"dlopen" or "LoadLibrary" function is used to load the library into
+the process, and to get a handle to it.
+
+*mode* 매개 변수는 라이브러리가 로드되는 방법을 지정하는 데 사용될 수
+있습니다. 자세한 내용은, *dlopen(3)* 매뉴얼 페이지를 참조하십시오. 윈
+도우에서는, *mode*가 무시됩니다. posix 시스템에서는 RTLD_NOW가 항상 추
+가되며 구성할 수 없습니다.
+
+The *use_errno* parameter, when set to true, enables a ctypes
+mechanism that allows accessing the system "errno" error number in a
+safe way. "ctypes" maintains a thread-local copy of the systems
+"errno" variable; if you call foreign functions created with
+"use_errno=True" then the "errno" value before the function call is
+swapped with the ctypes private copy, the same happens immediately
+after the function call.
+
+"ctypes.get_errno()" 함수는 ctypes 내부 사본의 값을 반환하고,
+"ctypes.set_errno()" 함수는 ctypes 내부 사본을 새 값으로 변경하고 이전
+값을 반환합니다.
+
+The *use_last_error* parameter, when set to true, enables the same
+mechanism for the Windows error code which is managed by the
+"GetLastError()" and "SetLastError()" Windows API functions;
+"ctypes.get_last_error()" and "ctypes.set_last_error()" are used to
+request and change the ctypes private copy of the windows error code.
+
+The *winmode* parameter is used on Windows to specify how the library
+is loaded (since *mode* is ignored). It takes any value that is valid
+for the Win32 API "LoadLibraryEx" flags parameter. When omitted, the
+default is to use the flags that result in the most secure DLL load to
+avoiding issues such as DLL hijacking. Passing the full path to the
+DLL is the safest way to ensure the correct library and dependencies
+are loaded.
+
+버전 3.8에서 변경: *winmode* 매개 변수가 추가되었습니다.
+
+ctypes.RTLD_GLOBAL
+
+   *mode* 매개 변수에 사용하는 플래그. 이 플래그를 사용할 수 없는 플랫
+   폼에서는, 정수 0으로 정의됩니다.
+
+ctypes.RTLD_LOCAL
+
+   *mode* 매개 변수에 사용하는 플래그. 이 플래그를 사용할 수 없는 플랫
+   폼에서는, *RTLD_GLOBAL*과 같습니다.
+
+ctypes.DEFAULT_MODE
+
+   공유 라이브러리를 로드하는 데 사용되는 기본 모드. OSX 10.3에서는
+   *RTLD_GLOBAL*이고, 그렇지 않으면 *RTLD_LOCAL*과 같습니다.
+
+이 클래스들의 인스턴스는 공개 메서드가 없습니다. 공유 라이브러리가 내
+보낸 함수는 어트리뷰트나 인덱스로 액세스할 수 있습니다. 어트리뷰트를
+통해 함수에 액세스하면 결과가 캐시 되므로 반복적으로 액세스할 때 매번
+같은 객체가 반환됨에 유의하십시오. 반면에 인덱스를 통해 액세스하면 매
+번 새로운 객체가 반환됩니다:
+
+   >>> from ctypes import CDLL
+   >>> libc = CDLL("libc.so.6")  # On Linux
+   >>> libc.time == libc.time
+   True
+   >>> libc['time'] == libc['time']
+   False
+
+다음 공개 어트리뷰트를 사용할 수 있습니다. 내보낸 함수 이름과의 충돌을
+피하고자 이름은 밑줄로 시작합니다:
+
+PyDLL._handle
+
+   라이브러리에 액세스하는 데 사용되는 시스템 핸들.
+
+PyDLL._name
+
+   생성자에서 전달된 라이브러리의 이름.
+
+Shared libraries can also be loaded by using one of the prefabricated
+objects, which are instances of the "LibraryLoader" class, either by
+calling the "LoadLibrary()" method, or by retrieving the library as
+attribute of the loader instance.
+
+class ctypes.LibraryLoader(dlltype)
+
+   공유 라이브러리를 로드하는 클래스. *dlltype*은 "CDLL", "PyDLL",
+   "WinDLL" 또는 "OleDLL" 형 중 하나여야 합니다.
+
+   "__getattr__()" has special behavior: It allows loading a shared
+   library by accessing it as attribute of a library loader instance.
+   The result is cached, so repeated attribute accesses return the
+   same library each time.
+
+   LoadLibrary(name)
+
+      공유 라이브러리를 프로세스에 로드하고 반환합니다. 이 메서드는 항
+      상 라이브러리의 새 인스턴스를 반환합니다.
+
+다음과 같은 사전 작성된 로더를 사용할 수 있습니다:
+
+ctypes.cdll
+
+   "CDLL" 인스턴스를 만듭니다.
+
+ctypes.windll
+
+   Windows only: Creates "WinDLL" instances.
+
+ctypes.oledll
+
+   Windows only: Creates "OleDLL" instances.
+
+ctypes.pydll
+
+   "PyDLL" 인스턴스를 만듭니다.
+
+C 파이썬 API에 직접 액세스하기 위해, 바로 사용할 수 있는 파이썬 공유
+라이브러리 객체가 제공됩니다:
+
+ctypes.pythonapi
+
+   An instance of "PyDLL" that exposes Python C API functions as
+   attributes.  Note that all these functions are assumed to return C
+   "int", which is of course not always the truth, so you have to
+   assign the correct "restype" attribute to use these functions.
+
+이러한 객체를 통해 라이브러리를 로드하면 라이브러리를 로드하는 데 사용
+된 이름인 "name" 문자열 인자로 감사 이벤트(auditing event)
+"ctypes.dlopen"을 발생시킵니다.
+
+로드된 라이브러리에서 함수에 액세스하면 인자 "library"(라이브러리 객체
+)와 "name"(문자열이나 정수로 심볼의 이름)으로 감사 이벤트
+"ctypes.dlsym"을 발생시킵니다.
+
+객체 대신 라이브러리 핸들만 사용 가능한 경우, 함수에 액세스하면 인자
+"handle"(원시 라이브러리 핸들)과 "name"으로 감사 이벤트
+"ctypes.dlsym/handle"을 발생시킵니다.
+
+
+외부 함수
+---------
+
+As explained in the previous section, foreign functions can be
+accessed as attributes of loaded shared libraries.  The function
+objects created in this way by default accept any number of arguments,
+accept any ctypes data instances as arguments, and return the default
+result type specified by the library loader. They are instances of a
+private class:
+
+class ctypes._FuncPtr
+
+   C 호출 가능한 외부 함수의 베이스 클래스.
+
+   외부 함수의 인스턴스는 C 호환 데이터형이기도 합니다; C 함수 포인터
+   를 나타냅니다.
+
+   이 동작은 외부 함수 객체의 특수 어트리뷰트에 대입하여 사용자 정의할
+   수 있습니다.
+
+   restype
+
+      Assign a ctypes type to specify the result type of the foreign
+      function. Use "None" for "void", a function not returning
+      anything.
+
+      It is possible to assign a callable Python object that is not a
+      ctypes type, in this case the function is assumed to return a C
+      "int", and the callable will be called with this integer,
+      allowing further processing or error checking.  Using this is
+      deprecated, for more flexible post processing or error checking
+      use a ctypes data type as "restype" and assign a callable to the
+      "errcheck" attribute.
+
+   argtypes
+
+      ctypes 형의 튜플을 대입하여 함수가 받아들이는 인자 형을 지정합니
+      다. "stdcall" 호출 규칙을 사용하는 함수는 이 튜플의 길이와 같은
+      수의 인자로만 호출할 수 있습니다; C 호출 규칙을 사용하는 함수는
+      추가적인 지정되지 않은 인자도 허용합니다.
+
+      When a foreign function is called, each actual argument is
+      passed to the "from_param()" class method of the items in the
+      "argtypes" tuple, this method allows adapting the actual
+      argument to an object that the foreign function accepts.  For
+      example, a "c_char_p" item in the "argtypes" tuple will convert
+      a string passed as argument into a bytes object using ctypes
+      conversion rules.
+
+      New: It is now possible to put items in argtypes which are not
+      ctypes types, but each item must have a "from_param()" method
+      which returns a value usable as argument (integer, string,
+      ctypes instance).  This allows defining adapters that can adapt
+      custom objects as function parameters.
+
+   errcheck
+
+      이 어트리뷰트에 파이썬 함수나 다른 콜러블을 대입합니다. 콜러블은
+      3개 이상의 인자로 호출됩니다:
+
+      callable(result, func, arguments)
+
+         *result* is what the foreign function returns, as specified
+         by the "restype" attribute.
+
+         *func*는 외부 함수 객체 자체이며, 같은 콜러블 객체를 재사용하
+         여 여러 함수의 결과를 확인하거나 사후 처리할 수 있도록 합니다
+         .
+
+         *arguments*는 원래 함수 호출에 전달된 매개 변수를 포함하는 튜
+         플입니다. 사용된 인자에 따라 동작을 특수화할 수 있도록 합니다
+         .
+
+      이 함수가 반환하는 객체는 외부 함수 호출에서 반환되지만, 결괏값
+      을 확인하고 외부 함수 호출이 실패하면 예외를 발생시킬 수도 있습
+      니다.
+
+exception ctypes.ArgumentError
+
+   외부 함수 호출이 전달된 인자 중 하나를 변환할 수 없을 때 발생하는
+   예외.
+
+On Windows, when a foreign function call raises a system exception
+(for example, due to an access violation), it will be captured and
+replaced with a suitable Python exception. Further, an auditing event
+"ctypes.seh_exception" with argument "code" will be raised, allowing
+an audit hook to replace the exception with its own.
+
+외부 함수 호출을 일으키는 일부 방법은 인자 "function pointer"와
+"arguments"로 감사 이벤트 "ctypes.call_function"를 발생시킬 수 있습니
+다.
+
+
+함수 프로토타입
+---------------
+
+함수 프로토타입의 인스턴스를 만들어서 외부 함수를 만들 수도 있습니다.
+함수 프로토타입은 C의 함수 프로토타입과 비슷합니다; 구현을 정의하지 않
+고 함수(반환형, 인자형, 호출 규칙)를 설명합니다. 팩토리 함수는 원하는
+결과형과 함수의 인자형들로 호출되어야 하며, 데코레이터 팩토리로 사용되
+어 "@wrapper" 문법을 통해 함수에 적용될 수 있습니다. 예제는 콜백 함수
+를 참조하십시오.
+
+ctypes.CFUNCTYPE(restype, *argtypes, use_errno=False, use_last_error=False)
+
+   반환된 함수 프로토타입은 표준 C 호출 규칙을 사용하는 함수를 만듭니
+   다. 이 함수는 호출 중에 GIL을 해제합니다. *use_errno*를 참으로 설정
+   하면, 시스템 "errno" 변수의 ctypes 내부 복사본이 호출 전후에 실제
+   "errno" 값과 교환됩니다; *use_last_error*는 윈도우 에러 코드에 대해
+   같은 일을 합니다.
+
+ctypes.WINFUNCTYPE(restype, *argtypes, use_errno=False, use_last_error=False)
+
+   Windows only: The returned function prototype creates functions
+   that use the "stdcall" calling convention.  The function will
+   release the GIL during the call.  *use_errno* and *use_last_error*
+   have the same meaning as above.
+
+ctypes.PYFUNCTYPE(restype, *argtypes)
+
+   반환된 함수 프로토타입은 파이썬 호출 규칙을 사용하는 함수를 만듭니
+   다. 이 함수는 호출 도중 GIL을 해제하지 *않습니다*.
+
+이러한 팩토리 함수로 만들어진 함수 프로토타입은 호출의 매개 변수 형과
+수에 따라 다른 방법으로 인스턴스를 만들 수 있습니다:
+
+   prototype(address)
+
+      지정된 정수 주소에 있는 외부 함수를 반환합니다.
+
+   prototype(callable)
+
+      파이썬 *callable*로 C 호출 가능 함수(콜백 함수)를 만듭니다.
+
+   prototype(func_spec[, paramflags])
+
+      공유 라이브러리가 내보낸 외부 함수를 반환합니다. *func_spec*은
+      2-튜플 "(name_or_ordinal, library)" 여야 합니다. 첫 번째 항목은
+      내보낸 함수의 문자열 이름이거나, 작은 정수로 표현된 내보낸 함수
+      의 서수(ordinal)입니다. 두 번째 항목은 공유 라이브러리 인스턴스
+      입니다.
+
+   prototype(vtbl_index, name[, paramflags[, iid]])
+
+      COM 메서드를 호출할 외부 함수를 반환합니다. *vtbl_index*는 가상
+      함수 테이블에 대한 인덱스이며, 작은 음이 아닌 정수입니다. *name*
+      은 COM 메서드의 이름입니다. *iid*는 확장 에러 보고에 사용되는 인
+      터페이스 식별자를 가리키는 선택적 포인터입니다.
+
+      COM methods use a special calling convention: They require a
+      pointer to the COM interface as first argument, in addition to
+      those parameters that are specified in the "argtypes" tuple.
+
+   선택적 *paramflags* 매개 변수는 위에 설명된 기능보다 훨씬 많은 기능
+   을 갖는 외부 함수 래퍼를 만듭니다.
+
+   *paramflags* must be a tuple of the same length as "argtypes".
+
+   이 튜플의 각 항목에는 매개 변수에 대한 추가 정보가 들어 있으며, 한
+   개, 두 개 또는 세 개의 항목이 들어있는 튜플이어야 합니다.
+
+   첫 번째 항목은 매개 변수의 방향 플래그 조합을 포함하는 정수입니다:
+
+      1
+         함수에 대한 입력 매개 변수를 지정합니다.
+
+      2
+         출력 매개 변수. 외부 함수가 값을 채웁니다.
+
+      4
+         기본값이 정수 0인 입력 매개 변수.
+
+   선택적인 두 번째 항목은 문자열 매개 변수 이름입니다. 이것이 지정되
+   면, 이름있는 매개 변수로 외부 함수를 호출할 수 있습니다.
+
+   선택적 세 번째 항목은 이 매개 변수의 기본값입니다.
+
+This example demonstrates how to wrap the Windows "MessageBoxW"
+function so that it supports default parameters and named arguments.
+The C declaration from the windows header file is this:
+
+   WINUSERAPI int WINAPI
+   MessageBoxW(
+       HWND hWnd,
+       LPCWSTR lpText,
+       LPCWSTR lpCaption,
+       UINT uType);
+
+다음은 "ctypes"로 래핑하는 방법입니다:
+
+   >>> from ctypes import c_int, WINFUNCTYPE, windll
+   >>> from ctypes.wintypes import HWND, LPCWSTR, UINT
+   >>> prototype = WINFUNCTYPE(c_int, HWND, LPCWSTR, LPCWSTR, UINT)
+   >>> paramflags = (1, "hwnd", 0), (1, "text", "Hi"), (1, "caption", "Hello from ctypes"), (1, "flags", 0)
+   >>> MessageBox = prototype(("MessageBoxW", windll.user32), paramflags)
+
+이제 "MessageBox" 외부 함수를 다음과 같이 호출할 수 있습니다.:
+
+   >>> MessageBox()
+   >>> MessageBox(text="Spam, spam, spam")
+   >>> MessageBox(flags=2, text="foo bar")
+
+두 번째 예제는 출력 매개 변수를 보여줍니다. win32 "GetWindowRect" 함수
+는 지정된 창의 크기를 조회하는데, 호출자가 제공해야 하는 "RECT" 구조체
+로 복사합니다. 다음은 C 선언입니다:
+
+   WINUSERAPI BOOL WINAPI
+   GetWindowRect(
+        HWND hWnd,
+        LPRECT lpRect);
+
+다음은 "ctypes"로 래핑하는 방법입니다:
+
+   >>> from ctypes import POINTER, WINFUNCTYPE, windll, WinError
+   >>> from ctypes.wintypes import BOOL, HWND, RECT
+   >>> prototype = WINFUNCTYPE(BOOL, HWND, POINTER(RECT))
+   >>> paramflags = (1, "hwnd"), (2, "lprect")
+   >>> GetWindowRect = prototype(("GetWindowRect", windll.user32), paramflags)
+   >>>
+
+출력 매개 변수가 있는 함수는, 하나뿐이면 자동으로 출력 매개 변숫값을
+반환하고, 여러 개면 출력 매개 변숫값을 포함하는 튜플을 반환하므로,
+GetWindowRect 함수는 이제 호출되면 RECT 인스턴스를 반환합니다.
+
+Output parameters can be combined with the "errcheck" protocol to do
+further output processing and error checking.  The win32
+"GetWindowRect" api function returns a "BOOL" to signal success or
+failure, so this function could do the error checking, and raises an
+exception when the api call failed:
+
+   >>> def errcheck(result, func, args):
+   ...     if not result:
+   ...         raise WinError()
+   ...     return args
+   ...
+   >>> GetWindowRect.errcheck = errcheck
+   >>>
+
+If the "errcheck" function returns the argument tuple it receives
+unchanged, "ctypes" continues the normal processing it does on the
+output parameters.  If you want to return a tuple of window
+coordinates instead of a "RECT" instance, you can retrieve the fields
+in the function and return them instead, the normal processing will no
+longer take place:
+
+   >>> def errcheck(result, func, args):
+   ...     if not result:
+   ...         raise WinError()
+   ...     rc = args[1]
+   ...     return rc.left, rc.top, rc.bottom, rc.right
+   ...
+   >>> GetWindowRect.errcheck = errcheck
+   >>>
+
+
+유틸리티 함수
+-------------
+
+ctypes.addressof(obj)
+
+   메모리 버퍼의 주소를 정수로 반환합니다. *obj*는 ctypes 형의 인스턴
+   스여야 합니다.
+
+   인자 "obj"로 감사 이벤트 "ctypes.addressof"를 발생시킵니다.
+
+ctypes.alignment(obj_or_type)
+
+   ctypes 형의 정렬 요구 사항을 반환합니다. *obj_or_type*는 ctypes 형
+   이나 인스턴스여야 합니다.
+
+ctypes.byref(obj[, offset])
+
+   *obj*에 대한 경량 포인터를 반환합니다. *obj*는 ctypes 형의 인스턴스
+   여야 합니다. *offset*의 기본값은 0이며, 내부 포인터 값에 더해질 정
+   수여야 합니다.
+
+   "byref(obj, offset)"는 이 C 코드에 해당합니다:
+
+      (((char *)&obj) + offset)
+
+   반환된 객체는 외부 함수 호출 매개 변수로만 사용할 수 있습니다.
+   "pointer(obj)"와 비슷하게 동작하지만, 훨씬 빨리 만들어집니다.
+
+ctypes.cast(obj, type)
+
+   이 함수는 C의 형 변환 연산자와 유사합니다. *obj*와 같은 메모리 블록
+   을 가리키는 *type* 형의 새 인스턴스를 반환합니다. *type*은 포인터형
+   이어야 하며, *obj*는 포인터로 해석될 수 있는 객체여야 합니다.
+
+ctypes.create_string_buffer(init_or_size, size=None)
+
+   이 함수는 가변 문자 버퍼를 만듭니다. 반환된 객체는 "c_char"의
+   ctypes 배열입니다.
+
+   *init_or_size*는 배열의 크기를 지정하는 정수거나 배열 항목을 초기화
+   하는 데 사용될 바이트열 객체여야 합니다.
+
+   바이트열 객체가 첫 번째 인자로 지정되면, 버퍼의 길이는 이 객체의 길
+   이보다 한 항목만큼 길어져서, 배열의 마지막 요소가 NUL 종료 문자가
+   됩니다. 두 번째 인자로 정수를 전달하면 바이트열의 길이를 사용하지
+   않고 배열의 크기를 지정할 수 있습니다.
+
+   "init", "size" 인자로 감사 이벤트 "ctypes.create_string_buffer"를
+   발생시킵니다.
+
+ctypes.create_unicode_buffer(init_or_size, size=None)
+
+   이 함수는 가변 유니코드 문자 버퍼를 만듭니다. 반환된 객체는
+   "c_wchar"의 ctypes 배열입니다.
+
+   *init_or_size*는 배열의 크기를 지정하는 정수거나 배열 항목을 초기화
+   하는 데 사용될 문자열이어야 합니다.
+
+   문자열이 첫 번째 인자로 지정되면, 버퍼의 길이는 문자열의 길이보다
+   한 항목만큼 길어져서, 배열의 마지막 요소가 NUL 종료 문자가 됩니다.
+   두 번째 인자로 정수를 전달하면 문자열의 길이를 사용하지 않고 배열의
+   크기를 지정할 수 있습니다.
+
+   "init", "size" 인자로 감사 이벤트 "ctypes.create_unicode_buffer"를
+   발생시킵니다.
+
+ctypes.DllCanUnloadNow()
+
+   Windows only: This function is a hook which allows implementing in-
+   process COM servers with ctypes.  It is called from the
+   DllCanUnloadNow function that the _ctypes extension dll exports.
+
+ctypes.DllGetClassObject()
+
+   Windows only: This function is a hook which allows implementing in-
+   process COM servers with ctypes.  It is called from the
+   DllGetClassObject function that the "_ctypes" extension dll
+   exports.
+
+ctypes.util.find_library(name)
+
+   라이브러리를 찾아서 경로명을 반환하려고 시도합니다. *name*은 "lib"
+   같은 접두사, ".so", ".dylib" 또는 버전 번호와 같은 접미사가 없는 라
+   이브러리 이름입니다 (이것은 posix 링커 옵션 "-l"에 사용되는 양식입
+   니다). 라이브러리를 찾을 수 없으면 "None"을 반환합니다.
+
+   정확한 기능은 시스템에 따라 다릅니다.
+
+ctypes.util.find_msvcrt()
+
+   Windows only: return the filename of the VC runtime library used by
+   Python, and by the extension modules.  If the name of the library
+   cannot be determined, "None" is returned.
+
+   예를 들어, "free(void *)"에 대한 호출로 확장 모듈에 의해 할당된 메
+   모리를 해제해야 하면, 메모리를 할당한 것과 같은 라이브러리에 있는
+   함수를 사용하는 것이 중요합니다.
+
+ctypes.FormatError([code])
+
+   Windows only: Returns a textual description of the error code
+   *code*.  If no error code is specified, the last error code is used
+   by calling the Windows api function GetLastError.
+
+ctypes.GetLastError()
+
+   Windows only: Returns the last error code set by Windows in the
+   calling thread. This function calls the Windows "GetLastError()"
+   function directly, it does not return the ctypes-private copy of
+   the error code.
+
+ctypes.get_errno()
+
+   호출하는 스레드에서 시스템 "errno" 변수의 ctypes 내부 복사본의 현재
+   값을 반환합니다.
+
+   인자 없이 감사 이벤트 "ctypes.get_errno"를 발생시킵니다.
+
+ctypes.get_last_error()
+
+   Windows only: returns the current value of the ctypes-private copy
+   of the system "LastError" variable in the calling thread.
+
+   인자 없이 감사 이벤트 "ctypes.get_last_error"를 발생시킵니다.
+
+ctypes.memmove(dst, src, count)
+
+   표준 C memmove 라이브러리 함수와 같습니다: *count* 바이트를 *src*에
+   서 *dst*로 복사합니다. *dst* 와 *src*는 정수이거나 포인터로 변환할
+   수 있는 ctypes 인스턴스여야 합니다.
+
+ctypes.memset(dst, c, count)
+
+   표준 C memset 라이브러리 함수와 같습니다: 주소 *dst*의 메모리 블록
+   을 값 *c*의 *count* 바이트로 채웁니다. *dst*는 주소를 지정하는 정수
+   거나 ctypes 인스턴스여야 합니다.
+
+ctypes.POINTER(type)
+
+   This factory function creates and returns a new ctypes pointer
+   type. Pointer types are cached and reused internally, so calling
+   this function repeatedly is cheap. *type* must be a ctypes type.
+
+ctypes.pointer(obj)
+
+   This function creates a new pointer instance, pointing to *obj*.
+   The returned object is of the type "POINTER(type(obj))".
+
+   참고 사항: 객체에 대한 포인터를 단지 외부 함수 호출로 전달하려면 훨
+   씬 빠른 "byref(obj)"를 사용해야 합니다.
+
+ctypes.resize(obj, size)
+
+   이 함수는 *obj*의 내부 메모리 버퍼의 크기를 조정합니다. *obj*는
+   ctypes 형의 인스턴스여야 합니다. "sizeof(type(obj))"로 주어지는 객
+   체 형의 원래 크기보다 버퍼를 작게 만들 수는 없지만, 버퍼를 확대할
+   수 있습니다.
+
+ctypes.set_errno(value)
+
+   호출 중인 스레드의 시스템 "errno" 변수의 ctypes 내부 복사본의 현재
+   값을 *value*로 설정하고 이전 값을 반환합니다.
+
+   인자 "errno"로 감사 이벤트 "ctypes.set_errno"를 발생시킵니다.
+
+ctypes.set_last_error(value)
+
+   Windows only: set the current value of the ctypes-private copy of
+   the system "LastError" variable in the calling thread to *value*
+   and return the previous value.
+
+   인자 "error"로 감사 이벤트 "ctypes.set_last_error"를 발생시킵니다.
+
+ctypes.sizeof(obj_or_type)
+
+   ctypes 형이나 인스턴스 메모리 버퍼의 크기를 바이트 단위로 반환합니
+   다. C "sizeof" 연산자와 같은 일을 합니다.
+
+ctypes.string_at(address, size=- 1)
+
+   This function returns the C string starting at memory address
+   *address* as a bytes object. If size is specified, it is used as
+   size, otherwise the string is assumed to be zero-terminated.
+
+   Raises an auditing event "ctypes.string_at" with arguments
+   "address", "size".
+
+ctypes.WinError(code=None, descr=None)
+
+   Windows only: this function is probably the worst-named thing in
+   ctypes. It creates an instance of OSError.  If *code* is not
+   specified, "GetLastError" is called to determine the error code. If
+   *descr* is not specified, "FormatError()" is called to get a
+   textual description of the error.
+
+   버전 3.3에서 변경: An instance of "WindowsError" used to be
+   created.
+
+ctypes.wstring_at(address, size=- 1)
+
+   This function returns the wide character string starting at memory
+   address *address* as a string.  If *size* is specified, it is used
+   as the number of characters of the string, otherwise the string is
+   assumed to be zero-terminated.
+
+   Raises an auditing event "ctypes.wstring_at" with arguments
+   "address", "size".
+
+
+데이터형
+--------
+
+class ctypes._CData
+
+   이 비공개 클래스는 모든 ctypes 데이터형의 공통 베이스 클래스입니다.
+   무엇보다도, 모든 ctypes 형 인스턴스에는 C 호환 데이터를 보관하는 메
+   모리 블록이 포함됩니다; 메모리 블록의 주소는 "addressof()" 도우미
+   함수에 의해 반환됩니다. 다른 인스턴스 변수는 "_objects"로 노출됩니
+   다; 여기에는 메모리 블록에 포인터가 포함되어있을 때, 살려둘 필요가
+   있는 다른 파이썬 객체가 포함되어 있습니다.
+
+   ctypes 데이터형의 공통 메서드, 이것들은 모두 클래스 메서드입니다 (
+   정확히 말하면, *메타 클래스*의 메서드입니다):
+
+   from_buffer(source[, offset])
+
+      이 메서드는 *source* 객체의 버퍼를 공유하는 ctypes 인스턴스를 반
+      환합니다. *source* 객체는 쓰기 가능한 버퍼 인터페이스를 지원해야
+      합니다. 선택적 *offset* 매개 변수는 source 버퍼의 오프셋을 바이
+      트 단위로 지정합니다; 기본값은 0입니다. source 버퍼가 충분히 크
+      지 않으면 "ValueError"가 발생합니다.
+
+      인자 "pointer", "size", "offset"으로 감사 이벤트
+      "ctypes.cdata/buffer"를 발생시킵니다.
+
+   from_buffer_copy(source[, offset])
+
+      이 메서드는 읽을 수 있어야 하는 *source* 객체 버퍼에서 버퍼를 복
+      사하여 ctypes 인스턴스를 만듭니다. 선택적 *offset* 매개 변수는
+      원본 버퍼의 오프셋을 바이트 단위로 지정합니다. 기본값은 0입니다.
+      소스 버퍼가 충분히 크지 않으면 "ValueError"가 발생합니다.
+
+      인자 "pointer", "size", "offset"으로 감사 이벤트
+      "ctypes.cdata/buffer"를 발생시킵니다.
+
+   from_address(address)
+
+      이 메서드는 정수 *address*로 지정된 메모리를 사용하여 ctypes 형
+      인스턴스를 반환합니다.
+
+      이 메서드와 이 메서드를 간접적으로 호출하는 다른 것들은 인자
+      "address"로 감사 이벤트 "ctypes.cdata"를 발생시킵니다.
+
+   from_param(obj)
+
+      This method adapts *obj* to a ctypes type.  It is called with
+      the actual object used in a foreign function call when the type
+      is present in the foreign function's "argtypes" tuple; it must
+      return an object that can be used as a function call parameter.
+
+      모든 ctypes 데이터형은 이 클래스 메서드의 기본 구현을 갖는데,
+      *obj* 가 이 형의 인스턴스면 *obj* 를 반환합니다. 일부 형은 다른
+      객체도 허용합니다.
+
+   in_dll(library, name)
+
+      이 메서드는 공유 라이브러리가 내보낸 ctypes 형 인스턴스를 반환합
+      니다. *name*은 데이터를 내보내는 심볼의 이름이고, *library*는 로
+      드된 공유 라이브러리입니다.
+
+   ctypes 데이터형의 공통 인스턴스 변수:
+
+   _b_base_
+
+      때로 ctypes 데이터 인스턴스는 포함하는 메모리 블록을 소유하지 않
+      고, 베이스 객체의 메모리 블록의 일부를 공유합니다. "_b_base_" 읽
+      기 전용 멤버는 메모리 블록을 소유한 루트 ctypes 객체입니다.
+
+   _b_needsfree_
+
+      이 읽기 전용 변수는 ctypes 데이터 인스턴스가 메모리 블록을 스스
+      로 할당했을 때 참이고, 그렇지 않으면 거짓입니다.
+
+   _objects
+
+      이 멤버는 "None" 이거나 메모리 블록 내용이 계속 유효하도록 유지
+      되어야 하는 파이썬 객체를 포함하는 딕셔너리입니다. 이 객체는 디
+      버깅을 위해서만 노출됩니다; 이 딕셔너리의 내용을 수정하지 마십시
+      오.
+
+
+기본 데이터형
+-------------
+
+class ctypes._SimpleCData
+
+   이 비공개 클래스는 모든 기본 ctypes 데이터형의 베이스 클래스입니다.
+   여기에는 기본 ctypes 데이터형의 공통 어트리뷰트가 들어 있으므로 여
+   기에서 언급합니다. "_SimpleCData"는 "_CData"의 서브 클래스이므로,
+   메서드와 어트리뷰트를 상속받습니다. 포인터가 아니고 포인터를 포함하
+   지 않는 ctypes 데이터형을 이제 피클 할 수 있습니다.
+
+   인스턴스에는 어트리뷰트가 하나 있습니다:
+
+   value
+
+      이 어트리뷰트는 인스턴스의 실제 값을 포함합니다. 정수형과 포인터
+      형에서는 정수고, 문자형에서는 단일 문자 바이트열 객체나 문자열이
+      고, 문자 포인터형에서는 파이썬 바이트열 객체나 문자열입니다.
+
+      ctypes 인스턴스에서 "value" 어트리뷰트를 조회하면, 대개 매번 새
+      객체가 반환됩니다. "ctypes"는 원래의 객체 반환을 구현하지 *않습
+      니다*. 항상 새로운 객체가 만들어집니다. 다른 모든 ctypes 객체 인
+      스턴스에서도 마찬가지입니다.
+
+Fundamental data types, when returned as foreign function call
+results, or, for example, by retrieving structure field members or
+array items, are transparently converted to native Python types.  In
+other words, if a foreign function has a "restype" of "c_char_p", you
+will always receive a Python bytes object, *not* a "c_char_p"
+instance.
+
+Subclasses of fundamental data types do *not* inherit this behavior.
+So, if a foreign functions "restype" is a subclass of "c_void_p", you
+will receive an instance of this subclass from the function call. Of
+course, you can get the value of the pointer by accessing the "value"
+attribute.
+
+다음은 기본 ctypes 데이터형입니다:
+
+class ctypes.c_byte
+
+   Represents the C "signed char" datatype, and interprets the value
+   as small integer.  The constructor accepts an optional integer
+   initializer; no overflow checking is done.
+
+class ctypes.c_char
+
+   Represents the C "char" datatype, and interprets the value as a
+   single character.  The constructor accepts an optional string
+   initializer, the length of the string must be exactly one
+   character.
+
+class ctypes.c_char_p
+
+   Represents the C "char*" datatype when it points to a zero-
+   terminated string.  For a general character pointer that may also
+   point to binary data, "POINTER(c_char)" must be used.  The
+   constructor accepts an integer address, or a bytes object.
+
+class ctypes.c_double
+
+   Represents the C "double" datatype.  The constructor accepts an
+   optional float initializer.
+
+class ctypes.c_longdouble
+
+   Represents the C "long double" datatype.  The constructor accepts
+   an optional float initializer.  On platforms where "sizeof(long
+   double) == sizeof(double)" it is an alias to "c_double".
+
+class ctypes.c_float
+
+   Represents the C "float" datatype.  The constructor accepts an
+   optional float initializer.
+
+class ctypes.c_int
+
+   Represents the C "signed int" datatype.  The constructor accepts an
+   optional integer initializer; no overflow checking is done.  On
+   platforms where "sizeof(int) == sizeof(long)" it is an alias to
+   "c_long".
+
+class ctypes.c_int8
+
+   Represents the C 8-bit "signed int" datatype.  Usually an alias for
+   "c_byte".
+
+class ctypes.c_int16
+
+   Represents the C 16-bit "signed int" datatype.  Usually an alias
+   for "c_short".
+
+class ctypes.c_int32
+
+   Represents the C 32-bit "signed int" datatype.  Usually an alias
+   for "c_int".
+
+class ctypes.c_int64
+
+   Represents the C 64-bit "signed int" datatype.  Usually an alias
+   for "c_longlong".
+
+class ctypes.c_long
+
+   Represents the C "signed long" datatype.  The constructor accepts
+   an optional integer initializer; no overflow checking is done.
+
+class ctypes.c_longlong
+
+   Represents the C "signed long long" datatype.  The constructor
+   accepts an optional integer initializer; no overflow checking is
+   done.
+
+class ctypes.c_short
+
+   Represents the C "signed short" datatype.  The constructor accepts
+   an optional integer initializer; no overflow checking is done.
+
+class ctypes.c_size_t
+
+   C "size_t" 데이터형을 나타냅니다.
+
+class ctypes.c_ssize_t
+
+   C "ssize_t" 데이터형을 나타냅니다.
+
+   버전 3.2에 추가.
+
+class ctypes.c_ubyte
+
+   Represents the C "unsigned char" datatype, it interprets the value
+   as small integer.  The constructor accepts an optional integer
+   initializer; no overflow checking is done.
+
+class ctypes.c_uint
+
+   Represents the C "unsigned int" datatype.  The constructor accepts
+   an optional integer initializer; no overflow checking is done.  On
+   platforms where "sizeof(int) == sizeof(long)" it is an alias for
+   "c_ulong".
+
+class ctypes.c_uint8
+
+   Represents the C 8-bit "unsigned int" datatype.  Usually an alias
+   for "c_ubyte".
+
+class ctypes.c_uint16
+
+   Represents the C 16-bit "unsigned int" datatype.  Usually an alias
+   for "c_ushort".
+
+class ctypes.c_uint32
+
+   Represents the C 32-bit "unsigned int" datatype.  Usually an alias
+   for "c_uint".
+
+class ctypes.c_uint64
+
+   Represents the C 64-bit "unsigned int" datatype.  Usually an alias
+   for "c_ulonglong".
+
+class ctypes.c_ulong
+
+   Represents the C "unsigned long" datatype.  The constructor accepts
+   an optional integer initializer; no overflow checking is done.
+
+class ctypes.c_ulonglong
+
+   Represents the C "unsigned long long" datatype.  The constructor
+   accepts an optional integer initializer; no overflow checking is
+   done.
+
+class ctypes.c_ushort
+
+   Represents the C "unsigned short" datatype.  The constructor
+   accepts an optional integer initializer; no overflow checking is
+   done.
+
+class ctypes.c_void_p
+
+   Represents the C "void*" type.  The value is represented as
+   integer. The constructor accepts an optional integer initializer.
+
+class ctypes.c_wchar
+
+   Represents the C "wchar_t" datatype, and interprets the value as a
+   single character unicode string.  The constructor accepts an
+   optional string initializer, the length of the string must be
+   exactly one character.
+
+class ctypes.c_wchar_p
+
+   Represents the C "wchar_t*" datatype, which must be a pointer to a
+   zero-terminated wide character string.  The constructor accepts an
+   integer address, or a string.
+
+class ctypes.c_bool
+
+   Represent the C "bool" datatype (more accurately, "_Bool" from
+   C99).  Its value can be "True" or "False", and the constructor
+   accepts any object that has a truth value.
+
+class ctypes.HRESULT
+
+   Windows only: Represents a "HRESULT" value, which contains success
+   or error information for a function or method call.
+
+class ctypes.py_object
+
+   Represents the C "PyObject*" datatype.  Calling this without an
+   argument creates a "NULL" "PyObject*" pointer.
+
+The "ctypes.wintypes" module provides quite some other Windows
+specific data types, for example "HWND", "WPARAM", or "DWORD".  Some
+useful structures like "MSG" or "RECT" are also defined.
+
+
+구조화된 데이터형
+-----------------
+
+class ctypes.Union(*args, **kw)
+
+   네이티브 바이트 순서의 공용체를 위한 추상 베이스 클래스.
+
+class ctypes.BigEndianStructure(*args, **kw)
+
+   *빅엔디안(big endian)* 바이트 순서의 구조체를 위한 추상 베이스 클래
+   스.
+
+class ctypes.LittleEndianStructure(*args, **kw)
+
+   *리틀엔디안(little endian)* 바이트 순서로의 구조체를 위한 추상 베이
+   스 클래스.
+
+Structures with non-native byte order cannot contain pointer type
+fields, or any other data types containing pointer type fields.
+
+class ctypes.Structure(*args, **kw)
+
+   *네이티브* 바이트 순서의 구조체를 위한 추상 베이스 클래스.
+
+   구상 구조체와 공용체 형은 이 형 중 하나를 서브 클래싱하고 적어도
+   "_fields_" 클래스 변수를 정의해서 만들어야 합니다. "ctypes"는 직접
+   어트리뷰트 액세스로 필드를 읽고 쓸 수 있는 *디스크립터*를 만듭니다.
+   이것들은
+
+   _fields_
+
+      구조체 필드를 정의하는 시퀀스. 항목은 2-튜플이나 3-튜플이어야 합
+      니다. 첫 번째 항목은 필드의 이름이고, 두 번째 항목은 필드의 형을
+      지정합니다; 모든 ctypes 데이터형이 될 수 있습니다.
+
+      "c_int"와 같은 정수형 필드에서는, 세 번째 선택적 항목을 지정할
+      수 있습니다. 필드의 비트 폭을 정의하는 작은 양의 정수여야 합니다
+      .
+
+      필드 이름은 하나의 구조체나 공용체 내에서 고유해야 합니다. 이것
+      은 검사되지 않습니다, 이름이 중복되면 하나의 필드만 액세스할 수
+      있습니다.
+
+      "_fields_" 클래스 변수를, Structure 서브 클래스를 정의하는 클래
+      스 문 *뒤에서* 정의할 수 있습니다. 직접 또는 간접적으로 자신을
+      참조하는 데이터형을 만들 수 있게 합니다:
+
+         class List(Structure):
+             pass
+         List._fields_ = [("pnext", POINTER(List)),
+                          ...
+                         ]
+
+      하지만, 형이 처음 사용되기 전에 "_fields_" 클래스 변수를 정의해
+      야 합니다 (인스턴스가 만들어지고, "sizeof()"가 호출되는 등의 일
+      이 일어납니다). 나중에 "_fields_" 클래스 변수에 대입하면
+      AttributeError가 발생합니다.
+
+      구조체 형의 서브-서브 클래스를 정의할 수 있습니다. 베이스 클래스
+      의 필드를 상속하고, 여기에 서브-서브 클래스에 정의된 "_fields_"
+      의 필드가 추가됩니다.
+
+   _pack_
+
+      An optional small integer that allows overriding the alignment
+      of structure fields in the instance.  "_pack_" must already be
+      defined when "_fields_" is assigned, otherwise it will have no
+      effect.
+
+   _anonymous_
+
+      이름 없는(익명) 필드의 이름을 나열하는 선택적 시퀀스. "_fields_"
+      가 대입될 때 "_anonymous_"는 이미 정의되어 있어야 합니다. 그렇지
+      않으면 아무 효과가 없습니다.
+
+      이 변수에 나열된 필드는 구조체나 공용체 형 필드여야 합니다.
+      "ctypes"는 구조체나 공용체 필드를 만들 필요 없이, 중첩된 필드에
+      직접 액세스할 수 있는 디스크립터를 구조체 형에 만듭니다.
+
+      다음은 예제 형입니다 (윈도우):
+
+         class _U(Union):
+             _fields_ = [("lptdesc", POINTER(TYPEDESC)),
+                         ("lpadesc", POINTER(ARRAYDESC)),
+                         ("hreftype", HREFTYPE)]
+
+         class TYPEDESC(Structure):
+             _anonymous_ = ("u",)
+             _fields_ = [("u", _U),
+                         ("vt", VARTYPE)]
+
+      "TYPEDESC" 구조체는 COM 데이터형을 설명합니다. "vt" 필드는 공용
+      체 필드 중 어느 것이 유효한지 지정합니다. "u" 필드가 익명 필드로
+      정의되었으므로, 이제 TYPEDESC 인스턴스에서 멤버에 직접 액세스할
+      수 있습니다. "td.lptdesc"와 "td.u.lptdesc"는 동등하지만, 앞에 있
+      는 것이 임시 공용체 인스턴스를 만들 필요가 없으므로 더 빠릅니다:
+
+         td = TYPEDESC()
+         td.vt = VT_PTR
+         td.lptdesc = POINTER(some_type)
+         td.u.lptdesc = POINTER(some_type)
+
+   구조체 형의 서브-서브 클래스를 정의할 수 있으며, 베이스 클래스의 필
+   드를 상속합니다. 서브 클래스 정의에 별도의 "_fields_" 변수가 있으면
+   , 여기에 지정된 필드가 베이스 클래스의 필드에 추가됩니다.
+
+   구조체와 공용체 생성자는 위치와 키워드 인자를 모두 받아들입니다. 위
+   치 인자는 "_fields_"에 나타나는 순서대로 멤버 필드를 초기화하는 데
+   사용됩니다. 생성자의 키워드 인자는 어트리뷰트 대입으로 해석되므로,
+   "_fields_"를 같은 이름으로 초기화하거나, "_fields_"에 없는 이름에
+   대한 새 어트리뷰트를 만듭니다.
+
+
+배열과 포인터
+-------------
+
+class ctypes.Array(*args)
+
+   배열의 추상 베이스 클래스.
+
+   The recommended way to create concrete array types is by
+   multiplying any "ctypes" data type with a non-negative integer.
+   Alternatively, you can subclass this type and define "_length_" and
+   "_type_" class variables. Array elements can be read and written
+   using standard subscript and slice accesses; for slice reads, the
+   resulting object is *not* itself an "Array".
+
+   _length_
+
+      배열의 요소 수를 지정하는 양의 정수. 범위를 벗어나는 서브 스크립
+      트는 "IndexError"를 일으킵니다. "len()"에 의해 반환됩니다.
+
+   _type_
+
+      배열의 각 요소 형을 지정합니다.
+
+   Array 서브 클래스 생성자는 요소를 순서대로 초기화하는 데 사용되는
+   위치 인자를 받아들입니다.
+
+class ctypes._Pointer
+
+   포인터를 위한 내부 추상 베이스 클래스.
+
+   구상 포인터형은 가리킬 형으로 "POINTER()"를 호출해서 만들어집니다;
+   이것은 "pointer()"에 의해 자동으로 수행됩니다.
+
+   포인터가 배열을 가리키면, 그것의 요소는 표준 서브 스크립트 및 슬라
+   이스 액세스를 사용하여 읽고 쓸 수 있습니다. 포인터 객체는 크기가 없
+   으므로, "len()"는 "TypeError"를 발생시킵니다. 음수 서브 스크립트는
+   (C처럼) 포인터 *앞의* 메모리를 읽을 것이고, 범위를 벗어나는 서브 스
+   크립트는 (운이 좋다면) 액세스 위반으로 인해 충돌을 일으킬 것입니다.
+
+   _type_
+
+      가리키는 형을 지정합니다.
+
+   contents
+
+      포인터가 가리키는 객체를 반환합니다. 이 어트리뷰트에 대입하면 대
+      입된 객체를 가리키도록 포인터가 변경됩니다.

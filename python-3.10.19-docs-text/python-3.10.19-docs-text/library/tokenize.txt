@@ -1,0 +1,280 @@
+"tokenize" --- Tokenizer for Python source
+******************************************
+
+**소스 코드:** Lib/tokenize.py
+
+======================================================================
+
+"tokenize" 모듈은 파이썬으로 구현된 파이썬 소스 코드를 위한 어휘 스캐
+너를 제공합니다. 이 모듈의 스캐너는 주석도 토큰으로 반환하므로, 화면
+디스플레이용 색상 표시기를 포함하여 "예쁜 인쇄기"를 구현하는 데 유용합
+니다.
+
+토큰 스트림 처리를 단순화하기 위해, 모든 연산자와 구분자 토큰과
+"Ellipsis"는 범용 "OP" 토큰 유형을 사용하여 반환됩니다. 정확한 유형은
+"tokenize.tokenize()"에서 반환된 *네임드 튜플*의 "exact_type" 프로퍼티
+를 확인하여 파악할 수 있습니다.
+
+경고:
+
+  Note that the functions in this module are only designed to parse
+  syntactically valid Python code (code that does not raise when
+  parsed using "ast.parse()").  The behavior of the functions in this
+  module is **undefined** when providing invalid Python code and it
+  can change at any point.
+
+
+입력 토큰화하기
+===============
+
+기본 진입점은 *제너레이터*입니다:
+
+tokenize.tokenize(readline)
+
+   "tokenize()" 제너레이터는 하나의 인자 *readline*을 요구합니다. 이
+   인자는 파일 객체의 "io.IOBase.readline()" 메서드와 같은 인터페이스
+   를 제공하는 콜러블 객체여야 합니다. 함수를 호출할 때마다 한 줄의 입
+   력을 바이트열로 반환해야 합니다.
+
+   제너레이터는 다음 멤버를 갖는 5-튜플을 생성합니다: 토큰 유형; 토큰
+   문자열; 토큰이 소스에서 시작하는 줄과 열을 지정하는 정수의 2-튜플
+   "(srow, scol)"; 토큰이 소스에서 끝나는 줄과 열을 지정하는 정수의 2-
+   튜플 "(erow, ecol)"과 토큰이 발견된 줄. 전달된 줄(마지막 튜플 항목)
+   은 *물리적* 줄입니다. 5-튜플은 필드 이름이 "type string start end
+   line" 인 *네임드 튜플*로 반환됩니다.
+
+   반환된 *네임드 튜플*에는 "OP" 토큰에 대한 정확한 연산자 유형이 포함
+   된 "exact_type"이라는 추가 프로퍼티가 있습니다. 다른 모든 토큰 유형
+   에서 "exact_type"은 네임드 튜플 "type" 필드와 같습니다.
+
+   버전 3.1에서 변경: 네임드 튜플에 대한 지원이 추가되었습니다.
+
+   버전 3.3에서 변경: "exact_type"에 대한 지원이 추가되었습니다.
+
+   "tokenize()"는 **PEP 263**에 따라 UTF-8 BOM이나 인코딩 쿠키를 찾아
+   파일의 소스 인코딩을 결정합니다.
+
+tokenize.generate_tokens(readline)
+
+   바이트열 대신에 유니코드 문자열을 읽는 소스를 토큰화합니다.
+
+   "tokenize()"와 마찬가지로, *readline* 인자는 한 줄의 입력을 반환하
+   는 콜러블입니다. 그러나, "generate_tokens()"는 *readline*이 바이트
+   열이 아닌 문자열 객체를 반환할 것으로 기대합니다.
+
+   결과는 정확히 "tokenize()"처럼 네임드 튜플을 산출하는 이터레이터입
+   니다. "ENCODING" 토큰을 산출하지 않습니다.
+
+"token" 모듈의 모든 상수도 "tokenize"에서 내보냅니다.
+
+토큰화 프로세스를 역전시키는 또 다른 함수가 제공됩니다. 이것은 스크립
+트를 토큰화하고, 토큰 스트림을 수정한 후, 수정된 스크립트를 다시 쓰는
+도구를 만드는 데 유용합니다.
+
+tokenize.untokenize(iterable)
+
+   토큰을 파이썬 소스 코드로 역 변환합니다. *iterable*은 최소한 토큰
+   유형과 토큰 문자열의 두 요소가 있는 시퀀스를 반환해야 합니다. 추가
+   시퀀스 요소는 무시됩니다.
+
+   The reconstructed script is returned as a single string.  The
+   result is guaranteed to tokenize back to match the input so that
+   the conversion is lossless and round-trips are assured.  The
+   guarantee applies only to the token type and token string as the
+   spacing between tokens (column positions) may change.
+
+   "tokenize()" 에 의해 출력되는 첫 번째 토큰 시퀀스인 "ENCODING" 토큰
+   을 사용하여 인코딩된 바이트열을 반환합니다. 입력에 인코딩 토큰이 없
+   으면, 대신 str을 반환합니다.
+
+"tokenize()"는 토큰화하는 소스 파일의 인코딩을 감지해야 합니다. 이 작
+업을 수행하는 데 사용되는 함수를 사용할 수 있습니다:
+
+tokenize.detect_encoding(readline)
+
+   "detect_encoding()" 함수는 파이썬 소스 파일을 디코딩할 때 사용해야
+   하는 인코딩을 감지하는 데 사용됩니다. "tokenize()" 제너레이터와 같
+   은 방식으로, 하나의 인자 readline을 요구합니다.
+
+   readline을 최대 두 번 호출하고, 사용된 인코딩(문자열로)과 읽은 줄들
+   (바이트열에서 디코드 되지 않습니다)의 리스트를 반환합니다.
+
+   **PEP 263**에 지정된 대로 UTF-8 BOM이나 인코딩 쿠키의 존재로부터 인
+   코딩을 검색합니다. BOM과 쿠키가 모두 있지만 서로 일치하지 않으면
+   "SyntaxError"가 발생합니다. BOM이 발견되면, "'utf-8-sig'"가 인코딩
+   으로 반환됩니다.
+
+   인코딩이 지정되지 않으면, 기본값인 "'utf-8'"이 반환됩니다.
+
+   "open()"을 사용하여 파이썬 소스 파일을 여십시오:
+   "detect_encoding()"을 사용하여 파일 인코딩을 감지합니다.
+
+tokenize.open(filename)
+
+   "detect_encoding()"에 의해 감지된 인코딩을 사용하여 읽기 전용 모드
+   로 파일을 엽니다.
+
+   버전 3.2에 추가.
+
+exception tokenize.TokenError
+
+   여러 줄로 나눌 수 있는 독스트링이나 표현식이 파일의 어디에서도 완료
+   되지 않을 때 발생합니다, 예를 들어:
+
+      """Beginning of
+      docstring
+
+   또는:
+
+      [1,
+       2,
+       3
+
+Note that unclosed single-quoted strings do not cause an error to be
+raised. They are tokenized as "ERRORTOKEN", followed by the
+tokenization of their contents.
+
+
+명령 줄 사용법
+==============
+
+버전 3.3에 추가.
+
+"tokenize" 모듈은 명령 줄에서 스크립트로 실행될 수 있습니다. 이렇게 간
+단합니다:
+
+   python -m tokenize [-e] [filename.py]
+
+허용되는 옵션은 다음과 같습니다:
+
+-h, --help
+
+   이 도움말 메시지를 표시하고 종료합니다
+
+-e, --exact
+
+   정확한 유형(exact_type)을 사용하여 토큰 이름을 표시합니다
+
+"filename.py"가 지정되면 그 내용은 표준출력(stdout)으로 토큰화됩니다.
+그렇지 않으면, 표준입력(stdin)에 대해 토큰화가 수행됩니다.
+
+
+예제
+====
+
+float 리터럴을 Decimal 객체로 변환하는 스크립트 재 작성기의 예제:
+
+   from tokenize import tokenize, untokenize, NUMBER, STRING, NAME, OP
+   from io import BytesIO
+
+   def decistmt(s):
+       """Substitute Decimals for floats in a string of statements.
+
+       >>> from decimal import Decimal
+       >>> s = 'print(+21.3e-5*-.1234/81.7)'
+       >>> decistmt(s)
+       "print (+Decimal ('21.3e-5')*-Decimal ('.1234')/Decimal ('81.7'))"
+
+       The format of the exponent is inherited from the platform C library.
+       Known cases are "e-007" (Windows) and "e-07" (not Windows).  Since
+       we're only showing 12 digits, and the 13th isn't close to 5, the
+       rest of the output should be platform-independent.
+
+       >>> exec(s)  #doctest: +ELLIPSIS
+       -3.21716034272e-0...7
+
+       Output from calculations with Decimal should be identical across all
+       platforms.
+
+       >>> exec(decistmt(s))
+       -3.217160342717258261933904529E-7
+       """
+       result = []
+       g = tokenize(BytesIO(s.encode('utf-8')).readline)  # tokenize the string
+       for toknum, tokval, _, _, _ in g:
+           if toknum == NUMBER and '.' in tokval:  # replace NUMBER tokens
+               result.extend([
+                   (NAME, 'Decimal'),
+                   (OP, '('),
+                   (STRING, repr(tokval)),
+                   (OP, ')')
+               ])
+           else:
+               result.append((toknum, tokval))
+       return untokenize(result).decode('utf-8')
+
+명령 줄에서 토큰화하는 예제. 스크립트:
+
+   def say_hello():
+       print("Hello, World!")
+
+   say_hello()
+
+는 다음 출력으로 토큰화됩니다. 여기서 첫 번째 열은 토큰이 발견된 줄/열
+좌표의 범위이고, 두 번째 열은 토큰의 이름이며, 마지막 열은 토큰의 값입
+니다 (있다면)
+
+   $ python -m tokenize hello.py
+   0,0-0,0:            ENCODING       'utf-8'
+   1,0-1,3:            NAME           'def'
+   1,4-1,13:           NAME           'say_hello'
+   1,13-1,14:          OP             '('
+   1,14-1,15:          OP             ')'
+   1,15-1,16:          OP             ':'
+   1,16-1,17:          NEWLINE        '\n'
+   2,0-2,4:            INDENT         '    '
+   2,4-2,9:            NAME           'print'
+   2,9-2,10:           OP             '('
+   2,10-2,25:          STRING         '"Hello, World!"'
+   2,25-2,26:          OP             ')'
+   2,26-2,27:          NEWLINE        '\n'
+   3,0-3,1:            NL             '\n'
+   4,0-4,0:            DEDENT         ''
+   4,0-4,9:            NAME           'say_hello'
+   4,9-4,10:           OP             '('
+   4,10-4,11:          OP             ')'
+   4,11-4,12:          NEWLINE        '\n'
+   5,0-5,0:            ENDMARKER      ''
+
+정확한 토큰 유형 이름은 "-e" 옵션을 사용하여 표시할 수 있습니다:
+
+   $ python -m tokenize -e hello.py
+   0,0-0,0:            ENCODING       'utf-8'
+   1,0-1,3:            NAME           'def'
+   1,4-1,13:           NAME           'say_hello'
+   1,13-1,14:          LPAR           '('
+   1,14-1,15:          RPAR           ')'
+   1,15-1,16:          COLON          ':'
+   1,16-1,17:          NEWLINE        '\n'
+   2,0-2,4:            INDENT         '    '
+   2,4-2,9:            NAME           'print'
+   2,9-2,10:           LPAR           '('
+   2,10-2,25:          STRING         '"Hello, World!"'
+   2,25-2,26:          RPAR           ')'
+   2,26-2,27:          NEWLINE        '\n'
+   3,0-3,1:            NL             '\n'
+   4,0-4,0:            DEDENT         ''
+   4,0-4,9:            NAME           'say_hello'
+   4,9-4,10:           LPAR           '('
+   4,10-4,11:          RPAR           ')'
+   4,11-4,12:          NEWLINE        '\n'
+   5,0-5,0:            ENDMARKER      ''
+
+"generate_tokens()"로 바이트열 대신 유니코드 문자열을 읽는, 프로그래밍
+방식으로 파일을 토큰화하는 예:
+
+   import tokenize
+
+   with tokenize.open('hello.py') as f:
+       tokens = tokenize.generate_tokens(f.readline)
+       for token in tokens:
+           print(token)
+
+또는 "tokenize()"로 직접 바이트열을 읽는 예:
+
+   import tokenize
+
+   with open('hello.py', 'rb') as f:
+       tokens = tokenize.tokenize(f.readline)
+       for token in tokens:
+           print(token)

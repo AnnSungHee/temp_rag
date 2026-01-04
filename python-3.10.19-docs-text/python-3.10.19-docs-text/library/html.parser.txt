@@ -1,0 +1,322 @@
+"html.parser" --- Simple HTML and XHTML parser
+**********************************************
+
+**소스 코드:** Lib/html/parser.py
+
+======================================================================
+
+이 모듈은 HTML(HyperText Mark-up Language)와 XHTML 형식의 텍스트 파일
+을 구문 분석하기 위한 기초로 사용되는 클래스 "HTMLParser"를 정의합니다
+.
+
+class html.parser.HTMLParser(*, convert_charrefs=True)
+
+   잘못된 마크업을 구문 분석할 수 있는 구문 분석기 인스턴스를 만듭니다
+   .
+
+   *convert_charrefs*가 "True"(기본값)이면, ("script"/"style" 요소에
+   있는 것을 제외한) 모든 문자 참조(character references)가 자동으로
+   해당 유니코드 문자로 변환됩니다.
+
+   "HTMLParser" 인스턴스는 HTML 데이터를 받아서 시작 태그, 종료 태그,
+   텍스트, 주석 및 기타 마크업 요소를 만날 때마다 처리기 메서드를 호출
+   합니다. 사용자는 원하는 동작을 구현하기 위해 "HTMLParser"의 서브 클
+   래스를 만들고 해당 메서드를 재정의해야 합니다.
+
+   이 구문 분석기는 종료 태그가 시작 태그와 일치하는지 검사하거나, 바
+   깥(outer) 요소를 닫음으로써 묵시적으로 닫힌 요소에 대해 종료 태그
+   처리기를 호출하지 않습니다.
+
+   버전 3.4에서 변경: *convert_charrefs* 키워드 인자가 추가되었습니다.
+
+   버전 3.5에서 변경: 인자 *convert_charrefs*의 기본값은 이제 "True"입
+   니다.
+
+
+HTML 구문 분석기 응용 프로그램 예제
+===================================
+
+기본 예제로, 다음은 "HTMLParser" 클래스를 사용하여 시작 태그, 종료 태
+그 및 데이터를 만날 때마다 인쇄하는 간단한 HTML 구문 분석기입니다:
+
+   from html.parser import HTMLParser
+
+   class MyHTMLParser(HTMLParser):
+       def handle_starttag(self, tag, attrs):
+           print("Encountered a start tag:", tag)
+
+       def handle_endtag(self, tag):
+           print("Encountered an end tag :", tag)
+
+       def handle_data(self, data):
+           print("Encountered some data  :", data)
+
+   parser = MyHTMLParser()
+   parser.feed('<html><head><title>Test</title></head>'
+               '<body><h1>Parse me!</h1></body></html>')
+
+출력은 다음과 같습니다:
+
+   Encountered a start tag: html
+   Encountered a start tag: head
+   Encountered a start tag: title
+   Encountered some data  : Test
+   Encountered an end tag : title
+   Encountered an end tag : head
+   Encountered a start tag: body
+   Encountered a start tag: h1
+   Encountered some data  : Parse me!
+   Encountered an end tag : h1
+   Encountered an end tag : body
+   Encountered an end tag : html
+
+
+"HTMLParser" 메서드
+===================
+
+"HTMLParser" 인스턴스에는 다음과 같은 메서드가 있습니다:
+
+HTMLParser.feed(data)
+
+   구문 분석기에 텍스트를 입력합니다. 완전한 요소로 구성되어있는 부분
+   까지 처리됩니다; 불완전한 데이터는 더 많은 데이터가 공급되거나
+   "close()"가 호출될 때까지 버퍼링 됩니다. *data*는 "str"이어야 합니
+   다.
+
+HTMLParser.close()
+
+   버퍼링 된 모든 데이터를 마치 파일 끝(end-of-file) 표시가 붙은 것처
+   럼 처리합니다. 이 메서드는 파생 클래스에 의해 입력 끝에서의 추가 처
+   리를 정의하기 위해 재정의될 수 있지만, 재정의된 버전에서는 항상
+   "HTMLParser" 베이스 클래스 메서드인 "close()"를 호출해야 합니다.
+
+HTMLParser.reset()
+
+   인스턴스를 재설정합니다. 처리되지 않은 모든 데이터를 잃습니다. 이것
+   은 인스턴스 생성 시에 묵시적으로 호출됩니다.
+
+HTMLParser.getpos()
+
+   현재의 줄 번호와 오프셋(offset)을 반환합니다.
+
+HTMLParser.get_starttag_text()
+
+   가장 최근에 열렸던 시작 태그의 텍스트를 반환합니다. 이것은 일반적으
+   로 구조화된 처리에 필요하지 않지만, "배치된 대로(as deployed)" HTML
+   을 다루거나 최소한의 변경(어트리뷰트 사이의 공백을 보존할 수 있음,
+   등등)으로 입력을 다시 생성하는 데 유용할 수 있습니다.
+
+다음 메서드는 데이터나 마크업 요소를 만날 때 호출되며 서브 클래스에서
+재정의하려는 용도입니다. 베이스 클래스 구현은 아무 일도 하지 않습니다
+("handle_startendtag()"는 예외입니다).:
+
+HTMLParser.handle_starttag(tag, attrs)
+
+   이 메서드는 엘리먼트의 시작 태그(예를 들어, "<div id="main">")를 처
+   리하기 위해 호출됩니다.
+
+   *tag* 인자는 소문자로 변환된 태그의 이름입니다. *attrs* 인자는 태그
+   의 "<>" 화살괄호 안에 있는 어트리뷰트를 포함하는 "(name, value)" 쌍
+   의 리스트입니다. *name*은 소문자로 변환되고, *value*의 따옴표는 제
+   거되고, 문자와 엔티티 참조는 치환됩니다.
+
+   예를 들어, 태그 "<A HREF="https://www.cwi.nl/">"의 경우, 이 메서드
+   는 "handle_starttag('a', [('href', 'https://www.cwi.nl/')])"로 호출
+   됩니다.
+
+   "html.entities"의 모든 엔티티 참조가 어트리뷰트 값에서 치환됩니다.
+
+HTMLParser.handle_endtag(tag)
+
+   이 메서드는 요소의 종료 태그(예를 들어, "</div>")를 처리하기 위해
+   호출됩니다.
+
+   *tag* 인자는 소문자로 변환된 태그의 이름입니다.
+
+HTMLParser.handle_startendtag(tag, attrs)
+
+   "handle_starttag()"와 비슷하지만, 구문 분석기가 XHTML 스타일의 빈
+   태그("<img ... />")를 만날 때 호출됩니다. 이 메서드는 이 특정의 어
+   휘 정보(lexical information)가 필요한 서브 클래스에 의해 재정의될
+   수 있습니다; 기본 구현은 단순히 "handle_starttag()"와
+   "handle_endtag()"를 호출합니다.
+
+HTMLParser.handle_data(data)
+
+   이 메서드는 임의의 데이터(예를 들어, 텍스트 노드와
+   "<script>...</script>" 및 "<style>...</style>"의 내용)를 처리하기
+   위해 호출됩니다.
+
+HTMLParser.handle_entityref(name)
+
+   이 메서드는 "&name;" 형식(예를 들어, "&gt;")의 이름있는 문자 참조를
+   처리하기 위해 호출됩니다. 여기서 *name*은 일반 엔티티 참조(예를 들
+   어, "'gt'")입니다. *convert_charrefs*가 "True"이면, 이 메서드는 호
+   출되지 않습니다.
+
+HTMLParser.handle_charref(name)
+
+   This method is called to process decimal and hexadecimal numeric
+   character references of the form "&#NNN;" and "&#xNNN;".  For
+   example, the decimal equivalent for "&gt;" is "&#62;", whereas the
+   hexadecimal is "&#x3E;"; in this case the method will receive
+   "'62'" or "'x3E'".  This method is never called if
+   *convert_charrefs* is "True".
+
+HTMLParser.handle_comment(data)
+
+   이 메서드는 주석을 만날 때 호출됩니다 (예를 들어, "<!--
+   comment-->").
+
+   예를 들어, 주석 "<!-- comment -->"는 이 메서드가 인자 "' comment '"
+   로 호출되도록 합니다.
+
+   Internet Explorer 조건부 주석(condcoms)의 내용도 이 메서드로 보내지
+   므로, "<!--[if IE 9]>IE9-specific content<![endif]-->"의 경우, 이
+   메서드는 "'[if IE 9]>IE9-specific content<![endif]'"를 받습니다.
+
+HTMLParser.handle_decl(decl)
+
+   이 메서드는 HTML doctype 선언(예를 들어, "<!DOCTYPE html>")을 처리
+   하기 위해 호출됩니다.
+
+   *decl* 매개 변수는 "<!...>" 마크업 내의 선언 전체 내용입니다 (예를
+   들어, "'DOCTYPE html'").
+
+HTMLParser.handle_pi(data)
+
+   처리 명령(processing instruction)을 만날 때 호출되는 메서드. *data*
+   매개 변수에는 전체 처리 명령이 포함됩니다. 예를 들어, 처리 명령
+   "<?proc color='red'>"의 경우, 이 메서드는 "handle_pi("proc
+   color='red'")"로 호출됩니다. 파생 클래스에 의해 재정의되려는 목적입
+   니다; 베이스 클래스 구현은 아무것도 수행하지 않습니다.
+
+   참고:
+
+     "HTMLParser" 클래스는 처리 명령에 대해 SGML 구문 규칙을 사용합니
+     다. 후행 "'?'"를 사용하는 XHTML 처리 명령은 "'?'"가 *data*에 포함
+     되도록 합니다.
+
+HTMLParser.unknown_decl(data)
+
+   이 메서드는 구문 분석기가 인식할 수 없는 선언을 읽었을 때 호출됩니
+   다.
+
+   *data* 매개 변수는 "<![...]>" 마크업 안에 있는 선언의 전체 내용입니
+   다. 파생 클래스가 재정의하는 것이 때때로 유용합니다. 베이스 클래스
+   구현은 아무것도 수행하지 않습니다.
+
+
+예제
+====
+
+다음 클래스는 더 많은 예를 설명하는 데 사용할 구문 분석기를 구현합니다
+:
+
+   from html.parser import HTMLParser
+   from html.entities import name2codepoint
+
+   class MyHTMLParser(HTMLParser):
+       def handle_starttag(self, tag, attrs):
+           print("Start tag:", tag)
+           for attr in attrs:
+               print("     attr:", attr)
+
+       def handle_endtag(self, tag):
+           print("End tag  :", tag)
+
+       def handle_data(self, data):
+           print("Data     :", data)
+
+       def handle_comment(self, data):
+           print("Comment  :", data)
+
+       def handle_entityref(self, name):
+           c = chr(name2codepoint[name])
+           print("Named ent:", c)
+
+       def handle_charref(self, name):
+           if name.startswith('x'):
+               c = chr(int(name[1:], 16))
+           else:
+               c = chr(int(name))
+           print("Num ent  :", c)
+
+       def handle_decl(self, data):
+           print("Decl     :", data)
+
+   parser = MyHTMLParser()
+
+doctype 구문 분석하기:
+
+   >>> parser.feed('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" '
+   ...             '"http://www.w3.org/TR/html4/strict.dtd">')
+   Decl     : DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"
+
+몇 가지 어트리뷰트를 가진 요소와 제목을 구문 분석하기:
+
+   >>> parser.feed('<img src="python-logo.png" alt="The Python logo">')
+   Start tag: img
+        attr: ('src', 'python-logo.png')
+        attr: ('alt', 'The Python logo')
+   >>>
+   >>> parser.feed('<h1>Python</h1>')
+   Start tag: h1
+   Data     : Python
+   End tag  : h1
+
+"script"와 "style" 요소의 내용은 더 구문 분석하지 않고 있는 그대로 반
+환됩니다:
+
+   >>> parser.feed('<style type="text/css">#python { color: green }</style>')
+   Start tag: style
+        attr: ('type', 'text/css')
+   Data     : #python { color: green }
+   End tag  : style
+
+   >>> parser.feed('<script type="text/javascript">'
+   ...             'alert("<strong>hello!</strong>");</script>')
+   Start tag: script
+        attr: ('type', 'text/javascript')
+   Data     : alert("<strong>hello!</strong>");
+   End tag  : script
+
+주석 구문 분석하기:
+
+   >>> parser.feed('<!-- a comment -->'
+   ...             '<!--[if IE 9]>IE-specific content<![endif]-->')
+   Comment  :  a comment
+   Comment  : [if IE 9]>IE-specific content<![endif]
+
+이름있는 문자 참조와 숫자 문자 참조를 구문 분석하고 올바른 문자로 변환
+합니다 (참고: 이 3개의 참조는 모두 "'>'"와 동등합니다):
+
+   >>> parser.feed('&gt;&#62;&#x3E;')
+   Named ent: >
+   Num ent  : >
+   Num ent  : >
+
+불완전한 청크를 "feed()"로 보내는 것이 작동합니다만, "handle_data()"가
+두 번 이상 호출될 수 있습니다 (*convert_charrefs*가 "True"로 설정되지
+않은 한):
+
+   >>> for chunk in ['<sp', 'an>buff', 'ered ', 'text</s', 'pan>']:
+   ...     parser.feed(chunk)
+   ...
+   Start tag: span
+   Data     : buff
+   Data     : ered
+   Data     : text
+   End tag  : span
+
+잘못된 HTML(예를 들어, 따옴표 처리되지 않은 어트리뷰트)을 구문 분석하
+는 것도 동작합니다:
+
+   >>> parser.feed('<p><a class=link href=#main>tag soup</p ></a>')
+   Start tag: p
+   Start tag: a
+        attr: ('class', 'link')
+        attr: ('href', '#main')
+   Data     : tag soup
+   End tag  : p
+   End tag  : a

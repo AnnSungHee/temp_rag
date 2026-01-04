@@ -1,0 +1,79 @@
+파일과 디렉터리 액세스
+**********************
+
+이 장에서 설명하는 모듈은 디스크 파일과 디렉터리를 다룹니다. 예를 들어
+, 파일의 속성을 읽고, 이식성 있는 방식으로 경로를 조작하고, 임시 파일
+을 만드는 모듈이 있습니다. 이 장의 전체 모듈 목록은 다음과 같습니다:
+
+* "pathlib" --- Object-oriented filesystem paths
+
+  * 기본 사용
+
+  * 순수한 경로
+
+    * 일반 속성
+
+    * 연산자
+
+    * 개별 부분에 액세스하기
+
+    * 메서드와 프로퍼티
+
+  * 구상 경로
+
+    * Methods
+
+  * Correspondence to tools in the "os" module
+
+* "os.path" --- Common pathname manipulations
+
+* "fileinput" --- Iterate over lines from multiple input streams
+
+* "stat" --- Interpreting "stat()" results
+
+* "filecmp" --- File and Directory Comparisons
+
+  * "dircmp" 클래스
+
+* "tempfile" --- Generate temporary files and directories
+
+  * 예
+
+  * 폐지된 함수와 변수
+
+* "glob" --- Unix style pathname pattern expansion
+
+* "fnmatch" --- Unix filename pattern matching
+
+* "linecache" --- Random access to text lines
+
+* "shutil" --- High-level file operations
+
+  * 디렉터리와 파일 연산
+
+    * 플랫폼 의존적 효율적인 복사 연산
+
+    * copytree 예
+
+    * rmtree 예
+
+  * 아카이브 연산
+
+    * 아카이브 예
+
+    * *base_dir*을 사용한 아카이브 예
+
+  * 출력 터미널의 크기 조회하기
+
+더 보기:
+
+  모듈 "os"
+     운영 체제 인터페이스. 파이썬 *파일 객체*보다 저수준으로 파일을 다
+     루는 함수를 포함합니다.
+
+  모듈 "io"
+     파이썬의 내장 I/O 라이브러리. 추상 클래스와 파일 I/O와 같은 구상
+     클래스를 모두 포함합니다.
+
+  내장 함수 "open()"
+     파이썬으로 읽고 쓰기 위해 파일을 여는 표준 방법.

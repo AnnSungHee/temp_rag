@@ -1,0 +1,114 @@
+복소수 객체
+***********
+
+파이썬의 복소수 객체는 C API에서 볼 때 두 개의 다른 형으로 구현됩니다:
+하나는 파이썬 프로그램에 노출된 파이썬 객체이고, 다른 하나는 실제 복소
+수 값을 나타내는 C 구조체입니다. API는 두 가지 모두도 작업할 수 있는
+함수를 제공합니다.
+
+
+C 구조체로서의 복소수
+=====================
+
+매개 변수로 이러한 구조체를 받아들이고 결과로 반환하는 함수는 포인터를
+통해 역참조하기보다는 *값으로* 다룹니다. 이는 API 전체에서 일관됩니다.
+
+type Py_complex
+
+   The C structure which corresponds to the value portion of a Python
+   complex number object.  Most of the functions for dealing with
+   complex number objects use structures of this type as input or
+   output values, as appropriate.  It is defined as:
+
+      typedef struct {
+         double real;
+         double imag;
+      } Py_complex;
+
+Py_complex _Py_c_sum(Py_complex left, Py_complex right)
+
+   C "Py_complex" 표현을 사용하여 두 복소수의 합을 반환합니다.
+
+Py_complex _Py_c_diff(Py_complex left, Py_complex right)
+
+   C "Py_complex" 표현을 사용하여 두 복소수의 차이를 반환합니다.
+
+Py_complex _Py_c_neg(Py_complex num)
+
+   C "Py_complex" 표현을 사용하여 복소수 *num*의 음의 값을 반환합니다.
+
+Py_complex _Py_c_prod(Py_complex left, Py_complex right)
+
+   C "Py_complex" 표현을 사용하여 두 복소수의 곱을 반환합니다.
+
+Py_complex _Py_c_quot(Py_complex dividend, Py_complex divisor)
+
+   C "Py_complex" 표현을 사용하여 두 복소수의 몫을 반환합니다.
+
+   If *divisor* is null, this method returns zero and sets "errno" to
+   "EDOM".
+
+Py_complex _Py_c_pow(Py_complex num, Py_complex exp)
+
+   C "Py_complex" 표현을 사용하여 *num*의 *exp* 거듭제곱을 반환합니다.
+
+   If *num* is null and *exp* is not a positive real number, this
+   method returns zero and sets "errno" to "EDOM".
+
+
+파이썬 객체로서의 복소수
+========================
+
+type PyComplexObject
+
+   파이썬 복소수 객체를 나타내는 "PyObject"의 서브 형.
+
+PyTypeObject PyComplex_Type
+    * Part of the Stable ABI.*
+
+   이 "PyTypeObject" 인스턴스는 파이썬 복소수 형을 나타냅니다. 파이썬
+   계층의 "complex"와 같은 객체입니다.
+
+int PyComplex_Check(PyObject *p)
+
+   인자가 "PyComplexObject" 나 "PyComplexObject"의 서브 형이면 참을 반
+   환합니다. 이 함수는 항상 성공합니다.
+
+int PyComplex_CheckExact(PyObject *p)
+
+   인자가 "PyComplexObject"이지만, "PyComplexObject"의 서브 유형이 아
+   니면 참을 반환합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyComplex_FromCComplex(Py_complex v)
+    *반환값: 새 참조.*
+
+   Create a new Python complex number object from a C "Py_complex"
+   value.
+
+PyObject *PyComplex_FromDoubles(double real, double imag)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Return a new "PyComplexObject" object from *real* and *imag*.
+
+double PyComplex_RealAsDouble(PyObject *op)
+    * Part of the Stable ABI.*
+
+   *op*의 실수부를 C "double"로 반환합니다.
+
+double PyComplex_ImagAsDouble(PyObject *op)
+    * Part of the Stable ABI.*
+
+   *op*의 허수부를 C "double"로 반환합니다.
+
+Py_complex PyComplex_AsCComplex(PyObject *op)
+
+   복소수 *op*의 "Py_complex" 값을 반환합니다.
+
+   If *op* is not a Python complex number object but has a
+   "__complex__()" method, this method will first be called to convert
+   *op* to a Python complex number object.  If "__complex__()" is not
+   defined then it falls back to "__float__()".  If "__float__()" is
+   not defined then it falls back to "__index__()".  Upon failure,
+   this method returns "-1.0" as a real value.
+
+   버전 3.8에서 변경: Use "__index__()" if available.

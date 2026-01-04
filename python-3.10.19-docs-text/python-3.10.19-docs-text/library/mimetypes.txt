@@ -1,0 +1,236 @@
+"mimetypes" --- Map filenames to MIME types
+*******************************************
+
+**소스 코드:** Lib/mimetypes.py
+
+======================================================================
+
+"mimetypes" 모듈은 파일명이나 URL과 파일명 확장자와 연관된 MIME 유형
+간의 변환을 제공합니다. 변환은 파일명에서 MIME 유형으로, MIME 유형에서
+파일 이름 확장자로 제공됩니다; 후자의 변환에서는 인코딩이 지원되지 않
+습니다.
+
+이 모듈은 하나의 클래스와 여러 편리 함수를 제공합니다. 함수가 이 모듈
+에 대한 일반 인터페이스이지만, 일부 응용 프로그램은 클래스에도 관심이
+있을 수 있습니다.
+
+아래에 설명된 함수는 이 모듈의 기본 인터페이스를 제공합니다. 모듈이 초
+기화되지 않았으면, 함수가 "init()"가 설정하는 정보에 의존하면 "init()"
+를 호출합니다.
+
+mimetypes.guess_type(url, strict=True)
+
+   *url*로 주어진 파일명, 경로 또는 URL에 기반한 파일의 유형을 추측합
+   니다. URL은 문자열이나 *경로류 객체*일 수 있습니다.
+
+   반환 값은 튜플 "(type, encoding)"인데, *type*은 MIME *content-type*
+   헤더에 사용할 수 있는 "'type/subtype'" 형식의 문자열이거나, 유형을
+   추측할 수 없으면 (없거나 알려지지 않은 확장자) "None"입니다.
+
+   *encoding*은 인코딩에 사용된 프로그램의 이름(예를 들어,
+   **compress**나 **gzip**)이거나, 인코딩이 없으면 "None"입니다. 인코
+   딩은 *Content-Encoding* 헤더로 사용하기에 적합합니다, *Content-
+   Transfer-Encoding* 헤더가 **아닙니다**. 매핑은 테이블 기반입니다.
+   인코딩 접미사는 대소 문자를 구분합니다; 유형 접미사는 먼저 대소 문
+   자를 구분해서 시도한 후에, 대소 문자를 구분하지 않고 시도합니다.
+
+   선택적 *strict* 인자는 알려진 MIME 유형 목록을 IANA에 등록된 공식
+   유형으로만 제한할지를 지정하는 플래그입니다. *strict*가 "True"(기본
+   값)이면 IANA 유형만 지원됩니다; *strict*가 "False"일 때, 추가로 표
+   준이 아니지만, 일반적으로 사용되는 MIME 유형도 인식됩니다.
+
+   버전 3.8에서 변경: Added support for url being a *path-like
+   object*.
+
+mimetypes.guess_all_extensions(type, strict=True)
+
+   Guess the extensions for a file based on its MIME type, given by
+   *type*. The return value is a list of strings giving all possible
+   filename extensions, including the leading dot ("'.'").  The
+   extensions are not guaranteed to have been associated with any
+   particular data stream, but would be mapped to the MIME type *type*
+   by "guess_type()".
+
+   선택적 *strict* 인자는 "guess_type()" 함수에서와 같은 의미를 가집니
+   다.
+
+mimetypes.guess_extension(type, strict=True)
+
+   Guess the extension for a file based on its MIME type, given by
+   *type*. The return value is a string giving a filename extension,
+   including the leading dot ("'.'").  The extension is not guaranteed
+   to have been associated with any particular data stream, but would
+   be mapped to the MIME type *type* by "guess_type()".  If no
+   extension can be guessed for *type*, "None" is returned.
+
+   선택적 *strict* 인자는 "guess_type()" 함수에서와 같은 의미를 가집니
+   다.
+
+일부 추가 함수와 데이터 항목은 모듈의 동작을 제어하는 데 사용할 수 있
+습니다.
+
+mimetypes.init(files=None)
+
+   내부 데이터 구조를 초기화합니다. 주어지면, *files*는 기본 유형 맵을
+   보강하는 데 사용해야 하는 파일 이름의 시퀀스여야 합니다. 생략하면,
+   사용할 파일 이름은 "knownfiles"에서 가져옵니다; 윈도우에서는, 현재
+   레지스트리 설정이 로드됩니다. *files*나 "knownfiles"에서 명명된 각
+   파일은 그 앞에서 명명된 파일보다 우선합니다. 반복적으로 "init()"를
+   호출할 수 있습니다.
+
+   *files*에 빈 리스트를 지정하면 시스템 기본값이 적용되지 않습니다:
+   내장 리스트로부터 온 잘 알려진 값만 나타납니다.
+
+   *files*가 "None"이면 내부 데이터 구조가 초기 기본값으로 완전히 다시
+   만들어집니다. 이것은 안정적인 연산이며 여러 번 호출 될 때 같은 결과
+   를 생성합니다.
+
+   버전 3.2에서 변경: 이전에는, 윈도우 레지스트리 설정이 무시되었습니
+   다.
+
+mimetypes.read_mime_types(filename)
+
+   *filename* 파일이 있으면, 그 파일에 주어진 유형 맵을 로드합니다. 유
+   형 맵은 선행 점("'.'")을 포함하는 파일명 확장자를 "'type/subtype'"
+   형식의 문자열로 매핑하는 딕셔너리로 반환됩니다. *filename* 파일이
+   없거나 읽을 수 없으면 "None"이 반환됩니다.
+
+mimetypes.add_type(type, ext, strict=True)
+
+   MIME 유형 *type*에서 확장자 *ext*로의 매핑을 추가합니다. 확장자가
+   이미 알려져 있으면, 새 유형이 이전 유형을 대체합니다. 유형이 이미
+   알려져 있으면, 확장이 알려진 확장 리스트에 추가됩니다.
+
+   *strict*가 "True"(기본값)이면, 매핑이 공식 MIME 유형에 추가되고, 그
+   렇지 않으면 비표준 MIME 유형에 추가됩니다.
+
+mimetypes.inited
+
+   전역 데이터 구조가 초기화되었는지를 나타내는 플래그. 이것은
+   "init()"에 의해 "True"로 설정됩니다.
+
+mimetypes.knownfiles
+
+   일반적으로 설치된 유형 맵 파일 이름의 리스트입니다. 이 파일들은 일
+   반적으로 "mime.types"로 명명되며 패키지별로 다른 위치에 설치됩니다.
+
+mimetypes.suffix_map
+
+   접미사를 접미사에 매핑하는 딕셔너리. 인코딩과 유형이 같은 확장자로
+   표시되는 인코딩된 파일을 인식하도록 하는 데 사용됩니다. 예를 들어,
+   ".tgz" 확장자는 인코딩과 유형을 별도로 인식 할 수 있도록, ".tar.gz"
+   에 매핑됩니다.
+
+mimetypes.encodings_map
+
+   파일명 확장자를 인코딩 유형에 매핑하는 딕셔너리.
+
+mimetypes.types_map
+
+   파일명 확장자를 MIME 유형에 매핑하는 딕셔너리.
+
+mimetypes.common_types
+
+   파일명 확장자를 비표준이지만 일반적으로 발견되는 MIME 유형에 매핑하
+   는 딕셔너리.
+
+모듈의 사용 예:
+
+   >>> import mimetypes
+   >>> mimetypes.init()
+   >>> mimetypes.knownfiles
+   ['/etc/mime.types', '/etc/httpd/mime.types', ... ]
+   >>> mimetypes.suffix_map['.tgz']
+   '.tar.gz'
+   >>> mimetypes.encodings_map['.gz']
+   'gzip'
+   >>> mimetypes.types_map['.tgz']
+   'application/x-tar-gz'
+
+
+MimeTypes 객체
+==============
+
+"MimeTypes" 클래스는 하나 이상의 MIME 유형 데이터베이스가 필요한 응용
+프로그램에 유용 할 수 있습니다. "mimetypes" 모듈과 유사한 인터페이스를
+제공합니다.
+
+class mimetypes.MimeTypes(filenames=(), strict=True)
+
+   이 클래스는 MIME 유형 데이터베이스를 나타냅니다. 기본적으로, 이 모
+   듈의 나머지 부분과 같은 데이터베이스에 대한 액세스를 제공합니다. 초
+   기 데이터베이스는 모듈이 제공하는 것의 사본이며, "read()"나
+   "readfp()" 메서드를 사용하여 추가 "mime.types"-스타일 파일을 데이터
+   베이스에 로드하여 확장할 수 있습니다. 기본 데이터가 필요하지 않으면
+   , 추가 데이터를 로드하기 전에 매핑 딕셔너리를 지울 수도 있습니다.
+
+   선택적 *filenames* 매개 변수는 기본 데이터베이스의 "위"에 추가 파일
+   을 로드하게 하는 데 사용할 수 있습니다.
+
+   suffix_map
+
+      접미사를 접미사에 매핑하는 딕셔너리. 인코딩과 유형이 같은 확장자
+      로 표시되는 인코딩된 파일을 인식하도록 하는 데 사용됩니다. 예를
+      들어, ".tgz" 확장자는 인코딩과 유형을 별도로 인식 할 수 있도록,
+      ".tar.gz"에 매핑됩니다. 이것은 초기에는 모듈에 정의된 전역
+      "suffix_map"의 사본입니다.
+
+   encodings_map
+
+      파일명 확장자를 인코딩 유형에 매핑하는 딕셔너리. 이것은 초기에는
+      모듈에 정의된 전역 "encodings_map"의 사본입니다.
+
+   types_map
+
+      파일명 확장자를 MIME 유형으로 매핑하는 두 개의 딕셔너리를 포함하
+      는 튜플: 첫 번째 딕셔너리는 비표준 유형 용이고 두 번째는 표준 유
+      형 용입니다. "common_types"와 "types_map"으로 초기화됩니다.
+
+   types_map_inv
+
+      MIME 타입을 파일명 확장자 리스트로 매핑하는 두 개의 딕셔너리를
+      포함하는 튜플: 첫 번째 딕셔너리는 비표준 유형 용이고 두 번째는
+      표준 유형 용입니다. "common_types"와 "types_map"으로 초기화됩니
+      다.
+
+   guess_extension(type, strict=True)
+
+      "guess_extension()" 함수와 유사하고, 객체의 일부로 저장된 테이블
+      을 사용합니다.
+
+   guess_type(url, strict=True)
+
+      "guess_type()" 함수와 유사하고, 객체의 일부로 저장된 테이블을 사
+      용합니다.
+
+   guess_all_extensions(type, strict=True)
+
+      "guess_all_extensions()" 함수와 유사하고, 객체의 일부로 저장된
+      테이블을 사용합니다.
+
+   read(filename, strict=True)
+
+      *filename*이라는 이름의 파일에서 MIME 정보를 로드합니다.
+      "readfp()"를 사용하여 파일을 구문 분석합니다.
+
+      *strict*가 "True"이면, 정보는 표준 유형 리스트에 추가되고, 그렇
+      지 않으면 비표준 유형 리스트에 추가됩니다.
+
+   readfp(fp, strict=True)
+
+      열린 파일 *fp*에서 MIME 유형 정보를 로드합니다. 파일은 표준
+      "mime.types" 파일의 형식이어야 합니다.
+
+      *strict*가 "True"이면, 정보는 표준 유형 리스트에 추가되고, 그렇
+      지 않으면 비표준 유형 리스트에 추가됩니다.
+
+   read_windows_registry(strict=True)
+
+      윈도우 레지스트리에서 MIME 유형 정보를 로드합니다.
+
+      Availability: Windows.
+
+      *strict*가 "True"이면, 정보는 표준 유형 리스트에 추가되고, 그렇
+      지 않으면 비표준 유형 리스트에 추가됩니다.
+
+      버전 3.2에 추가.

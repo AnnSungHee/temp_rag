@@ -1,0 +1,349 @@
+"resource" --- Resource usage information
+*****************************************
+
+======================================================================
+
+이 모듈은 프로그램에서 사용하는 시스템 자원을 측정하고 제어하기 위한
+기본 메커니즘을 제공합니다.
+
+기호 상수는 특정 시스템 자원을 지정하고 현재 프로세스나 그 자식들에 대
+한 사용 정보를 요청하는 데 사용됩니다.
+
+시스템 호출(syscall) 실패 시 "OSError"가 발생합니다.
+
+exception resource.error
+
+   폐지된 "OSError"의 별칭.
+
+   버전 3.3에서 변경: **PEP 3151**에 따라, 이 클래스는 "OSError"의 별
+   칭이 되었습니다.
+
+
+자원 제한
+=========
+
+아래 설명된 "setrlimit()" 함수를 사용하여 자원 사용량을 제한 할 수 있
+습니다. 각 자원은 제한의 쌍으로 제어됩니다: 소프트 제한과 하드 제한.
+소프트 제한은 현재 제한이며, 시간이 지남에 따라 프로세스에 의해 낮아지
+거나 높아질 수 있습니다. 소프트 제한은 하드 제한을 초과할 수 없습니다.
+하드 제한은 소프트 제한보다 큰 값으로 낮출 수 있지만, 높일 수는 없습니
+다. (슈퍼 유저의 유효 UID를 갖는 프로세스만 하드 제한을 높일 수 있습니
+다.)
+
+제한될 수 있는 구체적인 자원은 시스템에 따라 다릅니다. *getrlimit(2)*
+매뉴얼 페이지에 설명되어 있습니다. 아래에 나열된 자원은 하부 운영 체제
+에서 지원할 때 지원됩니다; 운영 체제에서 검사하거나 제어할 수 없는 자
+원은 해당 플랫폼에서는 이 모듈에서 정의되지 않습니다.
+
+resource.RLIM_INFINITY
+
+   무제한 자원의 제한을 나타내는 데 사용되는 상수.
+
+resource.getrlimit(resource)
+
+   *resource*의 현재 소프트와 하드 제한인 튜플 "(soft, hard)"를 반환합
+   니다. 유효하지 않은 resource가 지정되면 "ValueError"가 발생하고, 하
+   부 시스템 호출이 예기치 않게 실패하면 "error"가 발생합니다.
+
+resource.setrlimit(resource, limits)
+
+   *resource*의 새로운 소비 제한을 설정합니다. *limits* 인자는 새로운
+   제한을 설명하는 두 정수의 튜플 "(soft, hard)"이어야 합니다.
+   "RLIM_INFINITY" 값을 사용하여 무제한 제한을 요청할 수 있습니다.
+
+   유효하지 않은 resource가 지정되거나, 새 소프트 제한이 하드 제한을
+   초과하거나, 프로세스가 하드 제한을 높이려고 시도하면 "ValueError"가
+   발생합니다. 해당 자원의 하드나 시스템 제한이 무제한이 아닐 때
+   "RLIM_INFINITY" 제한을 지정하면 "ValueError"가 발생합니다. 슈퍼 유
+   저의 유효 UID를 갖는 프로세스는 무제한을 포함하여 임의의 유효한 제
+   한 값을 요청할 수 있지만, 요청된 제한이 시스템이 부과한 제한을 초과
+   하면 "ValueError"가 여전히 발생합니다.
+
+   하부 시스템 호출이 실패하면 "setrlimit"도 "error"를 발생시킬 수 있
+   습니다.
+
+   VxWorks는 "RLIMIT_NOFILE" 설정만 지원합니다.
+
+   인자 "resource", "limits"로 감사 이벤트 "resource.setrlimit"를 발생
+   시킵니다.
+
+resource.prlimit(pid, resource[, limits])
+
+   하나의 함수에서 "setrlimit()"와 "getrlimit()"를 결합하고 임의 프로
+   세스의 자원 제한을 가져오고 설정하도록 지원합니다. *pid*가 0이면,
+   호출은 현재 프로세스에 적용됩니다. *resource*와 *limits*는 *limits*
+   가 선택적이라는 점을 제외하고 "setrlimit()"와 같은 의미입니다.
+
+   *limits*가 제공되지 않으면 함수는 프로세스 *pid*의 *resource* 제한
+   을 반환합니다. *limits*가 제공되면 프로세스의 *resource* 제한이 설
+   정되고 이전 자원 제한이 반환됩니다.
+
+   *pid*를 찾을 수 없으면 "ProcessLookupError"가 발생하고 사용자가 프
+   로세스에 대해 "CAP_SYS_RESOURCE"가 없으면 "PermissionError"가 발생
+   합니다.
+
+   인자 "pid", "resource", "limits"로 감사 이벤트 "resource.prlimit"를
+   발생시킵니다.
+
+   Availability: Linux 2.6.36 or later with glibc 2.13 or later.
+
+   버전 3.4에 추가.
+
+이 기호들은 "setrlimit()"와 "getrlimit()" 함수를 사용하여 소비를 제어
+할 수 있는 아래 설명된 자원을 정의합니다. 이 기호의 값은 정확히 C 프로
+그램에서 사용하는 상수입니다.
+
+*getrlimit(2)*에 관한 유닉스 매뉴얼 페이지는 사용 가능한 자원을 나열합
+니다. 모든 시스템이 같은 자원을 나타내는 데 같은 기호나 같은 값을 사용
+하는 것은 아닙니다. 이 모듈은 플랫폼 차이를 감추려고 시도하지 않습니다
+--- 플랫폼에서 정의되지 않은 기호는 해당 플랫폼에서 이 모듈에서 제공되
+지 않습니다.
+
+resource.RLIMIT_CORE
+
+   현재 프로세스가 만들 수 있는 코어(core) 파일의 최대 크기 (바이트).
+   전체 프로세스 이미지를 담기 위해 더 큰 코어가 필요할 때 부분 코어
+   파일이 생성될 수 있습니다.
+
+resource.RLIMIT_CPU
+
+   프로세스가 사용할 수 있는 최대 프로세서 시간 (초). 이 제한을 초과하
+   면, "SIGXCPU" 시그널이 프로세스로 전송됩니다. (이 시그널을 포착하고
+   , 열려있는 파일을 디스크로 플러시 하는 등 유용한 작업을 수행하는 방
+   법에 대한 정보는 "signal" 모듈 설명서를 참조하십시오.)
+
+resource.RLIMIT_FSIZE
+
+   프로세스가 만들 수 있는 파일의 최대 크기.
+
+resource.RLIMIT_DATA
+
+   프로세스 힙(heap)의 최대 크기 (바이트).
+
+resource.RLIMIT_STACK
+
+   현재 프로세스에 대한 호출 스택의 최대 크기 (바이트). 이것은 다중 스
+   레드 프로세스에서 메인 스레드의 스택에만 영향을 줍니다.
+
+resource.RLIMIT_RSS
+
+   프로세스에서 사용할 수 있는 최대 상주 집합(resident set) 크기.
+
+resource.RLIMIT_NPROC
+
+   현재 프로세스가 만들 수 있는 최대 프로세스 수.
+
+resource.RLIMIT_NOFILE
+
+   현재 프로세스에 대한 열린 파일 기술자의 최대 수.
+
+resource.RLIMIT_OFILE
+
+   "RLIMIT_NOFILE"의 BSD 이름.
+
+resource.RLIMIT_MEMLOCK
+
+   메모리에 잠겨 있을 수 있는 최대 주소 공간.
+
+resource.RLIMIT_VMEM
+
+   프로세스가 차지할 수 있는 가장 큰 매핑된 메모리(mapped memory) 영역
+   .
+
+resource.RLIMIT_AS
+
+   프로세스에서 사용할 수 있는 주소 공간의 최대 영역 (바이트).
+
+resource.RLIMIT_MSGQUEUE
+
+   POSIX 메시지 큐에 할당할 수 있는 바이트 수.
+
+   Availability: Linux 2.6.8 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_NICE
+
+   프로세스의 나이스(nice) 수준의 상한 (20 - rlim_cur로 계산됩니다).
+
+   Availability: Linux 2.6.12 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_RTPRIO
+
+   실시간 우선순위의 상한.
+
+   Availability: Linux 2.6.12 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_RTTIME
+
+   프로세스가 블로킹 시스템 호출 없이 실시간 스케줄링 하에서 소비할 수
+   있는 CPU 시간의 시간제한 (마이크로초).
+
+   Availability: Linux 2.6.25 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_SIGPENDING
+
+   프로세스가 큐에 넣을 수 있는 시그널 수입니다.
+
+   Availability: Linux 2.6.8 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_SBSIZE
+
+   이 사용자의 소켓 버퍼 사용량의 최대 크기 (바이트). 이것은 이 사용자
+   가 모든 시점에 보유할 수 있는 네트워크 메모리양과 mbuf들의 양을 제
+   한합니다.
+
+   Availability: FreeBSD 9 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_SWAP
+
+   The maximum size (in bytes) of the swap space that may be reserved
+   or used by all of this user id's processes. This limit is enforced
+   only if bit 1 of the vm.overcommit sysctl is set. Please see
+   tuning(7) for a complete description of this sysctl.
+
+   Availability: FreeBSD 9 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_NPTS
+
+   이 사용자 ID로 만들어지는 최대 의사 터미널(pseudo-terminal) 수.
+
+   Availability: FreeBSD 9 or later.
+
+   버전 3.4에 추가.
+
+resource.RLIMIT_KQUEUES
+
+   이 사용자 ID로 만들 수 있는 최대 kqueue 수.
+
+   Availability: FreeBSD 11 or later.
+
+   버전 3.10에 추가.
+
+
+자원 사용량
+===========
+
+이 함수는 자원 사용량 정보를 조회하는 데 사용됩니다:
+
+resource.getrusage(who)
+
+   This function returns an object that describes the resources
+   consumed by either the current process or its children, as
+   specified by the *who* parameter.  The *who* parameter should be
+   specified using one of the "RUSAGE_*" constants described below.
+
+   간단한 예:
+
+      from resource import *
+      import time
+
+      # a non CPU-bound task
+      time.sleep(3)
+      print(getrusage(RUSAGE_SELF))
+
+      # a CPU-bound task
+      for i in range(10 ** 8):
+         _ = 1 + 1
+      print(getrusage(RUSAGE_SELF))
+
+   반환 값의 필드는 각각 특정 시스템 자원이 어떻게 사용되었는지를 설명
+   합니다. 예를 들어, 사용자 모드로 실행에 든 시간이나 프로세스가 주
+   메모리에서 스와프된 횟수. 일부 값은 클록 틱(clock tick) 내부에 의존
+   합니다, 예를 들어, 프로세스에서 사용 중인 메모리양.
+
+   이전 버전과의 호환성을 위해, 반환 값은 16개 요소의 튜플로 액세스 할
+   수도 있습니다.
+
+   The fields "ru_utime" and "ru_stime" of the return value are
+   floating point values representing the amount of time spent
+   executing in user mode and the amount of time spent executing in
+   system mode, respectively. The remaining values are integers.
+   Consult the *getrusage(2)* man page for detailed information about
+   these values. A brief summary is presented here:
+
+   +----------+-----------------------+-----------------------------------------+
+   | 인덱스   | 필드                  | 자원                                    |
+   |==========|=======================|=========================================|
+   | "0"      | "ru_utime"            | 사용자 모드의 시간 (float 초)           |
+   +----------+-----------------------+-----------------------------------------+
+   | "1"      | "ru_stime"            | 시스템 모드의 시간 (float 초)           |
+   +----------+-----------------------+-----------------------------------------+
+   | "2"      | "ru_maxrss"           | 최대 상주 집합(resident set) 크기       |
+   +----------+-----------------------+-----------------------------------------+
+   | "3"      | "ru_ixrss"            | 공유 메모리 크기                        |
+   +----------+-----------------------+-----------------------------------------+
+   | "4"      | "ru_idrss"            | 비공유 메모리 크기                      |
+   +----------+-----------------------+-----------------------------------------+
+   | "5"      | "ru_isrss"            | 비공유 스택 크기                        |
+   +----------+-----------------------+-----------------------------------------+
+   | "6"      | "ru_minflt"           | I/O가 필요 없는 페이지 폴트(page fault) |
+   +----------+-----------------------+-----------------------------------------+
+   | "7"      | "ru_majflt"           | I/O가 필요한 페이지 폴트(page fault)    |
+   +----------+-----------------------+-----------------------------------------+
+   | "8"      | "ru_nswap"            | 스와프(swap out) 수                     |
+   +----------+-----------------------+-----------------------------------------+
+   | "9"      | "ru_inblock"          | 블록 입력 연산(block input operations)  |
+   +----------+-----------------------+-----------------------------------------+
+   | "10"     | "ru_oublock"          | 블록 출력 연산(block output operations) |
+   +----------+-----------------------+-----------------------------------------+
+   | "11"     | "ru_msgsnd"           | 보낸 메시지                             |
+   +----------+-----------------------+-----------------------------------------+
+   | "12"     | "ru_msgrcv"           | 받은 메시지                             |
+   +----------+-----------------------+-----------------------------------------+
+   | "13"     | "ru_nsignals"         | 받은 시그널                             |
+   +----------+-----------------------+-----------------------------------------+
+   | "14"     | "ru_nvcsw"            | 자발적 컨텍스트 전환(voluntary context  |
+   |          |                       | switches)                               |
+   +----------+-----------------------+-----------------------------------------+
+   | "15"     | "ru_nivcsw"           | 비자발적 컨텍스트 전환(involuntary      |
+   |          |                       | context switches)                       |
+   +----------+-----------------------+-----------------------------------------+
+
+   유효하지 않은 *who* 매개 변수가 지정되면 이 함수는 "ValueError"를
+   발생시킵니다. 비정상적인 상황에서 "error" 예외가 발생할 수도 있습니
+   다.
+
+resource.getpagesize()
+
+   시스템 페이지의 바이트 수를 반환합니다. (하드웨어 페이지 크기와 같
+   을 필요는 없습니다.)
+
+The following "RUSAGE_*" symbols are passed to the "getrusage()"
+function to specify which processes information should be provided
+for.
+
+resource.RUSAGE_SELF
+
+   호출하는 프로세스가 소비한 자원을 요청하기 위해 "getrusage()"로 전
+   달합니다. 이는 프로세스의 모든 스레드가 사용하는 자원의 합계입니다.
+
+resource.RUSAGE_CHILDREN
+
+   호출하는 프로세스의 종료되어 기다리고 있는 자식 프로세스에서 소비한
+   자원을 요청하기 위해 "getrusage()"로 전달합니다.
+
+resource.RUSAGE_BOTH
+
+   현재 프로세스와 자식 프로세스 모두에서 소비한 자원을 요청하기 위해
+   "getrusage()"로 전달합니다. 모든 시스템에서 사용 가능한 것은 아닙니
+   다.
+
+resource.RUSAGE_THREAD
+
+   현재 스레드가 소비한 자원을 요청하기 위해 "getrusage()"에 전달합니
+   다. 모든 시스템에서 사용 가능한 것은 아닙니다.
+
+   버전 3.2에 추가.

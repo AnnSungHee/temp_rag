@@ -1,0 +1,264 @@
+"http.cookies" --- HTTP state management
+****************************************
+
+**소스 코드:** Lib/http/cookies.py
+
+======================================================================
+
+"http.cookies" 모듈은 HTTP 상태 관리 메커니즘인 쿠키의 개념을 추상화하
+는 클래스를 정의합니다. 그것은 단순한 문자열 전용 쿠키를 지원하고, 동
+시에 직렬화 가능한 데이터형을 쿠키값으로 갖는 데 필요한 추상화를 제공
+합니다.
+
+The module formerly strictly applied the parsing rules described in
+the **RFC 2109** and **RFC 2068** specifications.  It has since been
+discovered that MSIE 3.0x doesn't follow the character rules outlined
+in those specs and also many current day browsers and servers have
+relaxed parsing rules when comes to Cookie handling.  As a result, the
+parsing rules used are a bit less strict.
+
+The character set, "string.ascii_letters", "string.digits" and
+"!#$%&'*+-.^_`|~:" denote the set of valid characters allowed by this
+module in Cookie name (as "key").
+
+버전 3.3에서 변경: Allowed ':' as a valid Cookie name character.
+
+참고:
+
+  잘못된 쿠키가 발견되면, "CookieError"가 발생하므로, 쿠키 데이터가 브
+  라우저에서 제공되면 항상 잘못된 데이터일 가능성에 대비하고 구문 분석
+  할 때 "CookieError"를 잡아야 합니다.
+
+exception http.cookies.CookieError
+
+   **RFC 2109** 위반으로 인해 실패하는 예외: 잘못된 어트리뷰트, 잘못된
+   *Set-Cookie* 헤더 등
+
+class http.cookies.BaseCookie([input])
+
+   이 클래스는 키가 문자열이고 값이 "Morsel" 인스턴스인 딕셔너리 형 객
+   체입니다. 키에 값을 설정하면, 값이 먼저 키와 값이 포함된 "Morsel"로
+   변환됩니다.
+
+   *input*이 주어지면, "load()" 메서드로 전달됩니다.
+
+class http.cookies.SimpleCookie([input])
+
+   This class derives from "BaseCookie" and overrides "value_decode()"
+   and "value_encode()". SimpleCookie supports strings as cookie
+   values. When setting the value, SimpleCookie calls the builtin
+   "str()" to convert the value to a string. Values received from HTTP
+   are kept as strings.
+
+더 보기:
+
+  모듈 "http.cookiejar"
+     웹 *클라이언트*용 HTTP 쿠키 처리. "http.cookiejar"와
+     "http.cookies" 모듈 간의 의존성은 없습니다.
+
+  **RFC 2109** - HTTP State Management Mechanism (HTTP 상태 관리 메커
+  니즘)
+     이것은 이 모듈이 구현한 상태 관리 명세입니다.
+
+
+쿠키 객체
+=========
+
+BaseCookie.value_decode(val)
+
+   문자열 표현으로부터 튜플 "(real_value, coded_value)"를 반환합니다.
+   "real_value"는 모든 형이 될 수 있습니다. 이 메서드는 "BaseCookie"에
+   서는 아무런 디코딩을 하지 않습니다 --- 재정의할 수 있도록 존재합니
+   다.
+
+BaseCookie.value_encode(val)
+
+   튜플 "(real_value, coded_value)"를 반환합니다. *val*은 모든 형이 될
+   수 있지만, "coded_value"는 항상 문자열로 변환됩니다. 이 메서드는
+   "BaseCookie"에서는 아무런 인코딩을 하지 않습니다 --- 재정의할 수 있
+   도록 존재합니다.
+
+   일반적으로, "value_encode()"와 "value_decode()"는 *value_decode* 범
+   위에서 역연산입니다.
+
+BaseCookie.output(attrs=None, header='Set-Cookie:', sep='\r\n')
+
+   Return a string representation suitable to be sent as HTTP headers.
+   *attrs* and *header* are sent to each "Morsel"'s "output()" method.
+   *sep* is used to join the headers together, and is by default the
+   combination "'\r\n'" (CRLF).
+
+BaseCookie.js_output(attrs=None)
+
+   자바스크립트를 지원하는 브라우저에서 실행될 때 HTTP 헤더가 전송된
+   것처럼 작동하는, 삽입 가능한 자바스크립트 코드 조각을 반환합니다.
+
+   *attrs*의 의미는 "output()"과 같습니다.
+
+BaseCookie.load(rawdata)
+
+   *rawdata*가 문자열이면, "HTTP_COOKIE"로 구문 분석하고 거기에 있는
+   값을 "Morsel"로 추가합니다. 딕셔너리면, 다음과 동등합니다:
+
+      for k, v in rawdata.items():
+          cookie[k] = v
+
+
+Morsel 객체
+===========
+
+class http.cookies.Morsel
+
+   **RFC 2109** 어트리뷰트를 포함하는 키/값 쌍을 추상화합니다.
+
+   Morsels are dictionary-like objects, whose set of keys is constant
+   --- the valid **RFC 2109** attributes, which are
+
+   * "expires"
+
+   * "path"
+
+   * "comment"
+
+   * "domain"
+
+   * "max-age"
+
+   * "secure"
+
+   * "version"
+
+   * "httponly"
+
+   * "samesite"
+
+   "httponly" 어트리뷰트는 쿠키가 HTTP 요청으로만 전송되고 자바스크립
+   트를 통해 액세스할 수 없도록 지정합니다. 이것은 교차 사이트 스크립
+   팅의 일부 형식을 방지하기 위한 것입니다.
+
+   어트리뷰트 "samesite"는 브라우저가 교차 사이트 요청에 쿠키를 보낼
+   수 없도록 지정합니다. 이는 CSRF 공격을 완화하는 데 도움이 됩니다.
+   이 어트리뷰트의 유효한 값은 "Strict" 와 "Lax" 입니다.
+
+   키는 대소 문자를 구분하지 않으며 기본값은 "''"입니다.
+
+   버전 3.5에서 변경: "__eq__()" now takes "key" and "value" into
+   account.
+
+   버전 3.7에서 변경: 어트리뷰트 "key", "value" 및 "coded_value"는 읽
+   기 전용입니다. 설정하려면 "set()"을 사용하십시오.
+
+   버전 3.8에서 변경: "samesite" 어트리뷰트에 대한 지원이 추가되었습니
+   다.
+
+Morsel.value
+
+   쿠키의 값.
+
+Morsel.coded_value
+
+   쿠키의 인코딩된 값 --- 이것을 전송해야 합니다.
+
+Morsel.key
+
+   쿠키의 이름.
+
+Morsel.set(key, value, coded_value)
+
+   *key*, *value* 및 *coded_value* 어트리뷰트를 설정합니다.
+
+Morsel.isReservedKey(K)
+
+   *K*가 "Morsel"의 키 집합의 구성원인지를 판단합니다.
+
+Morsel.output(attrs=None, header='Set-Cookie:')
+
+   HTTP 헤더로 보내기에 적합한, Morsel의 문자열 표현을 반환합니다. 기
+   본적으로, *attrs*가 주어지지 않는 한, 모든 어트리뷰트가 포함됩니다.
+   주어지면 사용할 어트리뷰트 리스트여야 합니다. *header*는 기본적으로
+   ""Set-Cookie:""입니다.
+
+Morsel.js_output(attrs=None)
+
+   자바스크립트를 지원하는 브라우저에서 실행될 때, HTTP 헤더가 전송된
+   것처럼 작동하는, 삽입 가능한 자바스크립트 코드 조각을 반환합니다.
+
+   *attrs*의 의미는 "output()"과 같습니다.
+
+Morsel.OutputString(attrs=None)
+
+   둘러싸는 HTTP나 자바스크립트 없이 Morsel을 표현하는 문자열을 반환합
+   니다.
+
+   *attrs*의 의미는 "output()"과 같습니다.
+
+Morsel.update(values)
+
+   Morsel 딕셔너리의 값을 닥셔너리 *values*의 값으로 갱신합니다.
+   *values* 딕셔너리의 키 중 하나라도 유효한 **RFC 2109** 어트리뷰트가
+   아니면 에러를 발생시킵니다.
+
+   버전 3.5에서 변경: 유효하지 않은 키에 대해서 에러가 발생합니다.
+
+Morsel.copy(value)
+
+   Morsel 객체의 얕은 복사본을 반환합니다.
+
+   버전 3.5에서 변경: 딕셔너리 대신 Morsel 객체를 반환합니다.
+
+Morsel.setdefault(key, value=None)
+
+   key가 유효한 **RFC 2109** 어트리뷰트가 아니면 에러를 발생시킵니다.
+   그렇지 않으면, "dict.setdefault()"와 같이 동작합니다.
+
+
+예제
+====
+
+다음 예제는 "http.cookies" 모듈을 사용하는 방법을 보여줍니다.
+
+   >>> from http import cookies
+   >>> C = cookies.SimpleCookie()
+   >>> C["fig"] = "newton"
+   >>> C["sugar"] = "wafer"
+   >>> print(C) # generate HTTP headers
+   Set-Cookie: fig=newton
+   Set-Cookie: sugar=wafer
+   >>> print(C.output()) # same thing
+   Set-Cookie: fig=newton
+   Set-Cookie: sugar=wafer
+   >>> C = cookies.SimpleCookie()
+   >>> C["rocky"] = "road"
+   >>> C["rocky"]["path"] = "/cookie"
+   >>> print(C.output(header="Cookie:"))
+   Cookie: rocky=road; Path=/cookie
+   >>> print(C.output(attrs=[], header="Cookie:"))
+   Cookie: rocky=road
+   >>> C = cookies.SimpleCookie()
+   >>> C.load("chips=ahoy; vienna=finger") # load from a string (HTTP header)
+   >>> print(C)
+   Set-Cookie: chips=ahoy
+   Set-Cookie: vienna=finger
+   >>> C = cookies.SimpleCookie()
+   >>> C.load('keebler="E=everybody; L=\\"Loves\\"; fudge=\\012;";')
+   >>> print(C)
+   Set-Cookie: keebler="E=everybody; L=\"Loves\"; fudge=\012;"
+   >>> C = cookies.SimpleCookie()
+   >>> C["oreo"] = "doublestuff"
+   >>> C["oreo"]["path"] = "/"
+   >>> print(C)
+   Set-Cookie: oreo=doublestuff; Path=/
+   >>> C = cookies.SimpleCookie()
+   >>> C["twix"] = "none for you"
+   >>> C["twix"].value
+   'none for you'
+   >>> C = cookies.SimpleCookie()
+   >>> C["number"] = 7 # equivalent to C["number"] = str(7)
+   >>> C["string"] = "seven"
+   >>> C["number"].value
+   '7'
+   >>> C["string"].value
+   'seven'
+   >>> print(C)
+   Set-Cookie: number=7
+   Set-Cookie: string=seven

@@ -1,0 +1,147 @@
+집합 객체
+*********
+
+이 절에서는 "set"과 "frozenset" 객체에 대한 공용 API에 대해 자세히 설
+명합니다. 아래 나열되지 않은 기능은 추상 객체 프로토콜
+("PyObject_CallMethod()", "PyObject_RichCompareBool()",
+"PyObject_Hash()", "PyObject_Repr()", "PyObject_IsTrue()",
+"PyObject_Print()" 및 "PyObject_GetIter()"를 포함합니다)이나 추상 숫자
+프로토콜 ("PyNumber_And()", "PyNumber_Subtract()", "PyNumber_Or()",
+"PyNumber_Xor()", "PyNumber_InPlaceAnd()",
+"PyNumber_InPlaceSubtract()", "PyNumber_InPlaceOr()" 및
+"PyNumber_InPlaceXor()"을 포함합니다).
+
+type PySetObject
+
+   이 "PyObject"의 서브 형은 "set"과 "frozenset" 객체 모두의 내부 데이
+   터를 담는 데 사용됩니다. 이것은 작은 집합은 고정 크기(튜플 저장과
+   매우 흡사함)이고, 중형과 대형 집합은 별도의 가변 크기 메모리 블록(
+   리스트 저장소처럼)을 가리킨다는 점에서 "PyDictObject"와 비슷합니다.
+   이 구조체의 필드는 아무것도 공개되지 않은 것으로 취급되어야 하며,
+   모두 변경될 수 있습니다. 모든 액세스는 구조체의 값을 조작하기보다는
+   설명된 API를 통해 수행해야 합니다.
+
+PyTypeObject PySet_Type
+    * Part of the Stable ABI.*
+
+   이것은 파이썬 "set" 형을 나타내는 "PyTypeObject"의 인스턴스입니다.
+
+PyTypeObject PyFrozenSet_Type
+    * Part of the Stable ABI.*
+
+   이것은 파이썬 "frozenset" 형을 나타내는 "PyTypeObject"의 인스턴스입
+   니다.
+
+다음 형 검사 매크로는 모든 파이썬 객체에 대한 포인터에서 작동합니다.
+마찬가지로, 생성자 함수는 모든 이터러블 파이썬 객체에서 작동합니다.
+
+int PySet_Check(PyObject *p)
+
+   *p*가 "set" 객체나 서브 형의 인스턴스면 참을 반환합니다. 이 함수는
+   항상 성공합니다.
+
+int PyFrozenSet_Check(PyObject *p)
+
+   *p*가 "frozenset" 객체나 서브 형의 인스턴스면 참을 반환합니다. 이
+   함수는 항상 성공합니다.
+
+int PyAnySet_Check(PyObject *p)
+
+   *p*가 "set" 객체, "frozenset" 객체 또는 서브 형의 인스턴스면 참을
+   반환합니다. 이 함수는 항상 성공합니다.
+
+int PySet_CheckExact(PyObject *p)
+
+   *p*가 "set" 객체이지만, 서브 형의 인스턴스는 아니면 참을 반환합니다
+   . 이 함수는 항상 성공합니다.
+
+   버전 3.10에 추가.
+
+int PyAnySet_CheckExact(PyObject *p)
+
+   *p*가 "set" 객체나 "frozenset" 객체이지만, 서브 형의 인스턴스는 아
+   니면 참을 반환합니다. 이 함수는 항상 성공합니다.
+
+int PyFrozenSet_CheckExact(PyObject *p)
+
+   *p*가 "frozenset" 객체이지만, 서브 형의 인스턴스는 아니면 참을 반환
+   합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PySet_New(PyObject *iterable)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *iterable*에 의해 반환된 객체를 포함하는 새로운 "set"을 반환합니다.
+   *iterable*은 새로운 빈 집합을 만들기 위해 "NULL" 일 수 있습니다. 성
+   공하면 새 집합을, 실패하면 "NULL"을 반환합니다. *iterable*이 실제로
+   이터러블이 아니면 "TypeError"를 발생시킵니다. 생성자는 집합을 복사
+   할 때도 유용합니다 ("c=set(s)").
+
+PyObject *PyFrozenSet_New(PyObject *iterable)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *iterable*에 의해 반환된 객체를 포함한 새로운 "frozenset"을 반환합
+   니다. *iterable*은 새로운 빈 frozenset을 만들기 위해 "NULL" 일 수
+   있습니다. 성공하면 새 집합을, 실패하면 "NULL"을 반환합니다.
+   *iterable*이 실제로 이터러블이 아니면 "TypeError"를 발생시킵니다.
+
+"set" 이나 "frozenset"의 인스턴스 또는 그들의 서브 형의 인스턴스에 대
+해 다음 함수와 매크로를 사용할 수 있습니다.
+
+Py_ssize_t PySet_Size(PyObject *anyset)
+    * Part of the Stable ABI.*
+
+   Return the length of a "set" or "frozenset" object. Equivalent to
+   "len(anyset)".  Raises a "PyExc_SystemError" if *anyset* is not a
+   "set", "frozenset", or an instance of a subtype.
+
+Py_ssize_t PySet_GET_SIZE(PyObject *anyset)
+
+   에러 검사 없는 "PySet_Size()"의 매크로 형식.
+
+int PySet_Contains(PyObject *anyset, PyObject *key)
+    * Part of the Stable ABI.*
+
+   Return "1" if found, "0" if not found, and "-1" if an error is
+   encountered.  Unlike the Python "__contains__()" method, this
+   function does not automatically convert unhashable sets into
+   temporary frozensets.  Raise a "TypeError" if the *key* is
+   unhashable. Raise "PyExc_SystemError" if *anyset* is not a "set",
+   "frozenset", or an instance of a subtype.
+
+int PySet_Add(PyObject *set, PyObject *key)
+    * Part of the Stable ABI.*
+
+   *key*를 "set" 인스턴스에 추가합니다. 또한 "frozenset" 인스턴스에도
+   작동합니다 ("PyTuple_SetItem()"처럼 다른 코드에 노출되기 전에 새로
+   운 frozenset의 값을 채우는 데 사용할 수 있습니다). 성공하면 "0"을,
+   실패하면 "-1"을 반환합니다. *key*가 해시 불가능하면, "TypeError"를
+   발생시킵니다. 성장할 공간이 없다면 "MemoryError"를 발생시킵니다.
+   *set*이 "set" 이나 그 서브 형의 인스턴스가 아니면 "SystemError"를
+   발생시킵니다.
+
+다음 함수는 "set" 이나 그것의 서브 형의 인스턴스에는 사용할 수 있지만,
+"frozenset" 이나 그 서브 형의 인스턴스에는 사용할 수 없습니다.
+
+int PySet_Discard(PyObject *set, PyObject *key)
+    * Part of the Stable ABI.*
+
+   Return "1" if found and removed, "0" if not found (no action
+   taken), and "-1" if an error is encountered.  Does not raise
+   "KeyError" for missing keys.  Raise a "TypeError" if the *key* is
+   unhashable.  Unlike the Python "discard()" method, this function
+   does not automatically convert unhashable sets into temporary
+   frozensets. Raise "PyExc_SystemError" if *set* is not an instance
+   of "set" or its subtype.
+
+PyObject *PySet_Pop(PyObject *set)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *set*에 들어있는 임의의 객체에 대한 새 참조를 반환하고, *set*에서
+   객체를 제거합니다. 실패하면 "NULL"을 반환합니다. 집합이 비어 있으면
+   , "KeyError"를 발생시킵니다. *set*이 "set" 이나 그 서브 형의 인스턴
+   스가 아니면 "SystemError"를 발생시킵니다.
+
+int PySet_Clear(PyObject *set)
+    * Part of the Stable ABI.*
+
+   Empty an existing set of all elements.

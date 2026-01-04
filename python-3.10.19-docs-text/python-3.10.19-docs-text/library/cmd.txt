@@ -1,0 +1,350 @@
+"cmd" --- Support for line-oriented command interpreters
+********************************************************
+
+**소스 코드:** Lib/cmd.py
+
+======================================================================
+
+"Cmd" 클래스는 줄 지향 명령 인터프리터를 작성하기 위한 간단한 프레임워
+크를 제공합니다. 이것들은 종종 테스트 하네스(test harnesses), 관리 도
+구 및 나중에 더 복잡한 인터페이스로 포장될 프로토타입에 유용합니다.
+
+class cmd.Cmd(completekey='tab', stdin=None, stdout=None)
+
+   "Cmd" 인스턴스나 서브 클래스 인스턴스는 줄 지향 인터프리터 프레임워
+   크입니다. "Cmd" 자체를 인스턴스로 만들 이유는 없습니다; 그보다는,
+   "Cmd"의 메서드를 상속하고 액션 메서드를 캡슐화하기 위해 여러분 스스
+   로 정의한 인터프리터 클래스의 슈퍼 클래스로 유용합니다.
+
+   선택적 인자 *completekey*는 완성 키(completion key)의 "readline" 이
+   름입니다; 기본값은 "Tab"입니다. *completekey*가 "None"이 아니고
+   "readline"을 사용할 수 있으면, 명령 완성이 자동으로 수행됩니다.
+
+   선택적 인자 *stdin*과 *stdout*은 Cmd 인스턴스나 서브 클래스 인스턴
+   스가 입출력에 사용할 입력과 출력 파일 객체를 지정합니다. 지정하지
+   않으면, 기본적으로 "sys.stdin"과 "sys.stdout"이 됩니다.
+
+   지정된 *stdin*을 사용하려면, 인스턴스의 "use_rawinput" 어트리뷰트를
+   "False"로 설정해야 합니다, 그렇지 않으면 *stdin*이 무시됩니다.
+
+
+Cmd 객체
+========
+
+"Cmd" 인스턴스에는 다음과 같은 메서드가 있습니다:
+
+Cmd.cmdloop(intro=None)
+
+   반복해서 프롬프트를 제시하고, 입력을 받아들이고, 수신된 입력에서 초
+   기 접두사를 구문 분석하고, 줄의 나머지 부분을 인자로 전달해서 액션
+   메서드를 호출합니다.
+
+   선택적 인자는 첫 번째 프롬프트 전에 제시할 배너나 소개 문자열입니다
+   (이것은 "intro" 클래스 어트리뷰트를 재정의합니다).
+
+   "readline" 모듈이 로드되면, 입력은 자동으로 **bash**와 유사한 히스
+   토리 목록 편집을 상속합니다 (예를 들어, "Control-P"는 직전 명령으로
+   돌아가고(scroll back), "Control-N"은 다음 명령으로 이동하고
+   (forward), "Control-F"는 커서를 비파괴적으로 오른쪽으로 이동하고,
+   "Control-B"는 커서를 비파괴적으로 왼쪽으로 이동하고, 등등).
+
+   입력의 파일 끝(end-of-file)은 문자열 "'EOF'"로 전달됩니다.
+
+   An interpreter instance will recognize a command name "foo" if and
+   only if it has a method "do_foo()".  As a special case, a line
+   beginning with the character "'?'" is dispatched to the method
+   "do_help()".  As another special case, a line beginning with the
+   character "'!'" is dispatched to the method "do_shell()" (if such a
+   method is defined).
+
+   This method will return when the "postcmd()" method returns a true
+   value. The *stop* argument to "postcmd()" is the return value from
+   the command's corresponding "do_*()" method.
+
+   If completion is enabled, completing commands will be done
+   automatically, and completing of commands args is done by calling
+   "complete_foo()" with arguments *text*, *line*, *begidx*, and
+   *endidx*.  *text* is the string prefix we are attempting to match:
+   all returned matches must begin with it. *line* is the current
+   input line with leading whitespace removed, *begidx* and *endidx*
+   are the beginning and ending indexes of the prefix text, which
+   could be used to provide different completion depending upon which
+   position the argument is in.
+
+   All subclasses of "Cmd" inherit a predefined "do_help()".  This
+   method, called with an argument "'bar'", invokes the corresponding
+   method "help_bar()", and if that is not present, prints the
+   docstring of "do_bar()", if available.  With no argument,
+   "do_help()" lists all available help topics (that is, all commands
+   with corresponding "help_*()" methods or commands that have
+   docstrings), and also lists any undocumented commands.
+
+Cmd.onecmd(str)
+
+   Interpret the argument as though it had been typed in response to
+   the prompt. This may be overridden, but should not normally need to
+   be; see the "precmd()" and "postcmd()" methods for useful execution
+   hooks.  The return value is a flag indicating whether
+   interpretation of commands by the interpreter should stop.  If
+   there is a "do_*()" method for the command *str*, the return value
+   of that method is returned, otherwise the return value from the
+   "default()" method is returned.
+
+Cmd.emptyline()
+
+   프롬프트에 응답하여 빈 줄을 입력할 때 호출되는 메서드. 이 메서드를
+   재정의하지 않으면, 입력된 마지막 비어 있지 않은 명령을 반복합니다.
+
+Cmd.default(line)
+
+   명령 접두사가 인식되지 않을 때 입력 줄로 호출되는 메서드. 이 메서드
+   를 재정의하지 않으면, 에러 메시지를 인쇄하고 반환합니다.
+
+Cmd.completedefault(text, line, begidx, endidx)
+
+   Method called to complete an input line when no command-specific
+   "complete_*()" method is available.  By default, it returns an
+   empty list.
+
+Cmd.precmd(line)
+
+   명령 줄 *line*을 해석하기 직전에, 하지만 입력 프롬프트가 생성되고
+   제시된 후에 실행되는 훅 메서드. 이 메서드는 "Cmd"에서는 스텁(stub)
+   입니다; 서브 클래스에 의해 재정의되기 위해 존재합니다. 반환 값은
+   "onecmd()" 메서드에 의해 실행될 명령으로 사용됩니다; "precmd()" 구
+   현은 명령을 다시 쓰거나 단순히 *line*을 변경하지 않고 반환 할 수 있
+   습니다.
+
+Cmd.postcmd(stop, line)
+
+   명령 호출이 완료된 직후에 실행되는 훅 메서드. 이 메서는 "Cmd"에서는
+   스텁(stub)입니다; 서브 클래스에 의해 재정의되기 위해 존재합니다.
+   *line*은 실행된 명령 줄이고, *stop*은 "postcmd()"를 호출한 후 실행
+   이 종료될지를 나타내는 플래그입니다; 이것은 "onecmd()" 메서드의 반
+   환 값입니다. 이 메서드의 반환 값은 *stop*에 해당하는 내부 플래그의
+   새 값으로 사용됩니다; 거짓을 반환하면 해석이 계속됩니다.
+
+Cmd.preloop()
+
+   "cmdloop()"가 호출될 때 한 번 실행되는 훅 메서드. 이 메서드는 "Cmd"
+   에서는 스텁(stub)입니다; 서브 클래스에 의해 재정의되기 위해 존재합
+   니다.
+
+Cmd.postloop()
+
+   "cmdloop()"가 반환하려고 할 때 한 번 실행되는 훅 메서드. 이 메서드
+   는 "Cmd"에서는 스텁(stub)입니다; 서브 클래스에 의해 재정의되기 위해
+   존재합니다.
+
+"Cmd" 서브 클래스의 인스턴스에는 몇 가지 공용 인스턴스 변수가 있습니다
+:
+
+Cmd.prompt
+
+   입력을 요청하는 프롬프트.
+
+Cmd.identchars
+
+   명령 접두사에 허용되는 문자들의 문자열.
+
+Cmd.lastcmd
+
+   비어 있지 않은 마지막 명령 접두사.
+
+Cmd.cmdqueue
+
+   계류 중인 입력 줄의 리스트. cmdqueue 리스트는 새로운 입력이 필요할
+   때 "cmdloop()"에서 점검됩니다; 비어 있지 않으면, 프롬프트에서 입력
+   한 것처럼 해당 요소가 순서대로 처리됩니다.
+
+Cmd.intro
+
+   소개나 배너로 제시할 문자열. "cmdloop()" 메서드에 인자를 제공하여
+   재정의할 수 있습니다.
+
+Cmd.doc_header
+
+   도움말 출력에 설명된 명령 섹션이 있을 때 제시할 헤더입니다.
+
+Cmd.misc_header
+
+   The header to issue if the help output has a section for
+   miscellaneous  help topics (that is, there are "help_*()" methods
+   without corresponding "do_*()" methods).
+
+Cmd.undoc_header
+
+   The header to issue if the help output has a section for
+   undocumented  commands (that is, there are "do_*()" methods without
+   corresponding "help_*()" methods).
+
+Cmd.ruler
+
+   도움말 메시지 헤더 아래에 구분선을 그리는 데 사용되는 문자입니다.
+   비어 있으면, 눈금자 선이 그려지지 않습니다. 기본값은 "'='"입니다.
+
+Cmd.use_rawinput
+
+   A flag, defaulting to true.  If true, "cmdloop()" uses "input()" to
+   display a prompt and read the next command; if false,
+   "sys.stdout.write()" and "sys.stdin.readline()" are used. (This
+   means that by importing "readline", on systems that support it, the
+   interpreter will automatically support **Emacs**-like line editing
+   and command-history keystrokes.)
+
+
+Cmd 예
+======
+
+"cmd" 모듈은 주로 사용자가 대화식으로 프로그램을 사용할 수 있도록 하는
+사용자 정의 셸을 만드는 데 유용합니다.
+
+이 섹션에서는 "turtle" 모듈의 몇 가지 명령을 중심으로 셸을 작성하는 방
+법에 대한 간단한 예를 제공합니다.
+
+Basic turtle commands such as "forward()" are added to a "Cmd"
+subclass with method named "do_forward()".  The argument is converted
+to a number and dispatched to the turtle module.  The docstring is
+used in the help utility provided by the shell.
+
+The example also includes a basic record and playback facility
+implemented with the "precmd()" method which is responsible for
+converting the input to lowercase and writing the commands to a file.
+The "do_playback()" method reads the file and adds the recorded
+commands to the "cmdqueue" for immediate playback:
+
+   import cmd, sys
+   from turtle import *
+
+   class TurtleShell(cmd.Cmd):
+       intro = 'Welcome to the turtle shell.   Type help or ? to list commands.\n'
+       prompt = '(turtle) '
+       file = None
+
+       # ----- basic turtle commands -----
+       def do_forward(self, arg):
+           'Move the turtle forward by the specified distance:  FORWARD 10'
+           forward(*parse(arg))
+       def do_right(self, arg):
+           'Turn turtle right by given number of degrees:  RIGHT 20'
+           right(*parse(arg))
+       def do_left(self, arg):
+           'Turn turtle left by given number of degrees:  LEFT 90'
+           left(*parse(arg))
+       def do_goto(self, arg):
+           'Move turtle to an absolute position with changing orientation.  GOTO 100 200'
+           goto(*parse(arg))
+       def do_home(self, arg):
+           'Return turtle to the home position:  HOME'
+           home()
+       def do_circle(self, arg):
+           'Draw circle with given radius an options extent and steps:  CIRCLE 50'
+           circle(*parse(arg))
+       def do_position(self, arg):
+           'Print the current turtle position:  POSITION'
+           print('Current position is %d %d\n' % position())
+       def do_heading(self, arg):
+           'Print the current turtle heading in degrees:  HEADING'
+           print('Current heading is %d\n' % (heading(),))
+       def do_color(self, arg):
+           'Set the color:  COLOR BLUE'
+           color(arg.lower())
+       def do_undo(self, arg):
+           'Undo (repeatedly) the last turtle action(s):  UNDO'
+       def do_reset(self, arg):
+           'Clear the screen and return turtle to center:  RESET'
+           reset()
+       def do_bye(self, arg):
+           'Stop recording, close the turtle window, and exit:  BYE'
+           print('Thank you for using Turtle')
+           self.close()
+           bye()
+           return True
+
+       # ----- record and playback -----
+       def do_record(self, arg):
+           'Save future commands to filename:  RECORD rose.cmd'
+           self.file = open(arg, 'w')
+       def do_playback(self, arg):
+           'Playback commands from a file:  PLAYBACK rose.cmd'
+           self.close()
+           with open(arg) as f:
+               self.cmdqueue.extend(f.read().splitlines())
+       def precmd(self, line):
+           line = line.lower()
+           if self.file and 'playback' not in line:
+               print(line, file=self.file)
+           return line
+       def close(self):
+           if self.file:
+               self.file.close()
+               self.file = None
+
+   def parse(arg):
+       'Convert a series of zero or more numbers to an argument tuple'
+       return tuple(map(int, arg.split()))
+
+   if __name__ == '__main__':
+       TurtleShell().cmdloop()
+
+다음은 도움말 기능과, 명령을 반복하기 위해 빈 줄을 사용하는 방법과, 간
+단한 녹화와 재생기능을 보여주기 위해 turtle 셀을 사용한 예제 세션입니
+다:
+
+   Welcome to the turtle shell.   Type help or ? to list commands.
+
+   (turtle) ?
+
+   Documented commands (type help <topic>):
+   ========================================
+   bye     color    goto     home  playback  record  right
+   circle  forward  heading  left  position  reset   undo
+
+   (turtle) help forward
+   Move the turtle forward by the specified distance:  FORWARD 10
+   (turtle) record spiral.cmd
+   (turtle) position
+   Current position is 0 0
+
+   (turtle) heading
+   Current heading is 0
+
+   (turtle) reset
+   (turtle) circle 20
+   (turtle) right 30
+   (turtle) circle 40
+   (turtle) right 30
+   (turtle) circle 60
+   (turtle) right 30
+   (turtle) circle 80
+   (turtle) right 30
+   (turtle) circle 100
+   (turtle) right 30
+   (turtle) circle 120
+   (turtle) right 30
+   (turtle) circle 120
+   (turtle) heading
+   Current heading is 180
+
+   (turtle) forward 100
+   (turtle)
+   (turtle) right 90
+   (turtle) forward 100
+   (turtle)
+   (turtle) right 90
+   (turtle) forward 400
+   (turtle) right 90
+   (turtle) forward 500
+   (turtle) right 90
+   (turtle) forward 400
+   (turtle) right 90
+   (turtle) forward 300
+   (turtle) playback spiral.cmd
+   Current position is 0 0
+
+   Current heading is 0
+
+   Current heading is 180
+
+   (turtle) bye
+   Thank you for using Turtle

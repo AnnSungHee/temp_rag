@@ -1,0 +1,188 @@
+"shelve" --- Python object persistence
+**************************************
+
+**소스 코드:** Lib/shelve.py
+
+======================================================================
+
+"쉘프(shelf)"는 영속적인(persistent) 딕셔너리류 객체입니다. "dbm" 데이
+터베이스와의 차이점은 쉘프의 값(키가 아닙니다!)이 사실상 임의의 파이썬
+객체일 수 있다는 것입니다 --- "pickle" 모듈에서 처리할 수 있는 모든 것
+입니다. 여기에는 대부분의 클래스 인스턴스, 재귀적 데이터형 및 많은 공
+유 서브 객체를 포함하는 객체가 포함됩니다. 키는 일반 문자열입니다.
+
+shelve.open(filename, flag='c', protocol=None, writeback=False)
+
+   영속적 딕셔너리를 엽니다. 지정된 filename은 하부 데이터베이스의 기
+   본 파일명입니다. 부작용으로, 확장명이 파일명에 추가될 수 있으며 여
+   러 개의 파일이 만들어질 수 있습니다. 기본적으로, 하부 데이터베이스
+   파일은 읽기와 쓰기 용으로 열립니다. 선택적 *flag* 매개 변수는
+   "dbm.open()"의 *flag* 매개 변수와 같게 해석됩니다.
+
+   By default, pickles created with "pickle.DEFAULT_PROTOCOL" are used
+   to serialize values.  The version of the pickle protocol can be
+   specified with the *protocol* parameter.
+
+   파이썬 의미론 때문에, 쉘프는 가변 영속 딕셔너리 항목이 언제 수정되
+   는지 알 수 없습니다. 기본적으로 수정된 객체는 쉘프에 *대입될 때만*
+   기록됩니다 (예제를 참조하십시오). 선택적인 *writeback* 매개 변수가
+   "True"로 설정되면, 액세스 된 모든 항목도 메모리에 캐시 되고,
+   "sync()"와 "close()"가 호출될 때 다시 기록됩니다; 이것은 영속 딕셔
+   너리의 가변 항목을 변경하는 것을 더 수월하게 만들지만, 많은 항목이
+   액세스 되면, 캐시를 위해 막대한 양의 메모리를 소비할 수 있으며, 액
+   세스 된 모든 항목을 다시 기록하기 때문에 닫기 연산이 매우 느려질 수
+   있습니다 (어떤 액세스 된 항목이 가변인지, 어떤 것이 실제로 변경되었
+   는지를 판별할 방법이 없습니다).
+
+   버전 3.10에서 변경: "pickle.DEFAULT_PROTOCOL" is now used as the
+   default pickle protocol.
+
+   참고:
+
+     쉘프가 자동으로 닫히는 것에 의지하지 마십시오; 더는 필요 없을 때
+     "close()"를 명시적으로 호출하거나, "shelve.open()"을 컨텍스트 관
+     리자로 사용하십시오:
+
+        with shelve.open('spam') as db:
+            db['eggs'] = 'eggs'
+
+경고:
+
+  "shelve" 모듈은 "pickle"로 뒷받침되기 때문에, 신뢰할 수 없는 소스에
+  서 쉘프를 로드하는 것은 안전하지 않습니다. 피클과 마찬가지로, 쉘프를
+  로드하면 임의의 코드를 실행할 수 있습니다.
+
+쉘프 객체는 딕셔너리에서 지원하는 대부분의 메서드와 연산을 지원합니다
+(복사, 생성자 및 연산자 "|"와 "|="는 제외합니다). 이것은 딕셔너리 기반
+스크립트에서 영속적인 저장소를 요구하는 것으로의 전환을 쉽게 만듭니다.
+
+두 가지 추가 메서드가 지원됩니다:
+
+Shelf.sync()
+
+   *writeback*을 "True"로 설정하여 쉘프를 열었으면, 캐시의 모든 항목을
+   다시 기록합니다. 또한, 적절하다면, 캐시를 비우고 디스크 상의 영속
+   딕셔너리를 동기화합니다. "close()"로 쉘프를 닫을 때 자동으로 호출됩
+   니다.
+
+Shelf.close()
+
+   영구 *딕셔너리* 객체를 동기화하고 닫습니다. 닫힌 쉘프에 대한 연산은
+   "ValueError"로 실패합니다.
+
+더 보기:
+
+  Persistent dictionary recipe with widely supported storage formats
+  and having the speed of native dictionaries.
+
+
+제약 사항
+=========
+
+* 사용되는 데이터베이스 패키지의 선택(가령 "dbm.ndbm"이나 "dbm.gnu")은
+  어떤 인터페이스가 사용 가능한지에 따라 다릅니다. 따라서 "dbm"을 사용
+  하여 데이터베이스를 직접 여는 것은 안전하지 않습니다. 또한, 데이터베
+  이스는 (불행히도) "dbm"이 사용된다면 그것의 제약이 적용됩니다 --- 이
+  것은 데이터베이스에 저장되는 객체(의 피클 된 표현이)가 상당히 작아야
+  하며, 드물긴 하지만 키 충돌로 인해 데이터베이스가 업데이트를 거부할
+  수 있음을 뜻합니다.
+
+* "shelve" 모듈은 쉘브된 객체에 대한 *동시성(concurrent)* 읽기/쓰기 액
+  세스를 지원하지 않습니다. (여러 동시적인 읽기 액세스는 안전합니다.)
+  어떤 프로그램이 쓰기 용으로 쉘프를 열고 있으면, 다른 어떤 프로그램도
+  읽기나 쓰기 용으로 열지 않아야 합니다. 유닉스 파일 잠금을 이 문제를
+  해결하는 데 사용할 수 있지만, 이것은 유닉스 버전마다 다르며 사용된
+  데이터베이스 구현에 대한 지식이 필요합니다.
+
+class shelve.Shelf(dict, protocol=None, writeback=False, keyencoding='utf-8')
+
+   *dict* 객체에 피클 된 값을 저장하는
+   "collections.abc.MutableMapping"의 서브 클래스.
+
+   By default, pickles created with "pickle.DEFAULT_PROTOCOL" are used
+   to serialize values.  The version of the pickle protocol can be
+   specified with the *protocol* parameter.  See the "pickle"
+   documentation for a discussion of the pickle protocols.
+
+   *writeback* 매개 변수가 "True"이면, 객체는 액세스 된 모든 항목의 캐
+   시를 보유하고 sync와 close 할 때 *dict*에 다시 씁니다. 이것은 가변
+   항목에 대한 자연스러운 연산을 허락하지만, 더 많은 메모리를 소비하고
+   sync와 close 연산이 오래 걸릴 수 있습니다.
+
+   *keyencoding* 매개 변수는 하부 dict에 사용되기 전에 키를 인코딩하는
+   데 사용되는 인코딩입니다.
+
+   "Shelf" 객체는 컨텍스트 관리자로 사용할 수도 있습니다. 이 경우
+   "with" 블록이 끝날 때 자동으로 닫힙니다.
+
+   버전 3.2에서 변경: *keyencoding* 매개 변수가 추가되었습니다; 이전에
+   는 키가 항상 UTF-8으로 인코딩되었습니다.
+
+   버전 3.4에서 변경: 컨텍스트 관리자 지원 추가.
+
+   버전 3.10에서 변경: "pickle.DEFAULT_PROTOCOL" is now used as the
+   default pickle protocol.
+
+class shelve.BsdDbShelf(dict, protocol=None, writeback=False, keyencoding='utf-8')
+
+   A subclass of "Shelf" which exposes "first()", "next()",
+   "previous()", "last()" and "set_location()" which are available in
+   the third-party "bsddb" module from pybsddb but not in other
+   database modules.  The *dict* object passed to the constructor must
+   support those methods.  This is generally accomplished by calling
+   one of "bsddb.hashopen()", "bsddb.btopen()" or "bsddb.rnopen()".
+   The optional *protocol*, *writeback*, and *keyencoding* parameters
+   have the same interpretation as for the "Shelf" class.
+
+class shelve.DbfilenameShelf(filename, flag='c', protocol=None, writeback=False)
+
+   딕셔너리류 객체 대신에 *filename*을 받아들이는 "Shelf"의 서브 클래
+   스. 하부 파일은 "dbm.open()"을 사용하여 열립니다. 기본적으로, 파일
+   은 읽기와 쓰기가 가능하도록 만들어지고 열립니다. 선택적 *flag* 매개
+   변수는 "open()" 기능과 같게 해석됩니다. 선택적 *protocol*과
+   *writeback* 매개 변수는 "Shelf" 클래스와 같게 해석됩니다.
+
+
+예제
+====
+
+인터페이스를 요약하면 ("key"는 문자열입니다, "data"는 임의의 객체입니
+다):
+
+   import shelve
+
+   d = shelve.open(filename)  # open -- file may get suffix added by low-level
+                              # library
+
+   d[key] = data              # store data at key (overwrites old data if
+                              # using an existing key)
+   data = d[key]              # retrieve a COPY of data at key (raise KeyError
+                              # if no such key)
+   del d[key]                 # delete data stored at key (raises KeyError
+                              # if no such key)
+
+   flag = key in d            # true if the key exists
+   klist = list(d.keys())     # a list of all existing keys (slow!)
+
+   # as d was opened WITHOUT writeback=True, beware:
+   d['xx'] = [0, 1, 2]        # this works as expected, but...
+   d['xx'].append(3)          # *this doesn't!* -- d['xx'] is STILL [0, 1, 2]!
+
+   # having opened d without writeback=True, you need to code carefully:
+   temp = d['xx']             # extracts the copy
+   temp.append(5)             # mutates the copy
+   d['xx'] = temp             # stores the copy right back, to persist it
+
+   # or, d=shelve.open(filename,writeback=True) would let you just code
+   # d['xx'].append(5) and have it work as expected, BUT it would also
+   # consume more memory and make the d.close() operation slower.
+
+   d.close()                  # close it
+
+더 보기:
+
+  모듈 "dbm"
+     "dbm" 스타일 데이터베이스에 대한 범용 인터페이스.
+
+  모듈 "pickle"
+     "shelve"에 의해 사용되는 객체 직렬화.

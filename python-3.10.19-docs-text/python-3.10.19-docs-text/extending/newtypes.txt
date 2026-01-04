@@ -1,0 +1,646 @@
+3. 확장형 정의하기: 여러 가지 주제
+**********************************
+
+이 섹션은 구현할 수 있는 다양한 형 메서드와 그것이 하는 일에 대해 훑어
+보기를 제공하기 위한 것입니다.
+
+다음은 디버그 빌드에서만 사용되는 일부 필드가 생략된 "PyTypeObject"의
+정의입니다:
+
+   typedef struct _typeobject {
+       PyObject_VAR_HEAD
+       const char *tp_name; /* For printing, in format "<module>.<name>" */
+       Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
+
+       /* Methods to implement standard operations */
+
+       destructor tp_dealloc;
+       Py_ssize_t tp_vectorcall_offset;
+       getattrfunc tp_getattr;
+       setattrfunc tp_setattr;
+       PyAsyncMethods *tp_as_async; /* formerly known as tp_compare (Python 2)
+                                       or tp_reserved (Python 3) */
+       reprfunc tp_repr;
+
+       /* Method suites for standard classes */
+
+       PyNumberMethods *tp_as_number;
+       PySequenceMethods *tp_as_sequence;
+       PyMappingMethods *tp_as_mapping;
+
+       /* More standard operations (here for binary compatibility) */
+
+       hashfunc tp_hash;
+       ternaryfunc tp_call;
+       reprfunc tp_str;
+       getattrofunc tp_getattro;
+       setattrofunc tp_setattro;
+
+       /* Functions to access object as input/output buffer */
+       PyBufferProcs *tp_as_buffer;
+
+       /* Flags to define presence of optional/expanded features */
+       unsigned long tp_flags;
+
+       const char *tp_doc; /* Documentation string */
+
+       /* Assigned meaning in release 2.0 */
+       /* call function for all accessible objects */
+       traverseproc tp_traverse;
+
+       /* delete references to contained objects */
+       inquiry tp_clear;
+
+       /* Assigned meaning in release 2.1 */
+       /* rich comparisons */
+       richcmpfunc tp_richcompare;
+
+       /* weak reference enabler */
+       Py_ssize_t tp_weaklistoffset;
+
+       /* Iterators */
+       getiterfunc tp_iter;
+       iternextfunc tp_iternext;
+
+       /* Attribute descriptor and subclassing stuff */
+       struct PyMethodDef *tp_methods;
+       struct PyMemberDef *tp_members;
+       struct PyGetSetDef *tp_getset;
+       // Strong reference on a heap type, borrowed reference on a static type
+       struct _typeobject *tp_base;
+       PyObject *tp_dict;
+       descrgetfunc tp_descr_get;
+       descrsetfunc tp_descr_set;
+       Py_ssize_t tp_dictoffset;
+       initproc tp_init;
+       allocfunc tp_alloc;
+       newfunc tp_new;
+       freefunc tp_free; /* Low-level free-memory routine */
+       inquiry tp_is_gc; /* For PyObject_IS_GC */
+       PyObject *tp_bases;
+       PyObject *tp_mro; /* method resolution order */
+       PyObject *tp_cache;
+       PyObject *tp_subclasses;
+       PyObject *tp_weaklist;
+       destructor tp_del;
+
+       /* Type attribute cache version tag. Added in version 2.6 */
+       unsigned int tp_version_tag;
+
+       destructor tp_finalize;
+       vectorcallfunc tp_vectorcall;
+   } PyTypeObject;
+
+이제 메서드가 아주 *많습니다*. 너무 걱정하지 마십시오 -- 정의하려는 형
+이 있으면, 이 중 일부만 구현할 가능성이 매우 높습니다.
+
+아마 지금까지 예상했듯이, 이것에 대해 살펴보고 다양한 처리기에 대한 자
+세한 정보를 제공할 것입니다. 필드의 순서에 영향을 미치는 많은 과거의
+짐이 있어서, 구조체에 정의된 순서대로 진행하지 않을 것입니다. 필요한
+필드가 포함된 예제를 찾은 다음 새 형에 맞게 값을 변경하기가 종종 가장
+쉽습니다.
+
+   const char *tp_name; /* For printing */
+
+형의 이름 -- 이전 장에서 언급했듯이, 이것은 여러 곳에서 나타나는데, 거
+의 진단 목적입니다. 그러한 상황에서 도움이 될만한 것을 선택하십시오!
+
+   Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
+
+이 필드는 이 형의 새 객체가 만들어질 때 할당할 메모리양을 런타임에 알
+려줍니다. 파이썬은 가변 길이 구조(생각하세요: 문자열, 튜플)에 대한 지
+원을 내장하고 있는데, 이때 "tp_itemsize" 필드가 참여합니다. 이것은 나
+중에 다룰 것입니다.
+
+   const char *tp_doc;
+
+여기에 파이썬 스크립트가 "obj.__doc__"을 참조하여 독스트링을 꺼낼 때
+반환할 문자열(또는 문자열의 주소)을 넣을 수 있습니다.
+
+이제 기본 형 메서드에 대해 살펴보겠습니다 -- 대부분의 확장형이 구현할
+것들입니다.
+
+
+3.1. 파이널리제이션과 할당 해제
+===============================
+
+   destructor tp_dealloc;
+
+이 함수는 형의 인스턴스의 참조 횟수가 0으로 줄어들고 파이썬 인터프리터
+가 그것을 재활용하고자 할 때 호출됩니다. 여러분의 형에 해제할 메모리가
+있거나 수행할 기타 정리 작업이 있으면, 여기에 넣을 수 있습니다. 객체
+자체도 여기서 해제해야 합니다. 이 함수의 예는 다음과 같습니다:
+
+   static void
+   newdatatype_dealloc(newdatatypeobject *obj)
+   {
+       free(obj->obj_UnderlyingDatatypePtr);
+       Py_TYPE(obj)->tp_free((PyObject *)obj);
+   }
+
+형이 가비지 수거를 지원하면, 파괴자는 멤버 필드를 지우기 전에
+"PyObject_GC_UnTrack()"을 호출해야 합니다:
+
+   static void
+   newdatatype_dealloc(newdatatypeobject *obj)
+   {
+       PyObject_GC_UnTrack(obj);
+       Py_CLEAR(obj->other_obj);
+       ...
+       Py_TYPE(obj)->tp_free((PyObject *)obj);
+   }
+
+할당 해제 함수의 중요한 요구 사항 중 하나는 계류 중인 예외를 그대로 남
+겨 두어야 한다는 것입니다. 인터프리터가 파이썬 스택을 되감을 때 할당
+해제기가 자주 호출되기 때문에 중요합니다; 스택이 (정상적인 반환이 아닌
+) 예외로 인해 되감길 때, 할당 해제기가 예외가 이미 설정되어 있음을 알
+수 없도록 하는 것은 아무것도 수행되지 않습니다. 할당 해제기가 수행하는
+추가 파이썬 코드가 실행될 수 있도록 하는 추가 조치는 예외가 설정되었음
+을 감지할 수 있습니다. 이는 인터프리터가 혼동하도록 할 수 있습니다. 이
+를 방지하는 올바른 방법은 안전하지 않은 조치를 수행하기 전에 계류 중인
+예외를 저장하고 완료되면 복원하는 것입니다. "PyErr_Fetch()"와
+"PyErr_Restore()" 함수를 사용하여 수행할 수 있습니다:
+
+   static void
+   my_dealloc(PyObject *obj)
+   {
+       MyObject *self = (MyObject *) obj;
+       PyObject *cbresult;
+
+       if (self->my_callback != NULL) {
+           PyObject *err_type, *err_value, *err_traceback;
+
+           /* This saves the current exception state */
+           PyErr_Fetch(&err_type, &err_value, &err_traceback);
+
+           cbresult = PyObject_CallNoArgs(self->my_callback);
+           if (cbresult == NULL)
+               PyErr_WriteUnraisable(self->my_callback);
+           else
+               Py_DECREF(cbresult);
+
+           /* This restores the saved exception state */
+           PyErr_Restore(err_type, err_value, err_traceback);
+
+           Py_DECREF(self->my_callback);
+       }
+       Py_TYPE(obj)->tp_free((PyObject*)self);
+   }
+
+참고:
+
+  할당 해제 함수에서 안전하게 수행할 수 있는 작업에는 제한이 있습니다.
+  먼저, 형이 가비지 수거를 지원하면 ("tp_traverse" 및/또는 "tp_clear"
+  를 사용해서), "tp_dealloc"이 호출될 때 객체의 일부 멤버가 지워지거나
+  파이널라이즈 될 수 있습니다. 둘째, "tp_dealloc"에서, 객체는 불안정한
+  상태에 있습니다: 참조 횟수가 0입니다. (위의 예에서와같이) 사소하지
+  않은 객체나 API를 호출하면 "tp_dealloc"을 다시 호출하게 되어, 이중
+  해제와 충돌이 발생할 수 있습니다.파이썬 3.4부터는, "tp_dealloc"에 복
+  잡한 파이널리제이션 코드를 넣지 말고, 대신 새로운 "tp_finalize" 형
+  메서드를 사용하는 것이 좋습니다.
+
+  더 보기: **PEP 442**는 새로운 파이널리제이션 체계를 설명합니다.
+
+
+3.2. 객체 표현
+==============
+
+파이썬에서, 객체의 텍스트 표현을 생성하는 두 가지 방법이 있습니다:
+"repr()" 함수와 "str()" 함수. ("print()" 함수는 단지 "str()"을 호출합
+니다.) 이 처리기들은 모두 선택적입니다.
+
+   reprfunc tp_repr;
+   reprfunc tp_str;
+
+"tp_repr" 처리기는 호출된 인스턴스의 표현을 포함하는 문자열 객체를 반
+환해야 합니다. 다음은 간단한 예입니다:
+
+   static PyObject *
+   newdatatype_repr(newdatatypeobject * obj)
+   {
+       return PyUnicode_FromFormat("Repr-ified_newdatatype{{size:%d}}",
+                                   obj->obj_UnderlyingDatatypePtr->size);
+   }
+
+"tp_repr" 처리기가 지정되지 않으면, 인터프리터는 형의 "tp_name"과 객체
+의 고유 식별 값을 사용하는 표현을 제공합니다.
+
+"tp_str" 처리기는 "str()"에 대한 것이고, 위에서 설명한 "tp_repr" 처리
+기와 "repr()" 간의 관계와 같은 관계입니다; 즉, 파이썬 코드가 객체의 인
+스턴스에서 "str()"을 호출할 때 호출됩니다. 구현은 "tp_repr" 함수와 매
+우 유사하지만, 결과 문자열은 사람이 사용하기 위한 것입니다. "tp_str"을
+지정하지 않으면, "tp_repr" 처리기가 대신 사용됩니다.
+
+다음은 간단한 예입니다:
+
+   static PyObject *
+   newdatatype_str(newdatatypeobject * obj)
+   {
+       return PyUnicode_FromFormat("Stringified_newdatatype{{size:%d}}",
+                                   obj->obj_UnderlyingDatatypePtr->size);
+   }
+
+
+3.3. 어트리뷰트 관리
+====================
+
+어트리뷰트를 지원할 수 있는 모든 객체에 대해, 해당 형은 어트리뷰트가
+결정되는(resolved) 방법을 제어하는 함수를 제공해야 합니다. 어트리뷰트
+를 꺼낼 수 있는 함수와 (뭔가 정의되어 있다면), 어트리뷰트를 설정하는
+다른 함수(어트리뷰트 설정이 허용된다면)가 있어야 합니다. 어트리뷰트 제
+거는 특별한 경우이며, 처리기에 전달된 새 값이 "NULL"입니다.
+
+파이썬은 두 쌍의 어트리뷰트 처리기를 지원합니다; 어트리뷰트를 지원하는
+형은 한 쌍의 함수만 구현하면 됩니다. 차이점은 한 쌍은 어트리뷰트 이름
+을 "char*"로 취하고, 다른 쌍은 "PyObject*"를 받아들인다는 것입니다. 각
+형은 구현의 편의에 더 적합한 쌍을 사용할 수 있습니다.
+
+   getattrfunc  tp_getattr;        /* char * version */
+   setattrfunc  tp_setattr;
+   /* ... */
+   getattrofunc tp_getattro;       /* PyObject * version */
+   setattrofunc tp_setattro;
+
+객체의 어트리뷰트에 액세스하는 것이 항상 간단한 연산이면 (짧게 설명할
+것입니다), 어트리뷰트 관리 함수의 "PyObject*" 버전을 제공하는 데 사용
+할 수 있는 일반적인 구현이 있습니다. 파이썬 2.2부터 형별 어트리뷰트 처
+리기에 대한 실제 필요성은 거의 완전히 사라졌지만, 사용 가능한 새로운
+일반 메커니즘을 사용하도록 갱신되지 않은 예제가 많이 있습니다.
+
+
+3.3.1. 범용 어트리뷰트 관리
+---------------------------
+
+대부분의 확장형은 *간단한* 어트리뷰트만 사용합니다. 그렇다면, 어트리뷰
+트를 간단하게 만드는 것은 무엇입니까? 충족해야 하는 몇 가지 조건만 있
+습니다:
+
+1. "PyType_Ready()"가 호출될 때 어트리뷰트의 이름을 알아야 합니다.
+
+2. 어트리뷰트를 찾거나 설정했음을 기록하는 데 특별한 처리가 필요하지
+   않으며 값을 기반으로 조처를 하지 않아도 됩니다.
+
+이 목록은 어트리뷰트 값, 값을 계산하는 시점 또는 관련 데이터가 저장되
+는 방법에 제한을 두지 않음에 유의하십시오.
+
+"PyType_Ready()"가 호출될 때, 형 객체가 참조하는 3개의 테이블을 사용하
+여 형 객체의 딕셔너리에 배치되는 *디스크립터*를 만듭니다. 각 디스크립
+터는 인스턴스 객체의 한 어트리뷰트에 대한 액세스를 제어합니다. 각 테이
+블은 선택적입니다; 세 개 모두가 "NULL"이면, 형의 인스턴스는 베이스형에
+서 상속된 어트리뷰트만 갖게 되며, "tp_getattro"와 "tp_setattro" 필드도
+"NULL"로 남겨두어야 베이스형이 어트리뷰트를 처리할 수 있습니다.
+
+테이블은 형 객체의 세 필드로 선언됩니다:
+
+   struct PyMethodDef *tp_methods;
+   struct PyMemberDef *tp_members;
+   struct PyGetSetDef *tp_getset;
+
+"tp_methods"가 "NULL"이 아니면, "PyMethodDef" 구조체의 배열을 참조해야
+합니다. 테이블의 각 항목은 다음 구조체의 인스턴스입니다:
+
+   typedef struct PyMethodDef {
+       const char  *ml_name;       /* method name */
+       PyCFunction  ml_meth;       /* implementation function */
+       int          ml_flags;      /* flags */
+       const char  *ml_doc;        /* docstring */
+   } PyMethodDef;
+
+One entry should be defined for each method provided by the type; no
+entries are needed for methods inherited from a base type.  One
+additional entry is needed at the end; it is a sentinel that marks the
+end of the array.  The "ml_name" field of the sentinel must be "NULL".
+
+두 번째 테이블은 인스턴스에 저장된 데이터에 직접 매핑되는 어트리뷰트를
+정의하는 데 사용됩니다. 다양한 기본 C형이 지원되며, 액세스는 읽기 전용
+이거나 읽고 쓰기일 수 있습니다. 테이블의 구조체는 다음과 같이 정의됩니
+다:
+
+   typedef struct PyMemberDef {
+       const char *name;
+       int         type;
+       int         offset;
+       int         flags;
+       const char *doc;
+   } PyMemberDef;
+
+For each entry in the table, a *descriptor* will be constructed and
+added to the type which will be able to extract a value from the
+instance structure.  The "type" field should contain one of the type
+codes defined in the "structmember.h" header; the value will be used
+to determine how to convert Python values to and from C values.  The
+"flags" field is used to store flags which control how the attribute
+can be accessed.
+
+The following flag constants are defined in "structmember.h"; they may
+be combined using bitwise-OR.
+
++-----------------------------+------------------------------------------------+
+| Constant                    | Meaning                                        |
+|=============================|================================================|
+| "READONLY"                  | Never writable.                                |
++-----------------------------+------------------------------------------------+
+| "PY_AUDIT_READ"             | Emit an "object.__getattr__" audit events      |
+|                             | before reading.                                |
++-----------------------------+------------------------------------------------+
+
+버전 3.10에서 변경: "RESTRICTED", "READ_RESTRICTED" and
+"WRITE_RESTRICTED" are deprecated. However, "READ_RESTRICTED" is an
+alias for "PY_AUDIT_READ", so fields that specify either "RESTRICTED"
+or "READ_RESTRICTED" will also raise an audit event.
+
+An interesting advantage of using the "tp_members" table to build
+descriptors that are used at runtime is that any attribute defined
+this way can have an associated doc string simply by providing the
+text in the table.  An application can use the introspection API to
+retrieve the descriptor from the class object, and get the doc string
+using its "__doc__" attribute.
+
+As with the "tp_methods" table, a sentinel entry with a "name" value
+of "NULL" is required.
+
+
+3.3.2. 형별 어트리뷰트 관리
+---------------------------
+
+간단히 하기 위해, "char*" 버전 만 여기에서 예시합니다; name 매개 변수
+의 형이 인터페이스의 "char*"와 "PyObject*" 버전 간의 유일한 차이점입니
+다. 이 예제는 위의 범용 예제와 효과적으로 같은 것을 수행하지만, 파이썬
+2.2에 추가된 범용 지원은 사용하지 않습니다. 처리기 함수가 호출되는 방
+식을 설명하므로, 기능을 확장해야 한다면, 무엇을 해야 할지 이해할 수 있
+을 겁니다.
+
+The "tp_getattr" handler is called when the object requires an
+attribute look-up.  It is called in the same situations where the
+"__getattr__()" method of a class would be called.
+
+예는 다음과 같습니다:
+
+   static PyObject *
+   newdatatype_getattr(newdatatypeobject *obj, char *name)
+   {
+       if (strcmp(name, "data") == 0)
+       {
+           return PyLong_FromLong(obj->data);
+       }
+
+       PyErr_Format(PyExc_AttributeError,
+                    "'%.50s' object has no attribute '%.400s'",
+                    tp->tp_name, name);
+       return NULL;
+   }
+
+The "tp_setattr" handler is called when the "__setattr__()" or
+"__delattr__()" method of a class instance would be called.  When an
+attribute should be deleted, the third parameter will be "NULL".  Here
+is an example that simply raises an exception; if this were really all
+you wanted, the "tp_setattr" handler should be set to "NULL".
+
+   static int
+   newdatatype_setattr(newdatatypeobject *obj, char *name, PyObject *v)
+   {
+       PyErr_Format(PyExc_RuntimeError, "Read-only attribute: %s", name);
+       return -1;
+   }
+
+
+3.4. 객체 비교
+==============
+
+   richcmpfunc tp_richcompare;
+
+The "tp_richcompare" handler is called when comparisons are needed.
+It is analogous to the rich comparison methods, like "__lt__()", and
+also called by "PyObject_RichCompare()" and
+"PyObject_RichCompareBool()".
+
+이 함수는 두 개의 파이썬 객체와 연산자를 인자로 사용하여 호출됩니다,
+여기서 연산자는 "Py_EQ", "Py_NE", "Py_LE", "Py_GE", "Py_LT" 또는
+"Py_GT" 중 하나입니다. 지정된 연산자로 두 객체를 비교하고 비교에 성공
+하면 "Py_True"나 "Py_False"를, 비교가 구현되지 않았으며 다른 객체의 비
+교 메서드를 시도해야 한다는 것을 나타내려면 "Py_NotImplemented"를, 예
+외가 설정되면 "NULL"을 반환해야 합니다.
+
+내부 포인터의 크기가 같으면 같다고 간주하는 데이터형에 대한 샘플 구현
+은 다음과 같습니다:
+
+   static PyObject *
+   newdatatype_richcmp(PyObject *obj1, PyObject *obj2, int op)
+   {
+       PyObject *result;
+       int c, size1, size2;
+
+       /* code to make sure that both arguments are of type
+          newdatatype omitted */
+
+       size1 = obj1->obj_UnderlyingDatatypePtr->size;
+       size2 = obj2->obj_UnderlyingDatatypePtr->size;
+
+       switch (op) {
+       case Py_LT: c = size1 <  size2; break;
+       case Py_LE: c = size1 <= size2; break;
+       case Py_EQ: c = size1 == size2; break;
+       case Py_NE: c = size1 != size2; break;
+       case Py_GT: c = size1 >  size2; break;
+       case Py_GE: c = size1 >= size2; break;
+       }
+       result = c ? Py_True : Py_False;
+       Py_INCREF(result);
+       return result;
+    }
+
+
+3.5. 추상 프로토콜 지원
+=======================
+
+파이썬은 다양한 *추상* '프로토콜'을 지원합니다; 이러한 인터페이스를 사
+용하기 위해 제공되는 구체적인 인터페이스는 추상 객체 계층에 설명되어
+있습니다.
+
+이러한 추상 인터페이스 중 다수는 파이썬 구현 개발 초기에 정의되었습니
+다. 특히, 숫자, 매핑 및 시퀀스 프로토콜은 처음부터 파이썬의 일부였습니
+다. 다른 프로토콜은 시간이 지남에 따라 추가되었습니다. 형 구현의 여러
+처리기 루틴에 의존하는 프로토콜의 경우, 이전 프로토콜은 형 객체가 참조
+하는 선택적 처리기 블록으로 정의되었습니다. 최신 프로토콜의 경우 메인
+형 객체에 추가 슬롯이 있으며, 슬롯이 존재하고 인터프리터가 확인해야 함
+을 나타내는 플래그 비트가 설정됩니다. (플래그 비트는 슬롯 값이 "NULL"
+이 아님을 나타내지 않습니다. 플래그는 슬롯의 존재를 나타내도록 설정될
+수 있지만, 슬롯은 여전히 채워지지 않을 수 있습니다.)
+
+   PyNumberMethods   *tp_as_number;
+   PySequenceMethods *tp_as_sequence;
+   PyMappingMethods  *tp_as_mapping;
+
+여러분의 객체가 숫자, 시퀀스 또는 매핑 객체처럼 작동하도록 하려면, C형
+"PyNumberMethods", "PySequenceMethods" 또는 "PyMappingMethods"를 각각
+구현하는 구조체의 주소를 배치합니다. 이 구조체를 적절한 값으로 채우는
+것은 여러분의 책임입니다. 파이썬 소스 배포의 "Objects" 디렉터리에서 이
+들 각각의 사용 예를 찾을 수 있습니다.
+
+   hashfunc tp_hash;
+
+여러분이 제공하기로 선택했다면, 이 함수는 데이터형의 인스턴스에 대한
+해시 숫자를 반환해야 합니다. 다음은 간단한 예입니다:
+
+   static Py_hash_t
+   newdatatype_hash(newdatatypeobject *obj)
+   {
+       Py_hash_t result;
+       result = obj->some_size + 32767 * obj->some_number;
+       if (result == -1)
+          result = -2;
+       return result;
+   }
+
+"Py_hash_t"는 플랫폼에 따라 변하는 너비의 부호 있는 정수 형입니다.
+"tp_hash"에서 "-1"을 반환하면 에러를 표시해서, 위와 같이 해시 계산에
+성공했을 때 반환하지 않도록 주의해야 합니다.
+
+   ternaryfunc tp_call;
+
+이 함수는 데이터형의 인스턴스가 "호출"될 때 호출됩니다, 예를 들어,
+"obj1"이 데이터형의 인스턴스이고 파이썬 스크립트에 "obj1('hello')"가
+포함되어 있으면 "tp_call" 처리기가 호출됩니다.
+
+이 함수는 세 개의 인자를 취합니다:
+
+1. *self*는 호출의 대상인 데이터형의 인스턴스입니다. 호출이
+   "obj1('hello')"이면, *self*는 "obj1"입니다.
+
+2. *args*는 호출에 대한 인자를 포함하는 튜플입니다.
+   "PyArg_ParseTuple()"을 사용하여 인자를 추출할 수 있습니다.
+
+3. *kwds*는 전달된 키워드 인자의 딕셔너리입니다. 이것이 "NULL"이 아니
+   고 키워드 인자를 지원하면 "PyArg_ParseTupleAndKeywords()"를 사용하
+   여 인자를 추출하십시오. 키워드 인자를 지원하지 않고 이것이 "NULL"이
+   아니면, 키워드 인자가 지원되지 않는다는 메시지와 함께 "TypeError"를
+   발생시키십시오.
+
+장난감 "tp_call" 구현은 다음과 같습니다:
+
+   static PyObject *
+   newdatatype_call(newdatatypeobject *self, PyObject *args, PyObject *kwds)
+   {
+       PyObject *result;
+       const char *arg1;
+       const char *arg2;
+       const char *arg3;
+
+       if (!PyArg_ParseTuple(args, "sss:call", &arg1, &arg2, &arg3)) {
+           return NULL;
+       }
+       result = PyUnicode_FromFormat(
+           "Returning -- value: [%d] arg1: [%s] arg2: [%s] arg3: [%s]\n",
+           obj->obj_UnderlyingDatatypePtr->size,
+           arg1, arg2, arg3);
+       return result;
+   }
+
+   /* Iterators */
+   getiterfunc tp_iter;
+   iternextfunc tp_iternext;
+
+These functions provide support for the iterator protocol.  Both
+handlers take exactly one parameter, the instance for which they are
+being called, and return a new reference.  In the case of an error,
+they should set an exception and return "NULL".  "tp_iter" corresponds
+to the Python "__iter__()" method, while "tp_iternext" corresponds to
+the Python "__next__()" method.
+
+모든 *이터러블* 객체는 *이터레이터* 객체를 반환해야 하는 "tp_iter" 처
+리기를 구현해야 합니다. 다음은 파이썬 클래스에도 적용되는 공통 지침입
+니다:
+
+* 여러 개의 독립 이터레이터를 지원할 수 있는 컬렉션(가령 리스트와 튜플
+  )의 경우, "tp_iter"를 호출할 때마다 새 이터레이터가 만들어지고 반환
+  되어야 합니다.
+
+* 한 번만 이터레이트 될 수 있는 (보통 파일 객체처럼 이터레이션의 부작
+  용으로 인해) 객체는 스스로에 대한 새로운 참조를 반환하여 "tp_iter"를
+  구현할 수 있습니다 -- 따라서 "tp_iternext" 처리기도 구현해야 합니다.
+
+모든 *이터레이터* 객체는 "tp_iter"와 "tp_iternext"를 모두 구현해야 합
+니다. 이터레이터의 "tp_iter" 처리기는 이터레이터에 대한 새로운 참조를
+반환해야 합니다. "tp_iternext" 처리기는 이터레이션의 다음 객체(있다면)
+에 대한 새 참조를 반환해야 합니다. 이터레이션이 끝에 도달하면,
+"tp_iternext"는 예외를 설정하지 않고 "NULL"을 반환하거나, "NULL"을 반
+환하는 것에 *더해* "StopIteration"을 설정할 수 있습니다; 예외를 피하면
+성능이 약간 향상될 수 있습니다. 실제 에러가 발생하면, "tp_iternext"는
+항상 예외를 설정하고, "NULL"을 반환해야 합니다.
+
+
+3.6. 약한 참조 지원
+===================
+
+파이썬의 약한 참조 구현의 목표 중 하나는 성능에 중요한 객체(가령 숫자)
+에 대한 부하를 발생시키지 않고 모든 형이 약한 참조 메커니즘에 참여할
+수 있도록 하는 것입니다.
+
+더 보기: "weakref" 모듈에 대한 설명서.
+
+For an object to be weakly referencable, the extension type must do
+two things:
+
+1. Include a "PyObject*" field in the C object structure dedicated to
+   the weak reference mechanism.  The object's constructor should
+   leave it "NULL" (which is automatic when using the default
+   "tp_alloc").
+
+2. Set the "tp_weaklistoffset" type member to the offset of the
+   aforementioned field in the C object structure, so that the
+   interpreter knows how to access and modify that field.
+
+Concretely, here is how a trivial object structure would be augmented
+with the required field:
+
+   typedef struct {
+       PyObject_HEAD
+       PyObject *weakreflist;  /* List of weak references */
+   } TrivialObject;
+
+And the corresponding member in the statically declared type object:
+
+   static PyTypeObject TrivialType = {
+       PyVarObject_HEAD_INIT(NULL, 0)
+       /* ... other members omitted for brevity ... */
+       .tp_weaklistoffset = offsetof(TrivialObject, weakreflist),
+   };
+
+The only further addition is that "tp_dealloc" needs to clear any weak
+references (by calling "PyObject_ClearWeakRefs()") if the field is
+non-"NULL":
+
+   static void
+   Trivial_dealloc(TrivialObject *self)
+   {
+       /* Clear weakrefs first before calling any destructors */
+       if (self->weakreflist != NULL)
+           PyObject_ClearWeakRefs((PyObject *) self);
+       /* ... remainder of destruction code omitted for brevity ... */
+       Py_TYPE(self)->tp_free((PyObject *) self);
+   }
+
+
+3.7. 추가 제안
+==============
+
+새 데이터형에 특정 메서드를 구현하는 방법을 배우려면, *CPython* 소스
+코드를 구하십시오. "Objects" 디렉터리로 이동한 다음, C 소스 파일에서
+"tp_"에 원하는 기능을 더한 것(예를 들어, "tp_richcompare")을 검색하십
+시오. 구현하려는 함수의 예를 찾을 수 있을 겁니다.
+
+객체가 구현 중인 형의 구상 인스턴스인지 확인해야 하면,
+"PyObject_TypeCheck()" 함수를 사용하십시오. 사용 예는 다음과 같습니다:
+
+   if (!PyObject_TypeCheck(some_object, &MyType)) {
+       PyErr_SetString(PyExc_TypeError, "arg #1 not a mything");
+       return NULL;
+   }
+
+더 보기:
+
+  CPython 소스 릴리스를 다운로드하십시오.
+     https://www.python.org/downloads/source/
+
+  GitHub의 CPython 프로젝트, CPython 소스 코드가 개발되는 곳.
+     https://github.com/python/cpython

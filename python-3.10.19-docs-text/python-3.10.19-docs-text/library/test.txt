@@ -1,0 +1,1518 @@
+"test" --- Regression tests package for Python
+**********************************************
+
+참고:
+
+  "test" 패키지는 파이썬 내부 용으로만 사용됩니다. 파이썬의 핵심 개발
+  자를 위해 설명됩니다. 여기에 언급된 코드는 파이썬 릴리스 사이에 예고
+  없이 변경되거나 제거될 수 있어서, 파이썬의 표준 라이브러리 외부에서
+  이 패키지를 사용하는 것은 권장되지 않습니다.
+
+======================================================================
+
+"test" 패키지에는 "test.support"와 "test.regrtest"뿐만 아니라 파이썬에
+대한 모든 회귀 테스트가 포함되어 있습니다. "test.support"는 테스트를
+향상하는 데 사용되며 "test.regrtest"는 테스트 스위트를 구동합니다.
+
+이름이 "test_"로 시작하는 "test" 패키지의 각 모듈은 특정 모듈이나 기능
+에 대한 테스트 스위트입니다. 모든 새로운 테스트는 "unittest"나
+"doctest" 모듈을 사용하여 작성해야 합니다. 일부 오래된 테스트는
+"sys.stdout"으로 인쇄된 출력을 비교하는 "전통적인" 테스트 스타일을 사
+용하여 작성되었습니다; 이 테스트 스타일은 폐지된 것으로 간주합니다.
+
+더 보기:
+
+  모듈 "unittest"
+     PyUnit 회귀 테스트 작성.
+
+  모듈 "doctest"
+     독스트링에 포함된 테스트.
+
+
+"test" 패키지를 위한 단위 테스트 작성하기
+=========================================
+
+"unittest" 모듈을 사용하는 테스트는 몇 가지 지침을 따르는 것이 좋습니
+다. 하나는 테스트 모듈의 이름을 "test_"로 시작하고 테스트 중인 모듈의
+이름으로 끝나도록 짓는 것입니다. 테스트 모듈의 테스트 메서드는 "test_"
+로 시작하고 메서드가 테스트하는 내용에 대한 설명으로 끝나야 합니다. 이
+는 테스트 드라이버가 메서드를 테스트 메서드로 인식하기 위해 필요합니다
+. 또한, 메서드에 대한 독스트링이 포함되어서는 안 됩니다. 주석(가령 "#
+Tests function returns only True or False")을 사용하여 테스트 메서드에
+대한 설명을 제공해야 합니다. 이는 독스트링이 존재하면 이것이 인쇄되어
+실행되는 테스트가 인쇄되지 않기 때문입니다.
+
+기본 상용구가 자주 사용됩니다:
+
+   import unittest
+   from test import support
+
+   class MyTestCase1(unittest.TestCase):
+
+       # Only use setUp() and tearDown() if necessary
+
+       def setUp(self):
+           ... code to execute in preparation for tests ...
+
+       def tearDown(self):
+           ... code to execute to clean up after tests ...
+
+       def test_feature_one(self):
+           # Test feature one.
+           ... testing code ...
+
+       def test_feature_two(self):
+           # Test feature two.
+           ... testing code ...
+
+       ... more test methods ...
+
+   class MyTestCase2(unittest.TestCase):
+       ... same structure as MyTestCase1 ...
+
+   ... more test classes ...
+
+   if __name__ == '__main__':
+       unittest.main()
+
+이 코드 패턴을 사용하면 "test.regrtest"에서 자체적으로 "unittest" CLI
+를 지원하는 스크립트로나 "python -m unittest" CLI를 통해 테스트 스위트
+를 실행할 수 있습니다.
+
+회귀 테스트의 목표는 코드를 깨려고 시도하는 것입니다. 이는 따라야 할
+몇 가지 지침으로 이어집니다:
+
+* 테스트 스위트는 모든 클래스, 함수 및 상수를 괴롭혀야 합니다. 여기에
+  는 외부 세계에 제공되는 외부 API뿐만 아니라 "내부(private)" 코드도
+  포함됩니다.
+
+* 화이트 박스 테스트 (테스트 작성 시 테스트 중인 코드 검사)가 선호됩니
+  다. 블랙박스 테스트(게시된 사용자 인터페이스 만 테스트)는 모든 경계
+  와 에지 케이스가 테스트 되었는지 확인하기에 충분하지 않습니다.
+
+* 유효하지 않은 값을 포함하여 가능한 모든 값이 테스트 되었는지 확인하
+  십시오. 이렇게 하면 모든 유효한 값이 받아들여질 뿐만 아니라 부적절한
+  값이 올바르게 처리되었는지 확인하게 됩니다.
+
+* 가능한 한 많은 코드 경로를 소진하십시오. 분기가 발생하는 위치를 테스
+  트하고 입력을 조정하여 코드에서 여러 경로가 사용되는지 확인합니다.
+
+* 테스트 된 코드에 대해 발견된 버그에 대한 명시적 테스트를 추가합니다.
+  이렇게 하면 나중에 코드가 변경되어도 에러가 다시 발생하는지 확인합니
+  다.
+
+* 테스트 후에 정리해야 합니다 (가령 모든 임시 파일 닫고 제거하기).
+
+* 테스트가 운영 체제의 특정 조건에 의존하면 테스트를 시도하기 전에 조
+  건이 이미 존재하는지 확인하십시오.
+
+* 가능한 한 적은 수의 모듈을 임포트 하고 가능한 한 빨리 수행하십시오.
+  이렇게 하면 테스트의 외부 종속성이 최소화되고 모듈 임포트의 부작용에
+  따른 비정상적인 동작이 최소화됩니다.
+
+* 코드 재사용을 극대화하십시오. 때에 따라, 테스트는 사용되는 입력 유형
+  에 따라 조금씩 달라집니다. 입력을 지정하는 클래스로 기본 테스트 클래
+  스를 서브 클래싱하여 코드 중복을 최소화합니다:
+
+     class TestFuncAcceptsSequencesMixin:
+
+         func = mySuperWhammyFunction
+
+         def test_func(self):
+             self.func(self.arg)
+
+     class AcceptLists(TestFuncAcceptsSequencesMixin, unittest.TestCase):
+         arg = [1, 2, 3]
+
+     class AcceptStrings(TestFuncAcceptsSequencesMixin, unittest.TestCase):
+         arg = 'abc'
+
+     class AcceptTuples(TestFuncAcceptsSequencesMixin, unittest.TestCase):
+         arg = (1, 2, 3)
+
+  When using this pattern, remember that all classes that inherit from
+  "unittest.TestCase" are run as tests.  The "Mixin" class in the
+  example above does not have any data and so can't be run by itself,
+  thus it does not inherit from "unittest.TestCase".
+
+더 보기:
+
+  테스트 주도 개발(Test Driven Development)
+     코드 전에 테스트를 작성하는 것에 관한 Kent Beck의 책.
+
+
+명령 줄 인터페이스를 사용하여 테스트 실행하기
+=============================================
+
+"-m" 옵션 덕분에 "test" 패키지를 스크립트로 실행하여 파이썬의 회귀 테
+스트 스위트를 구동 할 수 있습니다: **python -m test**. 내부적으로는
+"test.regrtest"를 사용합니다; 이전 파이썬 버전에서 사용된 호출
+**python -m test.regrtest**는 여전히 작동합니다. 스크립트를 단독으로
+실행하면 "test" 패키지의 모든 회귀 테스트 실행이 자동으로 시작됩니다.
+패키지에서 이름이 "test_"로 시작하는 모든 모듈을 찾아서, 임포트 하고,
+"test_main()" 함수가 있으면 실행하고, "test_main"이 없으면
+unittest.TestLoader.loadTestsFromModule 을 통해 테스트를 로드하여 이를
+수행합니다. 실행할 테스트 이름도 스크립트에 전달할 수 있습니다. 단일
+회귀 테스트를 지정하면 (**python -m test test_spam**) 출력이 최소화되
+고 테스트의 통과나 실패 여부만 인쇄됩니다.
+
+"test"를 직접 실행하면 테스트에 사용할 수 있는 리소스를 설정할 수 있습
+니다. "-u" 명령 줄 옵션을 사용하여 이 작업을 수행합니다. "-u" 옵션의
+값으로 "all"을 지정하면 가능한 모든 자원을 사용할 수 있습니다:
+**python -m test -uall**. 하나를 제외한 모든 리소스가 필요한 경우 (더
+흔한 경우입니다), 원하지 않는 리소스의 쉼표로 구분된 목록이 "all" 뒤에
+나열될 수 있습니다. **python -m test -uall,-audio,-largefile** 명령은
+"audio"와 "largefile" 리소스를 제외한 모든 리소스로 "test"를 실행합니
+다. 모든 리소스와 추가 명령 줄 옵션 목록을 보려면, **python -m test
+-h**를 실행하십시오.
+
+회귀 테스트를 실행하는 다른 방법은 테스트가 실행되는 플랫폼에 따라 다
+릅니다. 유닉스에서는, 파이썬이 빌드된 최상위 디렉터리에서 **make
+test**를 실행할 수 있습니다. 윈도우에서는, "PCbuild" 디렉터리에서
+**rt.bat**을 실행하면 모든 회귀 테스트가 실행됩니다.
+
+
+"test.support" --- 파이썬 테스트 스위트용 유틸리티
+**************************************************
+
+"test.support" 모듈은 파이썬의 회귀 테스트 스위트를 지원합니다.
+
+참고:
+
+  "test.support"는 공용 모듈이 아닙니다. 파이썬 개발자가 테스트를 작성
+  하는 데 도움이 되도록 여기에 설명하고 있습니다. 이 모듈의 API는 릴리
+  스 간에 하위 호환성에 대한 고려 없이 변경될 수 있습니다.
+
+이 모듈은 다음 예외를 정의합니다:
+
+exception test.support.TestFailed
+
+   테스트가 실패할 때 발생하는 예외. 이것은 폐지되었고 "unittest" 기반
+   테스트와 "unittest.TestCase"의 어서션 메서드로 대체합니다.
+
+exception test.support.ResourceDenied
+
+   "unittest.SkipTest"의 서브 클래스. 리소스(가령 네트워크 연결)를 사
+   용할 수 없을 때 발생합니다. "requires()" 함수에 의해 발생합니다.
+
+"test.support" 모듈은 다음 상수를 정의합니다:
+
+test.support.verbose
+
+   상세 출력이 활성화될 때 "True". 실행 중인 테스트에 대한 자세한 정보
+   가 필요할 때 확인해야 합니다. *verbose*는 "test.regrtest"에 의해 설
+   정됩니다.
+
+test.support.is_jython
+
+   실행 중인 인터프리터가 Jython이면 "True".
+
+test.support.is_android
+
+   시스템이 안드로이드이면 "True".
+
+test.support.unix_shell
+
+   윈도우가 아니면 셸 경로; 그렇지 않으면 "None".
+
+test.support.LOOPBACK_TIMEOUT
+
+   "127.0.0.1"과 같은 네트워크 로컬 루프 백 인터페이스에서 리스닝하는
+   네트워크 서버를 사용하는 테스트의 초 단위 제한 시간.
+
+   제한 시간은 테스트 실패를 방지 할 수 있을 만큼 깁니다: 클라이언트와
+   서버가 다른 스레드나 다른 프로세스에서 실행될 수 있다는 점을 고려합
+   니다.
+
+   제한 시간은 "socket.socket"의 "connect()", "recv()" 및 "send()" 메
+   서드를 위해 충분히 길어야 합니다.
+
+   기본값은 5초입니다.
+
+   "INTERNET_TIMEOUT"도 참조하십시오.
+
+test.support.INTERNET_TIMEOUT
+
+   인터넷으로 가는 네트워크 요청에 대한 초 단위 제한 시간.
+
+   어떤 이유로 든 인터넷 요청이 블록 되면 테스트가 너무 오래 기다리지
+   않을 만큼 제한 시간이 적당히 짧습니다.
+
+   일반적으로, "INTERNET_TIMEOUT"을 사용하는 시간 초과는 테스트를 실패
+   로 표시해서는 안 되며, 대신 테스트를 건너뜁니다:
+   "transient_internet()"을 참조하십시오.
+
+   기본값은 1분입니다.
+
+   "LOOPBACK_TIMEOUT"도 참조하십시오.
+
+test.support.SHORT_TIMEOUT
+
+   테스트가 "너무 오래" 걸리면 테스트를 실패로 표시하는 초 단위 제한
+   시간.
+
+   제한 시간 값은 regrtest "--timeout" 명령 줄 옵션에 따라 다릅니다.
+
+   "SHORT_TIMEOUT"을 사용하는 테스트가 느린 빌드 봇에서 무작위로 실패
+   하기 시작하면, 대신 "LONG_TIMEOUT"을 사용합니다.
+
+   기본값은 30초입니다.
+
+test.support.LONG_TIMEOUT
+
+   테스트 멈춤을 감지하기 위한 초 단위 제한 시간.
+
+   가장 느린 파이썬 빌드 봇에서 테스트 실패의 위험을 줄이기에 충분히
+   깁니다. 테스트가 "너무 오래" 걸리면 테스트를 실패로 표시하는 데 사
+   용해서는 안 됩니다. 제한 시간 값은 regrtest "--timeout" 명령 줄 옵
+   션에 따라 다릅니다.
+
+   기본값은 5분입니다.
+
+   "LOOPBACK_TIMEOUT", "INTERNET_TIMEOUT" 및 "SHORT_TIMEOUT"도 참조하
+   십시오.
+
+test.support.PGO
+
+   PGO에 유용하지 않은 테스트를 건너뛸 수 있을 때 설정합니다.
+
+test.support.PIPE_MAX_SIZE
+
+   쓰기 블로킹을 일으키기 위해, 하부 OS 파이프 버퍼 크기보다 클 가능성
+   이 높은 상수.
+
+test.support.SOCK_MAX_SIZE
+
+   쓰기 블로킹을 일으키기 위해, 하부 OS 소켓 버퍼 크기보다 클 가능성이
+   높은 상수.
+
+test.support.TEST_SUPPORT_DIR
+
+   "test.support"를 포함하는 최상위 디렉터리로 설정합니다.
+
+test.support.TEST_HOME_DIR
+
+   테스트 패키지의 최상위 디렉터리로 설정합니다.
+
+test.support.TEST_DATA_DIR
+
+   테스트 패키지 내의 "data" 디렉터리로 설정합니다.
+
+test.support.MAX_Py_ssize_t
+
+   대용량 메모리 테스트를 위해 "sys.maxsize"로 설정합니다.
+
+test.support.max_memuse
+
+   대용량 메모리 테스트를 위한 메모리 제한으로 "set_memlimit()"에 의해
+   설정됩니다. "MAX_Py_ssize_t"에 의해 제한됩니다.
+
+test.support.real_max_memuse
+
+   대용량 메모리 테스트를 위한 메모리 제한으로 "set_memlimit()"에 의해
+   설정됩니다. "MAX_Py_ssize_t"에 의해 제한되지 않습니다.
+
+test.support.MISSING_C_DOCSTRINGS
+
+   Set to "True" if Python is built without docstrings (the
+   "WITH_DOC_STRINGS" macro is not defined). See the "configure
+   --without-doc-strings" option.
+
+   See also the "HAVE_DOCSTRINGS" variable.
+
+test.support.HAVE_DOCSTRINGS
+
+   Set to "True" if function docstrings are available. See the "python
+   -OO" option, which strips docstrings of functions implemented in
+   Python.
+
+   See also the "MISSING_C_DOCSTRINGS" variable.
+
+test.support.TEST_HTTP_URL
+
+   네트워크 테스트를 위한 전용 HTTP 서버의 URL을 정의합니다.
+
+test.support.ALWAYS_EQ
+
+   모든 것과 같은 객체. 혼합형 비교를 테스트하는 데 사용됩니다.
+
+test.support.NEVER_EQ
+
+   어떤 것과도 같지 않은 객체 ("ALWAYS_EQ"에도 해당합니다). 혼합형 비
+   교를 테스트하는 데 사용됩니다.
+
+test.support.LARGEST
+
+   모든 것보다 큰 객체 (자신은 제외하고). 혼합형 비교를 테스트하는 데
+   사용됩니다.
+
+test.support.SMALLEST
+
+   모든 것보다 작은 객체 (자신은 제외하고). 혼합형 비교를 테스트하는
+   데 사용됩니다.
+
+"test.support" 모듈은 다음 함수를 정의합니다:
+
+test.support.is_resource_enabled(resource)
+
+   *resource*가 활성화되고 사용할 수 있으면 "True"를 반환합니다. 사용
+   가능한 리소스 목록은 "test.regrtest"가 테스트를 실행할 때만 설정됩
+   니다.
+
+test.support.python_is_optimized()
+
+   파이썬이 "-O0"이나 "-Og"로 빌드되지 않았으면 "True"를 반환합니다.
+
+test.support.with_pymalloc()
+
+   Return "_testcapi.WITH_PYMALLOC".
+
+test.support.requires(resource, msg=None)
+
+   *resource*를 사용할 수 없으면 "ResourceDenied"를 발생시킵니다.
+   *msg*는 "ResourceDenied"가 발생한다면 이에 대한 인자입니다.
+   "__name__"이 "'__main__'"인 함수에 의해 호출되면 항상 "True"를 반환
+   합니다. "test.regrtest"에서 테스트를 실행할 때 사용됩니다.
+
+test.support.sortdict(dict)
+
+   정렬된 키로 *dict*의 repr을 반환합니다.
+
+test.support.findfile(filename, subdir=None)
+
+   *filename*이라는 파일의 경로를 반환합니다. 일치하는 것이 없으면
+   *filename*이 반환됩니다. 이것은 파일의 경로일 수 있어서 실패와 같지
+   않습니다.
+
+   *subdir* 설정은 경로 디렉터리를 직접 찾는 대신 파일을 찾는 데 사용
+   할 상대 경로를 나타냅니다.
+
+test.support.match_test(test)
+
+   Determine whether *test* matches the patterns set in
+   "set_match_tests()".
+
+test.support.set_match_tests(accept_patterns=None, ignore_patterns=None)
+
+   Define match patterns on test filenames and test method names for
+   filtering tests.
+
+test.support.run_unittest(*classes)
+
+   Execute "unittest.TestCase" subclasses passed to the function. The
+   function scans the classes for methods starting with the prefix
+   "test_" and executes the tests individually.
+
+   It is also legal to pass strings as parameters; these should be
+   keys in "sys.modules". Each associated module will be scanned by
+   "unittest.TestLoader.loadTestsFromModule()". This is usually seen
+   in the following "test_main()" function:
+
+      def test_main():
+          support.run_unittest(__name__)
+
+   This will run all tests defined in the named module.
+
+test.support.run_doctest(module, verbosity=None, optionflags=0)
+
+   Run "doctest.testmod()" on the given *module*.  Return
+   "(failure_count, test_count)".
+
+   If *verbosity* is "None", "doctest.testmod()" is run with verbosity
+   set to "verbose".  Otherwise, it is run with verbosity set to
+   "None".  *optionflags* is passed as "optionflags" to
+   "doctest.testmod()".
+
+test.support.setswitchinterval(interval)
+
+   "sys.setswitchinterval()"을 주어진 *interval*로 설정합니다. 시스템
+   이 멈추는 것을 방지하기 위해 안드로이드 시스템을 위한 최소 간격을
+   정의합니다.
+
+test.support.check_impl_detail(**guards)
+
+   이 검사를 사용하여 CPython의 구현 별 테스트를 보호하거나 인자로 보
+   호되는 구현에서만 실행합니다. 이 함수는 호스트 플랫폼에 따라 "True"
+   나 "False"를 반환합니다. 사용 예:
+
+      check_impl_detail()               # Only on CPython (default).
+      check_impl_detail(jython=True)    # Only on Jython.
+      check_impl_detail(cpython=False)  # Everywhere except CPython.
+
+test.support.set_memlimit(limit)
+
+   대용량 메모리 테스트를 위해 "max_memuse"와 "real_max_memuse" 값을
+   설정합니다.
+
+test.support.record_original_stdout(stdout)
+
+   *stdout*의 값을 저장합니다. regrtest가 시작될 때 stdout을 잡기 위한
+   것입니다.
+
+test.support.get_original_stdout()
+
+   "record_original_stdout()"에 의해 설정된 원래 stdout이나 설정되지
+   않았으면 "sys.stdout"을 반환합니다.
+
+test.support.args_from_interpreter_flags()
+
+   "sys.flags"와 "sys.warnoptions"의 현재 설정을 재현하는 명령 줄 인자
+   리스트를 반환합니다.
+
+test.support.optim_args_from_interpreter_flags()
+
+   "sys.flags"의 현재 최적화 설정을 재현하는 명령 줄 인자 리스트를 반
+   환합니다.
+
+test.support.captured_stdin()
+test.support.captured_stdout()
+test.support.captured_stderr()
+
+   명명된 스트림을 "io.StringIO" 객체로 일시적으로 대체하는 컨텍스트
+   관리자.
+
+   출력 스트림 사용 예:
+
+      with captured_stdout() as stdout, captured_stderr() as stderr:
+          print("hello")
+          print("error", file=sys.stderr)
+      assert stdout.getvalue() == "hello\n"
+      assert stderr.getvalue() == "error\n"
+
+   입력 스트림 사용 예:
+
+      with captured_stdin() as stdin:
+          stdin.write('hello\n')
+          stdin.seek(0)
+          # call test code that consumes from sys.stdin
+          captured = input()
+      self.assertEqual(captured, "hello")
+
+test.support.disable_faulthandler()
+
+   "faulthandler"를 일시적으로 비활성화하는 컨텍스트 관리자.
+
+test.support.gc_collect()
+
+   가능한 한 많은 객체를 수거하도록 강제합니다. 이는 가비지 수거기가
+   적시에 할당 해제를 보장하지 않기 때문에 필요합니다. 이는 "__del__"
+   메서드가 예상보다 늦게 호출될 수 있고 약한 참조(weakrefs)가 예상보
+   다 오래 살아있을 수 있음을 의미합니다.
+
+test.support.disable_gc()
+
+   진입할 때 가비지 수거기를 비활성화하는 컨텍스트 관리자. 탈출할 때,
+   가비지 수거기는 이전 상태로 복원됩니다.
+
+test.support.swap_attr(obj, attr, new_val)
+
+   어트리뷰트를 새 객체로 스와프하는 컨텍스트 관리자.
+
+   용법:
+
+      with swap_attr(obj, "attr", 5):
+          ...
+
+   이렇게 하면 "with" 블록의 기간 중 "obj.attr"이 5로 설정되고, 블록
+   끝에서 이전 값이 복원됩니다. "obj"에 "attr"이 없으면, 만들어지고 블
+   록의 끝에서 삭제됩니다.
+
+   이전 값(또는 존재하지 않으면 "None")이 "as" 절의 대상(있다면)에 대
+   입됩니다.
+
+test.support.swap_item(obj, attr, new_val)
+
+   항목을 새 객체로 스와프하는 컨텍스트 관리자.
+
+   용법:
+
+      with swap_item(obj, "item", 5):
+          ...
+
+   이렇게 하면 "with" 블록의 기간 중 "obj["item"]"이 5로 설정되고, 블
+   록 끝에서 이전 값이 복원됩니다. "obj"에 "item"이 없으면, 만들어지고
+   블록의 끝에서 삭제됩니다.
+
+   이전 값(또는 존재하지 않으면 "None")이 "as" 절의 대상(있다면)에 대
+   입됩니다.
+
+test.support.print_warning(msg)
+
+   "sys.__stderr__"에 경고를 인쇄합니다. 메시지를 다음처럼 포맷합니다:
+   "f"Warning -- {msg}"". *msg*가 여러 줄로 구성되면, 각 줄에
+   ""Warning -- "" 접두사를 추가합니다.
+
+   버전 3.9에 추가.
+
+test.support.wait_process(pid, *, exitcode, timeout=None)
+
+   프로세스 *pid*가 완료될 때까지 기다렸다가 프로세스 종료 코드가
+   *exitcode*인지 확인합니다.
+
+   프로세스 종료 코드가 *exitcode*와 같지 않으면 "AssertionError"를 발
+   생시킵니다.
+
+   프로세스가 *timeout*(기본적으로 "SHORT_TIMEOUT") 초보다 오래 실행되
+   면, 프로세스를 죽이고 "AssertionError"를 발생시킵니다. 제한 시간 기
+   능은 윈도우에서 사용할 수 없습니다.
+
+   버전 3.9에 추가.
+
+test.support.calcobjsize(fmt)
+
+   Return the size of the "PyObject" whose structure members are
+   defined by *fmt*. The returned value includes the size of the
+   Python object header and alignment.
+
+test.support.calcvobjsize(fmt)
+
+   Return the size of the "PyVarObject" whose structure members are
+   defined by *fmt*. The returned value includes the size of the
+   Python object header and alignment.
+
+test.support.checksizeof(test, o, size)
+
+   테스트 케이스 *test*에 대해, *o*의 "sys.getsizeof"에 GC 헤더 크기를
+   더한 값이 *size*와 같다고 어서션 합니다.
+
+@test.support.anticipate_failure(condition)
+
+   "unittest.expectedFailure()"로 테스트를 조건부로 표시하는 데코레이
+   터. 이 데코레이터를 사용하려면 관련 추적기(tracker) 이슈를 식별하는
+   관련 주석이 있어야 합니다.
+
+test.support.system_must_validate_cert(f)
+
+   TLS 인증서 유효성 검사 실패 시 데코레이트된 테스트를 건너뛰는 데코
+   레이터.
+
+@test.support.run_with_locale(catstr, *locales)
+
+   다른 로케일에서 함수를 실행하기 위한 데코레이터로, 완료된 후 올바르
+   게 재설정합니다. *catstr*은 문자열로 된 로케일 범주입니다 (예를 들
+   어 ""LC_ALL""). 전달된 *locales*는 순차적으로 시도되며, 첫 번째 유
+   효한 로케일이 사용됩니다.
+
+@test.support.run_with_tz(tz)
+
+   특정 시간대에서 함수를 실행하기 위한 데코레이터로, 완료된 후 올바르
+   게 재설정합니다.
+
+@test.support.requires_freebsd_version(*min_version)
+
+   FreeBSD에서 테스트를 실행할 때 최소 버전을 위한 데코레이터. FreeBSD
+   버전이 최소 버전보다 낮으면, 테스트를 건너뜁니다.
+
+@test.support.requires_linux_version(*min_version)
+
+   리눅스에서 테스트를 실행할 때 최소 버전을 위한 데코레이터. 리눅스
+   버전이 최소 버전보다 낮으면, 테스트를 건너뜁니다.
+
+@test.support.requires_mac_version(*min_version)
+
+   macOS에서 테스트를 실행할 때 최소 버전을 위한 데코레이터. macOS 버
+   전이 최소 버전보다 낮으면, 테스트를 건너뜁니다.
+
+@test.support.requires_IEEE_754
+
+   비 IEEE 754 플랫폼에서 테스트를 건너뛰는 데코레이터.
+
+@test.support.requires_zlib
+
+   "zlib"가 없으면 테스트를 건너뛰는 데코레이터.
+
+@test.support.requires_gzip
+
+   "gzip"이 없으면 테스트를 건너뛰는 데코레이터.
+
+@test.support.requires_bz2
+
+   "bz2"가 없으면 테스트를 건너뛰는 데코레이터.
+
+@test.support.requires_lzma
+
+   "lzma"가 없으면 테스트를 건너뛰는 데코레이터.
+
+@test.support.requires_resource(resource)
+
+   *resource*를 사용할 수 없으면 테스트를 건너뛰는 데코레이터.
+
+@test.support.requires_docstrings
+
+   "HAVE_DOCSTRINGS"일 때만 테스트를 실행하는 데코레이터.
+
+@test.support.cpython_only
+
+   CPython에만 적용되는 테스트용 데코레이터.
+
+@test.support.impl_detail(msg=None, **guards)
+
+   *guards*에 "check_impl_detail()"을 호출하는 데코레이터. "False"가
+   반환되면, 테스트를 건너뛰는 이유로 *msg*를 사용합니다.
+
+@test.support.no_tracing
+
+   테스트 기간 중 일시적으로 추적을 해제하는 데코레이터.
+
+@test.support.refcount_test
+
+   참조 횟수를 수반하는 테스트를 위한 데코레이터. 데코레이터는 CPython
+   에 의해 실행되지 않으면 테스트를 실행하지 않습니다. 추적 함수로 인
+   한 예기치 않은 참조 횟수를 방지하기 위해 테스트 기간 중 모든 추적
+   함수가 설정 해제됩니다.
+
+@test.support.bigmemtest(size, memuse, dry_run=True)
+
+   bigmem 테스트를 위한 데코레이터.
+
+   *size*는 테스트를 위해 요청된 크기입니다 (임의의 테스트가 해석하는
+   단위.) *memuse*는 테스트 단위당 바이트 수, 또는 이의 적절한 추정치
+   입니다. 예를 들어, 각각 4GiB인 두 개의 바이트 버퍼가 필요한 테스트
+   는 "@bigmemtest(size=_4G, memuse=2)"로 데코레이트 될 수 있습니다.
+
+   *size* 인자는 일반적으로 데코레이트 된 테스트 메서드에 추가 인자로
+   전달됩니다. *dry_run*이 "True"이면, 테스트 메서드에 전달된 값이 요
+   청된 값보다 작을 수 있습니다. *dry_run*이 "False"이면, "-M"가 지정
+   되지 않은 경우 테스트가 더미 실행을 지원하지 않음을 의미합니다.
+
+@test.support.bigaddrspacetest
+
+   주소 공간을 채우는 테스트용 데코레이터.
+
+test.support.check_syntax_error(testcase, statement, errtext='', *, lineno=None, offset=None)
+
+   *statement* 컴파일을 시도하여 *statement*의 구문 에러를 테스트합니
+   다. *testcase*는 테스트를 위한 "unittest" 인스턴스입니다. *errtext*
+   는 발생한 "SyntaxError"의 문자열 표현과 일치해야 하는 정규식입니다.
+   *lineno*가 "None"이 아니면, 예외 줄과 비교합니다. *offset*이 "None"
+   이 아니면, 예외의 오프셋과 비교합니다.
+
+test.support.open_urlresource(url, *args, **kw)
+
+   *url*을 엽니다. 열기에 실패하면, "TestFailed"를 발생시킵니다.
+
+test.support.reap_children()
+
+   서브 프로세스가 시작될 때마다 "test_main" 끝에 이것을 사용하십시오.
+   이렇게 하면 여분의 자식(좀비)이 남아서 리소스를 탐하지 않도록 하고
+   참조 누수를 찾을 때 문제가 발생하지 않도록 할 수 있습니다.
+
+test.support.get_attribute(obj, name)
+
+   어트리뷰트를 가져옵니다, "AttributeError"가 발생하면
+   "unittest.SkipTest"를 발생시킵니다.
+
+test.support.catch_unraisable_exception()
+
+   "sys.unraisablehook()"를 사용하여 발생시킬 수 없는(unraisable) 예외
+   를 포착하는 컨텍스트 관리자.
+
+   예외 값("cm.unraisable.exc_value")을 저장하면 참조 순환을 만듭니다.
+   컨텍스트 관리자가 탈출할 때 참조 순환이 명시적으로 끊어집니다.
+
+   객체("cm.unraisable.object")를 저장하면 파이널라이즈 중인 객체로 설
+   정되어 있으면 되살릴 수 있습니다. 컨텍스트 관리자를 탈출하면 저장된
+   객체가 지워집니다.
+
+   용법:
+
+      with support.catch_unraisable_exception() as cm:
+          # code creating an "unraisable exception"
+          ...
+
+          # check the unraisable exception: use cm.unraisable
+          ...
+
+      # cm.unraisable attribute no longer exists at this point
+      # (to break a reference cycle)
+
+   버전 3.8에 추가.
+
+test.support.load_package_tests(pkg_dir, loader, standard_tests, pattern)
+
+   테스트 패키지에서 사용하기 위한 "unittest" "load_tests" 프로토콜의
+   일반 구현. *pkg_dir*는 패키지의 루트 디렉터리입니다; *loader*,
+   *standard_tests* 및 *pattern*은 "load_tests"가 기대하는 인자입니다.
+   간단한 경우, 테스트 패키지의 "__init__.py"는 다음과 같을 수 있습니
+   다:
+
+      import os
+      from test.support import load_package_tests
+
+      def load_tests(*args):
+          return load_package_tests(os.path.dirname(__file__), *args)
+
+test.support.detect_api_mismatch(ref_api, other_api, *, ignore=())
+
+   *ignore*에 지정된 이 검사에서 무시할 정의된 항목 리스트를 제외하고,
+   *other_api*에서 찾을 수 없는 *ref_api*의 어트리뷰트, 함수 또는 메서
+   드 집합을 반환합니다.
+
+   기본적으로 이것은 '_'로 시작하는 내부(private) 어트리뷰트를 건너뛰
+   지만, 모든 매직 메서드, 즉 '__'로 시작하고 끝나는 것들을 포함합니다
+   .
+
+   버전 3.5에 추가.
+
+test.support.patch(test_instance, object_to_patch, attr_name, new_value)
+
+   *object_to_patch.attr_name*을 *new_value*로 대체합니다. 또한
+   *test_instance*에 대한 정리 절차를 추가하여 *object_to_patch*의
+   *attr_name*을 복원합니다. *attr_name*은 *object_to_patch*의 유효한
+   어트리뷰트여야 합니다.
+
+test.support.run_in_subinterp(code)
+
+   서브 인터프리터에서 *code*를 실행합니다. "tracemalloc"이 활성화되면
+   "unittest.SkipTest"를 발생시킵니다.
+
+test.support.check_free_after_iterating(test, iter, cls, args=())
+
+   이터레이션 후 *cls*의 인스턴스가 할당 해제되었음을 어서션 합니다.
+
+test.support.missing_compiler_executable(cmd_names=[])
+
+   *cmd_names*에 이름이 나열된 컴파일러 실행 파일이나 *cmd_names*가 비
+   어있을 때 모든 컴파일러 실행 파일이 있는지 확인하고 누락된 첫 번째
+   실행 파일을 반환하거나 누락된 것이 없으면 "None"을 반환합니다.
+
+test.support.check__all__(test_case, module, name_of_module=None, extra=(), not_exported=())
+
+   *module*의 "__all__" 변수에 모든 공용 이름이 포함되어 있는지 어서션
+   합니다.
+
+   모듈의 공용 이름(그것의 API)은 공용 이름 규칙과 일치하고 *module*에
+   정의되었는지에 따라 자동으로 감지됩니다.
+
+   *name_of_module* 인자는 공용 API로 감지하기 위해 API를 정의 할 수
+   있는 모듈을 (문자열이나 튜플로) 지정할 수 있습니다. 이에 대한 한 가
+   지 사례는 *module*이 다른 모듈에서 공용 API의 일부를 임포트 할 때입
+   니다, C 백 엔드도 가능합니다 ("csv"와 그것의 "_csv" 처럼).
+
+   The *extra* argument can be a set of names that wouldn't otherwise
+   be automatically detected as "public", like objects without a
+   proper "__module__" attribute. If provided, it will be added to the
+   automatically detected ones.
+
+   *not_exported* 인자는 이름이 공용처럼 보이더라도 공용 API의 일부로
+   취급해서는 안 되는 이름 집합일 수 있습니다.
+
+   사용 예:
+
+      import bar
+      import foo
+      import unittest
+      from test import support
+
+      class MiscTestCase(unittest.TestCase):
+          def test__all__(self):
+              support.check__all__(self, foo)
+
+      class OtherTestCase(unittest.TestCase):
+          def test__all__(self):
+              extra = {'BAR_CONST', 'FOO_CONST'}
+              not_exported = {'baz'}  # Undocumented name.
+              # bar imports part of its API from _bar.
+              support.check__all__(self, bar, ('bar', '_bar'),
+                                   extra=extra, not_exported=not_exported)
+
+   버전 3.6에 추가.
+
+test.support.skip_if_broken_multiprocessing_synchronize()
+
+   Skip tests if the "multiprocessing.synchronize" module is missing,
+   if there is no available semaphore implementation, or if creating a
+   lock raises an "OSError".
+
+   버전 3.10에 추가.
+
+test.support.check_disallow_instantiation(test_case, tp, *args, **kwds)
+
+   Assert that type *tp* cannot be instantiated using *args* and
+   *kwds*.
+
+   버전 3.10에 추가.
+
+test.support.adjust_int_max_str_digits(max_digits)
+
+   This function returns a context manager that will change the global
+   "sys.set_int_max_str_digits()" setting for the duration of the
+   context to allow execution of test code that needs a different
+   limit on the number of digits when converting between an integer
+   and string.
+
+   버전 3.10.7에 추가.
+
+"test.support" 모듈은 다음 클래스를 정의합니다:
+
+class test.support.SuppressCrashReport
+
+   서브 프로세스를 충돌시킬 것으로 예상되는 테스트에서 충돌 대화 상자
+   팝업을 방지하는 데 사용되는 컨텍스트 관리자.
+
+   윈도우에서는, SetErrorMode를 사용하여 윈도우 에러 보고 대화 상자를
+   비활성화합니다.
+
+   On UNIX, "resource.setrlimit()" is used to set
+   "resource.RLIMIT_CORE"'s soft limit to 0 to prevent coredump file
+   creation.
+
+   On both platforms, the old value is restored by "__exit__()".
+
+class test.support.SaveSignals
+
+   파이썬 시그널 처리기가 등록한 시그널 처리기를 저장하고 복원하는 클
+   래스.
+
+   save(self)
+
+      Save the signal handlers to a dictionary mapping signal numbers
+      to the current signal handler.
+
+   restore(self)
+
+      Set the signal numbers from the "save()" dictionary to the saved
+      handler.
+
+class test.support.Matcher
+
+   matches(self, d, **kwargs)
+
+      단일 딕셔너리를 제공된 인자와 일치시키려고 합니다.
+
+   match_value(self, k, dv, v)
+
+      단일 저장된 값(*dv*)을 제공된 값(*v*)과 일치시키려고 합니다.
+
+class test.support.BasicTestRunner
+
+   run(test)
+
+      Run *test* and return the result.
+
+
+"test.support.socket_helper" --- 소켓 테스트용 유틸리티
+*******************************************************
+
+"test.support.socket_helper" 모듈은 소켓 테스트를 지원합니다.
+
+버전 3.9에 추가.
+
+test.support.socket_helper.IPV6_ENABLED
+
+   이 호스트에서 IPv6가 활성화되어 있으면 "True"로 설정하고, 그렇지 않
+   으면 "False"로 설정합니다.
+
+test.support.socket_helper.find_unused_port(family=socket.AF_INET, socktype=socket.SOCK_STREAM)
+
+   바인딩에 적합해야 하는 미사용 포트를 반환합니다. 이는 "sock" 매개
+   변수와 같은 패밀리와 유형으로 (기본값은 "AF_INET", "SOCK_STREAM")
+   임시 소켓을 만들고, 포트를 0으로 설정하여 지정된 호스트 주소(기본값
+   은 "0.0.0.0")에 바인딩하여, OS에서 사용되지 않은 임시 포트를 도출하
+   여 수행됩니다. 그런 다음 임시 소켓이 닫히고 삭제되고, 임시 포트가
+   반환됩니다.
+
+   이 메서드나 "bind_port()"는 테스트 기간 중 서버 소켓을 특정 포트에
+   바인딩해야 하는 모든 테스트에 사용해야 합니다. 어떤 것을 사용할 것
+   인지는 호출하는 코드가 파이썬 소켓을 만드는지, 또는 사용되지 않은
+   포트가 생성자에서 제공되어야 하는지 또는 외부 프로그램에 전달되어야
+   하는지 (즉 openssl의 s_server 모드에 대한 "-accept" 인자)에 따라 다
+   릅니다. 가능하면 항상 "find_unused_port()"보다 "bind_port()"를 선호
+   하십시오. 하드 코딩된 포트를 사용하면 여러 테스트 인스턴스를 동시에
+   실행할 수 없게 되어 빌드 봇에 문제가 될 수 있어서 피하는 것이 좋습
+   니다.
+
+test.support.socket_helper.bind_port(sock, host=HOST)
+
+   소켓을 사용 가능한 포트에 바인딩하고 포트 번호를 반환합니다. 바인딩
+   되지 않은 포트를 사용하기 위해 임시 포트에 의존합니다. 이는 특히 빌
+   드 봇 환경에서, 많은 테스트가 동시에 실행될 수 있어서 중요합니다.
+   이 메서드는 "sock.family"가 "AF_INET"이고 "sock.type"이
+   "SOCK_STREAM"이고, 소켓에 "SO_REUSEADDR"이나 "SO_REUSEPORT"가 설정
+   되면 예외가 발생합니다. 테스트는 TCP/IP 소켓에 대해 이러한 소켓 옵
+   션을 설정해서는 안 됩니다. 이러한 옵션을 설정하는 유일한 경우는 여
+   러 UDP 소켓을 통해 멀티캐스팅을 테스트하는 것입니다.
+
+   또한, "SO_EXCLUSIVEADDRUSE" 소켓 옵션을 사용할 수 있으면 (즉 윈도우
+   에서), 소켓에 설정됩니다. 이렇게 하면 다른 사람이 테스트 기간 중 우
+   리의 호스트/포트에 바인딩하는 것을 방지할 수 있습니다.
+
+test.support.socket_helper.bind_unix_socket(sock, addr)
+
+   유닉스 소켓을 바인드 합니다, "PermissionError"가 발생하면
+   "unittest.SkipTest"를 발생시킵니다.
+
+@test.support.socket_helper.skip_unless_bind_unix_socket
+
+   유닉스 소켓용 "bind()" 기능이 필요한 테스트를 실행하기 위한 데코레
+   이터.
+
+test.support.socket_helper.transient_internet(resource_name, *, timeout=30.0, errnos=())
+
+   인터넷 연결과 관련된 다양한 문제가 예외로 나타날 때
+   "ResourceDenied"를 발생시키는 컨텍스트 관리자.
+
+
+"test.support.script_helper" --- 파이썬 실행 테스트용 유틸리티
+**************************************************************
+
+"test.support.script_helper" 모듈은 파이썬의 스크립트 실행 테스트를 지
+원합니다.
+
+test.support.script_helper.interpreter_requires_environment()
+
+   "sys.executable 인터프리터"를 실행하기 위해 환경 변수가 필요하면
+   "True"를 반환합니다.
+
+   "assert_python*()" 함수를 사용하여 격리 모드("-I")를 시작하거나 환
+   경 없음 모드("-E") 서브 인터프리터 프로세스를 시작해야 하는 테스트
+   를 어노테이트 하는 "@unittest.skipIf()"와 함께 사용하도록 설계되었
+   습니다.
+
+   정상적인 빌드와 테스트는 이러한 상황을 만나지 않지만, 파이썬의 현재
+   홈 찾기 논리로 명확한 홈이 없는 인터프리터에서 표준 라이브러리 테스
+   트 스위트를 실행하려고 할 때 발생할 수 있습니다.
+
+   "PYTHONHOME" 설정은 이러한 상황에서 대부분의 테스트 스위트를 실행하
+   는 한 가지 방법입니다. "PYTHONPATH"나 "PYTHONUSERSITE"는 인터프리터
+   가 시작될 수 있는지에 영향을 줄 수 있는 다른 공통 환경 변수입니다.
+
+test.support.script_helper.run_python_until_end(*args, **env_vars)
+
+   서브 프로세스에서 인터프리터를 실행하기 위해 *env_vars* 기반 환경을
+   설정합니다. 값에는 "__isolated", "__cleanenv", "__cwd" 및 "TERM"이
+   포함될 수 있습니다.
+
+   버전 3.9에서 변경: 이 함수는 더는 *stderr*에서 공백을 제거하지 않습
+   니다.
+
+test.support.script_helper.assert_python_ok(*args, **env_vars)
+
+   *args*와 선택적 환경 변수 *env_vars*를 사용하여 인터프리터를 실행하
+   면 성공("rc == 0")하고 "(return code, stdout, stderr)" 튜플을 반환
+   함을 어서션 합니다.
+
+   *__cleanenv* 키워드 전용 매개변수가 설정되면, *env_vars*가 새로운
+   환경으로 사용됩니다.
+
+   파이썬은 *__isolated* 키워드 전용 매개변수가 "False"로 설정된 경우
+   를 제외하고, 격리 모드(명령 줄 옵션 "-I")에서 시작됩니다.
+
+   버전 3.9에서 변경: 이 함수는 더는 *stderr*에서 공백을 제거하지 않습
+   니다.
+
+test.support.script_helper.assert_python_failure(*args, **env_vars)
+
+   *args*와 선택적 환경 변수 *env_vars*를 사용하여 인터프리터 실행하면
+   실패("rc != 0")하고 "(return code, stdout, stderr)" 튜플을 반환함을
+   어서션 합니다.
+
+   추가 옵션은 "assert_python_ok()"를 참조하십시오.
+
+   버전 3.9에서 변경: 이 함수는 더는 *stderr*에서 공백을 제거하지 않습
+   니다.
+
+test.support.script_helper.spawn_python(*args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kw)
+
+   주어진 인자로 파이썬 서브 프로세스를 실행합니다.
+
+   *kw*는 "subprocess.Popen()"에 전달할 추가 키워드 인자입니다.
+   "subprocess.Popen" 객체를 반환합니다.
+
+test.support.script_helper.kill_python(p)
+
+   완료될 때까지 주어진 "subprocess.Popen" 프로세스를 실행하고 stdout
+   을 반환합니다.
+
+test.support.script_helper.make_script(script_dir, script_basename, source, omit_suffix=False)
+
+   *script_dir*과 *script_basename* 경로에 *source*를 포함하는 스크립
+   트를 만듭니다. *omit_suffix*가 "False"이면, 이름에 ".py"를 추가합니
+   다. 전체 스크립트 경로를 반환합니다.
+
+test.support.script_helper.make_zip_script(zip_dir, zip_basename, script_name, name_in_zip=None)
+
+   *script_name*의 파일을 포함하는 확장자가 "zip"인 zip 파일을
+   *zip_dir*과 *zip_basename*에 만듭니다. *name_in_zip*은 아카이브 이
+   름입니다. "(full path, full path of archive name)"을 포함하는 튜플
+   을 반환합니다.
+
+test.support.script_helper.make_pkg(pkg_dir, init_source='')
+
+   *init_source*를 내용으로 하는 "__init__" 파일을 포함하는 *pkg_dir*
+   이라는 디렉터리를 만듭니다.
+
+test.support.script_helper.make_zip_pkg(zip_dir, zip_basename, pkg_name, script_basename, source, depth=1, compiled=False)
+
+   빈 "__init__" 파일과 *source*를 포함하는 파일 *script_basename*을
+   포함하는 zip 패키지 디렉터리를 *zip_dir*과 *zip_basename* 경로로 만
+   듭니다. *compiled*가 "True"이면, 두 소스 파일이 모두 컴파일되어 zip
+   패키지에 추가됩니다. 전체 zip 경로와 zip 파일의 아카이브 이름의 튜
+   플을 반환합니다.
+
+
+"test.support.bytecode_helper" --- 올바른 바이트 코드 생성 테스트를 위한 지원 도구
+**********************************************************************************
+
+"test.support.bytecode_helper" 모듈은 바이트 코드 생성 테스트와 검사를
+지원합니다.
+
+버전 3.9에 추가.
+
+모듈은 다음 클래스를 정의합니다:
+
+class test.support.bytecode_helper.BytecodeTestCase(unittest.TestCase)
+
+   이 클래스에는 바이트 코드를 검사하기 위한 사용자 정의 어서션 메서드
+   가 있습니다.
+
+BytecodeTestCase.get_disassembly_as_string(co)
+
+   *co*의 역 어셈블리를 문자열로 반환합니다.
+
+BytecodeTestCase.assertInBytecode(x, opname, argval=_UNSPECIFIED)
+
+   *opname*이 발견되면 명령어를 반환하고, 그렇지 않으면
+   "AssertionError"를 던집니다.
+
+BytecodeTestCase.assertNotInBytecode(x, opname, argval=_UNSPECIFIED)
+
+   *opname*이 발견되면 "AssertionError"를 던집니다.
+
+
+"test.support.threading_helper" --- threading 테스트용 유틸리티
+***************************************************************
+
+"test.support.threading_helper" 모듈은 threading 테스트를 지원합니다.
+
+버전 3.10에 추가.
+
+test.support.threading_helper.join_thread(thread, timeout=None)
+
+   *timeout* 내에 *thread*에 조인(join)합니다. 스레드가 *timeout* 초
+   후에도 여전히 살아 있으면 "AssertionError"를 발생시킵니다.
+
+@test.support.threading_helper.reap_threads
+
+   테스트가 실패하더라도 스레드를 정리하는 데코레이터.
+
+test.support.threading_helper.start_threads(threads, unlock=None)
+
+   Context manager to start *threads*, which is a sequence of threads.
+   *unlock* is a function called after the threads are started, even
+   if an exception was raised; an example would be
+   "threading.Event.set()". "start_threads" will attempt to join the
+   started threads upon exit.
+
+test.support.threading_helper.threading_cleanup(*original_values)
+
+   *original_values*에 지정되지 않은 스레드를 정리합니다. 테스트가 백
+   그라운드에서 실행 중인 스레드를 남겨두면 경고를 내도록 설계되었습니
+   다.
+
+test.support.threading_helper.threading_setup()
+
+   현재 스레드 수와 매달린(dangling) 스레드의 복사본을 반환합니다.
+
+test.support.threading_helper.wait_threads_exit(timeout=None)
+
+   "with" 문에서 만들어진 모든 스레드가 종료할 때까지 대기하는 컨텍스
+   트 관리자.
+
+test.support.threading_helper.catch_threading_exception()
+
+   "threading.excepthook()"을 사용하여 "threading.Thread" 예외를 포착
+   하는 컨텍스트 관리자.
+
+   예외가 포착될 때 설정되는 어트리뷰트:
+
+   * "exc_type"
+
+   * "exc_value"
+
+   * "exc_traceback"
+
+   * "thread"
+
+   "threading.excepthook()" 설명서를 참조하십시오.
+
+   이러한 어트리뷰트들은 컨텍스트 관리자 탈출 시에 삭제됩니다.
+
+   용법:
+
+      with threading_helper.catch_threading_exception() as cm:
+          # code spawning a thread which raises an exception
+          ...
+
+          # check the thread exception, use cm attributes:
+          # exc_type, exc_value, exc_traceback, thread
+          ...
+
+      # exc_type, exc_value, exc_traceback, thread attributes of cm no longer
+      # exists at this point
+      # (to avoid reference cycles)
+
+   버전 3.8에 추가.
+
+
+"test.support.os_helper" --- os 테스트용 유틸리티
+*************************************************
+
+"test.support.os_helper" 모듈은 os 테스트를 지원합니다.
+
+버전 3.10에 추가.
+
+test.support.os_helper.FS_NONASCII
+
+   "os.fsencode()"로 인코딩 할 수 있는 비 ASCII 문자.
+
+test.support.os_helper.SAVEDCWD
+
+   "os.getcwd()"로 설정합니다.
+
+test.support.os_helper.TESTFN
+
+   임시 파일의 이름으로 사용하기에 안전한 이름으로 설정합니다. 만들어
+   진 모든 임시 파일은 닫히고 언 링크(제거) 되어야 합니다.
+
+test.support.os_helper.TESTFN_NONASCII
+
+   Set to a filename containing the "FS_NONASCII" character, if it
+   exists. This guarantees that if the filename exists, it can be
+   encoded and decoded with the default filesystem encoding. This
+   allows tests that require a non-ASCII filename to be easily skipped
+   on platforms where they can't work.
+
+test.support.os_helper.TESTFN_UNENCODABLE
+
+   엄격(strict) 모드에서 파일 시스템 인코딩으로 인코딩할 수 없는 파일
+   명(str 형)으로 설정합니다. 이러한 파일명을 생성할 수 없으면 "None"
+   일 수 있습니다.
+
+test.support.os_helper.TESTFN_UNDECODABLE
+
+   엄격(strict) 모드에서 파일 시스템 인코딩으로 디코딩할 수 없는 파일
+   명(bytes 형)으로 설정합니다. 이러한 파일명을 생성할 수 없으면
+   "None"일 수 있습니다.
+
+test.support.os_helper.TESTFN_UNICODE
+
+   임시 파일을 위한 비 ASCII 이름으로 설정합니다.
+
+class test.support.os_helper.EnvironmentVarGuard
+
+   환경 변수를 임시로 설정하거나 설정 해제하는 데 사용되는 클래스. 인
+   스턴스는 컨텍스트 관리자로 사용할 수 있으며 하부 "os.environ"을 조
+   회/수정하기 위한 완전한 딕셔너리 인터페이스를 가질 수 있습니다. 컨
+   텍스트 관리자를 탈출하면 이 인스턴스를 통해 수행된 환경 변수에 대한
+   모든 변경 사항이 되돌려집니다.
+
+   버전 3.1에서 변경: 딕셔너리 인터페이스가 추가되었습니다.
+
+class test.support.os_helper.FakePath(path)
+
+   Simple *path-like object*.  It implements the "__fspath__()" method
+   which just returns the *path* argument.  If *path* is an exception,
+   it will be raised in "__fspath__()".
+
+EnvironmentVarGuard.set(envvar, value)
+
+   일시적으로 환경 변수 "envvar"를 "value" 값으로 설정합니다.
+
+EnvironmentVarGuard.unset(envvar)
+
+   일시적으로 환경 변수 "envvar"를 설정 해제합니다.
+
+test.support.os_helper.can_symlink()
+
+   OS가 심볼릭 링크를 지원하면 "True"를, 그렇지 않으면 "False"를 반환
+   합니다.
+
+test.support.os_helper.can_xattr()
+
+   OS가 xattr을 지원하면 "True"를, 그렇지 않으면 "False"를 반환합니다.
+
+test.support.os_helper.change_cwd(path, quiet=False)
+
+   현재 작업 디렉터리를 *path*로 일시적으로 변경하고 그 디렉터리를 산
+   출하는 컨텍스트 관리자.
+
+   *quiet*가 "False"이면, 컨텍스트 관리자는 에러 시 예외를 발생시킵니
+   다. 그렇지 않으면, 경고만 발행하고 현재 작업 디렉터리를 같게 유지합
+   니다.
+
+test.support.os_helper.create_empty_file(filename)
+
+   *filename*으로 빈 파일을 만듭니다. 이미 있으면, 자릅니다.
+
+test.support.os_helper.fd_count()
+
+   열린 파일 기술자의 수를 셉니다.
+
+test.support.os_helper.fs_is_case_insensitive(directory)
+
+   *directory*의 파일 시스템이 대소 문자를 구분하지 않으면 "True"를 반
+   환합니다.
+
+test.support.os_helper.make_bad_fd()
+
+   임시 파일을 여닫아서 잘못된 파일 기술자를 만든 다음, 그 기술자를 반
+   환합니다.
+
+test.support.os_helper.rmdir(filename)
+
+   *filename*에 대해 "os.rmdir()"을 호출합니다. 윈도우 플랫폼에서는,
+   파일의 존재를 확인하는 대기 루프로 래핑 됩니다. 이는 파일을 열려있
+   는 상태로 유지하고 삭제를 막을 수 있는 안티바이러스 프로그램 때문에
+   필요합니다.
+
+test.support.os_helper.rmtree(path)
+
+   *path*에 대해 "shutil.rmtree()"를 호출하거나 "os.lstat()"과
+   "os.rmdir()"을 호출하여 경로와 해당 내용을 제거합니다. "rmdir()"과
+   마찬가지로, 윈도우 플랫폼에서, 이것은 파일의 존재를 확인하는 대기
+   루프로 래핑 됩니다.
+
+@test.support.os_helper.skip_unless_symlink
+
+   심볼릭 링크 지원이 필요한 테스트를 실행하기 위한 데코레이터.
+
+@test.support.os_helper.skip_unless_xattr
+
+   xattr 지원이 필요한 테스트를 실행하기 위한 데코레이터.
+
+test.support.os_helper.temp_cwd(name='tempcwd', quiet=False)
+
+   임시로 새 디렉터리를 만들고 현재 작업 디렉터리(CWD)를 변경하는 컨텍
+   스트 관리자.
+
+   컨텍스트 관리자는 현재 작업 디렉터리를 임시로 변경하기 전에 이름이
+   *name*인 임시 디렉터리를 현재 디렉터리에 만듭니다. *name*이 "None"
+   이면, 임시 디렉터리는 "tempfile.mkdtemp()"를 사용하여 만들어집니다.
+
+   *quiet*가 "False"이고 만들 수 없거나 CWD를 변경할 수 없으면, 에러가
+   발생합니다. 그렇지 않으면, 경고만 발생하고 원래 CWD가 사용됩니다.
+
+test.support.os_helper.temp_dir(path=None, quiet=False)
+
+   *path*에 임시 디렉터리를 만들고 그 디렉터리를 산출하는 컨텍스트 관
+   리자.
+
+   *path*가 "None"이면, 임시 디렉터리는 "tempfile.mkdtemp()"를 사용하
+   여 만들어집니다. *quiet*가 "False"이면, 컨텍스트 관리자는 에러 시
+   예외를 발생시킵니다. 그렇지 않으면, *path*가 지정되고 만들 수 없으
+   면, 경고만 발행됩니다.
+
+test.support.os_helper.temp_umask(umask)
+
+   프로세스 umask를 임시로 설정하는 컨텍스트 관리자.
+
+test.support.os_helper.unlink(filename)
+
+   *filename*에 대해 "os.unlink()"를 호출합니다. "rmdir()"과 마친가지
+   로, 윈도우 플랫폼에서는, 파일의 존재를 확인하는 대기 루프로 래핑 됩
+   니다.
+
+
+"test.support.import_helper" --- 임포트 테스트용 유틸리티
+*********************************************************
+
+"test.support.import_helper" 모듈은 임포트 테스트를 지원합니다.
+
+버전 3.10에 추가.
+
+test.support.import_helper.forget(module_name)
+
+   "sys.modules"에서 *module_name*이라는 모듈을 제거하고 모듈의 바이트
+   컴파일된 파일을 삭제합니다.
+
+test.support.import_helper.import_fresh_module(name, fresh=(), blocked=(), deprecated=False)
+
+   이 함수는 임포트 전에 "sys.modules"에서 명명된 모듈을 제거하여 명명
+   된 파이썬 모듈의 새 복사본을 임포트하고 반환합니다. "reload()"와 달
+   리, 원래 모듈은 이 연산의 영향을 받지 않습니다.
+
+   *fresh*는 임포트를 수행하기 전에 "sys.modules" 캐시에서 함께 제거되
+   는 추가 모듈 이름의 이터러블입니다.
+
+   *blocked*는 임포트 하는 동안 모듈 캐시에서 "None"으로 대체되는 모듈
+   이름의 이터러블로, 임포트 하려고 시도하면 "ImportError"가 발생하도
+   록 합니다.
+
+   명명된 모듈과 *fresh*와 *blocked* 매개 변수에 명명된 모든 모듈은 임
+   포트를 시작하기 전에 보관되고 새 임포트가 완료되면 "sys.modules"에
+   다시 삽입됩니다.
+
+   *deprecated*가 "True"이면 이 임포트 중에 모듈과 패키지 폐지 메시지
+   가 억제됩니다.
+
+   이 함수는 명명된 모듈을 임포트 할 수 없으면 "ImportError"를 발생시
+   킵니다.
+
+   사용 예:
+
+      # Get copies of the warnings module for testing without affecting the
+      # version being used by the rest of the test suite. One copy uses the
+      # C implementation, the other is forced to use the pure Python fallback
+      # implementation
+      py_warnings = import_fresh_module('warnings', blocked=['_warnings'])
+      c_warnings = import_fresh_module('warnings', fresh=['_warnings'])
+
+   버전 3.1에 추가.
+
+test.support.import_helper.import_module(name, deprecated=False, *, required_on=())
+
+   이 함수는 명명된 모듈을 임포트하고 반환합니다. 일반 임포트와 달리,
+   이 함수는 모듈을 임포트할 수 없으면 "unittest.SkipTest"를 발생시킵
+   니다.
+
+   *deprecated*가 "True"이면 이 임포트 중에 모듈과 패키지 폐지 메시지
+   가 억제됩니다. 모듈이 한 플랫폼에서는 필수지만, 다른 곳에서는 선택
+   적이면, *required_on*을 "sys.platform"과 비교할 플랫폼 접두사의 이
+   터러블로 설정합니다.
+
+   버전 3.1에 추가.
+
+test.support.import_helper.modules_setup()
+
+   "sys.modules"의 복사본을 반환합니다.
+
+test.support.import_helper.modules_cleanup(oldmodules)
+
+   내부 캐시를 보존하기 위해 *oldmodules*와 "encodings"를 제외한 모듈
+   들을 제거합니다.
+
+test.support.import_helper.unload(name)
+
+   "sys.modules"에서 *name*을 삭제합니다.
+
+test.support.import_helper.make_legacy_pyc(source)
+
+   **PEP 3147**/**PEP 488** pyc 파일을 레거시 pyc 위치로 옮기고 레거시
+   pyc 파일에 대한 파일 시스템 경로를 반환합니다. *source* 값은 소스
+   파일에 대한 파일 시스템 경로입니다. 반드시 존재할 필요는 없지만,
+   PEP 3147/488 pyc 파일이 있어야 합니다.
+
+class test.support.import_helper.CleanImport(*module_names)
+
+   새 모듈 참조를 반환하도록 임포트를 강제하는 컨텍스트 관리자. 이는
+   임포트 시 "DeprecationWarning"의 방출과 같은 모듈 수준 동작을 테스
+   트하는 데 유용합니다. 사용 예:
+
+      with CleanImport('foo'):
+          importlib.import_module('foo')  # New reference.
+
+class test.support.import_helper.DirsOnSysPath(*paths)
+
+   "sys.path"에 디렉터리를 임시로 추가하는 컨텍스트 관리자.
+
+   이렇게 하면 "sys.path"의 복사본이 만들어지고, 위치 인자로 지정된 모
+   든 디렉터리를 추가한 다음, 컨텍스트가 끝나면 "sys.path"를 복사된 설
+   정으로 되돌립니다.
+
+   객체 교체를 포함하여, 컨텍스트 관리자 본문의 *모든* "sys.path" 수정
+   사항은 블록 끝에서 되돌려짐에 유의하십시오.
+
+
+"test.support.warnings_helper" --- warnings 테스트용 유틸리티
+*************************************************************
+
+"test.support.warnings_helper" 모듈은 warnings 테스트를 지원합니다.
+
+버전 3.10에 추가.
+
+test.support.warnings_helper.ignore_warnings(*, category)
+
+   Suppress warnings that are instances of *category*, which must be
+   "Warning" or a subclass. Roughly equivalent to
+   "warnings.catch_warnings()" with "warnings.simplefilter('ignore',
+   category=category)". For example:
+
+      @warning_helper.ignore_warnings(category=DeprecationWarning)
+      def test_suppress_warning():
+          # do something
+
+   버전 3.8에 추가.
+
+test.support.warnings_helper.check_no_resource_warning(testcase)
+
+   "ResourceWarning"이 발생하지 않았는지 확인하는 컨텍스트 관리자. 컨
+   텍스트 관리자가 끝나기 전에 "ResourceWarning"을 방출할 수 있는 객체
+   를 제거해야 합니다.
+
+test.support.warnings_helper.check_syntax_warning(testcase, statement, errtext='', *, lineno=1, offset=None)
+
+   *statement* 컴파일을 시도하여 *statement*에서 구문 경고를 테스트합
+   니다. "SyntaxWarning"이 한 번만 방출되고, 에러로 바꿀 때
+   "SyntaxError"로 변환되는지도 테스트합니다. *testcase*는 테스트를 위
+   한 "unittest" 인스턴스입니다. *errtext*는 방출된 "SyntaxWarning"과
+   발생한 "SyntaxError"의 문자열 표현과 일치해야 하는 정규식입니다.
+   *lineno*가 "None"이 아니면 경고와 예외 줄과 비교합니다. *offset*이
+   "None"이 아니면, 예외 오프셋과 비교합니다.
+
+   버전 3.8에 추가.
+
+test.support.warnings_helper.check_warnings(*filters, quiet=True)
+
+   A convenience wrapper for "warnings.catch_warnings()" that makes it
+   easier to test that a warning was correctly raised.  It is
+   approximately equivalent to calling
+   "warnings.catch_warnings(record=True)" with
+   "warnings.simplefilter()" set to "always" and with the option to
+   automatically validate the results that are recorded.
+
+   "check_warnings"는 위치 인자로 "("message regexp",
+   WarningCategory)" 형식의 2-튜플을 받습니다. 하나 이상의 *filters*가
+   제공되거나, 선택적 키워드 인자 *quiet*가 "False"이면, 경고가 예상대
+   로인지 확인합니다: 지정된 각 필터는 둘러싸인 코드에서 발생한 경고
+   중 적어도 하나와 일치해야 합니다. 그렇지 않으면 테스트가 실패합니다
+   . 지정된 필터와 일치하지 않는 경고가 발생하면 테스트가 실패합니다.
+   첫 번째 검사를 비활성화하려면, *quiet*를 "True"로 설정합니다.
+
+   인자가 지정되지 않으면, 기본값은 다음과 같습니다:
+
+      check_warnings(("", Warning), quiet=True)
+
+   이 경우 모든 경고가 포착되고 에러가 발생하지 않습니다.
+
+   컨텍스트 관리자에 진입하면, "WarningRecorder" 인스턴스가 반환됩니다
+   . "catch_warnings()"의 하부 경고 리스트는 레코더 객체의 "warnings"
+   어트리뷰트를 통해 사용할 수 있습니다. 편의상, 가장 최근의 경고를 나
+   타내는 객체의 어트리뷰트는 레코더 객체를 통해 직접 액세스 할 수도
+   있습니다 (아래 예를 참조하십시오). 경고가 발생하지 않으면, 객체에서
+   예상되는 경고를 나타내는 어트리뷰트는 "None"을 반환합니다.
+
+   레코더 객체에는 경고 리스트를 지우는 "reset()" 메서드도 있습니다.
+
+   컨텍스트 관리자는 다음과 같이 사용되도록 설계되었습니다:
+
+      with check_warnings(("assertion is always true", SyntaxWarning),
+                          ("", UserWarning)):
+          exec('assert(False, "Hey!")')
+          warnings.warn(UserWarning("Hide me!"))
+
+   이 경우 경고가 발생하지 않았거나, 다른 경고가 발생하면,
+   "check_warnings()"는 에러를 발생시킵니다.
+
+   테스트에서 경고가 발생했는지를 확인하는 것만이 아니라, 경고를 더 깊
+   이 조사해야 할 때, 다음과 같은 코드를 사용할 수 있습니다:
+
+      with check_warnings(quiet=True) as w:
+          warnings.warn("foo")
+          assert str(w.args[0]) == "foo"
+          warnings.warn("bar")
+          assert str(w.args[0]) == "bar"
+          assert str(w.warnings[0].args[0]) == "foo"
+          assert str(w.warnings[1].args[0]) == "bar"
+          w.reset()
+          assert len(w.warnings) == 0
+
+   여기에서 모든 경고가 포착되고, 테스트 코드는 포착된 경고를 직접 테
+   스트합니다.
+
+   버전 3.2에서 변경: 새로운 선택적 인자 *filters*와 *quiet*.
+
+class test.support.warnings_helper.WarningsRecorder
+
+   단위 테스트에 대한 경고를 기록하는 데 사용되는 클래스. 자세한 내용
+   은 위의 "check_warnings()" 설명서를 참조하십시오.

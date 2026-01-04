@@ -1,0 +1,189 @@
+"email.charset": Representing character sets
+********************************************
+
+**소스 코드:** Lib/email/charset.py
+
+======================================================================
+
+이 모듈은 레거시 ("Compat32") 이메일 API의 일부입니다. 새 API에서는 별
+칭 표만 사용됩니다.
+
+이 섹션의 나머지 텍스트는 모듈의 원본 설명서입니다.
+
+이 모듈은 문자 집합 레지스트리와 이 레지스트리를 조작하기 위한 몇 가지
+편의 메서드뿐만 아니라, 이메일 메시지의 문자 집합과 문자 집합 변환을
+나타내는 "Charset" 클래스를 제공합니다. "Charset" 인스턴스는 "email"
+패키지 내의 다른 여러 모듈에서 사용됩니다.
+
+"email.charset" 모듈에서 이 클래스를 임포트 하십시오.
+
+class email.charset.Charset(input_charset=DEFAULT_CHARSET)
+
+   문자 집합을 이메일 속성으로 매핑합니다.
+
+   이 클래스는 특정 문자 집합에 대해 이메일에 요구되는 요구 사항에 대
+   한 정보를 제공합니다. 또한 해당 코덱을 사용할 수 있으면, 문자 집합
+   간 변환을 위한 편의 루틴을 제공합니다. 문자 집합이 주어지면, RFC 호
+   환 방식으로 이메일 메시지에서 해당 문자 집합을 사용하는 방법에 대한
+   정보를 제공하는 데 최선을 다합니다.
+
+   이메일 헤더나 본문에 사용될 때 특정 문자 집합은 quoted-printable이
+   나 base64로 인코딩해야 합니다. 특정 문자 집합은 완전히 변환해야 하
+   며, 이메일에서는 허용되지 않습니다.
+
+   선택적 *input_charset*은 아래에 설명된 것과 같습니다; 항상 소문자로
+   강제 변환됩니다. 별칭이 정규화된 후에는 문자 집합 레지스트리에서 조
+   회로 사용되어 문자 집합을 위해 사용할 헤더 인코딩, 본문 인코딩 및
+   출력 변환 코덱을 찾습니다. 예를 들어, *input_charset*이
+   "iso-8859-1"이면, 헤더와 본문은 quoted-printable을 사용하여 인코딩
+   되며 출력 변환 코덱은 필요하지 않습니다. *input_charset*이 "euc-jp"
+   면, 헤더는 base64로 인코딩되고, 본문은 인코딩되지 않지만, 출력 텍스
+   트는 "euc-jp" 문자 집합에서 "iso-2022-jp" 문자 집합으로 변환됩니다.
+
+   "Charset" 인스턴스에는 다음과 같은 데이터 어트리뷰트가 있습니다:
+
+   input_charset
+
+      지정된 초기 문자 집합. 일반적인 별칭은 *공식* 이메일 이름으로 변
+      환됩니다 (예를 들어 "latin_1"은 "iso-8859-1"로 변환됩니다). 기본
+      값은 7비트 "us-ascii"입니다.
+
+   header_encoding
+
+      문자 집합을 이메일 헤더에서 사용하기 전에 인코딩해야 하면, 이 어
+      트리뷰트는 "charset.QP" (quoted-printable), "charset.BASE64"
+      (base64 인코딩) 또는 QP나 BASE64 인코딩 중 가장 짧은 것을 뜻하는
+      "charset.SHORTEST"로 설정됩니다. 그렇지 않으면, "None"이 됩니다.
+
+   body_encoding
+
+      *header_encoding*과 같지만, 메일 메시지 본문의 인코딩을 기술합니
+      다. 헤더 인코딩과 다를 수 있습니다. *body_encoding*에는
+      "charset.SHORTEST"가 허용되지 않습니다.
+
+   output_charset
+
+      일부 문자 집합은 이메일 헤더나 본문에 사용하기 전에 변환해야 합
+      니다. *input_charset*이 그중 하나이면, 이 어트리뷰트에는 출력이
+      변환될 문자 집합의 이름이 포함됩니다. 그렇지 않으면 "None"이 됩
+      니다.
+
+   input_codec
+
+      *input_charset*을 유니코드로 변환하는 데 사용되는 파이썬 코덱의
+      이름. 변환 코덱이 필요하지 않으면, 이 어트리뷰트는 "None"입니다.
+
+   output_codec
+
+      유니코드를 *output_charset*으로 변환하는 데 사용되는 파이썬 코덱
+      의 이름. 변환 코덱이 필요하지 않으면, 이 어트리뷰트의 값은
+      *input_codec*과 같습니다.
+
+   "Charset" 인스턴스에는 다음과 같은 메서드도 있습니다:
+
+   get_body_encoding()
+
+      본문 인코딩에 사용된 콘텐츠 전송 인코딩(content transfer
+      encoding)을 반환합니다.
+
+      사용된 인코딩에 따라 문자열 "quoted-printable"이나 "base64"입니
+      다. 또는 함수일 수 있는데, 이때는 인코딩되는 Message 객체를 단일
+      인자로 함수를 호출해야 합니다. 그러면 함수는 *Content-Transfer-
+      Encoding* 헤더 자체를 적절한 것으로 설정해야 합니다.
+
+      *body_encoding*이 "QP"이면 문자열 "quoted-printable"을 반환하고,
+      *body_encoding*이 "BASE64"이면 문자열 "base64"를 반환하고, 그렇
+      지 않으면 문자열 "7bit"를 반환합니다.
+
+   get_output_charset()
+
+      출력 문자 집합을 반환합니다.
+
+      "None"이 아니라면 *output_charset* 어트리뷰트이고, 그렇지 않으면
+      *input_charset*입니다.
+
+   header_encode(string)
+
+      문자열 *string*을 헤더 인코딩합니다.
+
+      인코딩 유형(base64나 quoted-printable)은 *header_encoding* 어트
+      리뷰트를 기반으로 합니다.
+
+   header_encode_lines(string, maxlengths)
+
+      *string*을 먼저 바이트열로 변환하여 헤더 인코딩합니다.
+
+      이는 문자열이 인자 *maxlengths*에 의해 주어진 최대 줄 길이에 맞
+      춰진다는 점을 제외하고는 "header_encode()"와 유사합니다.
+      *maxlengths*는 이터레이터여야 합니다: 이 이터레이터에서 반환된
+      각 요소는 다음 최대 줄 길이를 제공합니다.
+
+   body_encode(string)
+
+      문자열 *string*을 본문 인코딩합니다.
+
+      인코딩 유형(base64나 quoted-printable)은 *body_encoding* 어트리
+      뷰트를 기반으로 합니다.
+
+   "Charset" 클래스는 표준 연산과 내장 함수를 지원하는 여러 가지 메서
+   드도 제공합니다.
+
+   __str__()
+
+      Returns *input_charset* as a string coerced to lower case.
+      "__repr__()" is an alias for "__str__()".
+
+   __eq__(other)
+
+      이 메서드를 사용하면 두 개의 "Charset" 인스턴스가 같은지 비교할
+      수 있습니다.
+
+   __ne__(other)
+
+      이 메서드를 사용하면 두 "Charset" 인스턴스가 다른지 비교할 수 있
+      습니다.
+
+"email.charset" 모듈은 또한 전역 문자 집합, 별명 및 코덱 레지스트리에
+새 항목을 추가하기 위해 다음 함수를 제공합니다:
+
+email.charset.add_charset(charset, header_enc=None, body_enc=None, output_charset=None)
+
+   전역 레지스트리에 문자 속성을 추가합니다.
+
+   *charset*은 입력 문자 집합이며, 문자 집합의 규범적 이름이어야 합니
+   다.
+
+   선택적 *header_enc*와 *body_enc*는 quoted-printable의 경우
+   "charset.QP", base64 인코딩의 경우 "charset.BASE64", quoted-
+   printable이나 base64 인코딩 중 가장 짧은 것의 경우
+   "charset.SHORTEST", 또는 인코딩이 없으면 "None"입니다. "SHORTEST"는
+   *header_enc*에만 유효합니다. 인코딩이 없으면 기본값은 "None"입니다.
+
+   선택적 *output_charset*은 출력에 적용되어야 하는 문자 집합입니다.
+   "Charset.convert()" 메서드가 호출될 때 입력 문자 집합에서 유니코드
+   로, 다시 출력 문자 집합으로 변환이 진행됩니다. 기본값은 입력과 같은
+   문자 집합으로 출력하는 것입니다.
+
+   *input_charset*과 *output_charset*은 모두 모듈의 문자 집합에서 코덱
+   으로의 매핑에 유니코드 코덱 항목이 있어야 합니다; "add_codec()"을
+   사용하여 모듈이 모르는 코덱을 추가하십시오. 자세한 내용은 "codecs"
+   모듈 설명서를 참조하십시오.
+
+   전역 문자 집합 레지스트리는 모듈 전역 딕셔너리 "CHARSETS"에 유지됩
+   니다.
+
+email.charset.add_alias(alias, canonical)
+
+   문자 집합 별칭을 추가합니다. *alias*는 별칭 이름입니다, 예를 들어
+   "latin-1". *canonical*은 문자 집합의 규범적 이름입니다, 예를 들어
+   "iso-8859-1".
+
+   전역 문자 집합 별칭 레지스트리는 모듈 전역 딕셔너리 "ALIASES"에 유
+   지됩니다.
+
+email.charset.add_codec(charset, codecname)
+
+   주어진 문자 집합의 문자를 유니코드와 매핑하는 코덱을 추가합니다.
+
+   *charset*은 문자 집합의 규범적 이름입니다. *codecname*은 "str"의
+   "encode()" 메서드의 두 번째 인자에 적합한 파이썬 코덱의 이름입니다.

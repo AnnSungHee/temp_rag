@@ -1,0 +1,89 @@
+파일 객체
+*********
+
+이 API는 C 표준 라이브러리의 버퍼링 된 I/O ("FILE*") 지원에 의존하는
+내장 파일 객체에 대한 파이썬 2 C API의 최소 에뮬레이션입니다. 파이썬 3
+에서, 파일과 스트림은 새로운 "io" 모듈을 사용합니다. 이 모듈은 운영 체
+제의 저수준 버퍼링 되지 않은 I/O 위에 여러 계층을 정의합니다. 아래에서
+설명하는 함수는 이러한 새로운 API에 대한 편리한 C 래퍼이며, 주로 인터
+프리터의 내부 오류 보고를 위한 것입니다; 제삼자 코드는 대신 "io" API에
+액세스하는 것이 좋습니다.
+
+PyObject *PyFile_FromFd(int fd, const char *name, const char *mode, int buffering, const char *encoding, const char *errors, const char *newline, int closefd)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   이미 열려있는 파일의 파일 기술자 *fd*로 파이썬 파일 객체를 만듭니다
+   . 인자 *name*, *encoding*, *errors* 및 *newline*은 기본값을 사용하
+   기 위해 "NULL" 일 수 있습니다; *buffering*은 기본값을 사용하기 위해
+   *-1* 일 수 있습니다. *name*은 무시되고, 이전 버전과의 호환성을 위해
+   유지됩니다. 실패 시 "NULL"을 반환합니다. 인자에 대한 더 자세한 설명
+   은 "io.open()" 함수 설명서를 참조하십시오.
+
+   경고:
+
+     파이썬 스트림이 자체적인 버퍼링 계층을 가지고 있으므로, OS 수준의
+     파일 기술자와 혼합하면 여러 예기치 못한 문제가 발생할 수 있습니다
+     (가령 데이터의 예상치 못한 순서).
+
+   버전 3.2에서 변경: *name* 어트리뷰트를 무시합니다.
+
+int PyObject_AsFileDescriptor(PyObject *p)
+    * Part of the Stable ABI.*
+
+   *p*와 관련된 파일 기술자를 "int"로 반환합니다. 객체가 정수면, 값이
+   반환됩니다. 그렇지 않으면 객체의 "fileno()" 메서드가 있으면 호출됩
+   니다; 메서드는 반드시 정수를 반환해야 하고, 그 값이 파일 기술자 값
+   으로 반환됩니다. 실패하면 예외를 설정하고 "-1"을 반환합니다.
+
+PyObject *PyFile_GetLine(PyObject *p, int n)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   "p.readline([n])"과 동등합니다. 이 함수는 객체 *p*에서 한 줄을 읽습
+   니다. *p*는 파일 객체나 "readline()" 메서드가 있는 임의의 객체일 수
+   있습니다. *n*이 "0"이면, 줄의 길이와 관계없이 정확히 한 줄을 읽습니
+   다. *n*이 "0"보다 크면, *n* 바이트 이상을 파일에서 읽지 않습니다;
+   불완전한 줄이 반환될 수 있습니다. 두 경우 모두, 파일 끝에 즉시 도달
+   하면 빈 문자열이 반환됩니다. 그러나 *n*이 "0"보다 작으면, 길이와 관
+   계없이 한 줄을 읽지만, 파일 끝에 즉시 도달하면 "EOFError"가 발생합
+   니다.
+
+int PyFile_SetOpenCodeHook(Py_OpenCodeHookFunction handler)
+
+   제공된 handler를 통해 매개 변수를 전달하도록 "io.open_code()"의 일
+   반적인 동작을 재정의합니다.
+
+   The handler is a function of type "PyObject *(*)(PyObject *path,
+   void *userData)", where *path* is guaranteed to be
+   "PyUnicodeObject".
+
+   *userData* 포인터는 훅 함수로 전달됩니다. 훅 함수는 다른 런타임에서
+   호출될 수 있으므로, 이 포인터는 파이썬 상태를 직접 참조하면 안 됩니
+   다.
+
+   이 훅은 의도적으로 임포트 중에 사용되므로, 고정되었거나(frozen)
+   "sys.modules"에 있다고 알려진 경우가 아니라면 훅 실행 중에 새로운
+   모듈을 임포트하는 것을 피하십시오.
+
+   일단 훅이 설정되면, 제거하거나 교체할 수 없으며, 이후의
+   "PyFile_SetOpenCodeHook()"에 대한 호출은 실패합니다. 실패 시, 함수
+   는 -1을 반환하고 인터프리터가 초기화되었으면 예외를 설정합니다.
+
+   이 함수는 "Py_Initialize()" 전에 호출해도 안전합니다.
+
+   인자 없이 감사 이벤트 "setopencodehook"을 발생시킵니다.
+
+   버전 3.8에 추가.
+
+int PyFile_WriteObject(PyObject *obj, PyObject *p, int flags)
+    * Part of the Stable ABI.*
+
+   Write object *obj* to file object *p*.  The only supported flag for
+   *flags* is "Py_PRINT_RAW"; if given, the "str()" of the object is
+   written instead of the "repr()".  Return "0" on success or "-1" on
+   failure; the appropriate exception will be set.
+
+int PyFile_WriteString(const char *s, PyObject *p)
+    * Part of the Stable ABI.*
+
+   문자열 *s*를 파일 객체 *p*에 씁니다. 성공하면 "0"을 반환하고, 실패
+   하면 "-1"을 반환합니다; 적절한 예외가 설정됩니다.

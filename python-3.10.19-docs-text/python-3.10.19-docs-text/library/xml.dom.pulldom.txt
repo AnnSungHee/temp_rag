@@ -1,0 +1,138 @@
+"xml.dom.pulldom" --- Support for building partial DOM trees
+************************************************************
+
+**소스 코드:** Lib/xml/dom/pulldom.py
+
+======================================================================
+
+"xml.dom.pulldom" 모듈은 필요할 때 문서의 DOM 액세스 가능한 조각을 생
+성하도록 요청할 수 있는 "풀 구문 분석기 (pull parser)"를 제공합니다.
+기본 개념은 들어오는 XML 스트림에서 "이벤트"를 끌어당겨서(pull) 처리하
+는 것입니다. 콜백을 통한 이벤트 구동 처리 모델(event-driven processing
+model)을 사용하는 SAX와 달리 풀 구문 분석기 사용자는 스트림에서 이벤트
+를 명시적으로 가져와서 처리가 완료되거나 에러 조건이 발생할 때까지 그
+이벤트들을 루핑해야 합니다.
+
+경고:
+
+  "xml.dom.pulldom" 모듈은 악의적으로 구성된 데이터로부터 안전하지 않
+  습니다. 신뢰할 수 없거나 인증되지 않은 데이터를 구문 분석해야 하면
+  XML 취약점를 참조하십시오.
+
+버전 3.7.1에서 변경: SAX 구문 분석기는 보안을 강화하기 위해 더는 일반
+외부 엔티티를 처리하지 않습니다. 외부 엔티티를 처리를 활성화하려면, 사
+용자 정의 구문 분석기 인스턴스를 전달하십시오:
+
+   from xml.dom.pulldom import parse
+   from xml.sax import make_parser
+   from xml.sax.handler import feature_external_ges
+
+   parser = make_parser()
+   parser.setFeature(feature_external_ges, True)
+   parse(filename, parser=parser)
+
+예:
+
+   from xml.dom import pulldom
+
+   doc = pulldom.parse('sales_items.xml')
+   for event, node in doc:
+       if event == pulldom.START_ELEMENT and node.tagName == 'item':
+           if int(node.getAttribute('price')) > 50:
+               doc.expandNode(node)
+               print(node.toxml())
+
+"event"는 상수이며 다음 중 하나일 수 있습니다:
+
+* "START_ELEMENT"
+
+* "END_ELEMENT"
+
+* "COMMENT"
+
+* "START_DOCUMENT"
+
+* "END_DOCUMENT"
+
+* "CHARACTERS"
+
+* "PROCESSING_INSTRUCTION"
+
+* "IGNORABLE_WHITESPACE"
+
+"node"는 "xml.dom.minidom.Document", "xml.dom.minidom.Element" 또는
+"xml.dom.minidom.Text" 형의 객체입니다.
+
+문서는 "평평한(flat)" 이벤트 스트림으로 취급되므로, 문서 "트리"는 묵시
+적으로 탐색 되며 트리에서의 깊이와 관계없이 원하는 요소를 찾습니다. 다
+시 말해, 문서 노드의 재귀적 검색과 같은 계층적 문제를 고려할 필요는 없
+습니다. 하지만, 엘리먼트의 문맥이 중요하다면, 문맥과 관련된 상태를 유
+지하거나 (즉, 주어진 지점에서 문서의 어느 위치에 있는지 기억함으로써),
+"DOMEventStream.expandNode()" 메서드를 사용하고 DOM 관련 처리로 전환해
+야 합니다.
+
+class xml.dom.pulldom.PullDom(documentFactory=None)
+
+   "xml.sax.handler.ContentHandler"의 서브 클래스.
+
+class xml.dom.pulldom.SAX2DOM(documentFactory=None)
+
+   "xml.sax.handler.ContentHandler"의 서브 클래스.
+
+xml.dom.pulldom.parse(stream_or_string, parser=None, bufsize=None)
+
+   주어진 입력으로부터 "DOMEventStream"을 반환합니다.
+   *stream_or_string*은 파일 이름이거나 파일류 객체일 수 있습니다. 주
+   어질 때, *parser*는 "XMLReader" 객체여야 합니다. 이 함수는 구문 분
+   석기의 문서 처리기를 변경하고 이름 공간 지원을 활성화합니다; 다른
+   구문 분석기 구성(엔티티 해석기 설정과 같은)은 미리 수행되어 있어야
+   합니다.
+
+문자열로 XML을 갖고 있다면, "parseString()" 함수를 대신 사용할 수 있습
+니다:
+
+xml.dom.pulldom.parseString(string, parser=None)
+
+   (유니코드) *string*을 표현하는 "DOMEventStream"을 반환합니다.
+
+xml.dom.pulldom.default_bufsize
+
+   "parse()"의 *bufsize* 매개 변수의 기본값.
+
+   이 변수의 값은 "parse()"를 호출하기 전에 변경될 수 있으며 새 값이
+   적용됩니다.
+
+
+DOMEventStream 객체
+===================
+
+class xml.dom.pulldom.DOMEventStream(stream, parser, bufsize)
+
+   버전 3.8부터 폐지: Support for "sequence protocol" is deprecated.
+
+   getEvent()
+
+      *event*와 현재 *node*를 포함하는 튜플을 반환합니다. 노드는 이벤
+      트가 "START_DOCUMENT"와 같으면 "xml.dom.minidom.Document", 이벤
+      트가 "START_ELEMENT"나 "END_ELEMENT"와 같으면
+      "xml.dom.minidom.Element", 이벤트가 "CHARACTERS"와 같으면
+      "xml.dom.minidom.Text" 입니다. "expandNode()"가 호출되지 않는 한
+      현재 노드에는 자식에 대한 정보가 없습니다.
+
+   expandNode(node)
+
+      *node*의 모든 자식을 *node*로 확장합니다. 예:
+
+         from xml.dom import pulldom
+
+         xml = '<html><title>Foo</title> <p>Some text <div>and more</div></p> </html>'
+         doc = pulldom.parseString(xml)
+         for event, node in doc:
+             if event == pulldom.START_ELEMENT and node.tagName == 'p':
+                 # Following statement only prints '<p/>'
+                 print(node.toxml())
+                 doc.expandNode(node)
+                 # Following statement prints node with all its children '<p>Some text <div>and more</div></p>'
+                 print(node.toxml())
+
+   reset()

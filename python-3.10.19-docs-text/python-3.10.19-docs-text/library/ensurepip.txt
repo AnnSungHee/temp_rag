@@ -1,0 +1,129 @@
+"ensurepip" --- Bootstrapping the "pip" installer
+*************************************************
+
+버전 3.4에 추가.
+
+**소스 코드:** Lib/ensurepip
+
+======================================================================
+
+"ensurepip" 패키지는 "pip" 설치 프로그램을 기존의 파이썬 설치나 가상
+환경으로 부트스트랩 하는데 필요한 지원을 제공합니다. 이 부트스트랩 접
+근 방식은 "pip"가 자체 배포 주기가 있는 독립적인 프로젝트이며, 최신 사
+용 가능한 안정 버전이 CPython 참조 인터프리터의 유지 보수와 기능 배포
+에 번들로 제공된다는 사실을 반영합니다.
+
+대부분, 파이썬의 최종 사용자는 이 모듈을 직접 호출할 필요가 없습니다
+("pip"는 기본적으로 부트스트랩 되어있어야 하기 때문입니다). 하지만, 파
+이썬을 설치할 때 (또는 가상 환경을 만들 때) "pip"를 건너뛰었거나 그 후
+에 명시적으로 "pip"를 제거했다면 필요할 수 있습니다.
+
+참고:
+
+  이 모듈은 인터넷에 접속하지 *않습니다*. "pip"를 부트스트랩 하는 데
+  필요한 모든 구성 요소는 패키지의 내부 부품으로 포함됩니다.
+
+더 보기:
+
+  파이썬 모듈 설치하기
+     파이썬 패키지를 설치하기 위한 최종 사용자 지침서
+
+  **PEP 453**: 파이썬 설치에서 pip의 명시적 부트스트랩
+     이 모듈의 원래 근거와 사양.
+
+
+명령 줄 인터페이스
+==================
+
+명령 줄 인터페이스는 인터프리터의 "-m" 스위치를 사용하여 호출됩니다.
+
+가장 간단한 호출은 이렇습니다:
+
+   python -m ensurepip
+
+이 호출은 아직 설치되지 않았으면 "pip"를 설치하지만, 그렇지 않으면 아
+무것도 하지 않습니다. "pip"의 설치 버전이 적어도 "ensurepip"에서 제공
+하는 것 만큼 최신 버전이 되도록 하려면, "--upgrade" 옵션을 전달하십시
+오:
+
+   python -m ensurepip --upgrade
+
+기본적으로, "pip"는 현재 가상 환경(활성화되었다면)이나 시스템 사이트
+패키지(활성 가상 환경이 없으면)에 설치됩니다. 설치 위치는 두 개의 추가
+명령 줄 옵션을 통해 제어할 수 있습니다:
+
+* "--root <dir>": Installs "pip" relative to the given root directory
+  rather than the root of the currently active virtual environment (if
+  any) or the default root for the current Python installation.
+
+* "--user": Installs "pip" into the user site packages directory
+  rather than globally for the current Python installation (this
+  option is not permitted inside an active virtual environment).
+
+기본적으로, "pipX" 와 "pipX.Y" 스크립트가 설치됩니다 (여기서 X.Y는
+"ensurepip"를 호출하는 데 사용된 파이썬 버전을 나타냅니다). 설치된 스
+크립트는 두 개의 추가 명령 줄 옵션을 통해 제어할 수 있습니다:
+
+* "--altinstall": if an alternate installation is requested, the
+  "pipX" script will *not* be installed.
+
+* "--default-pip": if a "default pip" installation is requested, the
+  "pip" script will be installed in addition to the two regular
+  scripts.
+
+두 스크립트 선택 옵션을 모두 제공하면 예외가 발생합니다.
+
+
+모듈 API
+========
+
+"ensurepip"는 프로그래밍 방식으로 사용하기 위해 두 가지 함수를 제공합
+니다:
+
+ensurepip.version()
+
+   환경을 부트스트랩 할 때 설치될 pip의 버전을 지정하는 문자열을 반환
+   합니다.
+
+ensurepip.bootstrap(root=None, upgrade=False, user=False, altinstall=False, default_pip=False, verbosity=0)
+
+   "pip"를 현재나 지정된 환경으로 부트스트랩 합니다.
+
+   *root*는 상대 경로로 설치할 대안 루트 디렉터리를 지정합니다. *root*
+   가 "None"이면, 설치는 현재 환경의 기본 설치 위치를 사용합니다.
+
+   *upgrade*는 이미 설치된 이전 버전의 "pip"를 제공되는 버전으로 업그
+   레이드할지를 나타냅니다.
+
+   *user*는 전역으로 설치하는 대신 사용자 구성을 사용할지를 나타냅니다
+   .
+
+   기본적으로, "pipX" 및 "pipX.Y" 스크립트가 설치됩니다 (여기서 X.Y는
+   현재 버전의 파이썬을 나타냅니다).
+
+   *altinstall*가 설정되면, "pipX"가 설치되지 *않습니다*.
+
+   *default_pip*가 설정되면, 두 개의 일반 스크립트에 더해 "pip"가 설치
+   됩니다.
+
+   *altinstall* 과 *default_pip*를 모두 설정하면 "ValueError"가 발생합
+   니다.
+
+   *verbosity*는 부트스트랩 연산에서 "sys.stdout"로 출력하는 수준을 제
+   어합니다.
+
+   인자 "root"로 감사 이벤트(auditing event) "ensurepip.bootstrap"을
+   발생시킵니다.
+
+   참고:
+
+     부트스트랩 프로세스에는 "sys.path" 와 "os.environ" 모두에 부작용
+     이 있습니다. 대신 자식 프로세스에서 명령 줄 인터페이스를 호출하면
+     이러한 부작용을 피할 수 있습니다.
+
+   참고:
+
+     부트스트랩 프로세스는 "pip"에 필요한 추가 모듈을 설치할 수 있지만
+     , 다른 소프트웨어는 이러한 종속성이 기본적으로 항상 존재한다고 가
+     정해서는 안 됩니다 ("pip"의 차후 버전에서 제거될 수 있기 때문입니
+     다).

@@ -1,0 +1,382 @@
+호출 프로토콜
+*************
+
+CPython은 두 가지 호출 프로토콜을 지원합니다: *tp_call*과 벡터콜
+(vectorcall).
+
+
+*tp_call* 프로토콜
+==================
+
+"tp_call"을 설정하는 클래스의 인스턴스는 콜러블입니다. 슬롯의 서명은
+다음과 같습니다:
+
+   PyObject *tp_call(PyObject *callable, PyObject *args, PyObject *kwargs);
+
+파이썬 코드의 "callable(*args, **kwargs)" 와 유사하게, 위치 인자를 위
+한 튜플과 키워드 인자를 위한 딕셔너리를 사용하여 호출합니다. *args*는
+NULL이 아니어야 합니다 (인자가 없으면 빈 튜플을 사용하십시오). 하지만
+키워드 인자가 없으면 *kwargs*는 *NULL*일 수 있습니다.
+
+이 규칙은 *tp_call*에서만 사용되는 것이 아닙니다: "tp_new"와 "tp_init"
+도 인자를 이런 식으로 전달합니다.
+
+객체를 호출하려면, "PyObject_Call()"이나 다른 호출 API를 사용하십시오.
+
+
+벡터콜(Vectorcall) 프로토콜
+===========================
+
+버전 3.9에 추가.
+
+벡터콜 프로토콜은 **PEP 590**에서 호출 효율을 높이기 위한 추가 프로토
+콜로 도입되었습니다.
+
+경험 규칙으로, CPython은 콜러블이 지원하면 내부 호출에 대해 벡터콜을
+선호합니다. 그러나 이것은 엄격한 규칙이 아닙니다. 또한, 일부 제삼자 확
+장은 ("PyObject_call()"을 사용하지 않고) *tp_call*을 직접 사용합니다.
+따라서, 벡터콜을 지원하는 클래스도 "tp_call"을 구현해야 합니다. 또한,
+어떤 프로토콜을 사용하는지와 관계없이 콜러블은 동일하게 작동해야 합니
+다. 이를 위해 권장되는 방법은 "tp_call"을 "PyVectorcall_Call()"로 설정
+하는 것입니다. 이것이 반복을 처리합니다:
+
+경고:
+
+  벡터콜을 지원하는 클래스도 같은 의미가 있도록 "tp_call"을 **반드시**
+  구현해야 합니다.
+
+*tp_call*보다 느려진다면 클래스는 벡터콜을 구현해서는 안 됩니다. 예를
+들어, 피호출자가 어차피 인자를 인자 튜플과 kwargs 딕셔너리로 변환해야
+하면, 벡터콜을 구현할 이유가 없습니다.
+
+Classes can implement the vectorcall protocol by enabling the
+"Py_TPFLAGS_HAVE_VECTORCALL" flag and setting "tp_vectorcall_offset"
+to the offset inside the object structure where a *vectorcallfunc*
+appears. This is a pointer to a function with the following signature:
+
+typedef PyObject *(*vectorcallfunc)(PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwnames)
+
+* *callable*은 호출되는 객체입니다.
+
+* *args*는 위치 인자와 그 뒤를 따르는 키워드 인자의 값으로 구성된 C 배
+  열입니다.
+     인자가 없으면 *NULL*일 수 있습니다.
+
+* *nargsf*는 위치 인자의 수에
+     "PY_VECTORCALL_ARGUMENTS_OFFSET" flag. To get the actual number
+     of positional arguments from *nargsf*, use
+     "PyVectorcall_NARGS()".
+
+* *kwnames*는 키워드 인자의 이름을 포함하는 튜플입니다;
+     다시 말해, kwargs 딕셔너리의 키. 이 이름들은 문자열("str"이나 서
+     브 클래스의 인스턴스)이어야하며 고유해야 합니다. 키워드 인자가 없
+     으면, *kwnames*는 대신 *NULL*일 수 있습니다.
+
+PY_VECTORCALL_ARGUMENTS_OFFSET
+
+   이 플래그가 벡터콜 *nargsf* 인자에 설정되면, 피호출자는 일시적으로
+   "args[-1]"을 변경할 수 있습니다. 즉, *args*는 할당된 벡터에서 인자
+   1(0이 아닙니다)을 가리킵니다. 피호출자는 반환하기 전에 "args[-1]"
+   값을 복원해야 합니다.
+
+   "PyObject_VectorcallMethod()" 의 경우, 이 플래그는 대신 "args[0]"이
+   변경될 수 있음을 의미합니다.
+
+   Whenever they can do so cheaply (without additional allocation),
+   callers are encouraged to use "PY_VECTORCALL_ARGUMENTS_OFFSET".
+   Doing so will allow callables such as bound methods to make their
+   onward calls (which include a prepended *self* argument) very
+   efficiently.
+
+벡터콜을 구현하는 객체를 호출하려면, 다른 콜러블과 마찬가지로 호출 API
+함수를 사용하십시오. "PyObject_Vectorcall()"은 일반적으로 가장 효율적
+입니다.
+
+참고:
+
+  In CPython 3.8, the vectorcall API and related functions were
+  available provisionally under names with a leading underscore:
+  "_PyObject_Vectorcall", "_Py_TPFLAGS_HAVE_VECTORCALL",
+  "_PyObject_VectorcallMethod", "_PyVectorcall_Function",
+  "_PyObject_CallOneArg", "_PyObject_CallMethodNoArgs",
+  "_PyObject_CallMethodOneArg". Additionally,
+  "PyObject_VectorcallDict" was available as "_PyObject_FastCallDict".
+  The old names are still defined as aliases of the new, non-
+  underscored names.
+
+
+재귀 제어
+---------
+
+*tp_call*을 사용할 때, 피호출자는 재귀에 대해 걱정할 필요가 없습니다:
+CPython은 *tp_call*을 사용하여 호출한 경우 "Py_EnterRecursiveCall()"
+과 "Py_LeaveRecursiveCall()" 을 사용합니다.
+
+효율성을 위해, 벡터콜을 사용하여 호출한 경우에는 그렇지 않습니다: 피호
+출자는 필요하면 *Py_EnterRecursiveCall* 과 *Py_LeaveRecursiveCall* 을
+사용해야 합니다.
+
+
+벡터콜 지원 API
+---------------
+
+Py_ssize_t PyVectorcall_NARGS(size_t nargsf)
+
+   벡터콜 *nargsf* 인자가 주어지면, 실제 인자 수를 반환합니다. 현재 다
+   음과 동등합니다:
+
+      (Py_ssize_t)(nargsf & ~PY_VECTORCALL_ARGUMENTS_OFFSET)
+
+   그러나, 향후 확장을 위해 "PyVectorcall_NARGS" 함수를 사용해야 합니
+   다.
+
+   버전 3.8에 추가.
+
+vectorcallfunc PyVectorcall_Function(PyObject *op)
+
+   *op*가 벡터콜 프로토콜을 지원하지 않으면 (형이 지원하지 않거나 인스
+   턴스가 지원하지 않기 때문에), *NULL*을 반환합니다. 그렇지 않으면,
+   *op*에 저장된 벡터콜 함수 포인터를 반환합니다. 이 함수는 예외를 발
+   생시키지 않습니다.
+
+   이것은 *op*가 벡터콜을 지원하는지를 확인하는 데 주로 유용하며,
+   "PyVectorcall_Function(op) != NULL"을 확인하여 수행 할 수 있습니다.
+
+   버전 3.8에 추가.
+
+PyObject *PyVectorcall_Call(PyObject *callable, PyObject *tuple, PyObject *dict)
+
+   튜플과 딕셔너리에 각각 주어진 위치와 키워드 인자로 *callable*의
+   "vectorcallfunc" 를 호출합니다.
+
+   This is a specialized function, intended to be put in the "tp_call"
+   slot or be used in an implementation of "tp_call". It does not
+   check the "Py_TPFLAGS_HAVE_VECTORCALL" flag and it does not fall
+   back to "tp_call".
+
+   버전 3.8에 추가.
+
+
+객체 호출 API
+=============
+
+파이썬 객체를 호출하기 위해 다양한 함수를 사용할 수 있습니다. 각각은
+인자를 호출된 객체가 지원하는 규칙으로 변환합니다 - *tp_call* 또는 벡
+터콜. 가능한 한 적은 변환을 수행하려면, 사용 가능한 데이터 형식에 가장
+적합한 것을 선택하십시오.
+
+다음 표는 사용 가능한 함수를 요약한 것입니다; 자세한 내용은 개별 설명
+서를 참조하십시오.
+
++--------------------------------------------+--------------------+----------------------+-----------------+
+| 함수                                       | 콜러블             | args                 | kwargs          |
+|============================================|====================|======================|=================|
+| "PyObject_Call()"                          | "PyObject *"       | 튜플                 | 딕셔너리/"NULL" |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallNoArgs()"                    | "PyObject *"       | ---                  | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallOneArg()"                    | "PyObject *"       | 1 객체               | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallObject()"                    | "PyObject *"       | 튜플/"NULL"          | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallFunction()"                  | "PyObject *"       | 포맷(format)         | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallMethod()"                    | obj + "char*"      | 포맷(format)         | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallFunctionObjArgs()"           | "PyObject *"       | 가변(variadic)       | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallMethodObjArgs()"             | obj + name         | 가변(variadic)       | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallMethodNoArgs()"              | obj + name         | ---                  | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_CallMethodOneArg()"              | obj + name         | 1 객체               | ---             |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_Vectorcall()"                    | "PyObject *"       | 벡터콜               | 벡터콜          |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_VectorcallDict()"                | "PyObject *"       | 벡터콜               | 딕셔너리/"NULL" |
++--------------------------------------------+--------------------+----------------------+-----------------+
+| "PyObject_VectorcallMethod()"              | arg + name         | 벡터콜               | 벡터콜          |
++--------------------------------------------+--------------------+----------------------+-----------------+
+
+PyObject *PyObject_Call(PyObject *callable, PyObject *args, PyObject *kwargs)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   튜플 *args*로 주어진 인자와 딕셔너리 *kwargs*로 주어진 이름있는 인
+   자로 콜러블 파이썬 객체 *callable*을 호출합니다.
+
+   *args*는 *NULL*이 아니어야 합니다ㅣ 인자가 필요 없으면 빈 튜플을 사
+   용하십시오. 이름있는 인자가 필요하지 않으면, *kwargs*는 *NULL*일 수
+   있습니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   이것은 다음 파이썬 표현식과 동등합니다: "callable(*args,
+   **kwargs)".
+
+PyObject *PyObject_CallNoArgs(PyObject *callable)
+    * Part of the Stable ABI since version 3.10.*
+
+   인자 없이 콜러블 파이썬 객체 *callable*을 호출합니다. 인자 없이 콜
+   러블 파이썬 객체를 호출하는 가장 효율적인 방법입니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   버전 3.9에 추가.
+
+PyObject *PyObject_CallOneArg(PyObject *callable, PyObject *arg)
+
+   정확히 1개의 위치 인자 *arg*로 키워드 인자 없이 콜러블 파이썬 객체
+   *callable*을 호출합니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   버전 3.9에 추가.
+
+PyObject *PyObject_CallObject(PyObject *callable, PyObject *args)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   튜플 *args*에 의해 주어진 인자로 콜러블 파이썬 객체 *callable*을 호
+   출합니다. 인자가 필요하지 않으면 *args*는 *NULL*일 수 있습니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   이것은 다음 파이썬 표현식과 동등합니다: "callable(*args)".
+
+PyObject *PyObject_CallFunction(PyObject *callable, const char *format, ...)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   가변 개수의 C 인자로 콜러블 파이썬 객체 *callable*을 호출합니다. C
+   인자는 "Py_BuildValue()" 스타일 포맷 문자열을 사용하여 기술됩니다.
+   format은 *NULL*일 수 있으며, 인자가 제공되지 않음을 나타냅니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   이것은 다음 파이썬 표현식과 동등합니다: "callable(*args)".
+
+   "PyObject*" 인자만 전달한다면 "PyObject_CallFunctionObjArgs()" 가
+   더 빠른 대안임에 유의하십시오.
+
+   버전 3.4에서 변경: *format*의 형이 "char *"에서 변경되었습니다.
+
+PyObject *PyObject_CallMethod(PyObject *obj, const char *name, const char *format, ...)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   가변 개수의 C 인자를 사용하여 객체 *obj*의 *name*이라는 이름의 메서
+   드를 호출합니다. C 인자는 튜플을 생성해야 하는 "Py_BuildValue()" 포
+   맷 문자열로 기술됩니다.
+
+   format은 *NULL*일 수 있으며, 인자가 제공되지 않음을 나타냅니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   이것은 다음 파이썬 표현식과 동등합니다: "obj.name(arg1, arg2,
+   ...)".
+
+   "PyObject*" 인자만 전달한다면 "PyObject_CallMethodObjArgs()" 가 더
+   빠른 대안임에 유의하십시오.
+
+   버전 3.4에서 변경: *name*과 *format*의 형이 "char *"에서 변경되었습
+   니다.
+
+PyObject *PyObject_CallFunctionObjArgs(PyObject *callable, ...)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   가변 개수의 "PyObject*" 인자로 콜러블 파이썬 객체 *callable*을 호출
+   합니다. 인자는 *NULL*로 끝나는 가변 개수의 매개 변수로 제공됩니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   이것은 다음 파이썬 표현식과 동등합니다: "callable(arg1, arg2,
+   ...)".
+
+PyObject *PyObject_CallMethodObjArgs(PyObject *obj, PyObject *name, ...)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   파이썬 객체 *obj*의 메서드를 호출합니다. 여기서 메서드 이름은
+   *name*에서 파이썬 문자열 객체로 제공됩니다. 가변 개수의 "PyObject*"
+   인자로 호출됩니다. 인자는 *NULL*로 끝나는 가변 개수의 매개 변수로
+   제공됩니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+PyObject *PyObject_CallMethodNoArgs(PyObject *obj, PyObject *name)
+
+   인자 없이 파이썬 객체 *obj*의 메서드를 호출합니다. 여기서 메서드 이
+   름은 *name*에서 파이썬 문자열 객체로 제공됩니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   버전 3.9에 추가.
+
+PyObject *PyObject_CallMethodOneArg(PyObject *obj, PyObject *name, PyObject *arg)
+
+   단일 위치 인자 *arg*로 파이썬 객체 *obj*의 메서드를 호출합니다. 여
+   기서 메서드 이름은 *name*에서 파이썬 문자열 객체로 제공됩니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   버전 3.9에 추가.
+
+PyObject *PyObject_Vectorcall(PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwnames)
+
+   콜러블 파이썬 객체 *callable*을 호출합니다. 인자는 "vectorcallfunc"
+   와 같습니다. *callable*이 벡터콜을 지원하면, *callable*에 저장된 벡
+   터콜 함수를 직접 호출합니다.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   버전 3.9에 추가.
+
+PyObject *PyObject_VectorcallDict(PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwdict)
+
+   위치 인자가 벡터콜 프로토콜과 정확히 일치하지만 딕셔너리 *kwdict*로
+   전달된 키워드 인자로 *callable*을 호출합니다. *args* 배열은 위치 인
+   자만 포함합니다.
+
+   내부적으로 사용되는 프로토콜과 관계없이, 인자를 변환해야 합니다. 따
+   라서, 이 함수는 호출자에게 이미 키워드 인자로 사용할 준비가 된 딕셔
+   너리가 있지만, 위치 인자에 대한 튜플이 없을 때만 사용해야 합니다.
+
+   버전 3.9에 추가.
+
+PyObject *PyObject_VectorcallMethod(PyObject *name, PyObject *const *args, size_t nargsf, PyObject *kwnames)
+
+   Call a method using the vectorcall calling convention. The name of
+   the method is given as a Python string *name*. The object whose
+   method is called is *args[0]*, and the *args* array starting at
+   *args[1]* represents the arguments of the call. There must be at
+   least one positional argument. *nargsf* is the number of positional
+   arguments including *args[0]*, plus
+   "PY_VECTORCALL_ARGUMENTS_OFFSET" if the value of "args[0]" may
+   temporarily be changed. Keyword arguments can be passed just like
+   in "PyObject_Vectorcall()".
+
+   If the object has the "Py_TPFLAGS_METHOD_DESCRIPTOR" feature, this
+   will call the unbound method object with the full *args* vector as
+   arguments.
+
+   성공하면 호출 결과를 반환하고, 실패하면 예외를 발생시키고 *NULL*을
+   반환합니다.
+
+   버전 3.9에 추가.
+
+
+호출 지원 API
+=============
+
+int PyCallable_Check(PyObject *o)
+    * Part of the Stable ABI.*
+
+   객체 *o*가 콜러블 인지 판별합니다. 객체가 콜러블 이면 "1"을, 그렇지
+   않으면 "0"을 반환합니다. 이 함수는 항상 성공합니다.

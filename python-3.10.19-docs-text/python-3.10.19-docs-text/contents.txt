@@ -1,0 +1,9967 @@
+파이썬 설명서 목차
+******************
+
+* 파이썬의 새로운 기능
+
+  * What's New In Python 3.10
+
+    * Summary -- Release highlights
+
+    * New Features
+
+      * Parenthesized context managers
+
+      * Better error messages
+
+        * SyntaxErrors
+
+        * IndentationErrors
+
+        * AttributeErrors
+
+        * NameErrors
+
+      * PEP 626: Precise line numbers for debugging and other tools
+
+      * PEP 634: Structural Pattern Matching
+
+        * Syntax and operations
+
+        * Declarative approach
+
+        * Simple pattern: match to a literal
+
+          * Behavior without the wildcard
+
+        * Patterns with a literal and variable
+
+        * Patterns and classes
+
+          * Patterns with positional parameters
+
+        * Nested patterns
+
+        * Complex patterns and the wildcard
+
+        * Guard
+
+        * Other Key Features
+
+      * Optional "EncodingWarning" and "encoding="locale"" option
+
+    * New Features Related to Type Hints
+
+      * PEP 604: New Type Union Operator
+
+      * PEP 612: Parameter Specification Variables
+
+      * PEP 613: TypeAlias
+
+      * PEP 647: User-Defined Type Guards
+
+    * Other Language Changes
+
+    * New Modules
+
+    * Improved Modules
+
+      * asyncio
+
+      * argparse
+
+      * array
+
+      * asynchat, asyncore, smtpd
+
+      * base64
+
+      * bdb
+
+      * bisect
+
+      * codecs
+
+      * collections.abc
+
+      * contextlib
+
+      * curses
+
+      * dataclasses
+
+        * __slots__
+
+        * Keyword-only fields
+
+      * distutils
+
+      * doctest
+
+      * encodings
+
+      * fileinput
+
+      * faulthandler
+
+      * gc
+
+      * glob
+
+      * hashlib
+
+      * hmac
+
+      * IDLE and idlelib
+
+      * importlib.metadata
+
+      * inspect
+
+      * itertools
+
+      * linecache
+
+      * os
+
+      * os.path
+
+      * pathlib
+
+      * platform
+
+      * pprint
+
+      * py_compile
+
+      * pyclbr
+
+      * shelve
+
+      * statistics
+
+      * site
+
+      * socket
+
+      * ssl
+
+      * sqlite3
+
+      * sys
+
+      * tempfile
+
+      * _thread
+
+      * threading
+
+      * traceback
+
+      * types
+
+      * typing
+
+      * unittest
+
+      * urllib.parse
+
+      * xml
+
+      * zipimport
+
+    * Optimizations
+
+    * Deprecated
+
+    * Removed
+
+    * Porting to Python 3.10
+
+      * Changes in the Python syntax
+
+      * Changes in the Python API
+
+      * Changes in the C API
+
+    * CPython bytecode changes
+
+    * Build Changes
+
+    * C API Changes
+
+      * PEP 652: Maintaining the Stable ABI
+
+      * New Features
+
+      * Porting to Python 3.10
+
+      * Deprecated
+
+      * Removed
+
+    * Notable security feature in 3.10.7
+
+    * Notable security feature in 3.10.8
+
+    * Notable Changes in 3.10.12
+
+      * tarfile
+
+    * Notable changes in 3.10.15
+
+      * ipaddress
+
+      * email
+
+    * Notable changes in 3.10.18
+
+      * os.path
+
+      * tarfile
+
+  * 파이썬 3.9의 새로운 기능
+
+    * 요약 -- 배포 주요 사항
+
+    * 여러분의 코드에서 DeprecationWarning을 확인해야합니다
+
+    * 새로운 기능
+
+      * 딕셔너리 병합과 업데이트 연산자
+
+      * 접두사와 접미사를 제거하는 새로운 문자열 메서드
+
+      * 표준 컬렉션의 형 힌트 제네릭
+
+      * 새로운 구문 분석기
+
+    * 기타 언어 변경
+
+    * 새 모듈
+
+      * zoneinfo
+
+      * graphlib
+
+    * 개선된 모듈
+
+      * ast
+
+      * asyncio
+
+      * compileall
+
+      * concurrent.futures
+
+      * curses
+
+      * datetime
+
+      * distutils
+
+      * fcntl
+
+      * ftplib
+
+      * gc
+
+      * hashlib
+
+      * http
+
+      * IDLE과 idlelib
+
+      * imaplib
+
+      * importlib
+
+      * inspect
+
+      * ipaddress
+
+      * math
+
+      * multiprocessing
+
+      * nntplib
+
+      * os
+
+      * pathlib
+
+      * pdb
+
+      * poplib
+
+      * pprint
+
+      * pydoc
+
+      * random
+
+      * signal
+
+      * smtplib
+
+      * socket
+
+      * time
+
+      * sys
+
+      * tracemalloc
+
+      * typing
+
+      * unicodedata
+
+      * venv
+
+      * xml
+
+    * 최적화
+
+    * 폐지
+
+    * 제거
+
+    * 파이썬 3.9로 이식하기
+
+      * 파이썬 API의 변경
+
+      * C API의 변경
+
+      * CPython 바이트 코드 변경
+
+    * 빌드 변경
+
+    * C API 변경
+
+      * 새로운 기능
+
+      * 파이썬 3.9로 이식하기
+
+      * 제거
+
+    * 파이썬 3.9.1의 주목할만한 변경 사항
+
+      * typing
+
+      * macOS 11.0 (Big Sur) 및 Apple Silicon Mac 지원
+
+    * 파이썬 3.9.2의 주목할만한 변경 사항
+
+      * collections.abc
+
+      * urllib.parse
+
+  * 파이썬 3.8의 새로운 기능
+
+    * 요약 -- 배포 주요 사항
+
+    * 새로운 기능
+
+      * 대입 표현식
+
+      * 위치 전용 매개 변수
+
+      * 컴파일된 바이트 코드 파일을 위한 병렬 파일 시스템 캐시
+
+      * 디버그 빌드는 릴리스 빌드와 같은 ABI를 사용합니다.
+
+      * f-문자열은 스스로 설명하는 표현식과 디버깅을 위해 =를 지원합니
+        다.
+
+      * PEP 578: 파이썬 런타임 감사 훅
+
+      * PEP 587: 파이썬 초기화 구성
+
+      * PEP 590: 벡터콜: CPython을 위한 빠른 호출 프로토콜
+
+      * 아웃 오브 밴드 데이터 버퍼를 사용하는 피클 프로토콜 5
+
+    * 기타 언어 변경
+
+    * 새 모듈
+
+    * 개선된 모듈
+
+      * ast
+
+      * asyncio
+
+      * builtins
+
+      * collections
+
+      * cProfile
+
+      * csv
+
+      * curses
+
+      * ctypes
+
+      * datetime
+
+      * functools
+
+      * gc
+
+      * gettext
+
+      * gzip
+
+      * IDLE과 idlelib
+
+      * inspect
+
+      * io
+
+      * itertools
+
+      * json.tool
+
+      * logging
+
+      * math
+
+      * mmap
+
+      * multiprocessing
+
+      * os
+
+      * os.path
+
+      * pathlib
+
+      * pickle
+
+      * plistlib
+
+      * pprint
+
+      * py_compile
+
+      * shlex
+
+      * shutil
+
+      * socket
+
+      * ssl
+
+      * statistics
+
+      * sys
+
+      * tarfile
+
+      * threading
+
+      * tokenize
+
+      * tkinter
+
+      * time
+
+      * typing
+
+      * unicodedata
+
+      * unittest
+
+      * venv
+
+      * weakref
+
+      * xml
+
+      * xmlrpc
+
+    * 최적화
+
+    * 빌드와 C API 변경
+
+    * 폐지
+
+    * API 및 기능 제거
+
+    * 파이썬 3.8로 이식하기
+
+      * 파이썬 동작의 변경
+
+      * 파이썬 API의 변경
+
+      * C API의 변경
+
+      * CPython 바이트 코드 변경
+
+      * 데모와 도구
+
+    * 파이썬 3.8.1의 주목할만한 변경 사항
+
+    * 파이썬 3.8.8의 주목할만한 변경 사항
+
+    * 파이썬 3.8.12의 주목할만한 변경 사항
+
+  * 파이썬 3.7의 새로운 기능
+
+    * 요약 -- 배포 주요 사항
+
+    * 새로운 기능
+
+      * PEP 563 : 어노테이션의 지연된 평가
+
+      * PEP 538: 레거시 C 로케일 강제 변경
+
+      * PEP 540: 강제 UTF-8 실행시간 모드
+
+      * PEP 553: 내장 "breakpoint()"
+
+      * PEP 539: 스레드-로컬 저장소를 위한 새로운 C API
+
+      * PEP 562: 모듈 어트리뷰트에 대한 액세스 사용자 정의
+
+      * PEP 564: 나노초 해상도의 새로운 시간 함수
+
+      * PEP 565: "__main__" 의 DeprecationWarning 표시
+
+      * PEP 560: "typing" 모듈과 제네릭 형에 대한 코어 지원
+
+      * PEP 552: 해시 기반 .pyc 파일
+
+      * PEP 545: 파이썬 설명서 번역
+
+      * 파이썬 개발 모드 (-X dev)
+
+    * 기타 언어 변경
+
+    * 새 모듈
+
+      * contextvars
+
+      * dataclasses
+
+      * importlib.resources
+
+    * 개선된 모듈
+
+      * argparse
+
+      * asyncio
+
+      * binascii
+
+      * calendar
+
+      * collections
+
+      * compileall
+
+      * concurrent.futures
+
+      * contextlib
+
+      * cProfile
+
+      * crypt
+
+      * datetime
+
+      * dbm
+
+      * decimal
+
+      * dis
+
+      * distutils
+
+      * enum
+
+      * functools
+
+      * gc
+
+      * hmac
+
+      * http.client
+
+      * http.server
+
+      * idlelib 및 IDLE
+
+      * importlib
+
+      * io
+
+      * ipaddress
+
+      * itertools
+
+      * locale
+
+      * logging
+
+      * math
+
+      * mimetypes
+
+      * msilib
+
+      * multiprocessing
+
+      * os
+
+      * pathlib
+
+      * pdb
+
+      * py_compile
+
+      * pydoc
+
+      * queue
+
+      * re
+
+      * signal
+
+      * socket
+
+      * socketserver
+
+      * sqlite3
+
+      * ssl
+
+      * string
+
+      * subprocess
+
+      * sys
+
+      * time
+
+      * tkinter
+
+      * tracemalloc
+
+      * types
+
+      * unicodedata
+
+      * unittest
+
+      * unittest.mock
+
+      * urllib.parse
+
+      * uu
+
+      * uuid
+
+      * warnings
+
+      * xml.etree
+
+      * xmlrpc.server
+
+      * zipapp
+
+      * zipfile
+
+    * C API 변경
+
+    * 빌드 변경
+
+    * 최적화
+
+    * 기타 CPython 구현 변경
+
+    * 폐지된 파이썬 동작
+
+    * 폐지된 파이썬 모듈, 함수 및 메서드
+
+      * aifc
+
+      * asyncio
+
+      * collections
+
+      * dbm
+
+      * enum
+
+      * gettext
+
+      * importlib
+
+      * locale
+
+      * macpath
+
+      * threading
+
+      * socket
+
+      * ssl
+
+      * sunau
+
+      * sys
+
+      * wave
+
+    * 폐지된 C API의 함수 및 형
+
+    * 플랫폼 지원 제거
+
+    * API 및 기능 제거
+
+    * 모듈 제거
+
+    * 윈도우 전용 변경
+
+    * 파이썬 3.7로 이식하기
+
+      * 파이썬 동작의 변경
+
+      * 파이썬 API의 변경
+
+      * C API의 변경
+
+      * CPython 바이트 코드 변경
+
+      * 윈도우 전용 변경
+
+      * 기타 CPython 구현 변경
+
+    * 파이썬 3.7.1의 주목할만한 변경 사항
+
+    * 파이썬 3.7.2의 주목할만한 변경 사항
+
+    * 파이썬 3.7.6의 주목할만한 변경 사항
+
+    * 파이썬 3.7.10의 주목할만한 변경 사항
+
+  * 파이썬 3.6의 새로운 기능
+
+    * 요약 -- 배포 주요 사항
+
+    * 새로운 기능
+
+      * PEP 498: 포맷 문자열 리터럴
+
+      * PEP 526: 변수 어노테이션 문법
+
+      * PEP 515: 숫자 리터럴의 밑줄
+
+      * PEP 525: 비동기 제너레이터
+
+      * PEP 530: 비동기 컴프리헨션
+
+      * PEP 487: 더 간단한 클래스 생성 사용자 정의
+
+      * PEP 487: 디스크립터 프로토콜 향상
+
+      * PEP 519: 파일 시스템 경로 프로토콜 추가
+
+      * PEP 495: 현지 시간 명확성
+
+      * PEP 529: 윈도우 파일 시스템 인코딩을 UTF-8로 변경
+
+      * PEP 528: 윈도우 콘솔 인코딩을 UTF-8로 변경
+
+      * PEP 520: 클래스 어트리뷰트 정의 순서 유지
+
+      * PEP 468: 키워드 인자 순서 유지
+
+      * 새로운 *dict* 구현
+
+      * PEP 523: CPython에 프레임 평가 API 추가
+
+      * PYTHONMALLOC 환경 변수
+
+      * DTrace와 SystemTap 프로브 지원
+
+    * 기타 언어 변경
+
+    * 새로운 모듈
+
+      * secrets
+
+    * 개선된 모듈
+
+      * array
+
+      * ast
+
+      * asyncio
+
+      * Binascii
+
+      * cmath
+
+      * collections
+
+      * concurrent.futures
+
+      * contextlib
+
+      * datetime
+
+      * decimal
+
+      * distutils
+
+      * email
+
+      * encodings
+
+      * enum
+
+      * faulthandler
+
+      * fileinput
+
+      * hashlib
+
+      * http.client
+
+      * idlelib와 IDLE
+
+      * importlib
+
+      * inspect
+
+      * json
+
+      * logging
+
+      * math
+
+      * multiprocessing
+
+      * os
+
+      * pathlib
+
+      * pdb
+
+      * pickle
+
+      * pickletools
+
+      * pydoc
+
+      * random
+
+      * re
+
+      * readline
+
+      * rlcompleter
+
+      * shlex
+
+      * site
+
+      * sqlite3
+
+      * socket
+
+      * socketserver
+
+      * ssl
+
+      * statistics
+
+      * struct
+
+      * subprocess
+
+      * sys
+
+      * telnetlib
+
+      * time
+
+      * timeit
+
+      * tkinter
+
+      * traceback
+
+      * tracemalloc
+
+      * typing
+
+      * unicodedata
+
+      * unittest.mock
+
+      * urllib.request
+
+      * urllib.robotparser
+
+      * venv
+
+      * warnings
+
+      * winreg
+
+      * winsound
+
+      * xmlrpc.client
+
+      * zipfile
+
+      * zlib
+
+    * 최적화
+
+    * 빌드와 C API 변경
+
+    * 기타 개선 사항
+
+    * 폐지
+
+      * 새 키워드
+
+      * 폐지된 파이썬 동작
+
+      * 폐지된 파이썬 모듈, 함수 및 메서드
+
+        * asynchat
+
+        * asyncore
+
+        * dbm
+
+        * distutils
+
+        * grp
+
+        * importlib
+
+        * os
+
+        * re
+
+        * ssl
+
+        * tkinter
+
+        * venv
+
+      * C API의 폐지된 함수와 형
+
+      * 폐지된 빌드 옵션
+
+    * 제거
+
+      * API와 기능 제거
+
+    * 파이썬 3.6으로 이식하기
+
+      * 'python' 명령 동작의 변경 사항
+
+      * 파이썬 API의 변경 사항
+
+      * C API의 변경 사항
+
+      * CPython 바이트 코드 변경 사항
+
+    * 파이썬 3.6.2의 주목할만한 변경 사항
+
+      * 새로운 "make regen-all" 빌드 대상
+
+      * "make touch" 빌드 대상 제거
+
+    * 파이썬 3.6.4의 주목할만한 변경 사항
+
+    * 파이썬 3.6.5의 주목할만한 변경 사항
+
+    * 파이썬 3.6.7의 주목할만한 변경 사항
+
+    * 파이썬 3.6.10의 주목할만한 변경 사항
+
+    * 파이썬 3.6.13의 주목할만한 변경 사항
+
+  * 파이썬 3.5의 새로운 기능
+
+    * 요약 -- 배포 주요 사항
+
+    * 새로운 기능
+
+      * PEP 492 - async와 await 구문을 사용하는 코루틴
+
+      * PEP 465 - 행렬 곱셈을 위한 전용 중위(infix) 연산자
+
+      * PEP 448 - 추가적인 언 패킹 일반화
+
+      * PEP 461 - bytes와 bytearray를 위한 퍼센트 포매팅 지원
+
+      * PEP 484 - 형 힌트
+
+      * PEP 471 - os.scandir() 함수 -- 더 빠르고 더 나은 디렉터리 이터
+        레이터
+
+      * PEP 475: EINTR로 실패한 시스템 호출 재시도
+
+      * PEP 479: 제너레이터 내부에서의 StopIteration 처리 변경
+
+      * PEP 485: 대략적인 동등성을 테스트하는 함수
+
+      * PEP 486: 파이썬 런처가 가상 환경을 인식하도록 만들기
+
+      * PEP 488: PYO 파일 제거
+
+      * PEP 489: 다단계 확장 모듈 초기화
+
+    * 기타 언어 변경
+
+    * 새로운 모듈
+
+      * typing
+
+      * zipapp
+
+    * 개선된 모듈
+
+      * argparse
+
+      * asyncio
+
+      * bz2
+
+      * cgi
+
+      * cmath
+
+      * code
+
+      * collections
+
+      * collections.abc
+
+      * compileall
+
+      * concurrent.futures
+
+      * configparser
+
+      * contextlib
+
+      * csv
+
+      * curses
+
+      * dbm
+
+      * difflib
+
+      * distutils
+
+      * doctest
+
+      * email
+
+      * enum
+
+      * faulthandler
+
+      * functools
+
+      * glob
+
+      * gzip
+
+      * heapq
+
+      * http
+
+      * http.client
+
+      * idlelib 및 IDLE
+
+      * imaplib
+
+      * imghdr
+
+      * importlib
+
+      * inspect
+
+      * io
+
+      * ipaddress
+
+      * json
+
+      * linecache
+
+      * locale
+
+      * logging
+
+      * lzma
+
+      * math
+
+      * multiprocessing
+
+      * operator
+
+      * os
+
+      * pathlib
+
+      * pickle
+
+      * poplib
+
+      * re
+
+      * readline
+
+      * selectors
+
+      * Shutil
+
+      * signal
+
+      * smtpd
+
+      * smtplib
+
+      * sndhdr
+
+      * socket
+
+      * ssl
+
+        * 메모리 BIO 지원
+
+        * 응용 프로그램 계층 프로토콜 협상 지원
+
+        * 기타 변경 사항
+
+      * sqlite3
+
+      * subprocess
+
+      * sys
+
+      * sysconfig
+
+      * tarfile
+
+      * threading
+
+      * time
+
+      * timeit
+
+      * tkinter
+
+      * traceback
+
+      * types
+
+      * unicodedata
+
+      * unittest
+
+      * unittest.mock
+
+      * urllib
+
+      * wsgiref
+
+      * xmlrpc
+
+      * xml.sax
+
+      * zipfile
+
+    * 기타 모듈 수준 변경
+
+    * 최적화
+
+    * 빌드와 C API 변경
+
+    * 폐지
+
+      * 새 키워드
+
+      * 폐지된 파이썬 동작
+
+      * 지원되지 않는 운영 체제
+
+      * 폐지된 파이썬 모듈, 함수 및 메서드
+
+    * 제거
+
+      * API 및 기능 제거
+
+    * 파이썬 3.5로 이식하기
+
+      * 파이썬 동작의 변경
+
+      * 파이썬 API의 변경
+
+      * C API의 변경
+
+    * 파이썬 3.5.4의 주목할만한 변경 사항
+
+      * 새로운 "make regen-all" 빌드 대상
+
+      * "make touch" 빌드 대상 제거
+
+  * What's New In Python 3.4
+
+    * Summary -- Release Highlights
+
+    * New Features
+
+      * PEP 453: Explicit Bootstrapping of PIP in Python Installations
+
+        * Bootstrapping pip By Default
+
+        * Documentation Changes
+
+      * PEP 446: Newly Created File Descriptors Are Non-Inheritable
+
+      * Improvements to Codec Handling
+
+      * PEP 451: A ModuleSpec Type for the Import System
+
+      * Other Language Changes
+
+    * New Modules
+
+      * asyncio
+
+      * ensurepip
+
+      * enum
+
+      * pathlib
+
+      * selectors
+
+      * statistics
+
+      * tracemalloc
+
+    * Improved Modules
+
+      * abc
+
+      * aifc
+
+      * argparse
+
+      * audioop
+
+      * base64
+
+      * collections
+
+      * colorsys
+
+      * contextlib
+
+      * dbm
+
+      * dis
+
+      * doctest
+
+      * email
+
+      * filecmp
+
+      * functools
+
+      * gc
+
+      * glob
+
+      * hashlib
+
+      * hmac
+
+      * html
+
+      * http
+
+      * idlelib and IDLE
+
+      * importlib
+
+      * inspect
+
+      * ipaddress
+
+      * logging
+
+      * marshal
+
+      * mmap
+
+      * multiprocessing
+
+      * operator
+
+      * os
+
+      * pdb
+
+      * pickle
+
+      * plistlib
+
+      * poplib
+
+      * pprint
+
+      * pty
+
+      * pydoc
+
+      * re
+
+      * resource
+
+      * select
+
+      * shelve
+
+      * shutil
+
+      * smtpd
+
+      * smtplib
+
+      * socket
+
+      * sqlite3
+
+      * ssl
+
+      * stat
+
+      * struct
+
+      * subprocess
+
+      * sunau
+
+      * sys
+
+      * tarfile
+
+      * textwrap
+
+      * threading
+
+      * traceback
+
+      * types
+
+      * urllib
+
+      * unittest
+
+      * venv
+
+      * wave
+
+      * weakref
+
+      * xml.etree
+
+      * zipfile
+
+    * CPython Implementation Changes
+
+      * PEP 445: Customization of CPython Memory Allocators
+
+      * PEP 442: Safe Object Finalization
+
+      * PEP 456: Secure and Interchangeable Hash Algorithm
+
+      * PEP 436: Argument Clinic
+
+      * Other Build and C API Changes
+
+      * Other Improvements
+
+      * Significant Optimizations
+
+    * Deprecated
+
+      * Deprecations in the Python API
+
+      * Deprecated Features
+
+    * Removed
+
+      * Operating Systems No Longer Supported
+
+      * API and Feature Removals
+
+      * Code Cleanups
+
+    * Porting to Python 3.4
+
+      * Changes in 'python' Command Behavior
+
+      * Changes in the Python API
+
+      * Changes in the C API
+
+    * Changed in 3.4.3
+
+      * PEP 476: Enabling certificate verification by default for
+        stdlib http clients
+
+  * What's New In Python 3.3
+
+    * Summary -- Release highlights
+
+    * PEP 405: Virtual Environments
+
+    * PEP 420: Implicit Namespace Packages
+
+    * PEP 3118: New memoryview implementation and buffer protocol
+      documentation
+
+      * Features
+
+      * API changes
+
+    * PEP 393: Flexible String Representation
+
+      * Functionality
+
+      * Performance and resource usage
+
+    * PEP 397: Python Launcher for Windows
+
+    * PEP 3151: Reworking the OS and IO exception hierarchy
+
+    * PEP 380: Syntax for Delegating to a Subgenerator
+
+    * PEP 409: Suppressing exception context
+
+    * PEP 414: Explicit Unicode literals
+
+    * PEP 3155: Qualified name for classes and functions
+
+    * PEP 412: Key-Sharing Dictionary
+
+    * PEP 362: Function Signature Object
+
+    * PEP 421: Adding sys.implementation
+
+      * SimpleNamespace
+
+    * Using importlib as the Implementation of Import
+
+      * New APIs
+
+      * Visible Changes
+
+    * Other Language Changes
+
+    * A Finer-Grained Import Lock
+
+    * Builtin functions and types
+
+    * New Modules
+
+      * faulthandler
+
+      * ipaddress
+
+      * lzma
+
+    * Improved Modules
+
+      * abc
+
+      * array
+
+      * base64
+
+      * binascii
+
+      * bz2
+
+      * codecs
+
+      * collections
+
+      * contextlib
+
+      * crypt
+
+      * curses
+
+      * datetime
+
+      * decimal
+
+        * Features
+
+        * API changes
+
+      * email
+
+        * Policy Framework
+
+        * Provisional Policy with New Header API
+
+        * Other API Changes
+
+      * ftplib
+
+      * functools
+
+      * gc
+
+      * hmac
+
+      * http
+
+      * html
+
+      * imaplib
+
+      * inspect
+
+      * io
+
+      * itertools
+
+      * logging
+
+      * math
+
+      * mmap
+
+      * multiprocessing
+
+      * nntplib
+
+      * os
+
+      * pdb
+
+      * pickle
+
+      * pydoc
+
+      * re
+
+      * sched
+
+      * select
+
+      * shlex
+
+      * shutil
+
+      * signal
+
+      * smtpd
+
+      * smtplib
+
+      * socket
+
+      * socketserver
+
+      * sqlite3
+
+      * ssl
+
+      * stat
+
+      * struct
+
+      * subprocess
+
+      * sys
+
+      * tarfile
+
+      * tempfile
+
+      * textwrap
+
+      * threading
+
+      * time
+
+      * types
+
+      * unittest
+
+      * urllib
+
+      * webbrowser
+
+      * xml.etree.ElementTree
+
+      * zlib
+
+    * Optimizations
+
+    * Build and C API Changes
+
+    * Deprecated
+
+      * Unsupported Operating Systems
+
+      * Deprecated Python modules, functions and methods
+
+      * Deprecated functions and types of the C API
+
+      * Deprecated features
+
+    * Porting to Python 3.3
+
+      * Porting Python code
+
+      * Porting C code
+
+      * Building C extensions
+
+      * Command Line Switch Changes
+
+  * What's New In Python 3.2
+
+    * PEP 384: Defining a Stable ABI
+
+    * PEP 389: Argparse Command Line Parsing Module
+
+    * PEP 391:  Dictionary Based Configuration for Logging
+
+    * PEP 3148:  The "concurrent.futures" module
+
+    * PEP 3147:  PYC Repository Directories
+
+    * PEP 3149: ABI Version Tagged .so Files
+
+    * PEP 3333: Python Web Server Gateway Interface v1.0.1
+
+    * Other Language Changes
+
+    * New, Improved, and Deprecated Modules
+
+      * email
+
+      * elementtree
+
+      * functools
+
+      * itertools
+
+      * collections
+
+      * threading
+
+      * datetime and time
+
+      * math
+
+      * abc
+
+      * io
+
+      * reprlib
+
+      * logging
+
+      * csv
+
+      * contextlib
+
+      * decimal and fractions
+
+      * ftp
+
+      * popen
+
+      * select
+
+      * gzip and zipfile
+
+      * tarfile
+
+      * hashlib
+
+      * ast
+
+      * os
+
+      * shutil
+
+      * sqlite3
+
+      * html
+
+      * socket
+
+      * ssl
+
+      * nntp
+
+      * certificates
+
+      * imaplib
+
+      * http.client
+
+      * unittest
+
+      * random
+
+      * poplib
+
+      * asyncore
+
+      * tempfile
+
+      * inspect
+
+      * pydoc
+
+      * dis
+
+      * dbm
+
+      * ctypes
+
+      * site
+
+      * sysconfig
+
+      * pdb
+
+      * configparser
+
+      * urllib.parse
+
+      * mailbox
+
+      * turtledemo
+
+    * Multi-threading
+
+    * Optimizations
+
+    * Unicode
+
+    * Codecs
+
+    * Documentation
+
+    * IDLE
+
+    * Code Repository
+
+    * Build and C API Changes
+
+    * Porting to Python 3.2
+
+  * What's New In Python 3.1
+
+    * PEP 372: Ordered Dictionaries
+
+    * PEP 378: Format Specifier for Thousands Separator
+
+    * Other Language Changes
+
+    * New, Improved, and Deprecated Modules
+
+    * Optimizations
+
+    * IDLE
+
+    * Build and C API Changes
+
+    * Porting to Python 3.1
+
+  * What's New In Python 3.0
+
+    * Common Stumbling Blocks
+
+      * Print Is A Function
+
+      * Views And Iterators Instead Of Lists
+
+      * Ordering Comparisons
+
+      * Integers
+
+      * Text Vs. Data Instead Of Unicode Vs. 8-bit
+
+    * Overview Of Syntax Changes
+
+      * New Syntax
+
+      * Changed Syntax
+
+      * Removed Syntax
+
+    * Changes Already Present In Python 2.6
+
+    * Library Changes
+
+    * **PEP 3101**: A New Approach To String Formatting
+
+    * Changes To Exceptions
+
+    * Miscellaneous Other Changes
+
+      * Operators And Special Methods
+
+      * Builtins
+
+    * Build and C API Changes
+
+    * Performance
+
+    * Porting To Python 3.0
+
+  * What's New in Python 2.7
+
+    * The Future for Python 2.x
+
+    * Changes to the Handling of Deprecation Warnings
+
+    * Python 3.1 Features
+
+    * PEP 372: Adding an Ordered Dictionary to collections
+
+    * PEP 378: Format Specifier for Thousands Separator
+
+    * PEP 389: The argparse Module for Parsing Command Lines
+
+    * PEP 391: Dictionary-Based Configuration For Logging
+
+    * PEP 3106: Dictionary Views
+
+    * PEP 3137: The memoryview Object
+
+    * Other Language Changes
+
+      * Interpreter Changes
+
+      * Optimizations
+
+    * New and Improved Modules
+
+      * New module: importlib
+
+      * New module: sysconfig
+
+      * ttk: Themed Widgets for Tk
+
+      * Updated module: unittest
+
+      * Updated module: ElementTree 1.3
+
+    * Build and C API Changes
+
+      * Capsules
+
+      * Port-Specific Changes: Windows
+
+      * Port-Specific Changes: Mac OS X
+
+      * Port-Specific Changes: FreeBSD
+
+    * Other Changes and Fixes
+
+    * Porting to Python 2.7
+
+    * New Features Added to Python 2.7 Maintenance Releases
+
+      * Two new environment variables for debug mode
+
+      * PEP 434: IDLE Enhancement Exception for All Branches
+
+      * PEP 466: Network Security Enhancements for Python 2.7
+
+      * PEP 477: Backport ensurepip (PEP 453) to Python 2.7
+
+        * Bootstrapping pip By Default
+
+        * Documentation Changes
+
+      * PEP 476: Enabling certificate verification by default for
+        stdlib http clients
+
+      * PEP 493: HTTPS verification migration tools for Python 2.7
+
+      * New "make regen-all" build target
+
+      * Removal of "make touch" build target
+
+    * Acknowledgements
+
+  * What's New in Python 2.6
+
+    * Python 3.0
+
+    * Changes to the Development Process
+
+      * New Issue Tracker: Roundup
+
+      * New Documentation Format: reStructuredText Using Sphinx
+
+    * PEP 343: The 'with' statement
+
+      * Writing Context Managers
+
+      * The contextlib module
+
+    * PEP 366: Explicit Relative Imports From a Main Module
+
+    * PEP 370: Per-user "site-packages" Directory
+
+    * PEP 371: The "multiprocessing" Package
+
+    * PEP 3101: Advanced String Formatting
+
+    * PEP 3105: "print" As a Function
+
+    * PEP 3110: Exception-Handling Changes
+
+    * PEP 3112: Byte Literals
+
+    * PEP 3116: New I/O Library
+
+    * PEP 3118: Revised Buffer Protocol
+
+    * PEP 3119: Abstract Base Classes
+
+    * PEP 3127: Integer Literal Support and Syntax
+
+    * PEP 3129: Class Decorators
+
+    * PEP 3141: A Type Hierarchy for Numbers
+
+      * The "fractions" Module
+
+    * Other Language Changes
+
+      * Optimizations
+
+      * Interpreter Changes
+
+    * New and Improved Modules
+
+      * The "ast" module
+
+      * The "future_builtins" module
+
+      * The "json" module: JavaScript Object Notation
+
+      * The "plistlib" module: A Property-List Parser
+
+      * ctypes Enhancements
+
+      * Improved SSL Support
+
+    * Deprecations and Removals
+
+    * Build and C API Changes
+
+      * Port-Specific Changes: Windows
+
+      * Port-Specific Changes: Mac OS X
+
+      * Port-Specific Changes: IRIX
+
+    * Porting to Python 2.6
+
+    * Acknowledgements
+
+  * What's New in Python 2.5
+
+    * PEP 308: Conditional Expressions
+
+    * PEP 309: Partial Function Application
+
+    * PEP 314: Metadata for Python Software Packages v1.1
+
+    * PEP 328: Absolute and Relative Imports
+
+    * PEP 338: Executing Modules as Scripts
+
+    * PEP 341: Unified try/except/finally
+
+    * PEP 342: New Generator Features
+
+    * PEP 343: The 'with' statement
+
+      * Writing Context Managers
+
+      * The contextlib module
+
+    * PEP 352: Exceptions as New-Style Classes
+
+    * PEP 353: Using ssize_t as the index type
+
+    * PEP 357: The '__index__' method
+
+    * Other Language Changes
+
+      * Interactive Interpreter Changes
+
+      * Optimizations
+
+    * New, Improved, and Removed Modules
+
+      * The ctypes package
+
+      * The ElementTree package
+
+      * The hashlib package
+
+      * The sqlite3 package
+
+      * The wsgiref package
+
+    * Build and C API Changes
+
+      * Port-Specific Changes
+
+    * Porting to Python 2.5
+
+    * Acknowledgements
+
+  * What's New in Python 2.4
+
+    * PEP 218: Built-In Set Objects
+
+    * PEP 237: Unifying Long Integers and Integers
+
+    * PEP 289: Generator Expressions
+
+    * PEP 292: Simpler String Substitutions
+
+    * PEP 318: Decorators for Functions and Methods
+
+    * PEP 322: Reverse Iteration
+
+    * PEP 324: New subprocess Module
+
+    * PEP 327: Decimal Data Type
+
+      * Why is Decimal needed?
+
+      * The "Decimal" type
+
+      * The "Context" type
+
+    * PEP 328: Multi-line Imports
+
+    * PEP 331: Locale-Independent Float/String Conversions
+
+    * Other Language Changes
+
+      * Optimizations
+
+    * New, Improved, and Deprecated Modules
+
+      * cookielib
+
+      * doctest
+
+    * Build and C API Changes
+
+      * Port-Specific Changes
+
+    * Porting to Python 2.4
+
+    * Acknowledgements
+
+  * What's New in Python 2.3
+
+    * PEP 218: A Standard Set Datatype
+
+    * PEP 255: Simple Generators
+
+    * PEP 263: Source Code Encodings
+
+    * PEP 273: Importing Modules from ZIP Archives
+
+    * PEP 277: Unicode file name support for Windows NT
+
+    * PEP 278: Universal Newline Support
+
+    * PEP 279: enumerate()
+
+    * PEP 282: The logging Package
+
+    * PEP 285: A Boolean Type
+
+    * PEP 293: Codec Error Handling Callbacks
+
+    * PEP 301: Package Index and Metadata for Distutils
+
+    * PEP 302: New Import Hooks
+
+    * PEP 305: Comma-separated Files
+
+    * PEP 307: Pickle Enhancements
+
+    * Extended Slices
+
+    * Other Language Changes
+
+      * String Changes
+
+      * Optimizations
+
+    * New, Improved, and Deprecated Modules
+
+      * Date/Time Type
+
+      * The optparse Module
+
+    * Pymalloc: A Specialized Object Allocator
+
+    * Build and C API Changes
+
+      * Port-Specific Changes
+
+    * Other Changes and Fixes
+
+    * Porting to Python 2.3
+
+    * Acknowledgements
+
+  * What's New in Python 2.2
+
+    * Introduction
+
+    * PEPs 252 and 253: Type and Class Changes
+
+      * Old and New Classes
+
+      * Descriptors
+
+      * Multiple Inheritance: The Diamond Rule
+
+      * Attribute Access
+
+      * Related Links
+
+    * PEP 234: Iterators
+
+    * PEP 255: Simple Generators
+
+    * PEP 237: Unifying Long Integers and Integers
+
+    * PEP 238: Changing the Division Operator
+
+    * Unicode Changes
+
+    * PEP 227: Nested Scopes
+
+    * New and Improved Modules
+
+    * Interpreter Changes and Fixes
+
+    * Other Changes and Fixes
+
+    * Acknowledgements
+
+  * What's New in Python 2.1
+
+    * Introduction
+
+    * PEP 227: Nested Scopes
+
+    * PEP 236: __future__ Directives
+
+    * PEP 207: Rich Comparisons
+
+    * PEP 230: Warning Framework
+
+    * PEP 229: New Build System
+
+    * PEP 205: Weak References
+
+    * PEP 232: Function Attributes
+
+    * PEP 235: Importing Modules on Case-Insensitive Platforms
+
+    * PEP 217: Interactive Display Hook
+
+    * PEP 208: New Coercion Model
+
+    * PEP 241: Metadata in Python Packages
+
+    * New and Improved Modules
+
+    * Other Changes and Fixes
+
+    * Acknowledgements
+
+  * What's New in Python 2.0
+
+    * Introduction
+
+    * What About Python 1.6?
+
+    * New Development Process
+
+    * Unicode
+
+    * List Comprehensions
+
+    * Augmented Assignment
+
+    * String Methods
+
+    * Garbage Collection of Cycles
+
+    * Other Core Changes
+
+      * Minor Language Changes
+
+      * Changes to Built-in Functions
+
+    * Porting to 2.0
+
+    * Extending/Embedding Changes
+
+    * Distutils: Making Modules Easy to Install
+
+    * XML Modules
+
+      * SAX2 Support
+
+      * DOM Support
+
+      * Relationship to PyXML
+
+    * Module changes
+
+    * New modules
+
+    * IDLE Improvements
+
+    * Deleted and Deprecated Modules
+
+    * Acknowledgements
+
+  * Changelog
+
+    * Python 3.10.19 final
+
+      * Security
+
+      * Library
+
+    * Python 3.10.18 final
+
+      * Security
+
+      * Library
+
+    * Python 3.10.17 final
+
+      * Security
+
+      * Library
+
+      * Documentation
+
+    * Python 3.10.16 final
+
+      * Tests
+
+      * Security
+
+      * Library
+
+    * Python 3.10.15 final
+
+      * Windows
+
+      * Tests
+
+      * Security
+
+      * Library
+
+      * Core and Builtins
+
+    * Python 3.10.14 final
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Windows
+
+      * Tools/Demos
+
+    * Python 3.10.13 final
+
+      * Security
+
+      * Library
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.10.12 final
+
+      * Security
+
+      * Library
+
+      * Documentation
+
+      * Build
+
+    * Python 3.10.11 final
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+    * Python 3.10.10 final
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * C API
+
+    * Python 3.10.9 final
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+    * Python 3.10.8 final
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+    * Python 3.10.7 final
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * IDLE
+
+    * Python 3.10.6 final
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.10.5 final
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * Tools/Demos
+
+    * Python 3.10.4 final
+
+      * Core and Builtins
+
+      * Library
+
+    * Python 3.10.3 final
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.2 final
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * macOS
+
+      * C API
+
+    * Python 3.10.1 final
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.10.0 final
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.0 release candidate 2
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Windows
+
+      * macOS
+
+    * Python 3.10.0 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Windows
+
+      * macOS
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.10.0 beta 4
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * C API
+
+    * Python 3.10.0 beta 3
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.0 beta 2
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.10.0 beta 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.0 alpha 7
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.0 alpha 6
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.0 alpha 5
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.0 alpha 4
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * macOS
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.10.0 alpha 3
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.10.0 alpha 2
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * C API
+
+    * Python 3.10.0 alpha 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * C API
+
+    * Python 3.9.0 beta 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.9.0 alpha 6
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.9.0 alpha 5
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.9.0 alpha 4
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * IDLE
+
+      * C API
+
+    * Python 3.9.0 alpha 3
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Build
+
+      * IDLE
+
+      * C API
+
+    * Python 3.9.0 alpha 2
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * C API
+
+    * Python 3.9.0 alpha 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.8.0 beta 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.8.0 alpha 4
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.8.0 alpha 3
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.8.0 alpha 2
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Windows
+
+      * IDLE
+
+    * Python 3.8.0 alpha 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.7.0 final
+
+      * Library
+
+      * C API
+
+    * Python 3.7.0 release candidate 1
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Build
+
+      * Windows
+
+      * IDLE
+
+    * Python 3.7.0 beta 5
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * macOS
+
+      * IDLE
+
+    * Python 3.7.0 beta 4
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+    * Python 3.7.0 beta 3
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.7.0 beta 2
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+    * Python 3.7.0 beta 1
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * C API
+
+    * Python 3.7.0 alpha 4
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Windows
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.7.0 alpha 3
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.7.0 alpha 2
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Build
+
+      * IDLE
+
+      * C API
+
+    * Python 3.7.0 alpha 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.6.6 final
+
+    * Python 3.6.6 release candidate 1
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.6.5 final
+
+      * Tests
+
+      * Build
+
+    * Python 3.6.5 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.6.4 final
+
+    * Python 3.6.4 release candidate 1
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * macOS
+
+      * IDLE
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.6.3 final
+
+      * Library
+
+      * Build
+
+    * Python 3.6.3 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * IDLE
+
+      * Tools/Demos
+
+    * Python 3.6.2 final
+
+    * Python 3.6.2 release candidate 2
+
+      * Security
+
+    * Python 3.6.2 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * C API
+
+      * Build
+
+      * Documentation
+
+      * Tools/Demos
+
+      * Tests
+
+      * Windows
+
+    * Python 3.6.1 final
+
+      * Core and Builtins
+
+      * Build
+
+    * Python 3.6.1 release candidate 1
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Windows
+
+      * C API
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+    * Python 3.6.0 final
+
+    * Python 3.6.0 release candidate 2
+
+      * Core and Builtins
+
+      * Tools/Demos
+
+      * Windows
+
+      * Build
+
+    * Python 3.6.0 release candidate 1
+
+      * Core and Builtins
+
+      * Library
+
+      * C API
+
+      * Documentation
+
+      * Tools/Demos
+
+    * Python 3.6.0 beta 4
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+    * Python 3.6.0 beta 3
+
+      * Core and Builtins
+
+      * Library
+
+      * Windows
+
+      * Build
+
+      * Tests
+
+    * Python 3.6.0 beta 2
+
+      * Core and Builtins
+
+      * Library
+
+      * Windows
+
+      * C API
+
+      * Build
+
+      * Tests
+
+    * Python 3.6.0 beta 1
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * C API
+
+      * Tests
+
+      * Build
+
+      * Tools/Demos
+
+      * Windows
+
+    * Python 3.6.0 alpha 4
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Tests
+
+      * Windows
+
+      * Build
+
+    * Python 3.6.0 alpha 3
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * C API
+
+      * Build
+
+      * Tools/Demos
+
+      * Documentation
+
+      * Tests
+
+    * Python 3.6.0 alpha 2
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Documentation
+
+      * Tests
+
+      * Windows
+
+      * Build
+
+      * C API
+
+      * Tools/Demos
+
+    * Python 3.6.0 alpha 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.5.5 final
+
+    * Python 3.5.5 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+    * Python 3.5.4 final
+
+      * Library
+
+    * Python 3.5.4 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * C API
+
+    * Python 3.5.3 final
+
+    * Python 3.5.3 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * C API
+
+      * Documentation
+
+      * Tests
+
+      * Tools/Demos
+
+      * Windows
+
+      * Build
+
+    * Python 3.5.2 final
+
+      * Core and Builtins
+
+      * Tests
+
+      * IDLE
+
+    * Python 3.5.2 release candidate 1
+
+      * Security
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * Tools/Demos
+
+    * Python 3.5.1 final
+
+      * Core and Builtins
+
+      * Windows
+
+    * Python 3.5.1 release candidate 1
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Documentation
+
+      * Tests
+
+      * Build
+
+      * Windows
+
+      * Tools/Demos
+
+    * Python 3.5.0 final
+
+      * Build
+
+    * Python 3.5.0 release candidate 4
+
+      * Library
+
+      * Build
+
+    * Python 3.5.0 release candidate 3
+
+      * Core and Builtins
+
+      * Library
+
+    * Python 3.5.0 release candidate 2
+
+      * Core and Builtins
+
+      * Library
+
+    * Python 3.5.0 release candidate 1
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Documentation
+
+      * Tests
+
+    * Python 3.5.0 beta 4
+
+      * Core and Builtins
+
+      * Library
+
+      * Build
+
+    * Python 3.5.0 beta 3
+
+      * Core and Builtins
+
+      * Library
+
+      * Tests
+
+      * Documentation
+
+      * Build
+
+    * Python 3.5.0 beta 2
+
+      * Core and Builtins
+
+      * Library
+
+    * Python 3.5.0 beta 1
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Tests
+
+      * Documentation
+
+      * Tools/Demos
+
+    * Python 3.5.0 alpha 4
+
+      * Core and Builtins
+
+      * Library
+
+      * Build
+
+      * Tests
+
+      * Tools/Demos
+
+      * C API
+
+    * Python 3.5.0 alpha 3
+
+      * Core and Builtins
+
+      * Library
+
+      * Build
+
+      * Tests
+
+      * Tools/Demos
+
+    * Python 3.5.0 alpha 2
+
+      * Core and Builtins
+
+      * Library
+
+      * Build
+
+      * C API
+
+      * Windows
+
+    * Python 3.5.0 alpha 1
+
+      * Core and Builtins
+
+      * Library
+
+      * IDLE
+
+      * Build
+
+      * C API
+
+      * Documentation
+
+      * Tests
+
+      * Tools/Demos
+
+      * Windows
+
+* 파이썬 자습서
+
+  * 1. 입맛 돋우기
+
+  * 2. 파이썬 인터프리터 사용하기
+
+    * 2.1. 인터프리터 실행하기
+
+      * 2.1.1. 인자 전달
+
+      * 2.1.2. 대화형 모드
+
+    * 2.2. 인터프리터와 환경
+
+      * 2.2.1. 소스 코드 인코딩
+
+  * 3. 파이썬의 간략한 소개
+
+    * 3.1. 파이썬을 계산기로 사용하기
+
+      * 3.1.1. 숫자
+
+      * 3.1.2. Strings
+
+      * 3.1.3. 리스트
+
+    * 3.2. 프로그래밍으로의 첫걸음
+
+  * 4. 기타 제어 흐름 도구
+
+    * 4.1. "if" 문
+
+    * 4.2. "for" 문
+
+    * 4.3. "range()" 함수
+
+    * 4.4. "break" and "continue" Statements, and "else" Clauses on
+      Loops
+
+    * 4.5. "pass" 문
+
+    * 4.6. "match" 문
+
+    * 4.7. 함수 정의하기
+
+    * 4.8. 함수 정의 더 보기
+
+      * 4.8.1. 기본 인자 값
+
+      * 4.8.2. 키워드 인자
+
+      * 4.8.3. 특수 매개 변수
+
+        * 4.8.3.1. 위치-키워드(Positional-or-Keyword) 인자
+
+        * 4.8.3.2. 위치 전용 매개 변수
+
+        * 4.8.3.3. 키워드 전용 인자
+
+        * 4.8.3.4. 함수 예제
+
+        * 4.8.3.5. 복습
+
+      * 4.8.4. 임의의 인자 목록
+
+      * 4.8.5. 인자 목록 언 패킹
+
+      * 4.8.6. 람다 표현식
+
+      * 4.8.7. 도큐멘테이션 문자열
+
+      * 4.8.8. 함수 어노테이션
+
+    * 4.9. 막간극: 코딩 스타일
+
+  * 5. 자료 구조
+
+    * 5.1. 리스트 더 보기
+
+      * 5.1.1. 리스트를 스택으로 사용하기
+
+      * 5.1.2. 리스트를 큐로 사용하기
+
+      * 5.1.3. 리스트 컴프리헨션
+
+      * 5.1.4. 중첩된 리스트 컴프리헨션
+
+    * 5.2. "del" 문
+
+    * 5.3. 튜플과 시퀀스
+
+    * 5.4. 집합
+
+    * 5.5. 딕셔너리
+
+    * 5.6. 루프 테크닉
+
+    * 5.7. 조건 더 보기
+
+    * 5.8. 시퀀스와 다른 형들을 비교하기
+
+  * 6. 모듈
+
+    * 6.1. 모듈 더 보기
+
+      * 6.1.1. 모듈을 스크립트로 실행하기
+
+      * 6.1.2. 모듈 검색 경로
+
+      * 6.1.3. "컴파일된" 파이썬 파일
+
+    * 6.2. 표준 모듈들
+
+    * 6.3. "dir()" 함수
+
+    * 6.4. 패키지
+
+      * 6.4.1. 패키지에서 * 임포트 하기
+
+      * 6.4.2. 패키지 내부 간의 참조
+
+      * 6.4.3. 여러 디렉터리에 있는 패키지
+
+  * 7. 입력과 출력
+
+    * 7.1. 장식적인 출력 포매팅
+
+      * 7.1.1. 포맷 문자열 리터럴
+
+      * 7.1.2. 문자열 format() 메서드
+
+      * 7.1.3. 수동 문자열 포매팅
+
+      * 7.1.4. 예전의 문자열 포매팅
+
+    * 7.2. 파일을 읽고 쓰기
+
+      * 7.2.1. 파일 객체의 매소드
+
+      * 7.2.2. "json" 으로 구조적인 데이터를 저장하기
+
+  * 8. 에러와 예외
+
+    * 8.1. 문법 에러
+
+    * 8.2. 예외
+
+    * 8.3. 예외 처리하기
+
+    * 8.4. 예외 일으키기
+
+    * 8.5. 예외 연쇄
+
+    * 8.6. 사용자 정의 예외
+
+    * 8.7. 뒷정리 동작 정의하기
+
+    * 8.8. 미리 정의된 뒷정리 동작들
+
+  * 9. 클래스
+
+    * 9.1. 이름과 객체에 관한 한마디
+
+    * 9.2. 파이썬 스코프와 이름 공간
+
+      * 9.2.1. 스코프와 이름 공간 예
+
+    * 9.3. 클래스와의 첫 만남
+
+      * 9.3.1. 클래스 정의 문법
+
+      * 9.3.2. 클래스 객체
+
+      * 9.3.3. 인스턴스 객체
+
+      * 9.3.4. 메서드 객체
+
+      * 9.3.5. 클래스와 인스턴스 변수
+
+    * 9.4. 기타 주의사항들
+
+    * 9.5. 상속
+
+      * 9.5.1. 다중 상속
+
+    * 9.6. 비공개 변수
+
+    * 9.7. 잡동사니
+
+    * 9.8. 이터레이터
+
+    * 9.9. 제너레이터
+
+    * 9.10. 제너레이터 표현식
+
+  * 10. 표준 라이브러리 둘러보기
+
+    * 10.1. 운영 체제 인터페이스
+
+    * 10.2. 파일 와일드카드
+
+    * 10.3. 명령행 인자
+
+    * 10.4. 에러 출력 리디렉션과 프로그램 종료
+
+    * 10.5. 문자열 패턴 매칭
+
+    * 10.6. 수학
+
+    * 10.7. 인터넷 액세스
+
+    * 10.8. 날짜와 시간
+
+    * 10.9. 데이터 압축
+
+    * 10.10. 성능 측정
+
+    * 10.11. 품질 관리
+
+    * 10.12. 배터리가 포함됩니다
+
+  * 11. 표준 라이브러리 둘러보기 --- 2부
+
+    * 11.1. 출력 포매팅
+
+    * 11.2. 템플릿
+
+    * 11.3. 바이너리 데이터 레코드 배치 작업
+
+    * 11.4. 다중 스레딩
+
+    * 11.5. 로깅
+
+    * 11.6. 약한 참조
+
+    * 11.7. 리스트 작업 도구
+
+    * 11.8. Decimal Floating Point Arithmetic
+
+  * 12. 가상 환경 및 패키지
+
+    * 12.1. 소개
+
+    * 12.2. 가상 환경 만들기
+
+    * 12.3. pip로 패키지 관리하기
+
+  * 13. 이제 뭘 하지?
+
+  * 14. 대화형 입력 편집 및 히스토리 치환
+
+    * 14.1. 탭 완성 및 히스토리 편집
+
+    * 14.2. 대화형 인터프리터 대안
+
+  * 15. Floating Point Arithmetic:  Issues and Limitations
+
+    * 15.1. 표현 오류
+
+  * 16. 부록
+
+    * 16.1. 대화형 모드
+
+      * 16.1.1. 에러 처리
+
+      * 16.1.2. 실행 가능한 파이썬 스크립트
+
+      * 16.1.3. 대화형 시작 파일
+
+      * 16.1.4. 커스터마이제이션 모듈
+
+* 파이썬 설정 및 사용법
+
+  * 1. 명령 줄과 환경
+
+    * 1.1. 명령 줄
+
+      * 1.1.1. 인터페이스 옵션
+
+      * 1.1.2. 일반 옵션
+
+      * 1.1.3. 기타 옵션
+
+      * 1.1.4. 사용해서는 안 되는 옵션
+
+    * 1.2. 환경 변수
+
+      * 1.2.1. 디버그 모드 변수
+
+  * 2. 유닉스 플랫폼에서 파이썬 사용하기
+
+    * 2.1. 최신 버전의 파이썬 내려받기와 설치
+
+      * 2.1.1. 리눅스
+
+      * 2.1.2. FreeBSD와 OpenBSD
+
+      * 2.1.3. On OpenSolaris
+
+    * 2.2. 파이썬 빌드하기
+
+    * 2.3. 파이썬 관련 경로와 파일
+
+    * 2.4. 잡동사니
+
+    * 2.5. Custom OpenSSL
+
+  * 3. Configure Python
+
+    * 3.1. Configure Options
+
+      * 3.1.1. General Options
+
+      * 3.1.2. Install Options
+
+      * 3.1.3. Performance options
+
+      * 3.1.4. Python Debug Build
+
+      * 3.1.5. Debug options
+
+      * 3.1.6. Linker options
+
+      * 3.1.7. Libraries options
+
+      * 3.1.8. Security Options
+
+      * 3.1.9. macOS Options
+
+    * 3.2. Python Build System
+
+      * 3.2.1. Main files of the build system
+
+      * 3.2.2. Main build steps
+
+      * 3.2.3. Main Makefile targets
+
+      * 3.2.4. C extensions
+
+    * 3.3. Compiler and linker flags
+
+      * 3.3.1. Preprocessor flags
+
+      * 3.3.2. Compiler flags
+
+      * 3.3.3. Linker flags
+
+  * 4. 윈도우에서 파이썬 사용하기
+
+    * 4.1. 전체 설치 프로그램
+
+      * 4.1.1. 설치 단계
+
+      * 4.1.2. MAX_PATH 제한 제거하기
+
+      * 4.1.3. UI 없이 설치하기
+
+      * 4.1.4. 다운로드 없이 설치하기
+
+      * 4.1.5. 설치 수정하기
+
+    * 4.2. Microsoft Store 패키지
+
+      * 4.2.1. 알려진 문제
+
+        * 4.2.1.1. Redirection of local data, registry, and temporary
+          paths
+
+    * 4.3. nuget.org 패키지
+
+    * 4.4. 내장 가능한 패키지
+
+      * 4.4.1. 파이썬 응용 프로그램
+
+      * 4.4.2. 파이썬 내장하기
+
+    * 4.5. 대체 번들
+
+    * 4.6. 파이썬 구성하기
+
+      * 4.6.1. 보충 설명: 환경 변수 설정하기
+
+      * 4.6.2. 파이썬 실행 파일 찾기
+
+    * 4.7. UTF-8 모드
+
+    * 4.8. 윈도우 용 파이썬 런처
+
+      * 4.8.1. 시작하기
+
+        * 4.8.1.1. 명령 줄에서
+
+        * 4.8.1.2. 가상 환경
+
+        * 4.8.1.3. 스크립트에서
+
+        * 4.8.1.4. 파일 연결에서
+
+      * 4.8.2. 셔뱅 줄
+
+      * 4.8.3. 셔뱅 줄의 인자
+
+      * 4.8.4. 사용자 정의
+
+        * 4.8.4.1. INI 파일을 통한 사용자 정의
+
+        * 4.8.4.2. 기본 파이썬 버전 사용자 정의
+
+      * 4.8.5. 진단
+
+    * 4.9. 모듈 찾기
+
+    * 4.10. 추가 모듈
+
+      * 4.10.1. PyWin32
+
+      * 4.10.2. cx_Freeze
+
+    * 4.11. 윈도우에서 파이썬 컴파일하기
+
+    * 4.12. 기타 플랫폼
+
+  * 5. Using Python on a Mac
+
+    * 5.1. Getting and Installing MacPython
+
+      * 5.1.1. 파이썬 스크립트를 실행하는 방법
+
+      * 5.1.2. Running scripts with a GUI
+
+      * 5.1.3. Configuration
+
+    * 5.2. The IDE
+
+    * 5.3. 추가 파이썬 패키지 설치하기
+
+    * 5.4. GUI Programming on the Mac
+
+    * 5.5. Distributing Python Applications on the Mac
+
+    * 5.6. 기타 자원
+
+  * 6. 편집기와 IDE
+
+* 파이썬 언어 레퍼런스
+
+  * 1. 개요
+
+    * 1.1. 대안 구현들
+
+    * 1.2. 표기법
+
+  * 2. 어휘 분석
+
+    * 2.1. 줄 구조(Line structure)
+
+      * 2.1.1. 논리적인 줄
+
+      * 2.1.2. 물리적인 줄
+
+      * 2.1.3. 주석
+
+      * 2.1.4. 인코딩 선언
+
+      * 2.1.5. 명시적인 줄 결합
+
+      * 2.1.6. 묵시적인 줄 결합
+
+      * 2.1.7. 빈 줄
+
+      * 2.1.8. 들여쓰기
+
+      * 2.1.9. 토큰 사이의 공백
+
+    * 2.2. 다른 토큰들
+
+    * 2.3. 식별자와 키워드
+
+      * 2.3.1. 키워드
+
+      * 2.3.2. 소프트 키워드
+
+      * 2.3.3. 식별자의 예약 영역
+
+    * 2.4. 리터럴
+
+      * 2.4.1. 문자열과 바이트열 리터럴
+
+      * 2.4.2. 문자열 리터럴 이어붙이기
+
+      * 2.4.3. Formatted string literals
+
+      * 2.4.4. 숫자 리터럴
+
+      * 2.4.5. 정수 리터럴
+
+      * 2.4.6. Floating point literals
+
+      * 2.4.7. 허수 리터럴
+
+    * 2.5. 연산자
+
+    * 2.6. 구분자
+
+  * 3. 데이터 모델
+
+    * 3.1. 객체, 값, 형
+
+    * 3.2. 표준형 계층
+
+    * 3.3. 특수 메서드 이름들
+
+      * 3.3.1. 기본적인 커스터마이제이션
+
+      * 3.3.2. 어트리뷰트 액세스 커스터마이제이션
+
+        * 3.3.2.1. 모듈 어트리뷰트 액세스 커스터마이제이션
+
+        * 3.3.2.2. 디스크립터 구현하기
+
+        * 3.3.2.3. 디스크립터 호출하기
+
+        * 3.3.2.4. __slots__
+
+          * 3.3.2.4.1. Notes on using *__slots__*
+
+      * 3.3.3. 클래스 생성 커스터마이제이션
+
+        * 3.3.3.1. 메타 클래스
+
+        * 3.3.3.2. MRO 항목 결정하기
+
+        * 3.3.3.3. 적절한 메타 클래스 선택하기
+
+        * 3.3.3.4. 클래스 이름 공간 준비하기
+
+        * 3.3.3.5. 클래스 바디 실행하기
+
+        * 3.3.3.6. 클래스 객체 만들기
+
+        * 3.3.3.7. 메타 클래스의 용도
+
+      * 3.3.4. 인스턴스 및 서브 클래스 검사 커스터마이제이션
+
+      * 3.3.5. 제네릭 형 흉내 내기
+
+        * 3.3.5.1. The purpose of *__class_getitem__*
+
+        * 3.3.5.2. *__class_getitem__* versus *__getitem__*
+
+      * 3.3.6. 콜러블 객체 흉내 내기
+
+      * 3.3.7. 컨테이너형 흉내 내기
+
+      * 3.3.8. 숫자 형 흉내 내기
+
+      * 3.3.9. with 문 컨텍스트 관리자
+
+      * 3.3.10. Customizing positional arguments in class pattern
+        matching
+
+      * 3.3.11. 특수 메서드 조회
+
+    * 3.4. 코루틴(Coroutines)
+
+      * 3.4.1. 어웨이터블 객체(Awaitable Objects)
+
+      * 3.4.2. 코루틴 객체(Coroutine Objects)
+
+      * 3.4.3. 비동기 이터레이터(Asynchronous Iterators)
+
+      * 3.4.4. 비동기 컨텍스트 관리자
+
+  * 4. 실행 모델
+
+    * 4.1. 프로그램의 구조
+
+    * 4.2. 이름과 연결(binding)
+
+      * 4.2.1. 이름의 연결
+
+      * 4.2.2. 이름의 검색(resolution)
+
+      * 4.2.3. builtins 와 제한된 실행
+
+      * 4.2.4. 동적 기능과의 상호작용
+
+    * 4.3. 예외
+
+  * 5. 임포트 시스템
+
+    * 5.1. "importlib"
+
+    * 5.2. 패키지(package)
+
+      * 5.2.1. 정규 패키지
+
+      * 5.2.2. 이름 공간 패키지
+
+    * 5.3. 검색
+
+      * 5.3.1. 모듈 캐시
+
+      * 5.3.2. 파인더(finder)와 로더(loader)
+
+      * 5.3.3. 임포트 훅(import hooks)
+
+      * 5.3.4. 메타 경로(meta path)
+
+    * 5.4. 로딩(loading)
+
+      * 5.4.1. 로더
+
+      * 5.4.2. 서브 모듈
+
+      * 5.4.3. Module spec
+
+      * 5.4.4. Import-related module attributes
+
+      * 5.4.5. module.__path__
+
+      * 5.4.6. 모듈 repr
+
+      * 5.4.7. 캐시된 바이트 코드 무효화
+
+    * 5.5. 경로 기반 파인더
+
+      * 5.5.1. 경로 엔트리 파인더
+
+      * 5.5.2. 경로 엔트리 파인더 프로토콜
+
+    * 5.6. 표준 임포트 시스템 교체하기
+
+    * 5.7. 패키지 상대 임포트
+
+    * 5.8. __main__ 에 대한 특별한 고려
+
+      * 5.8.1. __main__.__spec__
+
+    * 5.9. 참고문헌
+
+  * 6. 표현식
+
+    * 6.1. 산술 변환
+
+    * 6.2. 아톰 (Atoms)
+
+      * 6.2.1. 식별자 (이름)
+
+      * 6.2.2. 리터럴 (Literals)
+
+      * 6.2.3. 괄호 안에 넣은 형
+
+      * 6.2.4. 리스트, 집합, 딕셔너리의 디스플레이(display)
+
+      * 6.2.5. 리스트 디스플레이
+
+      * 6.2.6. 집합 디스플레이
+
+      * 6.2.7. 딕셔너리 디스플레이
+
+      * 6.2.8. 제너레이터 표현식 (Generator expressions)
+
+      * 6.2.9. 일드 표현식(Yield expressions)
+
+        * 6.2.9.1. 제너레이터-이터레이터 메서드
+
+        * 6.2.9.2. 사용 예
+
+        * 6.2.9.3. 비동기 제너레이터 함수
+
+        * 6.2.9.4. 비동기 제너레이터-이터레이터 메서드
+
+    * 6.3. 프라이머리
+
+      * 6.3.1. 어트리뷰트 참조
+
+      * 6.3.2. 서브스크립션(Subscriptions)
+
+      * 6.3.3. 슬라이싱(Slicings)
+
+      * 6.3.4. 호출
+
+    * 6.4. 어웨이트 표현식
+
+    * 6.5. 거듭제곱 연산자
+
+    * 6.6. 일 항 산술과 비트 연산
+
+    * 6.7. 이항 산술 연산
+
+    * 6.8. 시프트 연산
+
+    * 6.9. 이항 비트 연산
+
+    * 6.10. 비교
+
+      * 6.10.1. 값 비교
+
+      * 6.10.2. 멤버십 검사 연산
+
+      * 6.10.3. 아이덴티티 비교
+
+    * 6.11. 논리 연산(Boolean operations)
+
+    * 6.12. 대입 표현식
+
+    * 6.13. 조건 표현식(Conditional expressions)
+
+    * 6.14. 람다(Lambdas)
+
+    * 6.15. 표현식 목록(Expression lists)
+
+    * 6.16. 값을 구하는 순서
+
+    * 6.17. 연산자 우선순위
+
+  * 7. 단순문(Simple statements)
+
+    * 7.1. 표현식 문
+
+    * 7.2. 대입문
+
+      * 7.2.1. 증분 대입문(Augmented assignment statements)
+
+      * 7.2.2. 어노테이트된 대입문(Annotated assignment statements)
+
+    * 7.3. "assert" 문
+
+    * 7.4. "pass" 문
+
+    * 7.5. "del" 문
+
+    * 7.6. "return" 문
+
+    * 7.7. "yield" 문
+
+    * 7.8. "raise" 문
+
+    * 7.9. "break" 문
+
+    * 7.10. "continue" 문
+
+    * 7.11. 임포트("import") 문
+
+      * 7.11.1. 퓨처 문
+
+    * 7.12. "global" 문
+
+    * 7.13. "nonlocal" 문
+
+  * 8. 복합문(Compound statements)
+
+    * 8.1. "if" 문
+
+    * 8.2. "while" 문
+
+    * 8.3. "for" 문
+
+    * 8.4. "try" 문
+
+    * 8.5. "with" 문
+
+    * 8.6. The "match" statement
+
+      * 8.6.1. Overview
+
+      * 8.6.2. Guards
+
+      * 8.6.3. Irrefutable Case Blocks
+
+      * 8.6.4. Patterns
+
+        * 8.6.4.1. OR Patterns
+
+        * 8.6.4.2. AS Patterns
+
+        * 8.6.4.3. Literal Patterns
+
+        * 8.6.4.4. Capture Patterns
+
+        * 8.6.4.5. Wildcard Patterns
+
+        * 8.6.4.6. Value Patterns
+
+        * 8.6.4.7. Group Patterns
+
+        * 8.6.4.8. Sequence Patterns
+
+        * 8.6.4.9. Mapping Patterns
+
+        * 8.6.4.10. Class Patterns
+
+    * 8.7. 함수 정의
+
+    * 8.8. 클래스 정의
+
+    * 8.9. 코루틴
+
+      * 8.9.1. 코루틴 함수 정의
+
+      * 8.9.2. "async for" 문
+
+      * 8.9.3. "async with" 문
+
+  * 9. 최상위 요소들
+
+    * 9.1. 완전한 파이썬 프로그램
+
+    * 9.2. 파일 입력
+
+    * 9.3. 대화형 입력
+
+    * 9.4. 표현식 입력
+
+  * 10. 전체 문법 규격
+
+* 파이썬 표준 라이브러리
+
+  * 소개
+
+    * 가용성에 대한 참고 사항
+
+  * 내장 함수
+
+  * 내장 상수
+
+    * "site" 모듈에 의해 추가된 상수들
+
+  * 내장형
+
+    * 논리값 검사
+
+    * 논리 연산 --- "and", "or", "not"
+
+    * 비교
+
+    * 숫자 형 --- "int", "float", "complex"
+
+      * 정수 형에 대한 비트 연산
+
+      * 정수 형에 대한 추가 메서드
+
+      * 실수에 대한 추가 메서드
+
+      * 숫자 형의 해싱
+
+    * 이터레이터 형
+
+      * 제너레이터 형
+
+    * 시퀀스 형 --- "list", "tuple", "range"
+
+      * 공통 시퀀스 연산
+
+      * 불변 시퀀스 형
+
+      * 가변 시퀀스 형
+
+      * 리스트
+
+      * 튜플
+
+      * 범위
+
+    * 텍스트 시퀀스 형 --- "str"
+
+      * 문자열 메서드
+
+      * "printf" 스타일 문자열 포매팅
+
+    * 바이너리 시퀀스 형 --- "bytes", "bytearray", "memoryview"
+
+      * 바이트열 객체
+
+      * 바이트 배열 객체
+
+      * 바이트열 과 바이트 배열 연산
+
+      * "printf" 스타일 바이너리 포매팅
+
+      * 메모리 뷰
+
+    * 집합 형 --- "set", "frozenset"
+
+    * 매핑 형 --- "dict"
+
+      * 딕셔너리 뷰 객체
+
+    * 컨텍스트 관리자 형
+
+    * Type Annotation Types --- *Generic Alias*, *Union*
+
+      * 제네릭 에일리어스 형
+
+        * Standard Generic Classes
+
+        * Special Attributes of "GenericAlias" objects
+
+      * Union Type
+
+    * 기타 내장형
+
+      * 모듈
+
+      * 클래스와 클래스 인스턴스
+
+      * 함수
+
+      * 메서드
+
+      * 코드 객체
+
+      * 형 객체
+
+      * 널 객체
+
+      * Ellipsis 객체
+
+      * NotImplemented 객체
+
+      * Boolean Values
+
+      * 내부 객체
+
+    * 특수 어트리뷰트
+
+    * Integer string conversion length limitation
+
+      * Affected APIs
+
+      * Configuring the limit
+
+      * Recommended configuration
+
+  * 내장 예외
+
+    * 예외 컨텍스트
+
+    * 내장 예외를 상속받기
+
+    * 베이스 클래스
+
+    * 구체적인 예외
+
+      * OS 예외
+
+    * 경고
+
+    * 예외 계층 구조
+
+  * 텍스트 처리 서비스
+
+    * "string" --- Common string operations
+
+      * 문자열 상수
+
+      * 사용자 지정 문자열 포매팅
+
+      * 포맷 문자열 문법
+
+        * 포맷 명세 미니 언어
+
+        * 포맷 예제
+
+      * 템플릿 문자열
+
+      * 도움 함수
+
+    * "re" --- Regular expression operations
+
+      * 정규식 문법
+
+      * 모듈 내용
+
+        * Flags
+
+        * Functions
+
+        * Exceptions
+
+      * 정규식 객체
+
+      * 일치 객체
+
+      * 정규식 예제
+
+        * 쌍 검사하기
+
+        * scanf() 시뮬레이션
+
+        * search() 대 match()
+
+        * 전화번호부 만들기
+
+        * 텍스트 뒤섞기
+
+        * 모든 부사 찾기
+
+        * 모든 부사와 그 위치 찾기
+
+        * 날 문자열 표기법
+
+        * 토크나이저 작성하기
+
+    * "difflib" --- Helpers for computing deltas
+
+      * SequenceMatcher 객체
+
+      * SequenceMatcher 예제
+
+      * Differ 객체
+
+      * Differ 예제
+
+      * difflib의 명령 줄 인터페이스
+
+    * "textwrap" --- Text wrapping and filling
+
+    * "unicodedata" --- Unicode Database
+
+    * "stringprep" --- Internet String Preparation
+
+    * "readline" --- GNU readline interface
+
+      * 초기화 파일
+
+      * 줄 버퍼
+
+      * 히스토리 파일
+
+      * 히스토리 목록
+
+      * 시동 훅
+
+      * 완성
+
+      * 예제
+
+    * "rlcompleter" --- Completion function for GNU readline
+
+      * Completer Objects
+
+  * 바이너리 데이터 서비스
+
+    * "struct" --- Interpret bytes as packed binary data
+
+      * 함수와 예외
+
+      * 포맷 문자열
+
+        * 바이트 순서, 크기 및 정렬
+
+        * 포맷 문자
+
+        * 예
+
+      * 응용
+
+        * 네이티브 포맷
+
+        * 표준 포맷
+
+      * 클래스
+
+    * "codecs" --- Codec registry and base classes
+
+      * 코덱 베이스 클래스
+
+        * 에러 처리기
+
+        * 상태 없는 인코딩과 디코딩
+
+        * 증분 인코딩과 디코딩
+
+          * IncrementalEncoder 객체
+
+          * IncrementalDecoder 객체
+
+        * 스트림 인코딩과 디코딩
+
+          * StreamWriter 객체
+
+          * StreamReader 객체
+
+          * StreamReaderWriter 객체
+
+          * StreamRecoder 객체
+
+      * 인코딩과 유니코드
+
+      * 표준 인코딩
+
+      * 파이썬 특정 인코딩
+
+        * 텍스트 인코딩
+
+        * 바이너리 변환
+
+        * 텍스트 변환
+
+      * "encodings.idna" --- 응용 프로그램에서의 국제화된 도메인 이름
+
+      * "encodings.mbcs" --- 윈도우 ANSI 코드 페이지
+
+      * "encodings.utf_8_sig" --- BOM 서명이 있는 UTF-8 코덱
+
+  * 데이터형
+
+    * "datetime" --- Basic date and time types
+
+      * 어웨어와 나이브 객체
+
+      * 상수
+
+      * 사용 가능한 형
+
+        * 공통 속성
+
+        * 객체가 어웨어한지 나이브한지 판단하기
+
+      * "timedelta" 객체
+
+        * 사용 예: "timedelta"
+
+      * "date" 객체
+
+        * 사용 예: "date"
+
+      * "datetime" 객체
+
+        * 사용 예: "datetime"
+
+      * "time" 객체
+
+        * 사용 예: "time"
+
+      * "tzinfo" 객체
+
+      * "timezone" 객체
+
+      * "strftime()" and "strptime()" Behavior
+
+        * "strftime()" and "strptime()" Format Codes
+
+        * 기술적 세부 사항
+
+    * "zoneinfo" --- IANA time zone support
+
+      * "ZoneInfo" 사용하기
+
+      * 데이터 소스
+
+        * 데이터 소스 구성
+
+          * 컴파일 시간 구성
+
+          * 환경 구성
+
+          * 실행 시간 구성
+
+      * "ZoneInfo" 클래스
+
+        * 문자열 표현
+
+        * 피클 직렬화
+
+      * 함수
+
+      * 전역
+
+      * 예외와 경고
+
+    * "calendar" --- General calendar-related functions
+
+    * "collections" --- Container datatypes
+
+      * "ChainMap" 객체
+
+        * "ChainMap" 예제와 조리법
+
+      * "Counter" 객체
+
+      * "deque" 객체
+
+        * "deque" 조리법
+
+      * "defaultdict" 객체
+
+        * "defaultdict" 예
+
+      * 이름있는 필드를 가진 튜플을 위한 "namedtuple()" 팩토리 함수
+
+      * "OrderedDict" 객체
+
+        * "OrderedDict" 예제와 조리법
+
+      * "UserDict" 객체
+
+      * "UserList" 객체
+
+      * "UserString" 객체
+
+    * "collections.abc" --- Abstract Base Classes for Containers
+
+      * Collections 추상 베이스 클래스
+
+      * Collections 추상 베이스 클래스 -- 상세한 설명
+
+      * 예제와 조리법
+
+    * "heapq" --- Heap queue algorithm
+
+      * 기본 예
+
+      * 우선순위 큐 구현 참고 사항
+
+      * 이론
+
+    * "bisect" --- Array bisection algorithm
+
+      * Performance Notes
+
+      * 정렬된 리스트 검색하기
+
+      * 예제
+
+    * "array" --- Efficient arrays of numeric values
+
+    * "weakref" --- 약한 참조
+
+      * 약한 참조 객체
+
+      * 예
+
+      * 파이널라이저 객체
+
+      * Comparing finalizers with "__del__()" methods
+
+    * "types" --- Dynamic type creation and names for built-in types
+
+      * 동적 형 생성
+
+      * 표준 인터프리터 형
+
+      * 추가 유틸리티 클래스와 함수
+
+      * 코루틴 유틸리티 함수
+
+    * "copy" --- Shallow and deep copy operations
+
+    * "pprint" --- Data pretty printer
+
+      * PrettyPrinter 객체
+
+      * 예제
+
+    * "reprlib" --- Alternate "repr()" implementation
+
+      * Repr 객체
+
+      * Repr 객체 서브 클래싱
+
+    * "enum" --- Support for enumerations
+
+      * 모듈 내용
+
+      * Creating an Enum
+
+      * Programmatic access to enumeration members and their
+        attributes
+
+      * Duplicating enum members and values
+
+      * Ensuring unique enumeration values
+
+      * Using automatic values
+
+      * Iteration
+
+      * Comparisons
+
+      * Allowed members and attributes of enumerations
+
+      * Restricted Enum subclassing
+
+      * Pickling
+
+      * Functional API
+
+      * Derived Enumerations
+
+        * IntEnum
+
+        * IntFlag
+
+        * Flag
+
+        * Others
+
+      * When to use "__new__()" vs. "__init__()"
+
+      * Interesting examples
+
+        * Omitting values
+
+          * Using "auto"
+
+          * Using "object"
+
+          * Using a descriptive string
+
+          * Using a custom "__new__()"
+
+        * OrderedEnum
+
+        * DuplicateFreeEnum
+
+        * Planet
+
+        * TimePeriod
+
+      * How are Enums different?
+
+        * Enum Classes
+
+        * Enum Members (aka instances)
+
+        * Finer Points
+
+          * 지원되는 "__dunder__" 이름
+
+          * 지원되는 "_sunder_" 이름
+
+          * _Private__names
+
+          * "Enum" member type
+
+          * Boolean value of "Enum" classes and members
+
+          * "Enum" classes with methods
+
+          * Combining members of "Flag"
+
+    * "graphlib" --- Functionality to operate with graph-like
+      structures
+
+      * 예외
+
+  * 숫자와 수학 모듈
+
+    * "numbers" --- Numeric abstract base classes
+
+      * 숫자 계층
+
+      * Notes for type implementors
+
+        * 더 많은 숫자 추상 베이스 클래스(ABC) 추가
+
+        * 산술 연산 구현
+
+    * "math" --- Mathematical functions
+
+      * Number-theoretic and representation functions
+
+      * Power and logarithmic functions
+
+      * 삼각 함수
+
+      * 각도 변환
+
+      * 쌍곡선 함수
+
+      * 특수 함수
+
+      * 상수
+
+    * "cmath" --- Mathematical functions for complex numbers
+
+      * 극좌표 변환
+
+      * 거듭제곱과 로그 함수
+
+      * 삼각 함수
+
+      * 쌍곡선(hyperbolic) 함수
+
+      * 분류 함수
+
+      * 상수
+
+    * "decimal" --- Decimal fixed point and floating point arithmetic
+
+      * 빠른 시작 자습서
+
+      * Decimal 객체
+
+        * 논리적 피연산자
+
+      * Context 객체
+
+      * 상수
+
+      * 자리 올림 모드
+
+      * 신호
+
+      * Floating Point Notes
+
+        * 증가시킨 정밀도로 자리 올림 오차 줄이기
+
+        * 특수 값
+
+      * 스레드로 작업하기
+
+      * 조리법
+
+      * Decimal FAQ
+
+    * "fractions" --- Rational numbers
+
+    * "random" --- Generate pseudo-random numbers
+
+      * 관리 함수
+
+      * 바이트열 함수
+
+      * 정수 함수
+
+      * 시퀀스 함수
+
+      * 실수 분포
+
+      * 대체 생성기
+
+      * 재현성에 대한 참고 사항
+
+      * 예제
+
+      * 조리법
+
+    * "statistics" --- Mathematical statistics functions
+
+      * 평균과 중심 위치의 측정
+
+      * 분산 측정
+
+      * Statistics for relations between two inputs
+
+      * 함수 세부 사항
+
+      * 예외
+
+      * "NormalDist" 객체
+
+        * "NormalDist" Examples and Recipes
+
+  * 함수형 프로그래밍 모듈
+
+    * "itertools" --- Functions creating iterators for efficient
+      looping
+
+      * Itertool functions
+
+      * Itertools 조리법
+
+    * "functools" --- Higher-order functions and operations on
+      callable objects
+
+      * "partial" 객체
+
+    * "operator" --- Standard operators as functions
+
+      * 연산자를 함수에 매핑하기
+
+      * 제자리 연산자
+
+  * 파일과 디렉터리 액세스
+
+    * "pathlib" --- Object-oriented filesystem paths
+
+      * 기본 사용
+
+      * 순수한 경로
+
+        * 일반 속성
+
+        * 연산자
+
+        * 개별 부분에 액세스하기
+
+        * 메서드와 프로퍼티
+
+      * 구상 경로
+
+        * Methods
+
+      * Correspondence to tools in the "os" module
+
+    * "os.path" --- Common pathname manipulations
+
+    * "fileinput" --- Iterate over lines from multiple input streams
+
+    * "stat" --- Interpreting "stat()" results
+
+    * "filecmp" --- File and Directory Comparisons
+
+      * "dircmp" 클래스
+
+    * "tempfile" --- Generate temporary files and directories
+
+      * 예
+
+      * 폐지된 함수와 변수
+
+    * "glob" --- Unix style pathname pattern expansion
+
+    * "fnmatch" --- Unix filename pattern matching
+
+    * "linecache" --- Random access to text lines
+
+    * "shutil" --- High-level file operations
+
+      * 디렉터리와 파일 연산
+
+        * 플랫폼 의존적 효율적인 복사 연산
+
+        * copytree 예
+
+        * rmtree 예
+
+      * 아카이브 연산
+
+        * 아카이브 예
+
+        * *base_dir*을 사용한 아카이브 예
+
+      * 출력 터미널의 크기 조회하기
+
+  * 데이터 지속성
+
+    * "pickle" --- Python object serialization
+
+      * 다른 파이썬 모듈과의 관계
+
+        * "marshal" 과의 비교
+
+        * "json" 과의 비교
+
+      * 데이터 스트림 형식
+
+      * 모듈 인터페이스
+
+      * 어떤 것이 피클 되고 역 피클 될 수 있을까요?
+
+      * 클래스 인스턴스 피클링
+
+        * 외부 객체의 지속성
+
+        * 디스패치 테이블
+
+        * 상태 저장 객체 처리
+
+      * 형, 함수 및 기타 객체에 대한 사용자 정의 환원
+
+      * 아웃 오브 밴드 버퍼
+
+        * 제공자 API
+
+        * 소비자 API
+
+        * 예제
+
+      * 전역 제한하기
+
+      * 성능
+
+      * 예제
+
+    * "copyreg" --- Register "pickle" support functions
+
+      * 예제
+
+    * "shelve" --- Python object persistence
+
+      * 제약 사항
+
+      * 예제
+
+    * "marshal" --- Internal Python object serialization
+
+    * "dbm" --- Interfaces to Unix "databases"
+
+      * "dbm.gnu" --- GNU's reinterpretation of dbm
+
+      * "dbm.ndbm" --- Interface based on ndbm
+
+      * "dbm.dumb" --- 이식성 있는 DBM 구현
+
+    * "sqlite3" --- DB-API 2.0 interface for SQLite databases
+
+      * Tutorial
+
+      * Reference
+
+        * Module functions
+
+        * Module constants
+
+        * Connection objects
+
+        * Cursor objects
+
+        * Row objects
+
+        * PrepareProtocol objects
+
+        * 예외
+
+        * SQLite 와 파이썬 형
+
+        * Default adapters and converters
+
+      * How-to guides
+
+        * How to use placeholders to bind values in SQL queries
+
+        * How to adapt custom Python types to SQLite values
+
+          * How to write adaptable objects
+
+          * How to register adapter callables
+
+        * How to convert SQLite values to custom Python types
+
+        * Adapter and converter recipes
+
+        * How to use connection shortcut methods
+
+        * How to use the connection context manager
+
+        * How to work with SQLite URIs
+
+        * How to create and use row factories
+
+      * Explanation
+
+        * Transaction control
+
+  * 데이터 압축 및 보관
+
+    * "zlib" --- Compression compatible with **gzip**
+
+    * "gzip" --- Support for **gzip** files
+
+      * 사용 예
+
+      * 명령 줄 인터페이스
+
+        * 명령 줄 옵션
+
+    * "bz2" --- Support for **bzip2** compression
+
+      * 파일 압축(해제)
+
+      * 증분 압축(해제)
+
+      * 일괄 압축(해제)
+
+      * 사용 예
+
+    * "lzma" --- Compression using the LZMA algorithm
+
+      * 압축 파일 읽기와 쓰기
+
+      * 메모리에서의 데이터 압축과 압축 해제
+
+      * 기타
+
+      * 사용자 정의 필터 체인 지정
+
+      * 예
+
+    * "zipfile" --- Work with ZIP archives
+
+      * ZipFile 객체
+
+      * Path 객체
+
+      * PyZipFile 객체
+
+      * ZipInfo 객체
+
+      * 명령 줄 인터페이스
+
+        * 명령 줄 옵션
+
+      * 압축 해제 함정
+
+        * 파일 자체에서
+
+        * 파일 시스템 제한
+
+        * 자원 제한
+
+        * 중단
+
+        * 추출의 기본 동작
+
+    * "tarfile" --- Read and write tar archive files
+
+      * TarFile 객체
+
+      * TarInfo 객체
+
+      * Extraction filters
+
+        * Default named filters
+
+        * Filter errors
+
+        * Hints for further verification
+
+        * Supporting older Python versions
+
+        * Stateful extraction filter example
+
+      * 명령 줄 인터페이스
+
+        * 명령 줄 옵션
+
+      * 예
+
+      * 지원되는 tar 형식
+
+      * 유니코드 문제
+
+  * 파일 형식
+
+    * "csv" --- CSV File Reading and Writing
+
+      * 모듈 내용
+
+      * 방언과 포매팅 파라미터
+
+      * 판독기 객체
+
+      * 기록기 객체
+
+      * 예제
+
+    * "configparser" --- Configuration file parser
+
+      * 빠른 시작
+
+      * 지원되는 데이터형
+
+      * 대체 값
+
+      * 지원되는 INI 파일 구조
+
+      * 값의 보간
+
+      * 매핑 프로토콜 액세스
+
+      * 구문 분석기 동작 사용자 정의
+
+      * 레거시 API 예제
+
+      * ConfigParser 객체
+
+      * RawConfigParser 객체
+
+      * 예외
+
+    * "netrc" --- netrc file processing
+
+      * netrc 객체
+
+    * "plistlib" --- Generate and parse Apple ".plist" files
+
+      * 예제
+
+  * 암호화 서비스
+
+    * "hashlib" --- Secure hashes and message digests
+
+      * 해시 알고리즘
+
+      * SHAKE 가변 길이 요약
+
+      * 키 파생
+
+      * BLAKE2
+
+        * 해시 객체 만들기
+
+        * 상수
+
+        * 예
+
+          * 간단한 해싱
+
+          * 다른 요약 크기 사용하기
+
+          * 키 해싱
+
+          * 무작위 해싱
+
+          * 개인화
+
+          * 트리 모드
+
+        * 크레딧
+
+    * "hmac" --- Keyed-Hashing for Message Authentication
+
+    * "secrets" --- Generate secure random numbers for managing
+      secrets
+
+      * 난수
+
+      * 토큰 생성
+
+        * 토큰은 몇 바이트를 사용해야 합니까?
+
+      * 기타 함수
+
+      * 조리법과 모범 사례
+
+  * 일반 운영 체제 서비스
+
+    * "os" --- Miscellaneous operating system interfaces
+
+      * 파일명, 명령 줄 인자 및 환경 변수
+
+      * Python UTF-8 Mode
+
+      * 프로세스 매개 변수
+
+      * 파일 객체 생성
+
+      * 파일 기술자 연산
+
+        * 터미널의 크기 조회하기
+
+        * 파일 기술자의 상속
+
+      * 파일과 디렉터리
+
+        * 리눅스 확장 어트리뷰트
+
+      * 프로세스 관리
+
+      * 스케줄러에 대한 인터페이스
+
+      * 기타 시스템 정보
+
+      * 난수
+
+    * "io" --- Core tools for working with streams
+
+      * 개요
+
+        * 텍스트 I/O
+
+        * 바이너리 I/O
+
+        * 원시 I/O
+
+      * 텍스트 인코딩
+
+        * Opt-in EncodingWarning
+
+      * 고수준 모듈 인터페이스
+
+      * 클래스 위계
+
+        * I/O 베이스 클래스
+
+        * 원시 파일 I/O
+
+        * 버퍼링 된 스트림
+
+        * 텍스트 I/O
+
+      * 성능
+
+        * 바이너리 I/O
+
+        * 텍스트 I/O
+
+        * 다중 스레드
+
+        * 재진입
+
+    * "time" --- Time access and conversions
+
+      * 함수
+
+      * 시계 ID 상수
+
+      * 시간대 상수
+
+    * "argparse" --- Parser for command-line options, arguments and
+      sub-commands
+
+      * Example
+
+        * Creating a parser
+
+        * Adding arguments
+
+        * Parsing arguments
+
+      * ArgumentParser 객체
+
+        * prog
+
+        * usage
+
+        * description
+
+        * epilog
+
+        * parents
+
+        * formatter_class
+
+        * prefix_chars
+
+        * fromfile_prefix_chars
+
+        * argument_default
+
+        * allow_abbrev
+
+        * conflict_handler
+
+        * add_help
+
+        * exit_on_error
+
+      * add_argument() 메서드
+
+        * name or flags
+
+        * action
+
+        * nargs
+
+        * const
+
+        * default
+
+        * type
+
+        * choices
+
+        * required
+
+        * help
+
+        * metavar
+
+        * dest
+
+        * Action 클래스
+
+      * parse_args() 메서드
+
+        * 옵션값 문법
+
+        * 잘못된 인자
+
+        * "-" 를 포함하는 인자들
+
+        * 인자 약어 (접두사 일치)
+
+        * "sys.argv" 너머
+
+        * Namespace 객체
+
+      * 기타 유틸리티
+
+        * 부속 명령
+
+        * FileType 객체
+
+        * 인자 그룹
+
+        * 상호 배제
+
+        * 파서 기본값
+
+        * 도움말 인쇄
+
+        * 부분 파싱
+
+        * 파일 파싱 사용자 정의
+
+        * 종료 메서드
+
+        * 혼합 파싱
+
+      * Upgrading optparse code
+
+    * "getopt" --- C-style parser for command line options
+
+    * "logging" --- Logging facility for Python
+
+      * Logger 객체
+
+      * 로깅 수준
+
+      * Handler 객체
+
+      * Formatter 객체
+
+      * Filter 객체
+
+      * LogRecord 객체
+
+      * LogRecord 어트리뷰트
+
+      * LoggerAdapter 객체
+
+      * 스레드 안전성
+
+      * 모듈 수준 함수
+
+      * 모듈 수준 어트리뷰트
+
+      * warnings 모듈과의 통합
+
+    * "logging.config" --- Logging configuration
+
+      * 구성 함수
+
+      * 보안 고려 사항
+
+      * 구성 딕셔너리 스키마
+
+        * 딕셔너리 스키마 세부사항
+
+        * 증분 구성
+
+        * 객체 연결
+
+        * 사용자 정의 객체
+
+        * 처리기 구성 순서
+
+        * 외부 객체에 대한 액세스
+
+        * 내부 객체에 대한 액세스
+
+        * 임포트 결정과 사용자 정의 임포터
+
+      * 구성 파일 형식
+
+    * "logging.handlers" --- Logging handlers
+
+      * StreamHandler
+
+      * FileHandler
+
+      * NullHandler
+
+      * WatchedFileHandler
+
+      * BaseRotatingHandler
+
+      * RotatingFileHandler
+
+      * TimedRotatingFileHandler
+
+      * SocketHandler
+
+      * DatagramHandler
+
+      * SysLogHandler
+
+      * NTEventLogHandler
+
+      * SMTPHandler
+
+      * MemoryHandler
+
+      * HTTPHandler
+
+      * QueueHandler
+
+      * QueueListener
+
+    * "getpass" --- Portable password input
+
+    * "curses" --- Terminal handling for character-cell displays
+
+      * 함수
+
+      * 창 객체
+
+      * 상수
+
+    * "curses.textpad" --- curses 프로그램을 위한 텍스트 입력 위젯
+
+      * Textbox 객체
+
+    * "curses.ascii" --- Utilities for ASCII characters
+
+    * "curses.panel" --- A panel stack extension for curses
+
+      * 함수
+
+      * Panel 객체
+
+    * "platform" ---  Access to underlying platform's identifying data
+
+      * 크로스 플랫폼
+
+      * 자바 플랫폼
+
+      * 윈도우 플랫폼
+
+      * 맥 OS 플랫폼
+
+      * 유닉스 플랫폼
+
+      * 리눅스 플랫폼
+
+    * "errno" --- Standard errno system symbols
+
+    * "ctypes" --- A foreign function library for Python
+
+      * ctypes 자습서
+
+        * 동적 링크 라이브러리 로드하기
+
+        * 로드된 dll에서 함수에 액세스하기
+
+        * 함수 호출하기
+
+        * 기본 데이터형
+
+        * 함수 호출하기, 계속
+
+        * Calling variadic functions
+
+        * 사용자 정의 데이터형을 사용하여 함수 호출하기
+
+        * 필수 인자 형 (함수 프로토타입) 지정하기
+
+        * 반환형
+
+        * 포인터 전달하기 (또는: 참조로 매개 변수 전달하기)
+
+        * 구조체와 공용체
+
+        * 구조체/공용체 정렬과 바이트 순서
+
+        * 구조체와 공용체의 비트 필드
+
+        * 배열
+
+        * 포인터
+
+        * 형 변환
+
+        * 불완전한 형
+
+        * 콜백 함수
+
+        * dll에서 내 보낸 값을 액세스하기
+
+        * 의외의 것들
+
+        * 가변 크기 데이터형
+
+      * ctypes 레퍼런스
+
+        * 공유 라이브러리 찾기
+
+        * 공유 라이브러리 로드하기
+
+        * 외부 함수
+
+        * 함수 프로토타입
+
+        * 유틸리티 함수
+
+        * 데이터형
+
+        * 기본 데이터형
+
+        * 구조화된 데이터형
+
+        * 배열과 포인터
+
+  * 동시 실행
+
+    * "threading" --- Thread-based parallelism
+
+      * 스레드 로컬 데이터
+
+      * Thread 객체
+
+      * Lock 객체
+
+      * RLock 객체
+
+      * Condition 객체
+
+      * Semaphore 객체
+
+        * "Semaphore" 예
+
+      * Event 객체
+
+      * Timer 객체
+
+      * Barrier 객체
+
+      * "with" 문으로 록, 조건 및 세마포어 사용하기
+
+    * "multiprocessing" --- Process-based parallelism
+
+      * 소개
+
+        * "Process" 클래스
+
+        * 컨텍스트 및 시작 방법
+
+        * 프로세스 간 객체 교환
+
+        * 프로세스 간 동기화
+
+        * 프로세스 간 상태 공유
+
+        * 작업자 풀 사용
+
+      * 레퍼런스
+
+        * "Process"와 예외
+
+        * 파이프와 큐
+
+        * 잡동사니
+
+        * Connection 객체
+
+        * 동기화 프리미티브
+
+        * 공유 "ctypes" 객체
+
+          * "multiprocessing.sharedctypes" 모듈
+
+        * 관리자
+
+          * 사용자 정의 관리자
+
+          * 원격 관리자 사용하기
+
+        * 프락시 객체
+
+          * 정리
+
+        * 프로세스 풀
+
+        * 리스너와 클라이언트
+
+          * 주소 형식
+
+        * 인증 키
+
+        * 로깅
+
+        * "multiprocessing.dummy" 모듈
+
+      * 프로그래밍 지침
+
+        * 모든 시작 방법
+
+        * *spawn* 과 *forkserver* 시작 방법
+
+      * 예제
+
+    * "multiprocessing.shared_memory" --- Shared memory for direct
+      access across processes
+
+    * The "concurrent" package
+
+    * "concurrent.futures" --- Launching parallel tasks
+
+      * Executor 객체
+
+      * ThreadPoolExecutor
+
+        * ThreadPoolExecutor 예제
+
+      * ProcessPoolExecutor
+
+        * ProcessPoolExecutor 예제
+
+      * Future 객체
+
+      * 모듈 함수
+
+      * 예외 클래스
+
+    * "subprocess" --- Subprocess management
+
+      * "subprocess" 모듈 사용하기
+
+        * 자주 사용되는 인자
+
+        * Popen 생성자
+
+        * 예외
+
+      * 보안 고려 사항
+
+      * Popen 객체
+
+      * 윈도우 Popen 도우미
+
+        * 윈도우 상수
+
+      * 오래된 고수준 API
+
+      * 이전 함수를 "subprocess" 모듈로 교체하기
+
+        * **/bin/sh** 셸 명령 치환 교체하기
+
+        * 셸 파이프라인 교체하기
+
+        * "os.system()" 교체하기
+
+        * "os.spawn" 패밀리 교체하기
+
+        * "os.popen()", "os.popen2()", "os.popen3()" 교체하기
+
+        * Replacing functions from the "popen2" module
+
+      * 레거시 셸 호출 함수
+
+      * 노트
+
+        * 윈도우에서 인자 시퀀스를 문자열로 변환하기
+
+    * "sched" --- Event scheduler
+
+      * 스케줄러 객체
+
+    * "queue" --- A synchronized queue class
+
+      * 큐 객체
+
+      * SimpleQueue 객체
+
+    * "contextvars" --- Context Variables
+
+      * 컨텍스트 변수
+
+      * 수동 컨텍스트 관리
+
+      * asyncio 지원
+
+    * "_thread" --- Low-level threading API
+
+  * 네트워킹과 프로세스 간 통신
+
+    * "asyncio" --- Asynchronous I/O
+
+      * 코루틴과 태스크
+
+        * 코루틴
+
+        * 어웨이터블
+
+        * Running an asyncio Program
+
+        * 태스크 만들기
+
+        * 잠자기
+
+        * 동시에 태스크 실행하기
+
+        * 취소로부터 보호하기
+
+        * 시간제한
+
+        * 대기 프리미티브
+
+        * 스레드에서 실행하기
+
+        * 다른 스레드에서 예약하기
+
+        * 인트로스펙션
+
+        * Task 객체
+
+        * Generator-based Coroutines
+
+      * 스트림
+
+        * StreamReader
+
+        * StreamWriter
+
+        * 예제
+
+          * 스트림을 사용하는 TCP 메아리 클라이언트
+
+          * 스트림을 사용하는 TCP 메아리 서버
+
+          * HTTP 헤더 가져오기
+
+          * 스트림을 사용하여 데이터를 기다리는 열린 소켓 등록
+
+      * 동기화 프리미티브
+
+        * Lock
+
+        * Event
+
+        * Condition
+
+        * Semaphore
+
+        * BoundedSemaphore
+
+      * 서브 프로세스
+
+        * 서브 프로세스 만들기
+
+        * 상수
+
+        * 서브 프로세스와 상호 작용하기
+
+          * 서브 프로세스와 스레드
+
+          * 예제
+
+      * 큐
+
+        * Queue
+
+        * 우선순위 큐
+
+        * LIFO 큐
+
+        * 예외
+
+        * 예제
+
+      * 예외
+
+      * 이벤트 루프
+
+        * 이벤트 루프 메서드
+
+          * 루프 실행 및 중지
+
+          * 콜백 예약하기
+
+          * 지연된 콜백 예약
+
+          * 퓨처와 태스크 만들기
+
+          * 네트워크 연결 열기
+
+          * 네트워크 서버 만들기
+
+          * 파일 전송
+
+          * TLS 업그레이드
+
+          * 파일 기술자 관찰하기
+
+          * 소켓 객체로 직접 작업하기
+
+          * DNS
+
+          * 파이프로 작업하기
+
+          * 유닉스 시그널
+
+          * 스레드 또는 프로세스 풀에서 코드를 실행하기
+
+          * 에러 처리 API
+
+          * 디버그 모드 활성화
+
+          * 자식 프로세스 실행하기
+
+        * 콜백 핸들
+
+        * 서버 객체
+
+        * 이벤트 루프 구현
+
+        * 예제
+
+          * call_soon()을 사용하는 Hello World
+
+          * call_later()로 현재 날짜를 표시합니다.
+
+          * 파일 기술자에서 읽기 이벤트를 관찰하기
+
+          * SIGINT 및 SIGTERM에 대한 시그널 처리기 설정
+
+      * 퓨처
+
+        * 퓨처 함수
+
+        * Future 객체
+
+      * 트랜스포트와 프로토콜
+
+        * 트랜스포트
+
+          * 트랜스포트 계층 구조
+
+          * 베이스 트랜스포트
+
+          * 읽기 전용 트랜스포트
+
+          * 쓰기 전용 트랜스포트
+
+          * 데이터 그램 트랜스포트
+
+          * 서브 프로세스 트랜스포트
+
+        * 프로토콜
+
+          * 베이스 프로토콜
+
+          * 베이스 프로토콜
+
+          * 스트리밍 프로토콜
+
+          * 버퍼 된 스트리밍 프로토콜
+
+          * 데이터 그램 프로토콜
+
+          * 서브 프로세스 프로토콜
+
+        * 예제
+
+          * TCP 메아리 서버
+
+          * TCP 메아리 클라이언트
+
+          * UDP 메아리 서버
+
+          * UDP 메아리 클라이언트
+
+          * 기존 소켓 연결하기
+
+          * loop.subprocess_exec() 와 SubprocessProtocol
+
+      * 정책
+
+        * 정책을 얻고 설정하기
+
+        * 정책 객체
+
+        * 프로세스 감시자
+
+        * 사용자 정의 정책
+
+      * 플랫폼 지원
+
+        * 모든 플랫폼
+
+        * 윈도우
+
+          * 윈도우에서의 서브 프로세스 지원
+
+        * macOS
+
+      * 고수준 API 색인
+
+        * 태스크
+
+        * 큐
+
+        * 서브 프로세스
+
+        * 스트림
+
+        * 동기화
+
+        * 예외
+
+      * 저수준 API 색인
+
+        * 이벤트 루프 얻기
+
+        * 이벤트 루프 메서드
+
+        * 트랜스포트
+
+        * 프로토콜
+
+        * 이벤트 루프 정책
+
+      * asyncio로 개발하기
+
+        * 디버그 모드
+
+        * 동시성과 다중 스레드
+
+        * 블로킹 코드 실행하기
+
+        * 로깅
+
+        * await 하지 않은 코루틴 감지
+
+        * 전달되지 않은 예외 감지
+
+    * "socket" --- Low-level networking interface
+
+      * 소켓 패밀리
+
+      * 모듈 내용
+
+        * 예외
+
+        * 상수
+
+        * 함수
+
+          * 소켓 만들기
+
+          * 기타 함수
+
+      * 소켓 객체
+
+      * 소켓 시간제한에 대한 참고 사항
+
+        * 시간제한과 "connect" 메서드
+
+        * 시간제한과 "accept" 메서드
+
+      * 예제
+
+    * "ssl" --- TLS/SSL wrapper for socket objects
+
+      * 함수, 상수 및 예외
+
+        * 소켓 생성
+
+        * 컨텍스트 생성
+
+        * 예외
+
+        * 난수 생성
+
+        * 인증서 처리
+
+        * 상수
+
+      * SSL 소켓
+
+      * SSL 컨텍스트
+
+      * 인증서
+
+        * 인증서 체인
+
+        * CA 인증서
+
+        * 결합한 키와 인증서
+
+        * 자체 서명 인증서
+
+      * 예제
+
+        * SSL 지원 검사하기
+
+        * 클라이언트 측 연산
+
+        * 서버 측 연산
+
+      * 비 블로킹 소켓에 대한 참고 사항
+
+      * 메모리 BIO 지원
+
+      * SSL 세션
+
+      * 보안 고려 사항
+
+        * 가장 좋은 기본값
+
+        * 수동 설정
+
+          * 인증서 확인
+
+          * 프로토콜 버전
+
+          * 사이퍼 선택
+
+        * 다중 프로세싱
+
+      * TLS 1.3
+
+    * "select" --- Waiting for I/O completion
+
+      * "/dev/poll" 폴링 객체
+
+      * 에지와 레벨 트리거 폴링 (epoll) 객체
+
+      * 폴링 객체
+
+      * Kqueue 객체
+
+      * Kevent 객체
+
+    * "selectors" --- High-level I/O multiplexing
+
+      * 소개
+
+      * 클래스
+
+      * 예제
+
+    * "signal" --- Set handlers for asynchronous events
+
+      * 일반 규칙
+
+        * 파이썬 시그널 처리기의 실행
+
+        * 시그널과 스레드
+
+      * 모듈 내용
+
+      * Example
+
+      * SIGPIPE에 대한 참고 사항
+
+      * 신호 처리기와 예외에 대한 참고 사항
+
+    * "mmap" --- Memory-mapped file support
+
+      * MADV_* 상수
+
+      * MAP_* 상수
+
+  * 인터넷 데이터 처리
+
+    * "email" --- An email and MIME handling package
+
+      * "email.message": Representing an email message
+
+      * "email.parser": Parsing email messages
+
+        * FeedParser API
+
+        * Parser API
+
+        * 추가 사항
+
+      * "email.generator": Generating MIME documents
+
+      * "email.policy": Policy Objects
+
+      * "email.errors": Exception and Defect classes
+
+      * "email.headerregistry": Custom Header Objects
+
+      * "email.contentmanager": Managing MIME Content
+
+        * 콘텐츠 관리자 인스턴스
+
+      * "email": 예제
+
+      * "email.message.Message": "compat32" API를 사용하여 이메일 메시
+        지 표현하기
+
+      * "email.mime": Creating email and MIME objects from scratch
+
+      * "email.header": Internationalized headers
+
+      * "email.charset": Representing character sets
+
+      * "email.encoders": Encoders
+
+      * "email.utils": Miscellaneous utilities
+
+      * "email.iterators": Iterators
+
+    * "json" --- JSON encoder and decoder
+
+      * 기본 사용법
+
+      * 인코더와 디코더
+
+      * 예외
+
+      * 표준 준수와 상호 운용성
+
+        * 문자 인코딩
+
+        * 무한대와 NaN 숫자 값
+
+        * 오브젝트 내에서 반복된 이름
+
+        * 오브젝트나 배열이 아닌 최상윗값
+
+        * 구현 제약 사항
+
+      * 명령 줄 인터페이스
+
+        * 명령 줄 옵션
+
+    * "mailbox" --- Manipulate mailboxes in various formats
+
+      * "Mailbox" objects
+
+        * "Maildir"
+
+        * "mbox"
+
+        * "MH"
+
+        * "Babyl"
+
+        * "MMDF"
+
+      * "Message" objects
+
+        * "MaildirMessage"
+
+        * "mboxMessage"
+
+        * "MHMessage"
+
+        * "BabylMessage"
+
+        * "MMDFMessage"
+
+      * 예외
+
+      * 예
+
+    * "mimetypes" --- Map filenames to MIME types
+
+      * MimeTypes 객체
+
+    * "base64" --- Base16, Base32, Base64, Base85 Data Encodings
+
+      * Security Considerations
+
+    * "binhex" --- Encode and decode binhex4 files
+
+      * Notes
+
+    * "binascii" --- Convert between binary and ASCII
+
+    * "quopri" --- Encode and decode MIME quoted-printable data
+
+  * 구조화된 마크업 처리 도구
+
+    * "html" --- HyperText Markup Language support
+
+    * "html.parser" --- Simple HTML and XHTML parser
+
+      * HTML 구문 분석기 응용 프로그램 예제
+
+      * "HTMLParser" 메서드
+
+      * 예제
+
+    * "html.entities" --- Definitions of HTML general entities
+
+    * XML 처리 모듈
+
+      * XML 취약점
+
+      * The "defusedxml" Package
+
+    * "xml.etree.ElementTree" --- The ElementTree XML API
+
+      * 자습서
+
+        * XML 트리와 엘리먼트
+
+        * XML 구문 분석하기
+
+        * 비 블로킹 구문 분석을 위한 풀(pull) API
+
+        * 흥미로운 엘리먼트 찾기
+
+        * XML 파일 수정하기
+
+        * XML 문서 구축하기
+
+        * 이름 공간이 있는 XML 구문 분석하기
+
+      * XPath 지원
+
+        * 예
+
+        * 지원되는 XPath 문법
+
+      * 레퍼런스
+
+        * 함수
+
+      * XInclude 지원
+
+        * 예
+
+      * 레퍼런스
+
+        * 함수
+
+        * Element 객체
+
+        * ElementTree 객체
+
+        * QName 객체
+
+        * TreeBuilder 객체
+
+        * XMLParser 객체
+
+        * XMLPullParser 객체
+
+        * 예외
+
+    * "xml.dom" --- The Document Object Model API
+
+      * 모듈 내용
+
+      * DOM의 객체
+
+        * DOMImplementation 객체
+
+        * Node 객체
+
+        * NodeList 객체
+
+        * DocumentType 객체
+
+        * Document 객체
+
+        * Element 객체
+
+        * Attr 객체
+
+        * NamedNodeMap 객체
+
+        * Comment 객체
+
+        * Text와 CDATASection 객체
+
+        * ProcessingInstruction 객체
+
+        * 예외
+
+      * 규격 준수
+
+        * 형 매핑
+
+        * 접근자 메서드
+
+    * "xml.dom.minidom" --- Minimal DOM implementation
+
+      * DOM 객체
+
+      * DOM 예제
+
+      * minidom과 DOM 표준
+
+    * "xml.dom.pulldom" --- Support for building partial DOM trees
+
+      * DOMEventStream 객체
+
+    * "xml.sax" --- Support for SAX2 parsers
+
+      * SAXException 객체
+
+    * "xml.sax.handler" --- Base classes for SAX handlers
+
+      * ContentHandler 객체
+
+      * DTDHandler 객체
+
+      * EntityResolver 객체
+
+      * ErrorHandler 객체
+
+      * LexicalHandler 객체
+
+    * "xml.sax.saxutils" --- SAX Utilities
+
+    * "xml.sax.xmlreader" --- Interface for XML parsers
+
+      * XMLReader 객체
+
+      * IncrementalParser 객체
+
+      * Locator 객체
+
+      * InputSource 객체
+
+      * "Attributes" 인터페이스
+
+      * "AttributesNS" 인터페이스
+
+    * "xml.parsers.expat" --- Fast XML parsing using Expat
+
+      * XMLParser 객체
+
+      * ExpatError 예외
+
+      * 예
+
+      * 콘텐츠 모델 기술
+
+      * Expat 에러 상수
+
+  * 인터넷 프로토콜과 지원
+
+    * "webbrowser" --- Convenient web-browser controller
+
+      * 브라우저 제어기 객체
+
+    * "wsgiref" --- WSGI Utilities and Reference Implementation
+
+      * "wsgiref.util" -- WSGI 환경 유틸리티
+
+      * "wsgiref.headers" -- WSGI 응답 헤더 도구
+
+      * "wsgiref.simple_server" -- 간단한 WSGI HTTP 서버
+
+      * "wsgiref.validate" --- WSGI 적합성 검사기
+
+      * "wsgiref.handlers" -- 서버/게이트웨이 베이스 클래스
+
+      * 예제
+
+    * "urllib" --- URL handling modules
+
+    * "urllib.request" --- Extensible library for opening URLs
+
+      * Request 객체
+
+      * OpenerDirector 객체
+
+      * BaseHandler 객체
+
+      * HTTPRedirectHandler 객체
+
+      * HTTPCookieProcessor 객체
+
+      * ProxyHandler 객체
+
+      * HTTPPasswordMgr 객체
+
+      * HTTPPasswordMgrWithPriorAuth 객체
+
+      * AbstractBasicAuthHandler 객체
+
+      * HTTPBasicAuthHandler 객체
+
+      * ProxyBasicAuthHandler 객체
+
+      * AbstractDigestAuthHandler 객체
+
+      * HTTPDigestAuthHandler 객체
+
+      * ProxyDigestAuthHandler 객체
+
+      * HTTPHandler 객체
+
+      * HTTPSHandler 객체
+
+      * FileHandler 객체
+
+      * DataHandler 객체
+
+      * FTPHandler 객체
+
+      * CacheFTPHandler 객체
+
+      * UnknownHandler 객체
+
+      * HTTPErrorProcessor 객체
+
+      * 예
+
+      * 레거시 인터페이스
+
+      * "urllib.request" 제약 사항
+
+    * "urllib.response" --- urllib가 사용하는 응답 클래스
+
+    * "urllib.parse" --- Parse URLs into components
+
+      * URL 구문 분석
+
+      * URL 구문 분석 보안
+
+      * ASCII로 인코딩된 바이트열 구문 분석
+
+      * 구조화된 구문 분석 결과
+
+      * URL 인용
+
+    * "urllib.error" --- Exception classes raised by urllib.request
+
+    * "urllib.robotparser" ---  Parser for robots.txt
+
+    * "http" --- HTTP modules
+
+      * HTTP 상태 코드
+
+    * "http.client" --- HTTP protocol client
+
+      * HTTPConnection 객체
+
+      * HTTPResponse 객체
+
+      * 예
+
+      * HTTPMessage 객체
+
+    * "ftplib" --- FTP protocol client
+
+      * FTP Objects
+
+      * FTP_TLS Objects
+
+    * "poplib" --- POP3 protocol client
+
+      * POP3 객체
+
+      * POP3 예제
+
+    * "imaplib" --- IMAP4 protocol client
+
+      * IMAP4 객체
+
+      * IMAP4 예
+
+    * "smtplib" --- SMTP protocol client
+
+      * SMTP 객체
+
+      * SMTP 예
+
+    * "uuid" --- UUID objects according to **RFC 4122**
+
+      * 예제
+
+    * "socketserver" --- A framework for network servers
+
+      * 서버 생성 노트
+
+      * 서버 객체
+
+      * 요청 처리기 객체
+
+      * 예
+
+        * "socketserver.TCPServer" 예
+
+        * "socketserver.UDPServer" 예
+
+        * 비동기 믹스인
+
+    * "http.server" --- HTTP servers
+
+      * Security Considerations
+
+    * "http.cookies" --- HTTP state management
+
+      * 쿠키 객체
+
+      * Morsel 객체
+
+      * 예제
+
+    * "http.cookiejar" --- Cookie handling for HTTP clients
+
+      * CookieJar와 FileCookieJar 객체
+
+      * FileCookieJar 서브 클래스와 웹 브라우저와의 협력
+
+      * CookiePolicy 객체
+
+      * DefaultCookiePolicy 객체
+
+      * Cookie 객체
+
+      * 예
+
+    * "xmlrpc" --- XMLRPC server and client modules
+
+    * "xmlrpc.client" --- XML-RPC client access
+
+      * ServerProxy 객체
+
+      * DateTime 객체
+
+      * Binary 객체
+
+      * Fault 객체
+
+      * ProtocolError 객체
+
+      * MultiCall 객체
+
+      * 편의 함수
+
+      * 클라이언트 사용 예
+
+      * 클라이언트와 서버 사용 예
+
+    * "xmlrpc.server" --- Basic XML-RPC servers
+
+      * SimpleXMLRPCServer 객체
+
+        * SimpleXMLRPCServer 예제
+
+      * CGIXMLRPCRequestHandler
+
+      * XMLRPC 서버 문서화
+
+      * DocXMLRPCServer 객체
+
+      * DocCGIXMLRPCRequestHandler
+
+    * "ipaddress" --- IPv4/IPv6 manipulation library
+
+      * 편의 팩토리 함수
+
+      * IP 주소
+
+        * 주소 객체
+
+        * 문자열과 정수로의 변환
+
+        * 연산자
+
+          * 비교 연산자
+
+          * 산술 연산자
+
+      * IP 네트워크 정의
+
+        * 접두사, 네트 마스크 및 호스트 마스크
+
+        * 네트워크 객체
+
+        * 연산자
+
+          * 논리 연산자
+
+          * 이터레이션
+
+          * 주소 컨테이너로서의 네트워크
+
+      * 인터페이스 객체
+
+        * 연산자
+
+          * 논리 연산자
+
+      * 다른 모듈 수준 함수
+
+      * 맞춤 예외
+
+  * 멀티미디어 서비스
+
+    * "wave" --- Read and write WAV files
+
+      * Wave_read 객체
+
+      * Wave_write 객체
+
+    * "colorsys" --- Conversions between color systems
+
+  * 국제화
+
+    * "gettext" --- Multilingual internationalization services
+
+      * GNU **gettext** API
+
+      * 클래스 기반 API
+
+        * "NullTranslations" 클래스
+
+        * "GNUTranslations" 클래스
+
+        * Solaris 메시지 카탈로그 지원
+
+        * Catalog 생성자
+
+      * 프로그램과 모듈의 국제화
+
+        * 모듈 현지화
+
+        * 응용 프로그램 현지화
+
+        * 실행 중 언어 변경
+
+        * 지연된 번역
+
+      * 감사의 말
+
+    * "locale" --- Internationalization services
+
+      * 배경, 세부 사항, 힌트, 팁 및 경고
+
+      * 확장 작성자와 파이썬을 내장하는 프로그램의 경우
+
+      * 메시지 카탈로그에 액세스
+
+  * 프로그램 프레임워크
+
+    * "turtle" --- 터틀 그래픽
+
+      * 소개
+
+      * Overview of available Turtle and Screen methods
+
+        * Turtle 메서드
+
+        * TurtleScreen/Screen의 메서드
+
+      * RawTurtle/Turtl의 메서드와 해당 함수
+
+        * 거북이 움직임
+
+        * 거북이의 상태 보고
+
+        * 측정 설정
+
+        * 펜 제어
+
+          * 그리기 상태
+
+          * 색상 제어
+
+          * 채우기
+
+          * 더 많은 그리기 제어
+
+        * 거북이 상태
+
+          * 가시성
+
+          * 외관
+
+        * 이벤트 사용하기
+
+        * 특수 Turtle 메서드
+
+        * 복합 모양
+
+      * TurtleScreen/Screen 메서드와 해당 함수
+
+        * 창 제어
+
+        * 애니메이션 제어
+
+        * 화면 이벤트 사용하기
+
+        * 입력 메서드
+
+        * 설정과 특수 메서드
+
+        * TurtleScreen에서 상속되지 않은, Screen만의 메서드
+
+      * 공개 클래스
+
+      * 도움말과 구성
+
+        * 도움말 사용법
+
+        * 독스트링을 다른 언어로 번역
+
+        * Screen과 Turtle을 구성하는 방법
+
+      * "turtledemo" --- 데모 스크립트
+
+      * 파이썬 2.6 이후의 변화
+
+      * 파이썬 3.0 이후의 변화
+
+    * "cmd" --- Support for line-oriented command interpreters
+
+      * Cmd 객체
+
+      * Cmd 예
+
+    * "shlex" --- Simple lexical analysis
+
+      * shlex 객체
+
+      * 구문 분석 규칙
+
+      * 셸과의 호환성 향상
+
+  * Tk를 사용한 그래픽 사용자 인터페이스
+
+    * "tkinter" --- Python interface to Tcl/Tk
+
+      * Architecture
+
+      * Tkinter 모듈
+
+      * Tkinter 구명조끼
+
+        * Hello World 프로그램
+
+        * Important Tk Concepts
+
+        * Understanding How Tkinter Wraps Tcl/Tk
+
+        * How do I...? What option does...?
+
+        * Navigating the Tcl/Tk Reference Manual
+
+      * Threading model
+
+      * 간편한 레퍼런스
+
+        * 옵션 설정
+
+        * 패커
+
+        * 패커 옵션
+
+        * 위젯 변수 결합하기
+
+        * 창 관리자
+
+        * Tk 옵션 데이터형
+
+        * 바인딩과 이벤트
+
+        * index 매개 변수
+
+        * 이미지
+
+      * 파일 처리기
+
+    * "tkinter.colorchooser" --- Color choosing dialog
+
+    * "tkinter.font" --- Tkinter font wrapper
+
+    * Tkinter 대화 상자
+
+      * "tkinter.simpledialog" --- 표준 Tkinter 입력 대화 상자
+
+      * "tkinter.filedialog" --- 파일 선택 대화 상자
+
+        * 네이티브 로드/저장 대화 상자
+
+      * "tkinter.commondialog" --- 대화창 템플릿
+
+    * "tkinter.messagebox" --- Tkinter message prompts
+
+    * "tkinter.scrolledtext" --- Scrolled Text Widget
+
+    * "tkinter.dnd" --- Drag and drop support
+
+    * "tkinter.ttk" --- Tk themed widgets
+
+      * Ttk 사용하기
+
+      * Ttk 위젯
+
+      * Widget
+
+        * 표준 옵션
+
+        * 스크롤 가능한 위젯 옵션
+
+        * 레이블 옵션
+
+        * 호환성 옵션
+
+        * 위젯 상태
+
+        * ttk.Widget
+
+      * Combobox
+
+        * 옵션
+
+        * 가상 이벤트
+
+        * ttk.Combobox
+
+      * Spinbox
+
+        * 옵션
+
+        * 가상 이벤트
+
+        * ttk.Spinbox
+
+      * Notebook
+
+        * 옵션
+
+        * 탭 옵션
+
+        * 탭 식별자
+
+        * 가상 이벤트
+
+        * ttk.Notebook
+
+      * Progressbar
+
+        * 옵션
+
+        * ttk.Progressbar
+
+      * Separator
+
+        * 옵션
+
+      * Sizegrip
+
+        * 플랫폼별 노트
+
+        * 버그
+
+      * Treeview
+
+        * 옵션
+
+        * 항목 옵션
+
+        * 태그 옵션
+
+        * 열 식별자
+
+        * 가상 이벤트
+
+        * ttk.Treeview
+
+      * Ttk 스타일링
+
+        * 레이아웃
+
+    * "tkinter.tix" --- Extension widgets for Tk
+
+      * Using Tix
+
+      * Tix Widgets
+
+        * Basic Widgets
+
+        * File Selectors
+
+        * Hierarchical ListBox
+
+        * Tabular ListBox
+
+        * Manager Widgets
+
+        * Image Types
+
+        * Miscellaneous Widgets
+
+        * Form Geometry Manager
+
+      * Tix Commands
+
+    * IDLE
+
+      * 메뉴
+
+        * File 메뉴 (셸과 편집기)
+
+        * Edit 메뉴 (셸과 편집기)
+
+        * Format 메뉴 (편집기 창 전용)
+
+        * Run 메뉴 (편집기 창 전용)
+
+        * Shell 메뉴 (셸 창 전용)
+
+        * Debug 메뉴 (셸 창 전용)
+
+        * Options 메뉴 (셸과 편집기)
+
+        * Window 메뉴 (셸과 편집기)
+
+        * Help 메뉴 (셸과 편집기)
+
+        * Context 메뉴
+
+      * 편집과 탐색
+
+        * 편집기 창
+
+        * 키 바인딩
+
+        * 자동 들여쓰기
+
+        * 검색과 치환
+
+        * 완성
+
+        * 콜팁
+
+        * 코드 컨텍스트
+
+        * 셸 창
+
+        * 텍스트 색상
+
+      * 시작과 코드 실행
+
+        * 명령 줄 사용법
+
+        * 시작 실패
+
+        * 사용자 코드 실행하기
+
+        * 셸의 사용자 출력
+
+        * tkinter 응용 프로그램 개발하기
+
+        * 서브 프로세스 없이 실행하기
+
+      * 도움말과 환경 설정
+
+        * 도움말 소스
+
+        * 환경 설정
+
+        * macOS의 IDLE
+
+        * 확장
+
+      * idlelib
+
+  * 개발 도구
+
+    * "typing" --- 형 힌트 지원
+
+      * Relevant PEPs
+
+      * 형 에일리어스
+
+      * NewType
+
+      * Callable
+
+      * 제네릭
+
+      * 사용자 정의 제네릭 형
+
+      * "Any" 형
+
+      * 명목적 대 구조적 서브 타이핑
+
+      * 모듈 내용
+
+        * 특수 타이핑 프리미티브
+
+          * 특수형
+
+          * 특수 형태
+
+          * Building generic types
+
+          * 기타 특수 지시자
+
+        * Generic concrete collections
+
+          * Corresponding to built-in types
+
+          * Corresponding to types in "collections"
+
+          * Other concrete types
+
+        * Abstract Base Classes
+
+          * Corresponding to collections in "collections.abc"
+
+          * Corresponding to other types in "collections.abc"
+
+          * Asynchronous programming
+
+          * Context manager types
+
+        * 프로토콜
+
+        * 함수와 데코레이터
+
+        * 인트로스펙션 도우미
+
+        * 상수
+
+    * "pydoc" --- Documentation generator and online help system
+
+    * 파이썬 개발 모드
+
+    * 파이썬 개발 모드의 효과
+
+    * ResourceWarning 예
+
+    * 잘못된 파일 기술자 에러 예
+
+    * "doctest" --- Test interactive Python examples
+
+      * 간단한 사용법: 독스트링에 있는 예제 확인하기
+
+      * 간단한 사용법: 텍스트 파일에 있는 예제 확인하기
+
+      * 작동 방법
+
+        * 어떤 독스트링을 검사합니까?
+
+        * 독스트링 예제는 어떻게 인식됩니까?
+
+        * 실행 컨텍스트란 무엇입니까?
+
+        * 예외는 어떻게 됩니까?
+
+        * 옵션 플래그
+
+        * 지시자
+
+        * 경고
+
+      * 기본 API
+
+      * Unittest API
+
+      * 고급 API
+
+        * DocTest 객체
+
+        * Example 객체
+
+        * DocTestFinder 객체
+
+        * DocTestParser 객체
+
+        * DocTestRunner 객체
+
+        * OutputChecker 객체
+
+      * 디버깅
+
+      * 맺음말
+
+    * "unittest" --- Unit testing framework
+
+      * 기본 예시
+
+      * 명령행 인터페이스
+
+        * 명령행 옵션
+
+      * 테스트 탐색(Discovery)
+
+      * 테스트 코드 구조 잡기
+
+      * 이전의 테스트 코드를 다시 사용하기
+
+      * 테스트 건너뛰기와 예상된 실패
+
+      * 부분 테스트(subtest)를 사용하여 테스트 반복 구별 짓기
+
+      * 클래스와 함수
+
+        * 테스트 케이스
+
+          * Deprecated aliases
+
+        * 테스트 분류
+
+        * 테스트를 로드하고 실행하기
+
+          * load_tests 프로토콜
+
+      * 클래스와 모듈 픽스쳐
+
+        * setUpClass 와 tearDownClass
+
+        * setUpModule 과 tearDownModule
+
+      * 시그널 처리하기
+
+    * "unittest.mock" --- mock object library
+
+      * 간략 지침
+
+      * Mock 클래스
+
+        * 호출
+
+        * 어트리뷰트 삭제
+
+        * 모의 객체 이름과 이름 어트리뷰트
+
+        * 모의 객체를 어트리뷰트로 연결하기
+
+      * 패처
+
+        * patch
+
+        * patch.object
+
+        * patch.dict
+
+        * patch.multiple
+
+        * 패처 메서드: start와 stop
+
+        * 내장 패치
+
+        * TEST_PREFIX
+
+        * 패치 데코레이터 중첩하기
+
+        * 패치할 곳
+
+        * 디스크립터와 프락시 객체 패치하기
+
+      * MagicMock과 매직 메서드 지원
+
+        * 매직 메서드 모킹하기
+
+        * 매직 모의 객체
+
+      * 도우미
+
+        * sentinel
+
+        * DEFAULT
+
+        * call
+
+        * create_autospec
+
+        * ANY
+
+        * FILTER_DIR
+
+        * mock_open
+
+        * 자동 사양
+
+        * 실링 모의 객체 봉인하기
+
+    * "unittest.mock" --- getting started
+
+      * 모의 객체 사용하기
+
+        * 메서드를 패치하는 모의 객체
+
+        * 객체의 메서드 호출을 위한 모의 객체
+
+        * 클래스 모킹하기
+
+        * 모의 객체 이름 붙이기
+
+        * 모든 호출 추적하기
+
+        * 반환 값과 어트리뷰트 설정하기
+
+        * 모의 객체로 예외 발생시키기
+
+        * 부작용 함수와 이터러블
+
+        * 비동기 이터레이터 모킹하기
+
+        * 비동기 컨텍스트 관리자 모킹하기
+
+        * 기존 객체에서 모의 객체 만들기
+
+      * 패치 데코레이터
+
+      * 추가 예
+
+        * 연쇄 호출 모킹하기
+
+        * 부분 모킹
+
+        * 제너레이터 메서드 모킹하기
+
+        * 모든 테스트 메서드에 같은 패치 적용하기
+
+        * 연결되지 않은 메서드 모킹하기
+
+        * 모의 객체로 여러 호출 확인하기
+
+        * 가변 인자에 대처하기
+
+        * 중첩 패치
+
+        * MagicMock으로 딕셔너리 모킹하기
+
+        * Mock 서브 클래스와 그 어트리뷰트
+
+        * patch.dict로 임포트를 모킹하기
+
+        * 호출 순서 추적과 덜 상세한 호출 어서션
+
+        * 더 복잡한 인자 일치
+
+    * 2to3 --- Automated Python 2 to 3 code translation
+
+      * Using 2to3
+
+      * Fixers
+
+      * "lib2to3" --- 2to3's library
+
+    * "test" --- Regression tests package for Python
+
+      * "test" 패키지를 위한 단위 테스트 작성하기
+
+      * 명령 줄 인터페이스를 사용하여 테스트 실행하기
+
+    * "test.support" --- 파이썬 테스트 스위트용 유틸리티
+
+    * "test.support.socket_helper" --- 소켓 테스트용 유틸리티
+
+    * "test.support.script_helper" --- 파이썬 실행 테스트용 유틸리티
+
+    * "test.support.bytecode_helper" --- 올바른 바이트 코드 생성 테스
+      트를 위한 지원 도구
+
+    * "test.support.threading_helper" --- threading 테스트용 유틸리티
+
+    * "test.support.os_helper" --- os 테스트용 유틸리티
+
+    * "test.support.import_helper" --- 임포트 테스트용 유틸리티
+
+    * "test.support.warnings_helper" --- warnings 테스트용 유틸리티
+
+  * 디버깅과 프로파일링
+
+    * 감사 이벤트 표
+
+    * "bdb" --- Debugger framework
+
+    * "faulthandler" --- Dump the Python traceback
+
+      * 트레이스백 덤프하기
+
+      * 결함 처리기 상태
+
+      * 시간 초과 후에 트레이스백 덤프하기
+
+      * 사용자 시그널에 트레이스백 덤프하기
+
+      * 파일 기술자 관련 문제
+
+      * 예제
+
+    * "pdb" --- 파이썬 디버거
+
+      * 디버거 명령들
+
+    * 파이썬 프로파일러
+
+      * 프로파일러 소개
+
+      * 즉석 사용자 설명서
+
+      * "profile"과 "cProfile" 모듈 레퍼런스
+
+      * "Stats" 클래스
+
+      * 결정론적 프로파일링이란 무엇입니까?
+
+      * 한계
+
+      * 보정
+
+      * 사용자 정의 타이머 사용하기
+
+    * "timeit" --- Measure execution time of small code snippets
+
+      * 기본 예제
+
+      * 파이썬 인터페이스
+
+      * 명령 줄 인터페이스
+
+      * 예제
+
+    * "trace" --- Trace or track Python statement execution
+
+      * 명령 줄 사용법
+
+        * 주요 옵션
+
+        * 수정자
+
+        * 필터
+
+      * 프로그래밍 인터페이스
+
+    * "tracemalloc" --- Trace memory allocations
+
+      * 예
+
+        * 상위 10개 표시
+
+        * 차이 계산
+
+        * 메모리 블록의 트레이스백 얻기
+
+        * 예쁜 탑(top)
+
+          * 모든 추적한 메모리 블록의 현재 및 최대 크기를 기록
+
+      * API
+
+        * 함수
+
+        * DomainFilter
+
+        * Filter
+
+        * Frame
+
+        * Snapshot
+
+        * Statistic
+
+        * StatisticDiff
+
+        * Trace
+
+        * Traceback
+
+  * 소프트웨어 패키징 및 배포
+
+    * "distutils" --- Building and installing Python modules
+
+    * "ensurepip" --- Bootstrapping the "pip" installer
+
+      * 명령 줄 인터페이스
+
+      * 모듈 API
+
+    * "venv" --- Creation of virtual environments
+
+      * 가상 환경 만들기
+
+      * How venvs work
+
+      * API
+
+      * "EnvBuilder" 확장 예제
+
+    * "zipapp" --- Manage executable Python zip archives
+
+      * 기본 예
+
+      * 명령 줄 인터페이스
+
+      * 파이썬 API
+
+      * 예
+
+      * 인터프리터 지정하기
+
+      * zipapp으로 독립형 응용 프로그램 만들기
+
+        * Making a Windows executable
+
+        * 경고
+
+      * 파이썬 Zip 응용 프로그램 아카이브 형식
+
+  * 파이썬 실행시간 서비스
+
+    * "sys" --- System-specific parameters and functions
+
+    * "sysconfig" --- Provide access to Python's configuration
+      information
+
+      * 구성 변수
+
+      * 설치 경로
+
+      * 기타 함수
+
+      * "sysconfig" 를 스크립트로 사용하기
+
+    * "builtins" --- Built-in objects
+
+    * "__main__" --- Top-level code environment
+
+      * "__name__ == '__main__'"
+
+        * "최상위 코드 환경" 이란 무엇인가요?
+
+        * 관용적 사용법
+
+        * 패키징 고려 사항
+
+      * 파이썬 패키지의 "__main__.py"
+
+        * 관용적 사용법
+
+      * "import __main__"
+
+    * "warnings" --- Warning control
+
+      * 경고 범주
+
+      * 경고 필터
+
+        * 경고 필터 설명
+
+        * 기본 경고 필터
+
+        * 기본 필터 재정의
+
+      * 일시적인 경고 억제
+
+      * 경고 테스트
+
+      * 새 버전의 종속성에 대한 코드 갱신
+
+      * 사용 가능한 함수
+
+      * 사용 가능한 컨텍스트 관리자
+
+    * "dataclasses" --- Data Classes
+
+      * Module contents
+
+      * 초기화 후처리
+
+      * 클래스 변수
+
+      * 초기화 전용 변수
+
+      * 고정 인스턴스
+
+      * 계승
+
+      * Re-ordering of keyword-only parameters in "__init__()"
+
+      * 기본 팩토리 함수
+
+      * 가변 기본값
+
+      * Descriptor-typed fields
+
+    * "contextlib" --- "with" 문 컨텍스트를 위한 유틸리티
+
+      * 유틸리티
+
+      * 예제와 조리법
+
+        * 일정하지 않은 수의 컨텍스트 관리자 지원
+
+        * "__enter__" 메서드에서 발생하는 예외 잡기
+
+        * "__enter__" 구현에서 정리하기
+
+        * "try-finally"와 플래그 변수 사용 교체하기
+
+        * 함수 데코레이터로 컨텍스트 관리자 사용하기
+
+      * 일회용, 재사용 가능 및 재진입 가능 컨텍스트 관리자
+
+        * 재진입 가능 컨텍스트 관리자
+
+        * 재사용 가능 컨텍스트 관리자
+
+    * "abc" --- Abstract Base Classes
+
+    * "atexit" --- Exit handlers
+
+      * "atexit" 예제
+
+    * "traceback" --- Print or retrieve a stack traceback
+
+      * "TracebackException" Objects
+
+      * "StackSummary" Objects
+
+      * "FrameSummary" Objects
+
+      * Traceback Examples
+
+    * "__future__" --- Future statement definitions
+
+    * "gc" --- Garbage Collector interface
+
+    * "inspect" --- Inspect live objects
+
+      * 형과 멤버
+
+      * 소스 코드 가져오기
+
+      * Signature 객체로 콜러블 검사하기
+
+      * 클래스와 함수
+
+      * 인터프리터 스택
+
+      * 정적으로 어트리뷰트 가져오기
+
+      * Current State of Generators and Coroutines
+
+      * 코드 객체 비트 플래그
+
+      * 명령 줄 인터페이스
+
+    * "site" --- Site-specific configuration hook
+
+      * Readline 구성
+
+      * 모듈 내용
+
+      * 명령 줄 인터페이스
+
+  * 사용자 정의 파이썬 인터프리터
+
+    * "code" --- Interpreter base classes
+
+      * 대화형 인터프리터 객체
+
+      * 대화형 콘솔 객체
+
+    * "codeop" --- Compile Python code
+
+  * 모듈 임포트 하기
+
+    * "zipimport" --- Import modules from Zip archives
+
+      * zipimporter 객체
+
+      * 예제
+
+    * "pkgutil" --- Package extension utility
+
+    * "modulefinder" --- Find modules used by a script
+
+      * "ModuleFinder"의 사용 예
+
+    * "runpy" --- Locating and executing Python modules
+
+    * "importlib" --- "import"의 구현
+
+      * 소개
+
+      * 함수
+
+      * "importlib.abc" -- import와 관련된 추상 베이스 클래스
+
+      * "importlib.resources" -- Resources
+
+      * "importlib.machinery" -- 임포터와 경로 훅
+
+      * "importlib.util" -- 임포터를 위한 유틸리티 코드
+
+      * 예
+
+        * 프로그래밍 방식으로 임포트 하기
+
+        * 모듈을 임포트 할 수 있는지 확인하기
+
+        * 소스 파일을 직접 임포트 하기
+
+        * Implementing lazy imports
+
+        * 임포터 설정하기
+
+        * "importlib.import_module()" 근사하기
+
+    * Using "importlib.metadata"
+
+      * 개요
+
+      * 기능적 API
+
+        * 진입 지점
+
+        * 배포 메타데이터
+
+        * 배포 버전
+
+        * 배포 파일
+
+        * 배포 요구 사항
+
+        * Package distributions
+
+      * 배포
+
+      * 검색 알고리즘 확장하기
+
+  * 파이썬 언어 서비스
+
+    * "ast" --- Abstract Syntax Trees
+
+      * 추상 문법
+
+      * 노드 클래스
+
+        * 리터럴
+
+        * 변수
+
+        * 표현식
+
+          * 서브스크립팅
+
+          * 컴프리헨션
+
+        * 문장
+
+          * 임포트
+
+        * 제어 흐름
+
+        * Pattern matching
+
+        * 함수와 클래스 정의
+
+        * Async와 await
+
+      * "ast" 도우미
+
+      * 컴파일러 플래그
+
+      * 명령 줄 사용법
+
+    * "symtable" --- Access to the compiler's symbol tables
+
+      * 심볼 테이블 생성하기
+
+      * 심볼 테이블 검사하기
+
+    * "token" --- Constants used with Python parse trees
+
+    * "keyword" --- Testing for Python keywords
+
+    * "tokenize" --- Tokenizer for Python source
+
+      * 입력 토큰화하기
+
+      * 명령 줄 사용법
+
+      * 예제
+
+    * "tabnanny" --- Detection of ambiguous indentation
+
+    * "pyclbr" --- Python module browser support
+
+      * Function 객체
+
+      * Class 객체
+
+    * "py_compile" --- Compile Python source files
+
+      * 명령줄 인터페이스
+
+    * "compileall" --- Byte-compile Python libraries
+
+      * 명령 줄 사용
+
+      * 공용 함수
+
+    * "dis" --- Disassembler for Python bytecode
+
+      * 바이트 코드 분석
+
+      * 분석 함수
+
+      * 파이썬 바이트 코드 명령어
+
+      * 옵코드 모음
+
+    * "pickletools" --- Tools for pickle developers
+
+      * 명령 줄 사용법
+
+        * 명령 줄 옵션
+
+      * 프로그래밍 인터페이스
+
+  * MS 윈도우 특정 서비스
+
+    * "msvcrt" --- Useful routines from the MS VC++ runtime
+
+      * 파일 연산
+
+      * 콘솔 I/O
+
+      * 기타 함수
+
+    * "winreg" --- Windows registry access
+
+      * 함수
+
+      * 상수
+
+        * HKEY_* 상수
+
+        * 액세스 권한
+
+          * 64비트 특정
+
+        * 값 형
+
+      * 레지스트리 핸들 객체
+
+    * "winsound" --- Sound-playing interface for Windows
+
+  * 유닉스 특정 서비스
+
+    * "posix" --- The most common POSIX system calls
+
+      * 대용량 파일 지원
+
+      * 주목할만한 모듈 내용
+
+    * "pwd" --- The password database
+
+    * "grp" --- The group database
+
+    * "termios" --- POSIX style tty control
+
+      * 예제
+
+    * "tty" --- Terminal control functions
+
+    * "pty" --- Pseudo-terminal utilities
+
+      * 예제
+
+    * "fcntl" --- The "fcntl" and "ioctl" system calls
+
+    * "resource" --- Resource usage information
+
+      * 자원 제한
+
+      * 자원 사용량
+
+    * "syslog" --- Unix syslog library routines
+
+      * 예제
+
+        * 간단한 예제
+
+  * 대체된 모듈
+
+    * "aifc" --- Read and write AIFF and AIFC files
+
+    * "asynchat" --- Asynchronous socket command/response handler
+
+      * asynchat Example
+
+    * "asyncore" --- Asynchronous socket handler
+
+      * asyncore Example basic HTTP client
+
+      * asyncore Example basic echo server
+
+    * "audioop" --- Manipulate raw audio data
+
+    * "cgi" --- Common Gateway Interface support
+
+      * Introduction
+
+      * Using the cgi module
+
+      * Higher Level Interface
+
+      * Functions
+
+      * Caring about security
+
+      * Installing your CGI script on a Unix system
+
+      * Testing your CGI script
+
+      * Debugging CGI scripts
+
+      * Common problems and solutions
+
+    * "cgitb" --- Traceback manager for CGI scripts
+
+    * "chunk" --- Read IFF chunked data
+
+    * "crypt" --- Function to check Unix passwords
+
+      * Hashing Methods
+
+      * Module Attributes
+
+      * Module Functions
+
+      * Examples
+
+    * "imghdr" --- Determine the type of an image
+
+    * "imp" --- Access the *import* internals
+
+      * Examples
+
+    * "mailcap" --- Mailcap file handling
+
+    * "msilib" --- Read and write Microsoft Installer files
+
+      * Database Objects
+
+      * View Objects
+
+      * Summary Information Objects
+
+      * Record Objects
+
+      * Errors
+
+      * CAB Objects
+
+      * Directory Objects
+
+      * Features
+
+      * GUI classes
+
+      * Precomputed tables
+
+    * "nis" --- Interface to Sun's NIS (Yellow Pages)
+
+    * "nntplib" --- NNTP protocol client
+
+      * NNTP Objects
+
+        * Attributes
+
+        * Methods
+
+      * Utility functions
+
+    * "optparse" --- Parser for command line options
+
+      * 배경
+
+        * 용어
+
+        * 옵션은 무엇을 위한 것입니까?
+
+        * 위치 인자는 무엇을 위한 것입니까?
+
+      * 자습서
+
+        * 옵션 액션의 이해
+
+        * store 액션
+
+        * 불리언 (플래그) 옵션 처리하기
+
+        * 다른 액션들
+
+        * 기본값
+
+        * 도움말 생성하기
+
+          * 옵션 그룹화하기
+
+        * 버전 문자열 인쇄하기
+
+        * "optparse"가 에러를 처리하는 방법
+
+        * 모두 합치기
+
+      * 레퍼런스 지침서
+
+        * 구문 분석기 만들기
+
+        * 구문 분석기 채우기
+
+        * 옵션 정의하기
+
+        * 옵션 어트리뷰트
+
+        * 표준 옵션 액션
+
+        * 표준 옵션 형
+
+        * 인자 구문 분석하기
+
+        * 옵션 구문 분석기를 조회하고 조작하기
+
+        * 옵션 간의 충돌
+
+        * 정리
+
+        * 기타 메서드
+
+      * 옵션 콜백
+
+        * 콜백 옵션 정의하기
+
+        * 콜백이 호출되는 방법
+
+        * 콜백에서 에러 발생시키기
+
+        * 콜백 예제 1: 간단한 콜백
+
+        * 콜백 예제 2: 옵션 순서 확인
+
+        * 콜백 예제 3: 옵션 순서 확인 (일반화)
+
+        * 콜백 예제 4: 임의 조건 확인
+
+        * 콜백 예제 5: 고정 인자
+
+        * 콜백 예제 6: 가변 인자
+
+      * "optparse" 확장하기
+
+        * 새로운 형 추가하기
+
+        * 새로운 액션 추가하기
+
+    * "ossaudiodev" --- Access to OSS-compatible audio devices
+
+      * Audio Device Objects
+
+      * Mixer Device Objects
+
+    * "pipes" --- Interface to shell pipelines
+
+      * Template Objects
+
+    * "smtpd" --- SMTP Server
+
+      * SMTPServer Objects
+
+      * DebuggingServer Objects
+
+      * PureProxy Objects
+
+      * MailmanProxy Objects
+
+      * SMTPChannel Objects
+
+    * "sndhdr" --- Determine type of sound file
+
+    * "spwd" --- The shadow password database
+
+    * "sunau" --- Read and write Sun AU files
+
+      * AU_read Objects
+
+      * AU_write Objects
+
+    * "telnetlib" --- Telnet client
+
+      * Telnet Objects
+
+      * Telnet Example
+
+    * "uu" --- Encode and decode uuencode files
+
+    * "xdrlib" --- Encode and decode XDR data
+
+      * Packer Objects
+
+      * Unpacker Objects
+
+      * Exceptions
+
+  * Security Considerations
+
+* 파이썬 인터프리터 확장 및 내장
+
+  * 권장 제삼자 도구
+
+  * 제삼자 도구 없이 확장 만들기
+
+    * 1. C나 C++로 파이썬 확장하기
+
+      * 1.1. 간단한 예
+
+      * 1.2. 막간극: 에러와 예외
+
+      * 1.3. 예제로 돌아가기
+
+      * 1.4. 모듈의 메서드 테이블과 초기화 함수
+
+      * 1.5. 컴파일과 링크
+
+      * 1.6. C에서 파이썬 함수 호출하기
+
+      * 1.7. 확장 함수에서 매개 변수 추출하기
+
+      * 1.8. 확장 함수를 위한 키워드 매개 변수
+
+      * 1.9. 임의의 값을 구축하기
+
+      * 1.10. 참조 횟수
+
+        * 1.10.1. 파이썬에서 참조 횟수 세기
+
+        * 1.10.2. 소유권 규칙
+
+        * 1.10.3. 살얼음
+
+        * 1.10.4. NULL 포인터
+
+      * 1.11. C++로 확장 작성하기
+
+      * 1.12. 확장 모듈을 위한 C API 제공하기
+
+    * 2. 확장형 정의하기: 자습서
+
+      * 2.1. 기초
+
+      * 2.2. 기초 예제에 데이터와 메서드 추가하기
+
+      * 2.3. 데이터 어트리뷰트를 더 세밀하게 제어하기
+
+      * 2.4. 순환 가비지 수거 지원하기
+
+      * 2.5. 다른 형의 서브 클래싱
+
+    * 3. 확장형 정의하기: 여러 가지 주제
+
+      * 3.1. 파이널리제이션과 할당 해제
+
+      * 3.2. 객체 표현
+
+      * 3.3. 어트리뷰트 관리
+
+        * 3.3.1. 범용 어트리뷰트 관리
+
+        * 3.3.2. 형별 어트리뷰트 관리
+
+      * 3.4. 객체 비교
+
+      * 3.5. 추상 프로토콜 지원
+
+      * 3.6. 약한 참조 지원
+
+      * 3.7. 추가 제안
+
+    * 4. C와 C++ 확장 빌드하기
+
+      * 4.1. Building C and C++ Extensions with distutils
+
+      * 4.2. Distributing your extension modules
+
+    * 5. 윈도우에서 C와 C++ 확장 빌드하기
+
+      * 5.1. 요리책 접근법
+
+      * 5.2. 유닉스와 윈도우의 차이점
+
+      * 5.3. DLL을 실제로 사용하기
+
+  * 더 큰 응용 프로그램에 CPython 런타임을 내장하기
+
+    * 1. 다른 응용 프로그램에 파이썬 내장하기
+
+      * 1.1. 매우 고수준의 내장
+
+      * 1.2. 매우 고수준 내장을 넘어서: 개요
+
+      * 1.3. 순수한 내장
+
+      * 1.4. 내장된 파이썬을 확장하기
+
+      * 1.5. C++로 파이썬 내장하기
+
+      * 1.6. 유닉스 계열 시스템에서 컴파일과 링크하기
+
+* 파이썬/C API 레퍼런스 설명서
+
+  * 소개
+
+    * 코딩 표준
+
+    * 인클루드 파일
+
+    * 유용한 매크로들
+
+    * 객체, 형 그리고 참조 횟수
+
+      * 참조 횟수
+
+        * 참조 횟수 상세
+
+      * 형
+
+    * 예외
+
+    * 파이썬 임베딩하기
+
+    * 디버깅 빌드
+
+  * C API Stability
+
+    * 안정적인 응용 프로그램 바이너리 인터페이스
+
+      * Limited API Scope and Performance
+
+      * Limited API Caveats
+
+    * Platform Considerations
+
+    * Contents of Limited API
+
+  * 매우 고수준 계층
+
+  * 참조 횟수
+
+  * 예외 처리
+
+    * 인쇄와 지우기
+
+    * 예외 발생시키기
+
+    * 경고 발행하기
+
+    * 에러 표시기 조회하기
+
+    * 시그널 처리하기
+
+    * 예외 클래스
+
+    * 예외 객체
+
+    * 유니코드 예외 객체
+
+    * 재귀 제어
+
+    * 표준 예외
+
+    * 표준 경고 범주
+
+  * 유틸리티
+
+    * 운영 체제 유틸리티
+
+    * 시스템 함수
+
+    * 프로세스 제어
+
+    * 모듈 임포트 하기
+
+    * 데이터 마샬링 지원
+
+    * 인자 구문 분석과 값 구축
+
+      * 인자 구문 분석
+
+        * 문자열과 버퍼
+
+        * 숫자
+
+        * 기타 객체
+
+        * API 함수
+
+      * 값 구축
+
+    * 문자열 변환과 포매팅
+
+    * 리플렉션
+
+    * 코덱 등록소와 지원 함수
+
+      * 코덱 조회 API
+
+      * 유니코드 인코딩 에러 처리기용 등록소 API
+
+  * 추상 객체 계층
+
+    * 객체 프로토콜
+
+    * 호출 프로토콜
+
+      * *tp_call* 프로토콜
+
+      * 벡터콜(Vectorcall) 프로토콜
+
+        * 재귀 제어
+
+        * 벡터콜 지원 API
+
+      * 객체 호출 API
+
+      * 호출 지원 API
+
+    * 숫자 프로토콜
+
+    * 시퀀스 프로토콜
+
+    * 매핑 프로토콜
+
+    * 이터레이터 프로토콜
+
+    * 버퍼 프로토콜
+
+      * 버퍼 구조체
+
+      * 버퍼 요청 유형
+
+        * 요청 독립적 필드
+
+        * readonly, format
+
+        * shape, strides, suboffsets
+
+        * 연속성 요청
+
+        * 복합 요청
+
+      * 복잡한 배열
+
+        * NumPy-스타일: shape과 strides
+
+        * PIL-스타일: shape, strides 및 suboffsets
+
+      * 버퍼 관련 함수
+
+    * Old Buffer Protocol
+
+  * 구상 객체 계층
+
+    * 기본 객체
+
+      * 형 객체
+
+        * 힙에 할당된 형 만들기
+
+      * "None" 객체
+
+    * 숫자 객체
+
+      * 정수 객체
+
+      * 불리언 객체
+
+      * Floating Point Objects
+
+      * 복소수 객체
+
+        * C 구조체로서의 복소수
+
+        * 파이썬 객체로서의 복소수
+
+    * 시퀀스 객체
+
+      * 바이트열 객체
+
+      * 바이트 배열 객체
+
+        * 형 검사 매크로
+
+        * 직접 API 함수
+
+        * 매크로
+
+      * 유니코드 객체와 코덱
+
+        * 유니코드 객체
+
+          * 유니코드 형
+
+          * 유니코드 문자 속성
+
+          * 유니코드 문자열 생성과 액세스
+
+          * Deprecated Py_UNICODE APIs
+
+          * 로케일 인코딩
+
+          * 파일 시스템 인코딩
+
+          * wchar_t 지원
+
+        * 내장 코덱
+
+          * 일반 코덱
+
+          * UTF-8 코덱
+
+          * UTF-32 코덱
+
+          * UTF-16 코덱
+
+          * UTF-7 코덱
+
+          * 유니코드 이스케이프 코덱
+
+          * 원시 유니코드 이스케이프 코덱
+
+          * Latin-1 코덱
+
+          * ASCII 코덱
+
+          * 문자 맵 코덱
+
+          * 윈도우 용 MBCS 코덱
+
+          * 메서드와 슬롯
+
+        * 메서드와 슬롯 함수
+
+      * 튜플 객체
+
+      * 구조체 시퀀스 객체
+
+      * 리스트 객체
+
+    * 컨테이너 객체
+
+      * 딕셔너리 객체
+
+      * 집합 객체
+
+    * 함수 객체
+
+      * 함수 객체
+
+      * 인스턴스 메서드 객체
+
+      * 메서드 객체
+
+      * 셀 객체
+
+      * 코드 객체
+
+    * 기타 객체
+
+      * 파일 객체
+
+      * 모듈 객체
+
+        * C 모듈 초기화
+
+          * 단단계 초기화
+
+          * 다단계 초기화
+
+          * 저수준 모듈 생성 함수
+
+          * 지원 함수
+
+        * 모듈 조회
+
+      * 이터레이터 객체
+
+      * 디스크립터 객체
+
+      * 슬라이스 객체
+
+      * Ellipsis 객체
+
+      * MemoryView 객체
+
+      * 약한 참조 객체
+
+      * 캡슐
+
+      * 제너레이터 객체
+
+      * 코루틴 객체
+
+      * 컨텍스트 변수 객체
+
+      * DateTime 객체
+
+      * Objects for Type Hinting
+
+  * 초기화, 파이널리제이션 및 스레드
+
+    * 파이썬 초기화 전
+
+    * 전역 구성 변수
+
+    * 인터프리터 초기화와 파이널리제이션
+
+    * 프로세스 전체 매개 변수
+
+    * 스레드 상태와 전역 인터프리터 록
+
+      * 확장 코드에서 GIL 해제하기
+
+      * 파이썬이 만들지 않은 스레드
+
+      * fork()에 대한 주의 사항
+
+      * 고수준 API
+
+      * 저수준 API
+
+    * 서브 인터프리터 지원
+
+      * 버그와 주의 사항
+
+    * 비동기 알림
+
+    * 프로파일링과 추적
+
+    * 고급 디버거 지원
+
+    * 스레드 로컬 저장소 지원
+
+      * 스레드별 저장소 (TSS - Thread Specific Storage) API
+
+        * 동적 할당
+
+        * 메서드
+
+      * 스레드 로컬 저장소 (TLS) API
+
+  * 파이썬 초기화 구성
+
+    * Example
+
+    * PyWideStringList
+
+    * PyStatus
+
+    * PyPreConfig
+
+    * Preinitialize Python with PyPreConfig
+
+    * PyConfig
+
+    * PyConfig를 사용한 초기화
+
+    * 격리된 구성
+
+    * 파이썬 구성
+
+    * Python Path Configuration
+
+    * Py_RunMain()
+
+    * Py_GetArgcArgv()
+
+    * 다단계 초기화 비공개 잠정적 API
+
+  * 메모리 관리
+
+    * 개요
+
+    * Allocator Domains
+
+    * 원시 메모리 인터페이스
+
+    * 메모리 인터페이스
+
+    * 객체 할당자
+
+    * 기본 메모리 할당자
+
+    * 메모리 할당자 사용자 정의
+
+    * 파이썬 메모리 할당자의 디버그 훅
+
+    * pymalloc 할당자
+
+      * pymalloc 아레나 할당자 사용자 정의
+
+    * tracemalloc C API
+
+    * 예
+
+  * 객체 구현 지원
+
+    * 힙에 객체 할당하기
+
+    * 공통 객체 구조체
+
+      * 기본 객체 형과 매크로
+
+      * 함수와 메서드 구현
+
+      * 확장형의 어트리뷰트 액세스
+
+    * Type Objects
+
+      * 간략 참조
+
+        * "tp 슬롯"
+
+        * 서브 슬롯
+
+        * 슬롯 typedef
+
+      * PyTypeObject 정의
+
+      * PyObject 슬롯
+
+      * PyVarObject 슬롯
+
+      * PyTypeObject 슬롯
+
+      * Static Types
+
+      * 힙 형
+
+    * 숫자 객체 구조체
+
+    * 매핑 객체 구조체
+
+    * 시퀀스 객체 구조체
+
+    * 버퍼 객체 구조체
+
+    * 비동기 객체 구조체
+
+    * 슬롯 형 typedef
+
+    * 예
+
+    * 순환 가비지 수집 지원
+
+      * 가비지 수거기 상태 제어하기
+
+  * API와 ABI 버전 붙이기
+
+* 파이썬 모듈 배포하기
+
+  * Key terms
+
+  * Open source licensing and collaboration
+
+  * Installing the tools
+
+  * Reading the Python Packaging User Guide
+
+  * How do I...?
+
+    * ... choose a name for my project?
+
+    * ... create and distribute binary extensions?
+
+* 파이썬 모듈 설치하기
+
+  * 핵심 용어
+
+  * 기본 사용법
+
+  * 어떻게 ...?
+
+    * ... 파이썬 3.4 이전 버전의 파이썬에서 "pip" 를 설치합니까?
+
+    * ... 현재 사용자만을 위해 패키지를 설치합니까?
+
+    * ... 과학 계산용 파이썬 패키지를 설치합니까?
+
+    * ... 병렬로 설치된 여러 버전의 파이썬으로 작업합니까?
+
+  * 흔히 만나는 설치 문제
+
+    * 리눅스에 시스템 파이썬 설치하기
+
+    * Pip가 설치되지 않았습니다.
+
+    * 바이너리 확장 설치하기
+
+* 파이썬 HOWTO
+
+  * Porting Python 2 Code to Python 3
+
+    * The Short Explanation
+
+    * Details
+
+      * Drop support for Python 2.6 and older
+
+      * Make sure you specify the proper version support in your
+        "setup.py" file
+
+      * Have good test coverage
+
+      * Learn the differences between Python 2 & 3
+
+      * Update your code
+
+        * Division
+
+        * Text versus binary data
+
+        * Use feature detection instead of version detection
+
+      * Prevent compatibility regressions
+
+      * Check which dependencies block your transition
+
+      * Update your "setup.py" file to denote Python 3 compatibility
+
+      * Use continuous integration to stay compatible
+
+      * Consider using optional static type checking
+
+  * 확장 모듈을 파이썬 3에 이식하기
+
+  * 파이썬 curses 프로그래밍
+
+    * curses란 무엇입니까?
+
+      * 파이썬 curses 모듈
+
+    * curses 응용 프로그램 시작과 종료
+
+    * 창과 패드
+
+    * 텍스트 표시
+
+      * 속성과 색상
+
+    * 사용자 입력
+
+    * 추가 정보
+
+  * Descriptor HowTo Guide
+
+    * 입문
+
+      * 간단한 예: 상수를 반환하는 디스크립터
+
+      * 동적 조회
+
+      * 관리되는 어트리뷰트
+
+      * 사용자 정의 이름
+
+      * 마무리 생각
+
+    * 완전한 실용적인 예
+
+      * 유효성 검사기 클래스
+
+      * 사용자 정의 유효성 검사기
+
+      * 실용적인 응용
+
+    * 기술적인 자습서
+
+      * 요약
+
+      * 정의와 소개
+
+      * 디스크립터 프로토콜
+
+      * 디스크립터 호출의 개요
+
+      * 인스턴스에서 호출
+
+      * 클래스에서 호출
+
+      * super에서 호출
+
+      * 호출 로직 요약
+
+      * 자동 이름 알림
+
+      * ORM 예제
+
+    * 순수한 파이썬 등가물
+
+      * 프로퍼티
+
+      * 함수와 메서드
+
+      * 메서드의 종류
+
+      * 정적 메서드
+
+      * 클래스 메서드
+
+      * 멤버 객체와 __slots__
+
+  * 함수형 프로그래밍 HOWTO
+
+    * 소개
+
+      * 형식적 증명 가능성
+
+      * 모듈성
+
+      * 디버깅과 테스트 용이성
+
+      * 결합성
+
+    * 이터레이터
+
+      * 이터레이터를 지원하는 데이터형
+
+    * 제너레이터 표현식과 리스트 컴프리헨션
+
+    * 제너레이터
+
+      * 제너레이터에 값 전달하기
+
+    * 내장 함수
+
+    * itertools 모듈
+
+      * 새로운 이터레이터 만들기
+
+      * 요소에 대한 함수 호출
+
+      * 요소 선택하기
+
+      * 조합 함수
+
+      * 요소 분류
+
+    * functools 모듈
+
+      * operator 모듈
+
+    * 작은 함수와 람다 표현식
+
+    * 개정내역 및 감사의 글
+
+    * 참고 문헌
+
+      * 일반
+
+      * 파이썬 특정
+
+      * 파이썬 설명서
+
+  * 로깅 HOWTO
+
+    * 기초 로깅 자습서
+
+      * 로깅을 사용할 때
+
+      * 간단한 예
+
+      * 파일에 로깅 하기
+
+      * Logging from multiple modules
+
+      * 변수 데이터 로깅
+
+      * 표시된 메시지의 포맷 변경
+
+      * 메시지에 날짜/시간 표시
+
+      * 다음 단계
+
+    * 고급 로깅 자습서
+
+      * 로깅 흐름
+
+      * 로거
+
+      * 처리기
+
+      * 포매터
+
+      * 로깅 구성
+
+      * 구성이 제공되지 않으면 어떻게 되는가
+
+      * 라이브러리 로깅 구성
+
+    * 로깅 수준
+
+      * 사용자 정의 수준
+
+    * 유용한 처리기
+
+    * 로깅 중에 발생하는 예외
+
+    * 임의의 객체를 메시지로 사용하기
+
+    * 최적화
+
+  * 로깅 요리책
+
+    * 여러 모듈에서 로깅 사용하기
+
+    * 여러 스레드에서 로깅 하기
+
+    * 다중 처리기 및 포매터
+
+    * 여러 대상으로 로깅 하기
+
+    * Custom handling of levels
+
+    * 구성 서버 예제
+
+    * 블록 하는 처리기 다루기
+
+    * 네트워크에서 로깅 이벤트 보내고 받기
+
+      * Running a logging socket listener in production
+
+    * 로그 출력에 문맥 정보 추가
+
+      * 문맥 정보 전달에 LoggerAdapters 사용하기
+
+        * 딕셔너리 이외의 객체를 사용하여 문맥 정보 전달하기
+
+      * 문맥 정보 전달에 필터 사용하기
+
+    * Use of "contextvars"
+
+    * Imparting contextual information in handlers
+
+    * 여러 프로세스에서 단일 파일에 로깅 하기
+
+      * concurrent.futures.ProcessPoolExecutor 사용하기
+
+      * Deploying Web applications using Gunicorn and uWSGI
+
+    * 파일 회전 사용하기
+
+    * 대체 포매팅 스타일 사용하기
+
+    * 사용자 정의 "LogRecord"
+
+    * Subclassing QueueHandler - a ZeroMQ example
+
+    * Subclassing QueueListener - a ZeroMQ example
+
+    * 딕셔너리 기반 구성의 예
+
+    * rotator와 namer를 사용해서 로그 회전 처리하기
+
+    * 좀 더 정교한 multiprocessing 예제
+
+    * SysLogHandler로 전송된 메시지에 BOM 삽입하기
+
+    * 구조적 로깅 구현
+
+    * "dictConfig()"로 처리기를 사용자 정의하기
+
+    * 응용 프로그램 전체에서 특정 포맷 스타일 사용하기
+
+      * LogRecord 팩토리 사용
+
+      * 사용자 정의 메시지 객체 사용
+
+    * "dictConfig()"로 필터 구성하기
+
+    * 사용자 정의된 예외 포매팅
+
+    * 로깅 메시지 말하기
+
+    * 로깅 메시지를 버퍼링하고 조건부 출력하기
+
+    * Sending logging messages to email, with buffering
+
+    * 구성을 통해 UTC(GMT)로 시간을 포맷하기
+
+    * 선택적 로깅을 위해 컨텍스트 관리자 사용하기
+
+    * CLI 응용 프로그램 시작 템플릿
+
+    * 로깅을 위한 Qt GUI
+
+    * Logging to syslog with RFC5424 support
+
+    * How to treat a logger like an output stream
+
+    * Patterns to avoid
+
+      * Opening the same log file multiple times
+
+      * Using loggers as attributes in a class or passing them as
+        parameters
+
+      * Adding handlers other than "NullHandler" to a logger in a
+        library
+
+      * Creating a lot of loggers
+
+    * Other resources
+
+  * 정규식 HOWTO
+
+    * 소개
+
+    * 단순한 패턴
+
+      * 문자 일치
+
+      * 반복하기
+
+    * 정규식 사용하기
+
+      * 정규식 컴파일하기
+
+      * 백 슬래시 전염병
+
+      * 일치 수행하기
+
+      * 모듈 수준 함수
+
+      * 컴파일 플래그
+
+    * 더 많은 패턴 기능
+
+      * 메타 문자 더 보기
+
+      * 그룹
+
+      * 비 포착 그룹과 이름 있는 그룹
+
+      * 미리 보기 어서션
+
+    * 문자열 수정하기
+
+      * 문자열 분할하기
+
+      * 검색과 치환
+
+    * 일반적인 문제들
+
+      * 문자열 메서드를 사용하십시오
+
+      * match()와 search() 비교
+
+      * 탐욕적 과 비 탐욕적 비교
+
+      * re.VERBOSE 사용하기
+
+    * 피드백
+
+  * 소켓 프로그래밍 HOWTO
+
+    * 소켓
+
+      * 역사
+
+    * 소켓 만들기
+
+      * IPC
+
+    * 소켓 사용하기
+
+      * 바이너리 데이터
+
+    * 연결 끊기
+
+      * 소켓이 죽을 때
+
+    * 비 블로킹 소켓
+
+  * Sorting HOW TO
+
+    * 정렬 기초
+
+    * 키 함수
+
+    * Operator Module Functions
+
+    * 오름차순과 내림차순
+
+    * 정렬 안정성과 복잡한 정렬
+
+    * The Old Way Using Decorate-Sort-Undecorate
+
+    * The Old Way Using the *cmp* Parameter
+
+    * Odd and Ends
+
+  * 유니코드 HOWTO
+
+    * 유니코드 소개
+
+      * 정의
+
+      * 인코딩
+
+      * 참조
+
+    * 파이썬의 유니코드 지원
+
+      * 문자열 형
+
+      * 바이트열로 변환
+
+      * 파이썬 소스 코드에서 유니코드 리터럴
+
+      * 유니코드 속성
+
+      * 문자열 비교
+
+      * 유니코드 정규식
+
+      * 참조
+
+    * 유니코드 데이터 읽고 쓰기
+
+      * 유니코드 파일 이름
+
+      * 유니코드 인식 프로그램 작성 팁
+
+        * 파일 인코딩끼리 변환
+
+        * 알 수 없는 인코딩의 파일
+
+      * 참조
+
+    * 감사 인사
+
+  * urllib 패키지를 사용하여 인터넷 리소스를 가져오는 방법
+
+    * 소개
+
+    * URL을 가져오기
+
+      * 데이터
+
+      * 헤더
+
+    * 예외 처리
+
+      * URLError
+
+      * HTTPError
+
+        * 에러 코드
+
+      * 마무리
+
+        * 1번
+
+        * 2번
+
+    * info와 geturl
+
+    * 오프너와 처리기
+
+    * 기본 인증
+
+    * 프락시
+
+    * 소켓과 계층
+
+    * 각주
+
+  * Argparse 자습서
+
+    * 개념
+
+    * 기본
+
+    * 위치 인자 소개
+
+    * 옵션 인자 소개
+
+      * 짧은 옵션
+
+    * 위치 및 옵션 인자 결합하기
+
+    * 조금 더 발전시키기
+
+      * 충돌하는 옵션들
+
+    * 맺음말
+
+  * ipaddress 모듈에 대한 소개
+
+    * 주소/네트워크/인터페이스 객체 만들기
+
+      * IP 버전에 대한 참고 사항
+
+      * IP 호스트 주소
+
+      * 네트워크 정의
+
+      * 호스트 인터페이스
+
+    * 주소/네트워크/인터페이스 객체 검사
+
+    * 주소 리스트로서의 네트워크
+
+    * 비교
+
+    * 다른 모듈과 함께 IP 주소 사용하기
+
+    * 인스턴스 생성 실패 시 세부 사항 가져오기
+
+  * 인자 클리닉 How-To
+
+    * The Goals Of Argument Clinic
+
+    * Basic Concepts And Usage
+
+    * Converting Your First Function
+
+    * Advanced Topics
+
+      * Symbolic default values
+
+      * Renaming the C functions and variables generated by Argument
+        Clinic
+
+      * Converting functions using PyArg_UnpackTuple
+
+      * Optional Groups
+
+      * Using real Argument Clinic converters, instead of "legacy
+        converters"
+
+      * Py_buffer
+
+      * Advanced converters
+
+      * Parameter default values
+
+      * The "NULL" default value
+
+      * Expressions specified as default values
+
+      * Using a return converter
+
+      * Cloning existing functions
+
+      * Calling Python code
+
+      * Using a "self converter"
+
+      * Using a "defining class" converter
+
+      * Writing a custom converter
+
+      * Writing a custom return converter
+
+      * METH_O and METH_NOARGS
+
+      * tp_new and tp_init functions
+
+      * Changing and redirecting Clinic's output
+
+      * The #ifdef trick
+
+      * Using Argument Clinic in Python files
+
+  * DTrace와 SystemTap으로 CPython 계측하기
+
+    * 정적 마커 활성화하기
+
+    * 정적 DTrace 프로브
+
+    * 정적 SystemTap 마커
+
+    * 사용 가능한 정적 마커
+
+    * SystemTap 탭셋
+
+    * 예제
+
+  * Annotations Best Practices
+
+    * Accessing The Annotations Dict Of An Object In Python 3.10 And
+      Newer
+
+    * Accessing The Annotations Dict Of An Object In Python 3.9 And
+      Older
+
+    * Manually Un-Stringizing Stringized Annotations
+
+    * Best Practices For "__annotations__" In Any Python Version
+
+    * "__annotations__" Quirks
+
+* 파이썬 자주 나오는 질문들
+
+  * 일반적인 파이썬 FAQ
+
+    * 일반적인 정보
+
+    * 현실 속의 파이썬
+
+  * 프로그래밍 FAQ
+
+    * 일반적인 질문
+
+    * 핵심 언어
+
+    * 숫자와 문자열
+
+    * 성능
+
+    * 시퀀스 (튜플/리스트)
+
+    * 객체
+
+    * 모듈
+
+  * 설계와 역사 FAQ
+
+    * 파이썬은 왜 문장의 그룹화에 들여쓰기를 사용합니까?
+
+    * 간단한 산술 연산으로 이상한 결과가 나오는 이유는 무엇입니까?
+
+    * 부동 소수점 계산이 왜 그렇게 부정확합니까?
+
+    * 파이썬 문자열이 불변인 이유는 무엇입니까?
+
+    * 메서드 정의와 호출에서 'self'를 명시적으로 사용해야 하는 이유는
+      무엇입니까?
+
+    * 표현식에서 대입을 사용할 수 없는 이유는 무엇입니까?
+
+    * 파이썬은 왜 일부 기능(예를 들어 list.index())에는 메서드를 사용
+      하고 다른 기능(예를 들어 len(list))에는 함수를 사용합니까?
+
+    * join()이 리스트나 튜플 메서드가 아니라 문자열 메서드인 이유는 무
+      엇입니까?
+
+    * 예외는 얼마나 빠릅니까?
+
+    * 파이썬에 switch 나 case 문이 없는 이유는 무엇입니까?
+
+    * OS별 스레드 구현에 의존하는 대신 인터프리터에서 스레드를 에뮬레
+      이션할 수 없습니까?
+
+    * 람다 표현식이 문장을 포함할 수 없는 이유는 무엇입니까?
+
+    * 파이썬을 기계 코드, C 또는 다른 언어로 컴파일 할 수 있습니까?
+
+    * 파이썬은 메모리를 어떻게 관리합니까?
+
+    * CPython이 더 전통적인 가비지 수거 체계를 사용하지 않는 이유는 무
+      엇입니까?
+
+    * CPython이 종료될 때 모든 메모리가 해제되지 않는 이유는 무엇입니
+      까?
+
+    * 별도의 튜플과 리스트 데이터형이 있는 이유는 무엇입니까?
+
+    * CPython에서 리스트는 어떻게 구현됩니까?
+
+    * CPython에서 딕셔너리는 어떻게 구현됩니까?
+
+    * 딕셔너리 키가 불변이어야 하는 이유는 무엇입니까?
+
+    * list.sort()가 정렬된 리스트를 반환하지 않는 이유는 무엇입니까?
+
+    * 파이썬에서 인터페이스 명세를 어떻게 지정하고 강제합니까?
+
+    * goto가 없는 이유는 무엇입니까?
+
+    * 날 문자열(r-strings)이 역 슬래시로 끝날 수 없는 이유는 무엇입니
+      까?
+
+    * 왜 파이썬에는 어트리뷰트 대입을 위한 "with" 문이 없습니까?
+
+    * Why don't generators support the with statement?
+
+    * if/while/def/class 문에 콜론이 필요한 이유는 무엇입니까?
+
+    * 파이썬은 왜 리스트와 튜플 끝에 쉼표를 허용합니까?
+
+  * 라이브러리와 확장 FAQ
+
+    * 일반 라이브러리 관련 질문
+
+    * 일반적인 작업
+
+    * 스레드
+
+    * 입력과 출력
+
+    * 네트워크/인터넷 프로그래밍
+
+    * 데이터베이스
+
+    * 수학과 숫자
+
+  * 확장/내장 FAQ
+
+    * C로 나만의 함수를 만들 수 있습니까?
+
+    * C++로 나만의 함수를 만들 수 있습니까?
+
+    * C를 쓰는 것은 어렵습니다; 대안이 있습니까?
+
+    * C에서 임의의 파이썬 문장을 어떻게 실행할 수 있습니까?
+
+    * C에서 임의의 파이썬 표현식을 어떻게 평가할 수 있습니까?
+
+    * 파이썬 객체에서 C값을 어떻게 추출합니까?
+
+    * Py_BuildValue()를 사용하여 임의 길이의 튜플을 만드는 방법은 무엇
+      입니까?
+
+    * C에서 객체의 메서드를 어떻게 호출합니까?
+
+    * PyErr_Print()의 출력(또는 stdout/stderr로 인쇄되는 모든 것)을 어
+      떻게 잡습니까?
+
+    * C에서 파이썬으로 작성된 모듈에 어떻게 액세스합니까?
+
+    * 파이썬에서 C++ 객체에 어떻게 인터페이스 합니까?
+
+    * Setup 파일을 사용하여 모듈을 추가했는데 make가 실패합니다; 왜 그
+      렇습니까?
+
+    * 확장을 어떻게 디버깅합니까?
+
+    * 리눅스 시스템에서 파이썬 모듈을 컴파일하고 싶지만, 일부 파일이
+      없습니다. 왜 그렇습니까?
+
+    * "잘못된 입력"과 "불완전한 입력"을 어떻게 구별할 수 있습니까?
+
+    * 정의되지 않은 g++ 기호 __builtin_new나 __pure_virtual을 어떻게
+      찾을 수 있습니까?
+
+    * 일부 메서드는 C로 구현되고 그 밖의 것은 파이썬으로 구현된 (예를
+      들어 상속을 통해) 객체 클래스를 만들 수 있습니까?
+
+  * 윈도우 파이썬 FAQ
+
+    * 윈도우에서 파이썬 프로그램을 실행하려면 어떻게 해야 합니까?
+
+    * 파이썬 스크립트 실행 파일로 만들려면 어떻게 해야 합니까?
+
+    * 왜 때때로 파이썬은 시작하는 데 시간이 오래 걸립니까?
+
+    * 파이썬 스크립트에서 실행 파일을 만드는 방법은 무엇입니까?
+
+    * "*.pyd" 파일은 DLL과 동일합니까?
+
+    * 윈도우 응용프로그램에 파이썬을 포함하려면 어떻게 해야 합니까?
+
+    * 편집기가 내 파이썬 소스에 탭을 삽입하지 않도록 하려면 어떻게 해
+      야 합니까?
+
+    * 블로킹 없이 키 입력을 확인하려면 어떻게 해야 합니까?
+
+    * How do I solve the missing api-ms-win-crt-runtime-l1-1-0.dll
+      error?
+
+  * 그래픽 사용자 인터페이스 FAQ
+
+    * 일반적인 GUI 질문
+
+    * 파이썬에 어떤 GUI 툴킷이 있습니까?
+
+    * Tkinter 질문
+
+  * "왜 내 컴퓨터에 파이썬이 설치되어 있습니까?" FAQ
+
+    * 파이썬이 무엇입니까?
+
+    * 내 컴퓨터에 파이썬이 설치된 이유는 무엇입니까?
+
+    * 파이썬을 삭제할 수 있습니까?
+
+* 용어집
+
+* About these documents
+
+  * Contributors to the Python Documentation
+
+* 버그 다루기
+
+  * 설명서 버그
+
+  * 파이썬 문제 추적기 사용하기
+
+  * 파이썬에 직접 이바지하기 입문
+
+* 저작권
+
+* 역사와 라이센스
+
+  * 소프트웨어의 역사
+
+  * 파이썬에 액세스하거나 사용하기 위한 이용 약관
+
+    * PSF LICENSE AGREEMENT FOR PYTHON 3.10.19
+
+    * BEOPEN.COM LICENSE AGREEMENT FOR PYTHON 2.0
+
+    * CNRI LICENSE AGREEMENT FOR PYTHON 1.6.1
+
+    * CWI LICENSE AGREEMENT FOR PYTHON 0.9.0 THROUGH 1.2
+
+    * ZERO-CLAUSE BSD LICENSE FOR CODE IN THE PYTHON 3.10.19
+      DOCUMENTATION
+
+  * 포함된 소프트웨어에 대한 라이센스 및 승인
+
+    * 메르센 트위스터
+
+    * 소켓
+
+    * 비동기 소켓 서비스
+
+    * 쿠키 관리
+
+    * 실행 추적
+
+    * UUencode 및 UUdecode 함수
+
+    * XML 원격 프로시저 호출
+
+    * test_epoll
+
+    * Select kqueue
+
+    * SipHash24
+
+    * strtod 와 dtoa
+
+    * OpenSSL
+
+    * expat
+
+    * libffi
+
+    * zlib
+
+    * cfuhash
+
+    * libmpdec
+
+    * W3C C14N 테스트 스위트
+
+    * Audioop

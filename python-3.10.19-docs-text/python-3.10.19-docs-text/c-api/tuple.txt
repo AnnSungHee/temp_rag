@@ -1,0 +1,208 @@
+튜플 객체
+*********
+
+type PyTupleObject
+
+   이 "PyObject"의 서브 형은 파이썬 튜플 객체를 나타냅니다.
+
+PyTypeObject PyTuple_Type
+    * Part of the Stable ABI.*
+
+   이 "PyTypeObject" 인스턴스는 파이썬 튜플 형을 나타냅니다. 파이썬 계
+   층의 "tuple"과 같은 객체입니다.
+
+int PyTuple_Check(PyObject *p)
+
+   *p*가 튜플 객체이거나 튜플 형의 서브 형의 인스턴스면 참을 돌려줍니
+   다. 이 함수는 항상 성공합니다.
+
+int PyTuple_CheckExact(PyObject *p)
+
+   *p*가 튜플 객체이지만, 튜플 형의 서브 형의 인스턴스는 아니면 참을
+   돌려줍니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyTuple_New(Py_ssize_t len)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Return a new tuple object of size *len*, or "NULL" on failure.
+
+PyObject *PyTuple_Pack(Py_ssize_t n, ...)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Return a new tuple object of size *n*, or "NULL" on failure. The
+   tuple values are initialized to the subsequent *n* C arguments
+   pointing to Python objects. "PyTuple_Pack(2, a, b)" is equivalent
+   to "Py_BuildValue("(OO)", a, b)".
+
+Py_ssize_t PyTuple_Size(PyObject *p)
+    * Part of the Stable ABI.*
+
+   Take a pointer to a tuple object, and return the size of that
+   tuple.
+
+Py_ssize_t PyTuple_GET_SIZE(PyObject *p)
+
+   Return the size of the tuple *p*, which must be non-"NULL" and
+   point to a tuple; no error checking is performed.
+
+PyObject *PyTuple_GetItem(PyObject *p, Py_ssize_t pos)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   *p*가 가리키는 튜플의 *pos* 위치에 있는 객체를 반환합니다. *pos*가
+   음수이거나 범위를 벗어나면, "NULL"을 반환하고 "IndexError" 예외를
+   설정합니다.
+
+PyObject *PyTuple_GET_ITEM(PyObject *p, Py_ssize_t pos)
+    *반환값: 빌린 참조.*
+
+   "PyTuple_GetItem()"와 비슷하지만, 인자를 확인하지 않습니다.
+
+PyObject *PyTuple_GetSlice(PyObject *p, Py_ssize_t low, Py_ssize_t high)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Return the slice of the tuple pointed to by *p* between *low* and
+   *high*, or "NULL" on failure.  This is the equivalent of the Python
+   expression "p[low:high]".  Indexing from the end of the list is not
+   supported.
+
+int PyTuple_SetItem(PyObject *p, Py_ssize_t pos, PyObject *o)
+    * Part of the Stable ABI.*
+
+   *p*가 가리키는 튜플의 *pos* 위치에 객체 *o*에 대한 참조를 삽입합니
+   다. 성공하면 "0"을 반환합니다. *pos*가 범위를 벗어나면, "-1"을 반환
+   하고 "IndexError" 예외를 설정합니다.
+
+   참고:
+
+     이 함수는 *o*에 대한 참조를 "훔치고" 영향을 받는 위치에서 튜플에
+     이미 있는 항목에 대한 참조를 버립니다(discard).
+
+void PyTuple_SET_ITEM(PyObject *p, Py_ssize_t pos, PyObject *o)
+
+   "PyTuple_SetItem()"과 비슷하지만, 에러 검사는 하지 않으며 새로운 튜
+   플을 채울 때*만* 사용해야 합니다.
+
+   참고:
+
+     This macro "steals" a reference to *o*, and, unlike
+     "PyTuple_SetItem()", does *not* discard a reference to any item
+     that is being replaced; any reference in the tuple at position
+     *pos* will be leaked.
+
+int _PyTuple_Resize(PyObject **p, Py_ssize_t newsize)
+
+   튜플 크기를 조정하는 데 사용할 수 있습니다. *newsize*는 튜플의 새로
+   운 길이가 됩니다. 튜플은 불변이라고 *여겨지므로*, 객체에 대해 참조
+   가 하나만 있을 때만 사용해야 합니다. 튜플이 코드의 다른 부분에 이미
+   알려졌으면 이것을 사용하지 *마십시오*. 튜플은 항상 끝에서 커지거나
+   줄어듭니다. 이것을 오래된 튜플을 파괴하고 새 튜플을 만드는 것으로
+   생각하십시오, 단지 더 효율적일 뿐입니다. 성공하면 "0"을 반환합니다.
+   클라이언트 코드는, "*p"의 결괏값이 이 함수를 호출하기 전과 같다고
+   가정해서는 안 됩니다. "*p"가 참조하는 객체가 바뀌면 원래 "*p"는 파
+   괴됩니다. 실패하면, "-1"을 반환하고, "*p"를 "NULL"로 설정하고,
+   "MemoryError" 나 "SystemError"를 발생시킵니다.
+
+
+구조체 시퀀스 객체
+******************
+
+구조체 시퀀스(struct sequence) 객체는 "namedtuple()" 객체의 C 등가물입
+니다, 즉 어트리뷰트를 통해 항목에 액세스할 수 있는 시퀀스입니다. 구조
+체 시퀀스를 만들려면, 먼저 특정 구조체 시퀀스 형을 만들어야 합니다.
+
+PyTypeObject *PyStructSequence_NewType(PyStructSequence_Desc *desc)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   아래에 설명된 *desc*의 데이터로 새로운 구조체 시퀀스 형을 만듭니다.
+   결과 형의 인스턴스는 "PyStructSequence_New()"로 만들 수 있습니다.
+
+void PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)
+
+   *desc*로 구조체 시퀀스 형 *type*을 재자리에서 초기화합니다.
+
+int PyStructSequence_InitType2(PyTypeObject *type, PyStructSequence_Desc *desc)
+
+   The same as "PyStructSequence_InitType", but returns "0" on success
+   and "-1" on failure.
+
+   버전 3.4에 추가.
+
+type PyStructSequence_Desc
+    * Part of the Stable ABI (including all members).*
+
+   만들 구조체 시퀀스 형의 메타 정보를 포함합니다.
+
+   +---------------------+--------------------------------+----------------------------------------+
+   | Field               | C Type                         | Meaning                                |
+   |=====================|================================|========================================|
+   | "name"              | "const char *"                 | name of the struct sequence type       |
+   +---------------------+--------------------------------+----------------------------------------+
+   | "doc"               | "const char *"                 | pointer to docstring for the type or   |
+   |                     |                                | "NULL" to omit                         |
+   +---------------------+--------------------------------+----------------------------------------+
+   | "fields"            | "PyStructSequence_Field *"     | pointer to "NULL"-terminated array     |
+   |                     |                                | with field names of the new type       |
+   +---------------------+--------------------------------+----------------------------------------+
+   | "n_in_sequence"     | "int"                          | number of fields visible to the Python |
+   |                     |                                | side (if used as tuple)                |
+   +---------------------+--------------------------------+----------------------------------------+
+
+type PyStructSequence_Field
+    * Part of the Stable ABI (including all members).*
+
+   Describes a field of a struct sequence. As a struct sequence is
+   modeled as a tuple, all fields are typed as "PyObject*".  The index
+   in the "fields" array of the "PyStructSequence_Desc" determines
+   which field of the struct sequence is described.
+
+   +-------------+--------------------+-------------------------------------------+
+   | Field       | C Type             | Meaning                                   |
+   |=============|====================|===========================================|
+   | "name"      | "const char *"     | name for the field or "NULL" to end the   |
+   |             |                    | list of named fields, set to              |
+   |             |                    | "PyStructSequence_UnnamedField" to leave  |
+   |             |                    | unnamed                                   |
+   +-------------+--------------------+-------------------------------------------+
+   | "doc"       | "const char *"     | field docstring or "NULL" to omit         |
+   +-------------+--------------------+-------------------------------------------+
+
+const char *const PyStructSequence_UnnamedField
+
+   이름 없는 상태로 남겨두기 위한 필드 이름의 특수 값.
+
+   버전 3.9에서 변경: 형이 "char *"에서 변경되었습니다.
+
+PyObject *PyStructSequence_New(PyTypeObject *type)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   "PyStructSequence_NewType()"으로 만든 *type*의 인스턴스를 만듭니다.
+
+PyObject *PyStructSequence_GetItem(PyObject *p, Py_ssize_t pos)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   Return the object at position *pos* in the struct sequence pointed
+   to by *p*. No bounds checking is performed.
+
+PyObject *PyStructSequence_GET_ITEM(PyObject *p, Py_ssize_t pos)
+    *반환값: 빌린 참조.*
+
+   Macro equivalent of "PyStructSequence_GetItem()".
+
+void PyStructSequence_SetItem(PyObject *p, Py_ssize_t pos, PyObject *o)
+    * Part of the Stable ABI.*
+
+   구조체 시퀀스 *p*의 인덱스 *pos*에 있는 필드를 값 *o*로 설정합니다.
+   "PyTuple_SET_ITEM()"과 마찬가지로, 이것은 새로운 인스턴스를 채울 때
+   만 사용해야 합니다.
+
+   참고:
+
+     이 함수는 *o*에 대한 참조를 "훔칩니다".
+
+void PyStructSequence_SET_ITEM(PyObject *p, Py_ssize_t *pos, PyObject *o)
+
+   Macro equivalent of "PyStructSequence_SetItem()".
+
+   참고:
+
+     이 함수는 *o*에 대한 참조를 "훔칩니다".

@@ -1,0 +1,45 @@
+이터레이터 객체
+***************
+
+Python provides two general-purpose iterator objects.  The first, a
+sequence iterator, works with an arbitrary sequence supporting the
+"__getitem__()" method.  The second works with a callable object and a
+sentinel value, calling the callable for each item in the sequence,
+and ending the iteration when the sentinel value is returned.
+
+PyTypeObject PySeqIter_Type
+    * Part of the Stable ABI.*
+
+   "PySeqIter_New()"와 내장 시퀀스 형에 대한 "iter()" 내장 함수의 단일
+   인자 형식에 의해 반환된 이터레이터 객체에 대한 형 객체.
+
+int PySeqIter_Check(op)
+
+   *op*의 형이 "PySeqIter_Type"이면 참을 돌려줍니다. 이 함수는 항상 성
+   공합니다.
+
+PyObject *PySeqIter_New(PyObject *seq)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   일반 시퀀스 객체 *seq*와 함께 작동하는 이터레이터를 반환합니다. 시
+   퀀스가 서브스크립션 연산에서 "IndexError"를 일으키면 이터레이션이
+   끝납니다.
+
+PyTypeObject PyCallIter_Type
+    * Part of the Stable ABI.*
+
+   "PyCallIter_New()"와 "iter()" 내장 함수의 두 인자 형식에 의해 반환
+   된 이터레이터 객체에 대한 형 객체.
+
+int PyCallIter_Check(op)
+
+   *op*의 형이 "PyCallIter_Type"이면 참을 돌려줍니다. 이 함수는 항상
+   성공합니다.
+
+PyObject *PyCallIter_New(PyObject *callable, PyObject *sentinel)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   새로운 이터레이터를 돌려줍니다. 첫 번째 매개 변수 *callable*은 매개
+   변수 없이 호출할 수 있는 모든 파이썬 콜러블 객체일 수 있습니다; 각
+   호출은 이터레이션의 다음 항목을 반환해야 합니다. *callable*이
+   *sentinel*와 같은 값을 반환하면 이터레이션이 종료됩니다.

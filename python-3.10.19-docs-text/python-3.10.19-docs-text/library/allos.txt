@@ -1,0 +1,374 @@
+일반 운영 체제 서비스
+*********************
+
+이 장에서 설명하는 모듈은 파일 및 시계와 같은 (거의) 모든 운영 체제에
+서 사용할 수 있는 운영 체제 기능에 대한 인터페이스를 제공합니다. 인터
+페이스는 일반적으로 유닉스 또는 C 인터페이스를 모델로 하지만, 대부분의
+다른 시스템에서도 사용할 수 있습니다. 다음은 개요입니다:
+
+* "os" --- Miscellaneous operating system interfaces
+
+  * 파일명, 명령 줄 인자 및 환경 변수
+
+  * Python UTF-8 Mode
+
+  * 프로세스 매개 변수
+
+  * 파일 객체 생성
+
+  * 파일 기술자 연산
+
+    * 터미널의 크기 조회하기
+
+    * 파일 기술자의 상속
+
+  * 파일과 디렉터리
+
+    * 리눅스 확장 어트리뷰트
+
+  * 프로세스 관리
+
+  * 스케줄러에 대한 인터페이스
+
+  * 기타 시스템 정보
+
+  * 난수
+
+* "io" --- Core tools for working with streams
+
+  * 개요
+
+    * 텍스트 I/O
+
+    * 바이너리 I/O
+
+    * 원시 I/O
+
+  * 텍스트 인코딩
+
+    * Opt-in EncodingWarning
+
+  * 고수준 모듈 인터페이스
+
+  * 클래스 위계
+
+    * I/O 베이스 클래스
+
+    * 원시 파일 I/O
+
+    * 버퍼링 된 스트림
+
+    * 텍스트 I/O
+
+  * 성능
+
+    * 바이너리 I/O
+
+    * 텍스트 I/O
+
+    * 다중 스레드
+
+    * 재진입
+
+* "time" --- Time access and conversions
+
+  * 함수
+
+  * 시계 ID 상수
+
+  * 시간대 상수
+
+* "argparse" --- Parser for command-line options, arguments and sub-
+  commands
+
+  * Example
+
+    * Creating a parser
+
+    * Adding arguments
+
+    * Parsing arguments
+
+  * ArgumentParser 객체
+
+    * prog
+
+    * usage
+
+    * description
+
+    * epilog
+
+    * parents
+
+    * formatter_class
+
+    * prefix_chars
+
+    * fromfile_prefix_chars
+
+    * argument_default
+
+    * allow_abbrev
+
+    * conflict_handler
+
+    * add_help
+
+    * exit_on_error
+
+  * add_argument() 메서드
+
+    * name or flags
+
+    * action
+
+    * nargs
+
+    * const
+
+    * default
+
+    * type
+
+    * choices
+
+    * required
+
+    * help
+
+    * metavar
+
+    * dest
+
+    * Action 클래스
+
+  * parse_args() 메서드
+
+    * 옵션값 문법
+
+    * 잘못된 인자
+
+    * "-" 를 포함하는 인자들
+
+    * 인자 약어 (접두사 일치)
+
+    * "sys.argv" 너머
+
+    * Namespace 객체
+
+  * 기타 유틸리티
+
+    * 부속 명령
+
+    * FileType 객체
+
+    * 인자 그룹
+
+    * 상호 배제
+
+    * 파서 기본값
+
+    * 도움말 인쇄
+
+    * 부분 파싱
+
+    * 파일 파싱 사용자 정의
+
+    * 종료 메서드
+
+    * 혼합 파싱
+
+  * Upgrading optparse code
+
+* "getopt" --- C-style parser for command line options
+
+* "logging" --- Logging facility for Python
+
+  * Logger 객체
+
+  * 로깅 수준
+
+  * Handler 객체
+
+  * Formatter 객체
+
+  * Filter 객체
+
+  * LogRecord 객체
+
+  * LogRecord 어트리뷰트
+
+  * LoggerAdapter 객체
+
+  * 스레드 안전성
+
+  * 모듈 수준 함수
+
+  * 모듈 수준 어트리뷰트
+
+  * warnings 모듈과의 통합
+
+* "logging.config" --- Logging configuration
+
+  * 구성 함수
+
+  * 보안 고려 사항
+
+  * 구성 딕셔너리 스키마
+
+    * 딕셔너리 스키마 세부사항
+
+    * 증분 구성
+
+    * 객체 연결
+
+    * 사용자 정의 객체
+
+    * 처리기 구성 순서
+
+    * 외부 객체에 대한 액세스
+
+    * 내부 객체에 대한 액세스
+
+    * 임포트 결정과 사용자 정의 임포터
+
+  * 구성 파일 형식
+
+* "logging.handlers" --- Logging handlers
+
+  * StreamHandler
+
+  * FileHandler
+
+  * NullHandler
+
+  * WatchedFileHandler
+
+  * BaseRotatingHandler
+
+  * RotatingFileHandler
+
+  * TimedRotatingFileHandler
+
+  * SocketHandler
+
+  * DatagramHandler
+
+  * SysLogHandler
+
+  * NTEventLogHandler
+
+  * SMTPHandler
+
+  * MemoryHandler
+
+  * HTTPHandler
+
+  * QueueHandler
+
+  * QueueListener
+
+* "getpass" --- Portable password input
+
+* "curses" --- Terminal handling for character-cell displays
+
+  * 함수
+
+  * 창 객체
+
+  * 상수
+
+* "curses.textpad" --- curses 프로그램을 위한 텍스트 입력 위젯
+
+  * Textbox 객체
+
+* "curses.ascii" --- Utilities for ASCII characters
+
+* "curses.panel" --- A panel stack extension for curses
+
+  * 함수
+
+  * Panel 객체
+
+* "platform" ---  Access to underlying platform's identifying data
+
+  * 크로스 플랫폼
+
+  * 자바 플랫폼
+
+  * 윈도우 플랫폼
+
+  * 맥 OS 플랫폼
+
+  * 유닉스 플랫폼
+
+  * 리눅스 플랫폼
+
+* "errno" --- Standard errno system symbols
+
+* "ctypes" --- A foreign function library for Python
+
+  * ctypes 자습서
+
+    * 동적 링크 라이브러리 로드하기
+
+    * 로드된 dll에서 함수에 액세스하기
+
+    * 함수 호출하기
+
+    * 기본 데이터형
+
+    * 함수 호출하기, 계속
+
+    * Calling variadic functions
+
+    * 사용자 정의 데이터형을 사용하여 함수 호출하기
+
+    * 필수 인자 형 (함수 프로토타입) 지정하기
+
+    * 반환형
+
+    * 포인터 전달하기 (또는: 참조로 매개 변수 전달하기)
+
+    * 구조체와 공용체
+
+    * 구조체/공용체 정렬과 바이트 순서
+
+    * 구조체와 공용체의 비트 필드
+
+    * 배열
+
+    * 포인터
+
+    * 형 변환
+
+    * 불완전한 형
+
+    * 콜백 함수
+
+    * dll에서 내 보낸 값을 액세스하기
+
+    * 의외의 것들
+
+    * 가변 크기 데이터형
+
+  * ctypes 레퍼런스
+
+    * 공유 라이브러리 찾기
+
+    * 공유 라이브러리 로드하기
+
+    * 외부 함수
+
+    * 함수 프로토타입
+
+    * 유틸리티 함수
+
+    * 데이터형
+
+    * 기본 데이터형
+
+    * 구조화된 데이터형
+
+    * 배열과 포인터

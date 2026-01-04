@@ -1,0 +1,748 @@
+"tracemalloc" --- Trace memory allocations
+******************************************
+
+버전 3.4에 추가.
+
+**소스 코드:** Lib/tracemalloc.py
+
+======================================================================
+
+tracemalloc 모듈은 파이썬이 할당한 메모리 블록을 추적하는 디버그 도구
+입니다. 다음 정보를 제공합니다:
+
+* 객체가 할당된 곳의 트레이스백
+
+* 파일명과 줄 번호별로 할당된 메모리 블록에 대한 통계: 할당된 메모리
+  블록의 총 크기, 수 및 평균 크기
+
+* 메모리 누수를 탐지하기 위해 두 스냅샷의 차이점 계산
+
+파이썬이 할당한 대부분의 메모리 블록을 추적하려면, "PYTHONTRACEMALLOC"
+환경 변수를 "1"로 설정하거나, "-X" "tracemalloc" 명령 줄 옵션을 사용하
+여 모듈을 가능한 한 빨리 시작해야 합니다. "tracemalloc.start()" 함수는
+실행 시간에 호출되어 파이썬 메모리 할당 추적을 시작할 수 있습니다.
+
+기본적으로, 할당된 메모리 블록의 트레이스는 가장 최근의 프레임 만 저장
+합니다 (1프레임). 시작 시 25프레임을 저장하려면: "PYTHONTRACEMALLOC"
+환경 변수를 "25"로 설정하거나, "-X" "tracemalloc=25" 명령 줄 옵션을 사
+용하십시오.
+
+
+예
+==
+
+
+상위 10개 표시
+--------------
+
+가장 많은 메모리를 할당하는 10개의 파일을 표시합니다:
+
+   import tracemalloc
+
+   tracemalloc.start()
+
+   # ... run your application ...
+
+   snapshot = tracemalloc.take_snapshot()
+   top_stats = snapshot.statistics('lineno')
+
+   print("[ Top 10 ]")
+   for stat in top_stats[:10]:
+       print(stat)
+
+파이썬 테스트 스위트의 출력 예:
+
+   [ Top 10 ]
+   <frozen importlib._bootstrap>:716: size=4855 KiB, count=39328, average=126 B
+   <frozen importlib._bootstrap>:284: size=521 KiB, count=3199, average=167 B
+   /usr/lib/python3.4/collections/__init__.py:368: size=244 KiB, count=2315, average=108 B
+   /usr/lib/python3.4/unittest/case.py:381: size=185 KiB, count=779, average=243 B
+   /usr/lib/python3.4/unittest/case.py:402: size=154 KiB, count=378, average=416 B
+   /usr/lib/python3.4/abc.py:133: size=88.7 KiB, count=347, average=262 B
+   <frozen importlib._bootstrap>:1446: size=70.4 KiB, count=911, average=79 B
+   <frozen importlib._bootstrap>:1454: size=52.0 KiB, count=25, average=2131 B
+   <string>:5: size=49.7 KiB, count=148, average=344 B
+   /usr/lib/python3.4/sysconfig.py:411: size=48.0 KiB, count=1, average=48.0 KiB
+
+파이썬이 모듈에서 "4855 KiB" 데이터 (바이트 코드와 상수)를 로드했으며
+"collections" 모듈이 "namedtuple" 형을 빌드하기 위해 "244 KiB"를 할당
+했음을 알 수 있습니다.
+
+추가 옵션은 "Snapshot.statistics()"를 참조하십시오.
+
+
+차이 계산
+---------
+
+두 개의 스냅샷을 취하고 차이점을 표시합니다:
+
+   import tracemalloc
+   tracemalloc.start()
+   # ... start your application ...
+
+   snapshot1 = tracemalloc.take_snapshot()
+   # ... call the function leaking memory ...
+   snapshot2 = tracemalloc.take_snapshot()
+
+   top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+
+   print("[ Top 10 differences ]")
+   for stat in top_stats[:10]:
+       print(stat)
+
+파이썬 테스트 스위트의 일부 테스트를 실행하기 전/후의 출력 예:
+
+   [ Top 10 differences ]
+   <frozen importlib._bootstrap>:716: size=8173 KiB (+4428 KiB), count=71332 (+39369), average=117 B
+   /usr/lib/python3.4/linecache.py:127: size=940 KiB (+940 KiB), count=8106 (+8106), average=119 B
+   /usr/lib/python3.4/unittest/case.py:571: size=298 KiB (+298 KiB), count=589 (+589), average=519 B
+   <frozen importlib._bootstrap>:284: size=1005 KiB (+166 KiB), count=7423 (+1526), average=139 B
+   /usr/lib/python3.4/mimetypes.py:217: size=112 KiB (+112 KiB), count=1334 (+1334), average=86 B
+   /usr/lib/python3.4/http/server.py:848: size=96.0 KiB (+96.0 KiB), count=1 (+1), average=96.0 KiB
+   /usr/lib/python3.4/inspect.py:1465: size=83.5 KiB (+83.5 KiB), count=109 (+109), average=784 B
+   /usr/lib/python3.4/unittest/mock.py:491: size=77.7 KiB (+77.7 KiB), count=143 (+143), average=557 B
+   /usr/lib/python3.4/urllib/parse.py:476: size=71.8 KiB (+71.8 KiB), count=969 (+969), average=76 B
+   /usr/lib/python3.4/contextlib.py:38: size=67.2 KiB (+67.2 KiB), count=126 (+126), average=546 B
+
+우리는 파이썬이 "8173 KiB"의 모듈 데이터(바이트 코드와 상수)를 로드했
+으며, 이전 스냅샷을 취할 때인 테스트 전에 로드된 것보다 "4428 KiB" 더
+많은 것을 볼 수 있습니다. 마찬가지로, "linecache" 모듈은 트레이스백을
+포맷하기 위해 "940 KiB"의 파이썬 소스 코드를 캐시 했는데, 이전 스냅샷
+이후의 모든 것입니다.
+
+시스템에 사용 가능한 메모리가 거의 없으면, 스냅샷을 오프라인으로 분석
+하기 위해 "Snapshot.dump()" 메서드로 디스크에 스냅샷을 기록할 수 있습
+니다. 그런 다음 "Snapshot.load()" 메서드를 사용하여 스냅샷을 다시 로드
+하십시오.
+
+
+메모리 블록의 트레이스백 얻기
+-----------------------------
+
+가장 큰 메모리 블록의 트레이스백을 표시하는 코드:
+
+   import tracemalloc
+
+   # Store 25 frames
+   tracemalloc.start(25)
+
+   # ... run your application ...
+
+   snapshot = tracemalloc.take_snapshot()
+   top_stats = snapshot.statistics('traceback')
+
+   # pick the biggest memory block
+   stat = top_stats[0]
+   print("%s memory blocks: %.1f KiB" % (stat.count, stat.size / 1024))
+   for line in stat.traceback.format():
+       print(line)
+
+파이썬 테스트 스위트의 출력 예 (트레이스백은 25프레임으로 제한되었습니
+다):
+
+   903 memory blocks: 870.1 KiB
+     File "<frozen importlib._bootstrap>", line 716
+     File "<frozen importlib._bootstrap>", line 1036
+     File "<frozen importlib._bootstrap>", line 934
+     File "<frozen importlib._bootstrap>", line 1068
+     File "<frozen importlib._bootstrap>", line 619
+     File "<frozen importlib._bootstrap>", line 1581
+     File "<frozen importlib._bootstrap>", line 1614
+     File "/usr/lib/python3.4/doctest.py", line 101
+       import pdb
+     File "<frozen importlib._bootstrap>", line 284
+     File "<frozen importlib._bootstrap>", line 938
+     File "<frozen importlib._bootstrap>", line 1068
+     File "<frozen importlib._bootstrap>", line 619
+     File "<frozen importlib._bootstrap>", line 1581
+     File "<frozen importlib._bootstrap>", line 1614
+     File "/usr/lib/python3.4/test/support/__init__.py", line 1728
+       import doctest
+     File "/usr/lib/python3.4/test/test_pickletools.py", line 21
+       support.run_doctest(pickletools)
+     File "/usr/lib/python3.4/test/regrtest.py", line 1276
+       test_runner()
+     File "/usr/lib/python3.4/test/regrtest.py", line 976
+       display_failure=not verbose)
+     File "/usr/lib/python3.4/test/regrtest.py", line 761
+       match_tests=ns.match_tests)
+     File "/usr/lib/python3.4/test/regrtest.py", line 1563
+       main()
+     File "/usr/lib/python3.4/test/__main__.py", line 3
+       regrtest.main_in_temp_cwd()
+     File "/usr/lib/python3.4/runpy.py", line 73
+       exec(code, run_globals)
+     File "/usr/lib/python3.4/runpy.py", line 160
+       "__main__", fname, loader, pkg_name)
+
+대부분의 메모리가 모듈에서 데이터(바이트 코드와 상수)를 로드하기 위해
+"importlib" 모듈에 할당되었음을 알 수 있습니다: "870.1 KiB". 트레이스
+백은 "importlib"가 가장 최근에 데이터를 로드한 위치입니다: "doctest"
+모듈의 "import pdb" 줄. 새 모듈이 로드되면 트레이스백이 변경될 수 있습
+니다.
+
+
+예쁜 탑(top)
+------------
+
+"<frozen importlib._bootstrap>"과 "<unknown>" 파일을 무시하고, 예쁜 출
+력으로 가장 많은 메모리를 할당하는 10개의 줄을 표시하는 코드:
+
+   import linecache
+   import os
+   import tracemalloc
+
+   def display_top(snapshot, key_type='lineno', limit=10):
+       snapshot = snapshot.filter_traces((
+           tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+           tracemalloc.Filter(False, "<unknown>"),
+       ))
+       top_stats = snapshot.statistics(key_type)
+
+       print("Top %s lines" % limit)
+       for index, stat in enumerate(top_stats[:limit], 1):
+           frame = stat.traceback[0]
+           print("#%s: %s:%s: %.1f KiB"
+                 % (index, frame.filename, frame.lineno, stat.size / 1024))
+           line = linecache.getline(frame.filename, frame.lineno).strip()
+           if line:
+               print('    %s' % line)
+
+       other = top_stats[limit:]
+       if other:
+           size = sum(stat.size for stat in other)
+           print("%s other: %.1f KiB" % (len(other), size / 1024))
+       total = sum(stat.size for stat in top_stats)
+       print("Total allocated size: %.1f KiB" % (total / 1024))
+
+   tracemalloc.start()
+
+   # ... run your application ...
+
+   snapshot = tracemalloc.take_snapshot()
+   display_top(snapshot)
+
+파이썬 테스트 스위트의 출력 예:
+
+   Top 10 lines
+   #1: Lib/base64.py:414: 419.8 KiB
+       _b85chars2 = [(a + b) for a in _b85chars for b in _b85chars]
+   #2: Lib/base64.py:306: 419.8 KiB
+       _a85chars2 = [(a + b) for a in _a85chars for b in _a85chars]
+   #3: collections/__init__.py:368: 293.6 KiB
+       exec(class_definition, namespace)
+   #4: Lib/abc.py:133: 115.2 KiB
+       cls = super().__new__(mcls, name, bases, namespace)
+   #5: unittest/case.py:574: 103.1 KiB
+       testMethod()
+   #6: Lib/linecache.py:127: 95.4 KiB
+       lines = fp.readlines()
+   #7: urllib/parse.py:476: 71.8 KiB
+       for a in _hexdig for b in _hexdig}
+   #8: <string>:5: 62.0 KiB
+   #9: Lib/_weakrefset.py:37: 60.0 KiB
+       self.data = set()
+   #10: Lib/base64.py:142: 59.8 KiB
+       _b32tab2 = [a + b for a in _b32tab for b in _b32tab]
+   6220 other: 3602.8 KiB
+   Total allocated size: 5303.1 KiB
+
+추가 옵션은 "Snapshot.statistics()"를 참조하십시오.
+
+
+모든 추적한 메모리 블록의 현재 및 최대 크기를 기록
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+다음 코드는 "0 + 1 + 2 + ..."와 같은 두 개의 합계를 비효율적으로 계산
+하는데, 이 숫자들의 리스트를 만듭니다. 이 리스트는 일시적으로 많은 메
+모리를 소비합니다. "get_traced_memory()"와 "reset_peak()"를 사용하여
+계산 중 최대 메모리 사용량뿐만 아니라 합이 계산된 후의 작은 메모리 사
+용량도 관찰할 수 있습니다:
+
+   import tracemalloc
+
+   tracemalloc.start()
+
+   # Example code: compute a sum with a large temporary list
+   large_sum = sum(list(range(100000)))
+
+   first_size, first_peak = tracemalloc.get_traced_memory()
+
+   tracemalloc.reset_peak()
+
+   # Example code: compute a sum with a small temporary list
+   small_sum = sum(list(range(1000)))
+
+   second_size, second_peak = tracemalloc.get_traced_memory()
+
+   print(f"{first_size=}, {first_peak=}")
+   print(f"{second_size=}, {second_peak=}")
+
+출력:
+
+   first_size=664, first_peak=3592984
+   second_size=804, second_peak=29704
+
+"reset_peak()"를 사용하면 "small_sum"을 계산하는 동안의 최대 사용량을
+"start()" 호출 이후 메모리 블록의 전체 최대 크기보다 훨씬 작더라도 정
+확하게 기록 할 수 있습니다. "reset_peak()"를 호출하지 않으면,
+"second_peak"는 여전히 "large_sum" 계산의 최대가 됩니다 (즉,
+"first_peak"와 같습니다). 이 경우, 두 최댓값은 모두 최종 메모리 사용량
+보다 훨씬 높아서, 최적화할 수 있음을 제안합니다 ("list"에 대한 불필요
+한 호출을 제거하고, "sum(range(...))"이라고 작성하여).
+
+
+API
+===
+
+
+함수
+----
+
+tracemalloc.clear_traces()
+
+   파이썬이 할당한 메모리 블록의 트레이스를 지웁니다.
+
+   "stop()"도 참조하십시오.
+
+tracemalloc.get_object_traceback(obj)
+
+   파이썬 객체 *obj*가 할당된 위치의 트레이스백을 가져옵니다.
+   "Traceback" 인스턴스를 반환하거나, "tracemalloc" 모듈이 메모리 할당
+   을 추적하지 않고 있거나 객체 할당을 추적하지 않았으면 "None"을 반환
+   합니다.
+
+   "gc.get_referrers()"와 "sys.getsizeof()" 함수도 참조하십시오.
+
+tracemalloc.get_traceback_limit()
+
+   트레이스의 트레이스백에 저장된 최대 프레임 수를 가져옵니다.
+
+   한계를 얻으려면 "tracemalloc" 모듈이 메모리 할당을 추적하고 있어야
+   합니다, 그렇지 않으면 예외가 발생합니다.
+
+   한계는 "start()" 함수에 의해 설정됩니다.
+
+tracemalloc.get_traced_memory()
+
+   "tracemalloc" 모듈이 추적하는 메모리 블록의 현재 크기와 최대 크기를
+   튜플로 가져옵니다: "(current: int, peak: int)".
+
+tracemalloc.reset_peak()
+
+   "tracemalloc" 모듈이 추적하는 메모리 블록의 최대 크기를 현재 크기로
+   설정합니다.
+
+   "tracemalloc" 모듈이 파이썬 메모리 할당을 추적하고 있지 않으면 아무
+   것도 하지 않습니다.
+
+   이 함수는 기록된 최대 크기만 수정하며, "clear_traces()"와 달리 어떤
+   추적도 수정하거나 지우지 않습니다. "reset_peak()"를 호출하기 전에
+   "take_snapshot()"로 찍은 스냅숏은 호출 후 찍은 스냅숏과 의미 있게
+   비교할 수 있습니다.
+
+   "get_traced_memory()"도 참조하십시오.
+
+   버전 3.9에 추가.
+
+tracemalloc.get_tracemalloc_memory()
+
+   메모리 블록의 트레이스를 저장하는 데 사용된 "tracemalloc" 모듈의 메
+   모리 사용량을 바이트 단위로 가져옵니다. "int"를 반환합니다.
+
+tracemalloc.is_tracing()
+
+   "tracemalloc" 모듈이 파이썬 메모리 할당을 추적하고 있으면 "True",
+   그렇지 않으면 "False".
+
+   "start()"와 "stop()" 함수도 참조하십시오.
+
+tracemalloc.start(nframe: int = 1)
+
+   파이썬 메모리 할당 추적을 시작합니다: 파이썬 메모리 할당자
+   (allocator)에 훅을 설치합니다. 수집된 트레이스의 트레이스백은
+   *nframe* 개의 프레임으로 제한됩니다. 기본적으로, 메모리 블록의 트레
+   이스는 가장 최근의 프레임 만 저장합니다: 제한은 "1"입니다. *nframe*
+   은 "1"보다 크거나 같아야 합니다.
+
+   "Traceback.total_nframe" 어트리뷰트를 보면 트레이스백을 구성한 원래
+   의 총 프레임 수를 계속 읽을 수 있습니다.
+
+   "1"개보다 더 많은 프레임을 저장하는 것은 "'traceback'"으로 그룹화된
+   통계를 계산하거나 누적 통계를 계산할 때만 유용합니다:
+   "Snapshot.compare_to()"와 "Snapshot.statistics()" 메서드를 참조하십
+   시오.
+
+   더 많은 프레임을 저장하면 "tracemalloc" 모듈의 메모리와 CPU 오버헤
+   드가 증가합니다. "get_tracemalloc_memory()" 함수를 사용하여
+   "tracemalloc" 모듈이 사용하는 메모리양을 측정하십시오.
+
+   "PYTHONTRACEMALLOC" 환경 변수("PYTHONTRACEMALLOC=NFRAME")와 "-X"
+   "tracemalloc=NFRAME" 명령 줄 옵션을 사용하여 시작 시 추적을 시작할
+   수 있습니다.
+
+   "stop()", "is_tracing()" 및 "get_traceback_limit()" 함수도 참조하십
+   시오.
+
+tracemalloc.stop()
+
+   파이썬 메모리 할당 추적을 중지합니다: 파이썬 메모리 할당자에서 훅을
+   제거합니다. 또한 파이썬이 할당한 메모리 블록의 이전에 수집된 모든
+   트레이스를 지웁니다.
+
+   트레이스를 지우기 전에 "take_snapshot()" 함수를 호출하여 트레이스의
+   스냅샷을 취하십시오.
+
+   "start()", "is_tracing()" 및 "clear_traces()" 함수도 참조하십시오.
+
+tracemalloc.take_snapshot()
+
+   파이썬이 할당한 메모리 블록의 트레이스의 스냅샷을 취합니다. 새로운
+   "Snapshot" 인스턴스를 반환합니다.
+
+   "tracemalloc" 모듈이 메모리 할당 추적을 시작하기 전에 할당된 메모리
+   블록은 스냅샷에 포함되지 않습니다.
+
+   트레이스의 트레이스백은 "get_traceback_limit()" 개의 프레임으로 제
+   한됩니다. 더 많은 프레임을 저장하려면 "start()" 함수의 *nframe* 매
+   개 변수를 사용하십시오.
+
+   스냅샷을 취하기 위해서는 "tracemalloc" 모듈이 메모리 할당을 추적하
+   고 있어야 합니다, "start()" 함수를 참조하십시오.
+
+   "get_object_traceback()" 함수도 참조하십시오.
+
+
+DomainFilter
+------------
+
+class tracemalloc.DomainFilter(inclusive: bool, domain: int)
+
+   주소 공간(도메인)별로 메모리 블록의 트레이스를 필터링합니다.
+
+   버전 3.6에 추가.
+
+   inclusive
+
+      *inclusive*가 "True"이면 (포함), 주소 공간 "domain"에 할당된 메
+      모리 블록을 일치시킵니다.
+
+      *inclusive*가 "False"이면 (제외), 주소 공간 "domain"에 할당되지
+      않은 메모리 블록을 일치시킵니다.
+
+   domain
+
+      메모리 블록의 주소 공간 ("int"). 읽기 전용 프로퍼티.
+
+
+Filter
+------
+
+class tracemalloc.Filter(inclusive: bool, filename_pattern: str, lineno: int = None, all_frames: bool = False, domain: int = None)
+
+   메모리 블록의 트레이스를 필터링합니다.
+
+   *filename_pattern*의 문법은 "fnmatch.fnmatch()" 함수를 참조하십시오
+   . "'.pyc'" 파일 확장자가 "'.py'"로 대체됩니다.
+
+   예:
+
+   * "Filter(True, subprocess.__file__)"은 "subprocess" 모듈의 트레이
+     스만 포함합니다
+
+   * "Filter(False, tracemalloc.__file__)"은 "tracemalloc" 모듈의 트레
+     이스를 제외합니다
+
+   * "Filter(False, "<unknown>")"은 빈 트레이스백을 제외합니다
+
+   버전 3.5에서 변경: "'.pyo'" 파일 확장자는 더는 "'.py'"로 대체되지
+   않습니다.
+
+   버전 3.6에서 변경: "domain" 어트리뷰트를 추가했습니다.
+
+   domain
+
+      메모리 블록의 주소 공간 ("int"나 "None").
+
+      tracemalloc은 도메인 "0"을 사용하여 파이썬의 메모리 할당을 추적
+      합니다. C 확장은 다른 도메인을 사용하여 다른 리소스를 추적 할 수
+      있습니다.
+
+   inclusive
+
+      *inclusive*가 "True"(포함)이면, 줄 번호 "lineno"에서 이름이
+      "filename_pattern"과 일치하는 파일에서 할당된 메모리 블록만 일치
+      시킵니다.
+
+      *inclusive*가 "False"(제외)이면, 줄 번호 "lineno"에서 이름이
+      "filename_pattern"과 일치하는 파일에 할당된 메모리 블록을 무시합
+      니다.
+
+   lineno
+
+      필터의 줄 번호 ("int"). *lineno*가 "None"이면, 필터는 모든 줄 번
+      호와 일치합니다.
+
+   filename_pattern
+
+      필터의 파일명 패턴 ("str"). 읽기 전용 프로퍼티.
+
+   all_frames
+
+      *all_frames*가 "True"이면, 트레이스백의 모든 프레임이 검사됩니다
+      . *all_frames*가 "False"이면, 가장 최근 프레임 만 검사됩니다.
+
+      트레이스백 한계가 "1"이면 이 어트리뷰트가 적용되지 않습니다.
+      "get_traceback_limit()" 함수와 "Snapshot.traceback_limit" 어트리
+      뷰트를 참조하십시오.
+
+
+Frame
+-----
+
+class tracemalloc.Frame
+
+   트레이스백의 프레임.
+
+   "Traceback" 클래스는 "Frame" 인스턴스의 시퀀스입니다.
+
+   filename
+
+      파일명 ("str").
+
+   lineno
+
+      줄 번호 ("int").
+
+
+Snapshot
+--------
+
+class tracemalloc.Snapshot
+
+   파이썬이 할당한 메모리 블록의 트레이스의 스냅샷.
+
+   "take_snapshot()" 함수는 스냅샷 인스턴스를 만듭니다.
+
+   compare_to(old_snapshot: Snapshot, key_type: str, cumulative: bool = False)
+
+      이전 스냅샷과의 차이점을 계산합니다. *key_type* 별로 그룹화된
+      "StatisticDiff" 인스턴스의 정렬된 리스트로 통계를 가져옵니다.
+
+      *key_type*과 *cumulative* 매개 변수에 대해서는
+      "Snapshot.statistics()" 메서드를 참조하십시오.
+
+      결과는 다음 값에 따라 내림차순으로 정렬됩니다:
+      "StatisticDiff.size_diff"의 절댓값, "StatisticDiff.size",
+      "StatisticDiff.count_diff"의 절댓값, "Statistic.count" 그런 다음
+      "StatisticDiff.traceback".
+
+   dump(filename)
+
+      스냅샷을 파일에 씁니다.
+
+      스냅샷을 다시 로드하려면 "load()"를 사용하십시오.
+
+   filter_traces(filters)
+
+      필터링 된 "traces" 시퀀스로 새 "Snapshot" 인스턴스를 만듭니다.
+      *filters*는 "DomainFilter"와 "Filter" 인스턴스의 리스트입니다.
+      *filters*가 빈 리스트면, traces의 사본으로 새 "Snapshot" 인스턴
+      스를 반환합니다.
+
+      모든 포함 필터가 한 번에 적용되며, 아무런 포함 필터도 일치하지
+      않으면 트레이스는 무시됩니다. 하나 이상의 제외 필터가 일치하면
+      트레이스는 무시됩니다.
+
+      버전 3.6에서 변경: "DomainFilter" 인스턴스도 이제 *filters*에서
+      허용됩니다.
+
+   classmethod load(filename)
+
+      파일에서 스냅샷을 로드합니다.
+
+      "dump()"도 참조하십시오.
+
+   statistics(key_type: str, cumulative: bool = False)
+
+      *key_type* 별로 그룹화된 "Statistic" 인스턴스의 정렬된 리스트로
+      통계를 가져옵니다:
+
+      +-----------------------+--------------------------+
+      | key_type              | 설명                     |
+      |=======================|==========================|
+      | "'filename'"          | 파일명                   |
+      +-----------------------+--------------------------+
+      | "'lineno'"            | 파일명과 줄 번호         |
+      +-----------------------+--------------------------+
+      | "'traceback'"         | 트레이스백               |
+      +-----------------------+--------------------------+
+
+      *cumulative*가 "True"이면, 가장 최근의 프레임뿐만 아니라, 트레이
+      스의 트레이스백의 모든 프레임에 대한 메모리 블록의 크기와 개수를
+      누적합니다. 누적 모드는 *key_type*이 "'filename'"과 "'lineno'"와
+      같을 때만 사용할 수 있습니다.
+
+      결과는 다음 값에 따라 내림차순으로 정렬됩니다: "Statistic.size",
+      "Statistic.count" 그런 다음 "Statistic.traceback".
+
+   traceback_limit
+
+      "traces"의 트레이스백에 저장된 최대 프레임 수: 스냅샷을 취할 때
+      "get_traceback_limit()"의 결과.
+
+   traces
+
+      파이썬이 할당한 모든 메모리 블록의 트레이스: "Trace" 인스턴스의
+      시퀀스.
+
+      시퀀스의 순서는 정의되지 않았습니다. 정렬된 통계 리스트를 얻으려
+      면 "Snapshot.statistics()" 메서드를 사용하십시오.
+
+
+Statistic
+---------
+
+class tracemalloc.Statistic
+
+   메모리 할당 통계.
+
+   "Snapshot.statistics()"는 "Statistic" 인스턴스의 리스트를 반환합니
+   다.
+
+   "StatisticDiff" 클래스도 참조하십시오.
+
+   count
+
+      메모리 블록 수 ("int").
+
+   size
+
+      총 메모리 블록의 바이트 단위 크기 ("int").
+
+   traceback
+
+      메모리 블록이 할당된 곳의 트레이스백, "Traceback" 인스턴스.
+
+
+StatisticDiff
+-------------
+
+class tracemalloc.StatisticDiff
+
+   기존 "Snapshot" 인스턴스와 새 인스턴스 간의 메모리 할당에 대한 통계
+   적 차이.
+
+   "Snapshot.compare_to()"는 "StatisticDiff" 인스턴스의 리스트를 반환
+   합니다. "Statistic" 클래스도 참조하십시오.
+
+   count
+
+      새 스냅샷의 메모리 블록 수 ("int"): 새 스냅샷에서 메모리 블록이
+      해제되었으면 "0".
+
+   count_diff
+
+      이전 스냅샷과 새 스냅샷 간의 메모리 블록 수의 차이 ("int"): 메모
+      리 블록이 새 스냅샷에 할당되었으면 "0".
+
+   size
+
+      새 스냅샷에서 총 메모리 블록의 바이트 단위 크기 ("int"): 새 스냅
+      샷에서 메모리 블록이 해제되었으면 "0".
+
+   size_diff
+
+      이전 스냅샷과 새 스냅샷 사이의 총 메모리 블록 크기의 바이트 단위
+      차이 ("int"): 메모리 블록이 새 스냅샷에 할당되었으면 "0".
+
+   traceback
+
+      메모리 블록이 할당된 곳의 트레이스백, "Traceback" 인스턴스.
+
+
+Trace
+-----
+
+class tracemalloc.Trace
+
+   메모리 블록의 트레이스.
+
+   "Snapshot.traces" 어트리뷰트는 "Trace" 인스턴스의 시퀀스입니다.
+
+   버전 3.6에서 변경: "domain" 어트리뷰트를 추가했습니다.
+
+   domain
+
+      메모리 블록의 주소 공간 ("int"). 읽기 전용 프로퍼티.
+
+      tracemalloc은 도메인 "0"을 사용하여 파이썬의 메모리 할당을 추적
+      합니다. C 확장은 다른 도메인을 사용하여 다른 리소스를 추적 할 수
+      있습니다.
+
+   size
+
+      메모리 블록의 바이트 단위 크기 ("int").
+
+   traceback
+
+      메모리 블록이 할당된 곳의 트레이스백, "Traceback" 인스턴스.
+
+
+Traceback
+---------
+
+class tracemalloc.Traceback
+
+   가장 오래된 프레임에서 가장 최근 프레임 순으로 정렬된 "Frame" 인스
+   턴스의 시퀀스.
+
+   트레이스백은 적어도 "1"프레임을 포함합니다. "tracemalloc" 모듈이 프
+   레임을 가져오지 못하면, 줄 번호 "0"의 파일명 ""<unknown>""이 사용됩
+   니다.
+
+   스냅샷을 취할 때, 트레이스의 트레이스백은 "get_traceback_limit()"
+   프레임으로 제한됩니다. "take_snapshot()" 함수를 참조하십시오. 트레
+   이스백의 원래 프레임 수는 "Traceback.total_nframe" 어트리뷰트에 저
+   장됩니다. 이를 통해 트레이스백 제한으로 인해 트레이스백이 잘렸는지
+   알 수 있습니다.
+
+   "Trace.traceback" 어트리뷰트는 "Traceback" 인스턴스의 인스턴스입니
+   다.
+
+   버전 3.7에서 변경: 프레임은 이제 가장 최근에서 가장 오래된 것 대신,
+   가장 오래된 것에서 가장 최근으로 정렬됩니다.
+
+   total_nframe
+
+      자르기 전에 트레이스백을 구성한 총 프레임 수. 정보가 없으면 이
+      어트리뷰트를 "None"으로 설정할 수 있습니다.
+
+   버전 3.9에서 변경: "Traceback.total_nframe" 어트리뷰트가 추가되었습
+   니다.
+
+   format(limit=None, most_recent_first=False)
+
+      줄의 리스트로 트레이스백을 포맷합니다. 소스 코드에서 줄을 꺼내는
+      데 "linecache" 모듈을 사용합니다. *limit*가 설정되면, *limit*가
+      양수일 때 가장 최신 *limit* 개의 프레임을 포맷합니다. 그렇지 않
+      으면, 가장 오래된 "abs(limit)" 개의 프레임을 포맷합니다.
+      *most_recent_first*가 "True"이면, 포맷된 프레임의 순서가 반대로
+      되어, 가장 최근의 프레임을 마지막이 아니라 처음에 반환합니다.
+
+      "format()"에 줄 넘김 문자가 포함되지 않는다는 점을 제외하고,
+      "traceback.format_tb()" 함수와 유사합니다.
+
+      예:
+
+         print("Traceback (most recent call first):")
+         for line in traceback:
+             print(line)
+
+      출력:
+
+         Traceback (most recent call first):
+           File "test.py", line 9
+             obj = Object()
+           File "test.py", line 12
+             tb = tracemalloc.get_object_traceback(f())

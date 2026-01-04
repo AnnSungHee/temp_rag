@@ -1,0 +1,1650 @@
+이벤트 루프
+***********
+
+**소스 코드:** Lib/asyncio/events.py, Lib/asyncio/base_events.py
+
+======================================================================
+
+-[ 머리말 ]-
+
+이벤트 루프는 모든 asyncio 응용 프로그램의 핵심입니다. 이벤트 루프는
+비동기 태스크 및 콜백을 실행하고 네트워크 IO 연산을 수행하며 자식 프로
+세스를 실행합니다.
+
+응용 프로그램 개발자는 일반적으로 "asyncio.run()"과 같은 고수준의
+asyncio 함수를 사용해야 하며, 루프 객체를 참조하거나 메서드를 호출할
+필요가 거의 없습니다. 이 절은 주로 이벤트 루프 동작을 세부적으로 제어
+해야 하는 저수준 코드, 라이브러리 및 프레임워크의 작성자를 대상으로 합
+니다.
+
+-[ 이벤트 루프 얻기 ]-
+
+다음 저수준 함수를 사용하여 이벤트 루프를 가져오거나 설정하거나 만들
+수 있습니다.:
+
+asyncio.get_running_loop()
+
+   현재 OS 스레드에서 실행 중인 이벤트 루프를 반환합니다.
+
+   실행 중인 이벤트 루프가 없으면 "RuntimeError"를 발생시킵니다.
+
+   이 함수는 코루틴이나 콜백에서만 호출할 수 있습니다.
+
+   버전 3.7에 추가.
+
+asyncio.get_event_loop()
+
+   현재의 이벤트 루프를 가져옵니다.
+
+   When called from a coroutine or a callback (e.g. scheduled with
+   call_soon or similar API), this function will always return the
+   running event loop.
+
+   If there is no running event loop set, the function will return the
+   result of the "get_event_loop_policy().get_event_loop()" call.
+
+   이 함수는 (특히 사용자 정의 이벤트 루프 정책을 사용할 때) 다소 복잡
+   한 동작을 하므로, 코루틴과 콜백에서 "get_event_loop()"보다
+   "get_running_loop()" 함수를 사용하는 것이 좋습니다.
+
+   위에서 언급된 바와 같이, 이 저수준 함수를 사용하여 수동으로 이벤트
+   루프를 만들고 닫는 대신, 고수준 "asyncio.run()" 함수를 사용하는 것
+   을 고려하십시오.
+
+   참고:
+
+     In Python versions 3.10.0--3.10.8 and 3.11.0 this function (and
+     other functions which use it implicitly) emitted a
+     "DeprecationWarning" if there was no running event loop, even if
+     the current loop was set on the policy. In Python versions
+     3.10.9, 3.11.1 and 3.12 they emit a "DeprecationWarning" if there
+     is no running event loop and no current loop is set. In some
+     future Python release this will become an error.
+
+asyncio.set_event_loop(loop)
+
+   *loop*를 현재 OS 스레드의 현재 이벤트 루프로 설정합니다.
+
+asyncio.new_event_loop()
+
+   새 이벤트 루프 객체를 만들고 반환합니다.
+
+"get_event_loop()", "set_event_loop()" 및 "new_event_loop()" 함수의 동
+작은 사용자 정의 이벤트 루프 정책 설정에 의해 변경될 수 있음에 유의하
+십시오.
+
+-[ 목차 ]-
+
+이 설명서 페이지는 다음과 같은 절로 구성됩니다:
+
+* 이벤트 루프 메서드 절은 이벤트 루프 API의 레퍼런스 설명서입니다.
+
+* 콜백 핸들 절은 "loop.call_soon()" 및 "loop.call_later()"와 같은 예약
+  메서드에서 반환된 "Handle" 및 "TimerHandle" 인스턴스를 설명합니다.
+
+* 서버 객체 절은 "loop.create_server()"와 같은 이벤트 루프 메서드에서
+  반환되는 형을 설명합니다.
+
+* 이벤트 루프 구현 절은 "SelectorEventLoop" 및 "ProactorEventLoop" 클
+  래스를 설명합니다.
+
+* 예제 절에서는 일부 이벤트 루프 API로 작업하는 방법을 보여줍니다.
+
+
+이벤트 루프 메서드
+==================
+
+이벤트 루프에는 다음과 같은 **저수준** API가 있습니다:
+
+* 루프 실행 및 중지
+
+* 콜백 예약하기
+
+* 지연된 콜백 예약
+
+* 퓨처와 태스크 만들기
+
+* 네트워크 연결 열기
+
+* 네트워크 서버 만들기
+
+* 파일 전송
+
+* TLS 업그레이드
+
+* 파일 기술자 관찰하기
+
+* 소켓 객체로 직접 작업하기
+
+* DNS
+
+* 파이프로 작업하기
+
+* 유닉스 시그널
+
+* 스레드 또는 프로세스 풀에서 코드를 실행하기
+
+* 에러 처리 API
+
+* 디버그 모드 활성화
+
+* 자식 프로세스 실행하기
+
+
+루프 실행 및 중지
+-----------------
+
+loop.run_until_complete(future)
+
+   *future*("Future"의 인스턴스)가 완료할 때까지 실행합니다.
+
+   인자가 코루틴 객체 면, "asyncio.Task"로 실행되도록 묵시적으로 예약
+   됩니다.
+
+   퓨처의 결과를 반환하거나 퓨처의 예외를 일으킵니다.
+
+loop.run_forever()
+
+   "stop()"가 호출될 때까지 이벤트 루프를 실행합니다.
+
+   If "stop()" is called before "run_forever()" is called, the loop
+   will poll the I/O selector once with a timeout of zero, run all
+   callbacks scheduled in response to I/O events (and those that were
+   already scheduled), and then exit.
+
+   만약 "stop()" 이 "run_forever()" 가 실행 중일 때 호출되면, 루프는
+   현재 걸려있는 콜백들을 실행한 다음 종료합니다. 콜백에 의해 예약되는
+   새 콜백은 이 경우 실행되지 않습니다; 대신 그것들은 다음에
+   "run_forever()"나 "run_until_complete()"가 호출될 때 실행됩니다.
+
+loop.stop()
+
+   이벤트 루프를 중지합니다.
+
+loop.is_running()
+
+   이벤트 루프가 현재 실행 중이면 "True" 를 반환합니다.
+
+loop.is_closed()
+
+   이벤트 루프가 닫혔으면 "True" 를 반환합니다.
+
+loop.close()
+
+   이벤트 루프를 닫습니다.
+
+   이 함수를 호출할 때 루프는 반드시 실행 중이지 않아야 합니다. 계류
+   중인 모든 콜백을 버립니다.
+
+   이 메서드는 모든 큐를 비우고 실행기를 종료하지만, 실행기가 완료할
+   때까지 기다리지 않습니다.
+
+   이 메서드는 멱등적(itempotent)이고 되돌릴 수 없습니다. 이벤트 루프
+   가 닫힌 후에 다른 메서드를 호출해서는 안 됩니다.
+
+coroutine loop.shutdown_asyncgens()
+
+   Schedule all currently open *asynchronous generator* objects to
+   close with an "aclose()" call.  After calling this method, the
+   event loop will issue a warning if a new asynchronous generator is
+   iterated. This should be used to reliably finalize all scheduled
+   asynchronous generators.
+
+   "asyncio.run()"가 사용될 때 이 함수를 호출할 필요는 없다는 점에 유
+   의하세요.
+
+   예:
+
+      try:
+          loop.run_forever()
+      finally:
+          loop.run_until_complete(loop.shutdown_asyncgens())
+          loop.close()
+
+   버전 3.6에 추가.
+
+coroutine loop.shutdown_default_executor()
+
+   기본 실행기의 닫힘을 예약하고 "ThreadPoolExecutor"의 모든 스레드가
+   조인(join)될 때까지 기다립니다. 이 메서드가 호출된 후,
+   "loop.run_in_executor()"로 기본 실행기를 사용하면 "RuntimeError"가
+   발생합니다.
+
+   참고:
+
+     Do not call this method when using "asyncio.run()", as the latter
+     handles default executor shutdown automatically.
+
+   버전 3.9에 추가.
+
+
+콜백 예약하기
+-------------
+
+loop.call_soon(callback, *args, context=None)
+
+   이벤트 루프의 다음 이터레이션 때 *args* 인자로 호출할 *callback* *
+   콜백*을 예약합니다.
+
+   "asyncio.Handle" 인스턴스를 반환하는데, 나중에 콜백을 취소하는 데
+   사용할 수 있습니다.
+
+   콜백은 등록된 순서대로 호출됩니다. 각 콜백은 정확히 한 번 호출됩니
+   다.
+
+   선택적인 키워드 전용 *context* 인자는 *callback* 을 실행할 사용자
+   정의 "contextvars.Context" 를 지정합니다. *context* 가 제공되지 않
+   을 때, 콜백은 현재 컨텍스트를 사용합니다.
+
+   "call_soon_threadsafe()"와 달리, 이 메서드는 스레드 안전하지 않습니
+   다.
+
+loop.call_soon_threadsafe(callback, *args, context=None)
+
+   스레드 안전한 "call_soon()" 변형입니다. "call_soon()"은 스레드 안전
+   하지 않기 때문에, 다른 스레드에서 콜백을 예약할 때, *반드시* 이 함
+   수를 사용해야 합니다.
+
+   Raises "RuntimeError" if called on a loop that's been closed. This
+   can happen on a secondary thread when the main application is
+   shutting down.
+
+   설명서의 동시성과 다중 스레딩 절을 참고하십시오.
+
+버전 3.7에서 변경: *context* 키워드 전용 매개 변수가 추가되었습니다.
+자세한 정보는 **PEP 567**을 보십시오.
+
+참고:
+
+  대부분 "asyncio" 예약 함수는 키워드 인자 전달을 허용하지 않습니다.
+  그렇게 하려면 "functools.partial()"을 사용하십시오:
+
+     # will schedule "print("Hello", flush=True)"
+     loop.call_soon(
+         functools.partial(print, "Hello", flush=True))
+
+  asyncio는 디버그 및 오류 메시지에서 partial 객체를 더욱 잘 표시할 수
+  있으므로, partial 객체를 사용하는 것이 람다를 사용하는 것보다 편리합
+  니다.
+
+
+지연된 콜백 예약
+----------------
+
+이벤트 루프는 콜백 함수가 미래의 어떤 시점에서 호출되도록 예약하는 메
+커니즘을 제공합니다. 이벤트 루프는 단조 시계를 사용하여 시간을 추적합
+니다.
+
+loop.call_later(delay, callback, *args, context=None)
+
+   지정된 *delay* 초 (int 또는 float) 뒤에 *callback* 이 호출되도록 예
+   약합니다.
+
+   "asyncio.TimerHandle" 의 인스턴스가 반환되는데, 콜백을 취소하는 데
+   사용할 수 있습니다.
+
+   *callback* 은 정확히 한번 호출됩니다. 두 콜백이 정확히 같은 시간에
+   예약되면, 어떤 것이 먼저 호출되는지는 정의되지 않습니다.
+
+   선택적 위치 *args* 는 호출 될 때 콜백에 전달됩니다. 콜백을 키워드
+   인자로 호출하고 싶으면 "functools.partial()" 를 사용하십시오.
+
+   선택적인 키워드 전용 *context* 인자는 *callback* 을 실행할 사용자
+   정의 "contextvars.Context" 를 지정할 수 있게 합니다. *context* 가
+   제공되지 않을 때는 현재 컨텍스트가 사용됩니다.
+
+   버전 3.7에서 변경: *context* 키워드 전용 매개 변수가 추가되었습니다
+   . 자세한 정보는 **PEP 567**을 보십시오.
+
+   버전 3.8에서 변경: 파이썬 3.7 및 이전 버전에서 기본 이벤트 루프 구
+   현을 사용할 때, *delay*는 하루를 초과할 수 없었습니다. 이 문제는 파
+   이썬 3.8에서 수정되었습니다.
+
+loop.call_at(when, callback, *args, context=None)
+
+   지정된 절대 타임스탬프 *when*(int 또는 float)에 *callback* 이 호출
+   되도록 예약합니다. "loop.time()" 과 같은 시간 참조를 사용하십시오.
+
+   이 메서드의 동작은 "call_later()"와 같습니다.
+
+   "asyncio.TimerHandle" 의 인스턴스가 반환되는데, 콜백을 취소하는 데
+   사용할 수 있습니다.
+
+   버전 3.7에서 변경: *context* 키워드 전용 매개 변수가 추가되었습니다
+   . 자세한 정보는 **PEP 567**을 보십시오.
+
+   버전 3.8에서 변경: 파이썬 3.7 및 이전 버전에서 기본 이벤트 루프 구
+   현을 사용할 때, *when*와 현재 시각의 차이는 하루를 초과할 수 없었습
+   니다. 이 문제는 파이썬 3.8에서 수정되었습니다.
+
+loop.time()
+
+   이벤트 루프의 내부 단조 시계에 따라, "float" 값으로 현재 시각을 반
+   환합니다.
+
+참고:
+
+  버전 3.8에서 변경: 파이썬 3.7 및 이전 버전에서 제한 시간(상대적인
+  *delay* 나 절대적인 *when*)은 1일을 초과하지 않아야 했습니다. 이 문
+  제는 파이썬 3.8에서 수정되었습니다.
+
+더 보기: "asyncio.sleep()" 함수.
+
+
+퓨처와 태스크 만들기
+--------------------
+
+loop.create_future()
+
+   이벤트 루프에 연결된 "asyncio.Future" 객체를 만듭니다.
+
+   이것이 asyncio에서 퓨처를 만드는 데 선호되는 방법입니다. 이렇게 하
+   면 제삼자 이벤트 루프가 Future 객체의 다른 구현(더 나은 성능이나 계
+   측(instrumentation))을 제공할 수 있습니다
+
+   버전 3.5.2에 추가.
+
+loop.create_task(coro, *, name=None)
+
+   코루틴 *coro*의 실행을 예약합니다. "Task" 객체를 반환합니다.
+
+   제삼자 이벤트 루프는 상호 운용성을 위해 자신만의 "Task" 의 서브 클
+   래스를 사용할 수 있습니다. 이 경우, 결과 형은 "Task" 의 서브 클래스
+   입니다.
+
+   *name* 인자가 제공되고 "None"이 아니면, "Task.set_name()"을 사용하
+   여 태스크의 이름으로 설정됩니다.
+
+   버전 3.8에서 변경: *name* 매개 변수가 추가되었습니다.
+
+loop.set_task_factory(factory)
+
+   "loop.create_task()" 에 의해 사용되는 태스크 팩토리를 설정합니다.
+
+   If *factory* is "None" the default task factory will be set.
+   Otherwise, *factory* must be a *callable* with the signature
+   matching "(loop, coro)", where *loop* is a reference to the active
+   event loop, and *coro* is a coroutine object.  The callable must
+   return a "asyncio.Future"-compatible object.
+
+loop.get_task_factory()
+
+   태스크 팩토리를 반환하거나, 기본값이 사용 중이면 "None" 을 반환합니
+   다.
+
+
+네트워크 연결 열기
+------------------
+
+coroutine loop.create_connection(protocol_factory, host=None, port=None, *, ssl=None, family=0, proto=0, flags=0, sock=None, local_addr=None, server_hostname=None, ssl_handshake_timeout=None, happy_eyeballs_delay=None, interleave=None)
+
+   주어진 *host* 와 *port*로 지정된 주소로의 스트리밍 트랜스포트 연결
+   을 엽니다.
+
+   The socket family can be either "AF_INET" or "AF_INET6" depending
+   on *host* (or the *family* argument, if provided).
+
+   The socket type will be "SOCK_STREAM".
+
+   *protocol_factory* 는 반드시 asyncio 프로토콜 구현을 반환하는 콜러
+   블이어야 합니다.
+
+   이 메서드는 백그라운드에서 연결을 맺으려고 시도합니다. 성공하면,
+   "(transport, protocol)" 쌍을 반환합니다.
+
+   하부 연산의 시간순 개요는 다음과 같습니다:
+
+   1. 연결이 맺어지고, 이를 위한 트랜스포트(transport) 가 만들어집니다
+      .
+
+   2. *protocol_factory* 가 인자 없이 호출되고, 프로토콜(protocol) 인
+      스턴스를 반환할 것으로 기대됩니다.
+
+   3. 프로토콜 인스턴스는 "connection_made()" 메서드를 호출함으로써 트
+      랜스포트와 연결됩니다.
+
+   4. 성공하면 "(transport, protocol)" 튜플이 반환됩니다.
+
+   만들어진 트랜스포트는 구현 의존적인 양방향 스트림입니다.
+
+   다른 인자들:
+
+   * *ssl*: 주어지고 거짓이 아니면, SSL/TLS 트랜스포트가 만들어집니다
+     (기본적으로는 평범한 TCP 트랜스포트가 만들어집니다). *ssl* 이
+     "ssl.SSLContext" 객체면, 트랜스포트를 만들 때 이 컨텍스트가 사용
+     됩니다; *ssl* 이 "True" 면, "ssl.create_default_context()" 가 반
+     환하는 기본 컨텍스트가 사용됩니다.
+
+     더 보기: SSL/TLS 보안 고려 사항
+
+   * *server_hostname*는 대상 서버의 인증서가 일치될 호스트 이름을 설
+     정하거나 대체합니다. *ssl*이 "None"이 아닐 때만 전달되어야 합니다
+     . 기본적으로 *host* 인자의 값이 사용됩니다. *host* 가 비어 있으면
+     , 기본값이 없고 *server_hostname* 값을 전달해야 합니다.
+     *server_hostname* 이 빈 문자열이면, 호스트 이름 일치가 비활성화됩
+     니다 (이것은 심각한 보안 위험으로, 잠재적인 중간자 공격을 허용하
+     게 됩니다).
+
+   * *family*, *proto*, *flags* 는 *host* 결정을 위해 getaddrinfo() 에
+     전달할 선택적 주소 패밀리, 프로토콜, 플래그입니다. 주어지면, 이것
+     들은 모두 해당하는 "socket" 모듈 상수에 대응하는 정수여야 합니다.
+
+   * 주어지면, *happy_eyeballs_delay*는 이 연결에 대해 Happy Eyeballs
+     를 활성화합니다. 다음 시도를 병렬로 시작하기 전에, 연결 시도가 완
+     료되기를 기다리는 시간(초)을 나타내는 부동 소수점 숫자여야 합니다
+     . 이것은 **RFC 8305**에 정의된 "연결 시도 지연(Connection Attempt
+     Delay)" 입니다. RFC에서 권장하는 적절한 기본값은 "0.25"(250밀리
+     초)입니다.
+
+   * *interleave*는 호스트 이름이 여러 IP 주소로 해석될 때 주소 재정렬
+     을 제어합니다. "0"이거나 지정되지 않으면, 재정렬이 수행되지 않고,
+     주소는 "getaddrinfo()"에 의해 반환된 순서대로 시도됩니다. 양의 정
+     수가 지정되면, 주소는 주소 패밀리에 의해 인터리브 되고, 주어진 정
+     수는 **RFC 8305**에 정의된 대로 "첫 번째 주소 패밀리 수(First
+     Address Family Count)"로 해석됩니다. 기본값은
+     *happy_eyeballs_delay*가 지정되지 않으면 "0"이고, 지정되면 "1"입
+     니다.
+
+   * *sock* 이 주어지면, 트랜스포트가 사용할, 기존의 이미 연결된
+     "socket.socket" 객체여야 합니다. *sock* 이 주어지면, *host*,
+     *port*, *family*, *proto*, *flags*, *happy_eyeballs_delay*,
+     *interleave*, *local_addr* 를 지정해서는 안 됩니다.
+
+     참고:
+
+       The *sock* argument transfers ownership of the socket to the
+       transport created. To close the socket, call the transport's
+       "close()" method.
+
+   * *local_addr* 이 주어지면, 소켓을 로컬에 바인드 하는데 사용되는
+     "(local_host, local_port)" 튜플이어야 합니다. *local_host* 와
+     *local_port* 는 *host* 및 *port* 와 유사하게 "getaddrinfo()" 를
+     사용하여 조회됩니다.
+
+   * *ssl_handshake_timeout* 은 (TLS 연결의 경우) 연결을 중단하기 전에
+     TLS 핸드 셰이크가 완료될 때까지 대기하는 시간(초)입니다. "None" (
+     기본값) 이면 "60.0" 초가 사용됩니다.
+
+   버전 3.5에서 변경: "ProactorEventLoop"에 SSL/TLS에 대한 지원이 추가
+   되었습니다.
+
+   버전 3.6에서 변경: The socket option "TCP_NODELAY" is set by
+   default for all TCP connections.
+
+   버전 3.7에서 변경: *ssl_handshake_timeout* 매개 변수를 추가했습니다
+   .
+
+   버전 3.8에서 변경: *happy_eyeballs_delay*와 *interleave* 매개 변수
+   가 추가되었습니다.Happy Eyeballs 알고리즘: 듀얼 스택 호스트의 성공.
+   서버의 IPv4 경로와 프로토콜이 작동하지만, 서버의 IPv6 경로와 프로토
+   콜은 작동하지 않을 때, 이중 스택 클라이언트 응용 프로그램은 IPv4 전
+   용 클라이언트와 비교하여 상당한 연결 지연이 발생합니다. 이중 스택
+   클라이언트의 사용자 환경이 더 나빠지기 때문에 바람직하지 않습니다.
+   이 문서는 이런 사용자가 볼 수 있는 지연을 줄이고 알고리즘에 대한 요
+   구 사항을 지정하고 알고리즘을 제공합니다.For more information:
+   https://tools.ietf.org/html/rfc6555
+
+   더 보기:
+
+     "open_connection()" 함수는 고수준 대안 API입니다. async/await 코
+     드에서 직접 사용할 수 있는 ("StreamReader", "StreamWriter") 쌍을
+     반환합니다.
+
+coroutine loop.create_datagram_endpoint(protocol_factory, local_addr=None, remote_addr=None, *, family=0, proto=0, flags=0, reuse_address=None, reuse_port=None, allow_broadcast=None, sock=None)
+
+   참고:
+
+     The parameter *reuse_address* is no longer supported, as using
+     "SO_REUSEADDR" poses a significant security concern for UDP.
+     Explicitly passing "reuse_address=True" will raise an
+     exception.UID가 다른 여러 프로세스가 "SO_REUSEADDR"를 사용하여 소
+     켓을 같은 UDP 소켓 주소에 할당하면, 들어오는 패킷이 소켓 간에 무
+     작위로 분산될 수 있습니다.For supported platforms, *reuse_port*
+     can be used as a replacement for similar functionality. With
+     *reuse_port*, "SO_REUSEPORT" is used instead, which specifically
+     prevents processes with differing UIDs from assigning sockets to
+     the same socket address.
+
+   데이터 그램 연결을 만듭니다.
+
+   The socket family can be either "AF_INET", "AF_INET6", or
+   "AF_UNIX", depending on *host* (or the *family* argument, if
+   provided).
+
+   The socket type will be "SOCK_DGRAM".
+
+   *protocol_factory* 는 반드시 프로토콜 구현을 반환하는 콜러블이어야
+   합니다.
+
+   성공하면 "(transport, protocol)" 튜플이 반환됩니다.
+
+   다른 인자들:
+
+   * *local_addr* 이 주어지면, 소켓을 로컬에 바인드 하는 데 사용되는
+     "(local_host, local_port)" 튜플입니다. *local_host* 와
+     *local_port* 는 "getaddrinfo()"를 사용하여 조회됩니다.
+
+   * *remote_addr* 이 주어지면, 소켓을 원격 주소에 연결하는 데 사용되
+     는 "(remote_host, remote_port)" 튜플입니다. *remote_host* 와
+     *remote_port* 는 "getaddrinfo()"를 사용하여 조회됩니다.
+
+   * *family*, *proto*, *flags* 는 *host* 결정을 위해 "getaddrinfo()"
+     에 전달할 선택적 주소 패밀리, 프로토콜, 플래그입니다. 주어지면,
+     이것들은 모두 해당하는 "socket" 모듈 상수에 대응하는 정수여야 합
+     니다.
+
+   * *reuse_port* tells the kernel to allow this endpoint to be bound
+     to the same port as other existing endpoints are bound to, so
+     long as they all set this flag when being created. This option is
+     not supported on Windows and some Unixes. If the "SO_REUSEPORT"
+     constant is not defined then this capability is unsupported.
+
+   * *allow_broadcast* 는 이 말단이 브로드캐스트 주소로 메시지를 보낼
+     수 있도록 커널에 알립니다.
+
+   * *sock* 은 트랜스포트가 사용할 소켓 객체로, 기존의 이미 연결된
+     "socket.socket" 객체를 사용하기 위해 선택적으로 지정할 수 있습니
+     다. 지정되면 *local_addr* 과 *remote_addr* 를 생략해야 합니다 (반
+     드시 "None" 이어야 합니다).
+
+     참고:
+
+       The *sock* argument transfers ownership of the socket to the
+       transport created. To close the socket, call the transport's
+       "close()" method.
+
+   UDP 메아리 클라이언트 프로토콜 과 UDP 메아리 서버 프로토콜 예제를
+   참고하세요.
+
+   버전 3.4.4에서 변경: The *family*, *proto*, *flags*,
+   *reuse_address*, *reuse_port, *allow_broadcast*, and *sock*
+   parameters were added.
+
+   버전 3.8.1에서 변경: The *reuse_address* parameter is no longer
+   supported due to security concerns.
+
+   버전 3.8에서 변경: 윈도우에 대한 지원이 추가되었습니다.
+
+coroutine loop.create_unix_connection(protocol_factory, path=None, *, ssl=None, sock=None, server_hostname=None, ssl_handshake_timeout=None)
+
+   유닉스 연결을 만듭니다.
+
+   The socket family will be "AF_UNIX"; socket type will be
+   "SOCK_STREAM".
+
+   성공하면 "(transport, protocol)" 튜플이 반환됩니다.
+
+   *path* 는 유닉스 도메인 소켓의 이름이며, *sock* 매개 변수가 지정되
+   지 않으면 필수입니다. 추상 유닉스 소켓, "str", "bytes", "Path" 경로
+   가 지원됩니다.
+
+   이 메서드의 인자에 관한 정보는 "loop.create_connection()" 메서드의
+   설명서를 참조하십시오.
+
+   Availability: Unix.
+
+   버전 3.7에서 변경: *ssl_handshake_timeout* 매개 변수를 추가했습니다
+   . *path* 매개 변수는 이제 *경로류 객체* 가 될 수 있습니다.
+
+
+네트워크 서버 만들기
+--------------------
+
+coroutine loop.create_server(protocol_factory, host=None, port=None, *, family=socket.AF_UNSPEC, flags=socket.AI_PASSIVE, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, start_serving=True)
+
+   Create a TCP server (socket type "SOCK_STREAM") listening on *port*
+   of the *host* address.
+
+   "Server" 객체를 반환합니다.
+
+   인자:
+
+   * *protocol_factory* 는 반드시 프로토콜 구현을 반환하는 콜러블이어
+     야 합니다.
+
+   * *host* 매개 변수는 서버가 리스닝할 위치를 결정하는 여러 형으로 설
+     정할 수 있습니다.:
+
+     * *host*가 문자열이면, TCP 서버는 *host*로 지정된 단일 네트워크
+       인터페이스에 바인딩 됩니다.
+
+     * *host*가 문자열의 시퀀스면, TCP 서버는 시퀀스로 지정된 모든 네
+       트워크 인터페이스에 바인딩 됩니다.
+
+     * *host*가 빈 문자열이거나 "None"이면, 모든 인터페이스가 사용되는
+       것으로 가정하고, 여러 소켓의 리스트가 반환됩니다 (대체로 IPv4
+       하나와 IPv6 하나).
+
+   * The *port* parameter can be set to specify which port the server
+     should listen on. If "0" or "None" (the default), a random unused
+     port will be selected (note that if *host* resolves to multiple
+     network interfaces, a different random port will be selected for
+     each interface).
+
+   * *family* can be set to either "socket.AF_INET" or "AF_INET6" to
+     force the socket to use IPv4 or IPv6. If not set, the *family*
+     will be determined from host name (defaults to "AF_UNSPEC").
+
+   * *flags* 은 "getaddrinfo()"를 위한 비트 마스크입니다.
+
+   * *sock* 은 기존 소켓 객체를 사용하기 위해 선택적으로 지정할 수 있
+     습니다. 지정되면, *host* 및 *port* 는 지정할 수 없습니다.
+
+     참고:
+
+       The *sock* argument transfers ownership of the socket to the
+       server created. To close the socket, call the server's
+       "close()" method.
+
+   * *backlog* 는 "listen()" 으로 전달되는 최대 대기 연결 수 입니다 (
+     기본값은 100).
+
+   * *ssl* 을 "SSLContext" 인스턴스로 설정하면, 들어오는 연결에 TLS를
+     사용합니다.
+
+   * *reuse_address* 는, 일반적인 시간제한이 만료될 때까지 기다리지 않
+     고, "TIME_WAIT" 상태의 로컬 소켓을 재사용하도록 커널에 알려줍니다
+     . 지정하지 않으면 유닉스에서 자동으로 "True" 로 설정됩니다.
+
+   * *reuse_port* 는 모두 만들 때 이 플래그를 설정하는 한, 이 말단이
+     다른 기존 말단이 바인드 된 것과 같은 포트에 바인드 되도록 허용하
+     도록 커널에 알려줍니다. 이 옵션은 윈도우에서 지원되지 않습니다.
+
+   * *ssl_handshake_timeout* 은 (TLS 서버의 경우) 연결을 중단하기 전에
+     TLS 핸드 셰이크가 완료될 때까지 대기하는 시간(초)입니다. "None" (
+     기본값) 이면 "60.0" 초가 사용됩니다.
+
+   * *start_serving* 을 "True" (기본값) 로 설정하면, 생성된 서버가 즉
+     시 연결을 받아들입니다. "False" 로 설정되면, 사용자는 서버가 연결
+     을 받기 시작하도록 "Server.start_serving()" 이나
+     "Server.serve_forever()"를 await 해야 합니다.
+
+   버전 3.5에서 변경: "ProactorEventLoop"에 SSL/TLS에 대한 지원이 추가
+   되었습니다.
+
+   버전 3.5.1에서 변경: *host* 매개 변수는 문자열의 시퀀스가 될 수 있
+   습니다.
+
+   버전 3.6에서 변경: Added *ssl_handshake_timeout* and
+   *start_serving* parameters. The socket option "TCP_NODELAY" is set
+   by default for all TCP connections.
+
+   더 보기:
+
+     "start_server()" 함수는 async/await 코드에서 사용할 수 있는
+     "StreamReader" 및 "StreamWriter" 쌍을 반환하는 고수준의 대체 API
+     입니다.
+
+coroutine loop.create_unix_server(protocol_factory, path=None, *, sock=None, backlog=100, ssl=None, ssl_handshake_timeout=None, start_serving=True)
+
+   Similar to "loop.create_server()" but works with the "AF_UNIX"
+   socket family.
+
+   *path* 는 유닉스 도메인 소켓의 이름이며, *sock* 매개 변수가 제공되
+   지 않으면 필수입니다. 추상 유닉스 소켓, "str", "bytes", "Path" 경로
+   가 지원됩니다.
+
+   이 메서드의 인자에 대한 정보는 "loop.create_server()" 메서드의 설명
+   서를 참조하십시오.
+
+   Availability: Unix.
+
+   버전 3.7에서 변경: *ssl_handshake_timeout* 과 *start_serving* 매개
+   변수를 추가했습니다. *path* 매개 변수는 이제 "Path" 객체일 수 있습
+   니다.
+
+coroutine loop.connect_accepted_socket(protocol_factory, sock, *, ssl=None, ssl_handshake_timeout=None)
+
+   이미 받아들인 연결을 트랜스포트/프로토콜 쌍으로 래핑합니다.
+
+   이 메서드는 asyncio 밖에서 연결을 받아들이지만, 그 연결을 처리하는
+   데 asyncio 를 사용하는 서버에서 사용됩니다.
+
+   매개 변수:
+
+   * *protocol_factory* 는 반드시 프로토콜 구현을 반환하는 콜러블이어
+     야 합니다.
+
+   * *sock* 은 "socket.accept" 가 반환한 기존 소켓 객체입니다.
+
+     참고:
+
+       The *sock* argument transfers ownership of the socket to the
+       transport created. To close the socket, call the transport's
+       "close()" method.
+
+   * *ssl* 을 "SSLContext" 로 설정하면, 들어오는 연결에 SSL을 사용합니
+     다.
+
+   * *ssl_handshake_timeout* 은 (SSL 연결의 경우) 연결을 중단하기 전에
+     SSL 핸드 셰이크가 완료될 때까지 대기하는 시간(초)입니다. "None" (
+     기본값) 이면 "60.0" 초가 사용됩니다.
+
+   "(transport, protocol)" 쌍을 반환합니다.
+
+   버전 3.5.3에 추가.
+
+   버전 3.7에서 변경: *ssl_handshake_timeout* 매개 변수를 추가했습니다
+   .
+
+
+파일 전송
+---------
+
+coroutine loop.sendfile(transport, file, offset=0, count=None, *, fallback=True)
+
+   *file* 을 *transport* 로 보냅니다. 전송된 총 바이트 수를 반환합니다
+   .
+
+   이 메서드는 가능한 경우 고성능 "os.sendfile()" 을 사용합니다.
+
+   *file* 는 바이너리 모드로 열린 일반 파일 객체여야 합니다.
+
+   *offset* 은 파일 읽기 시작할 위치를 알려줍니다. *count* 를 제공하면
+   , EOF에 도달할 때까지 파일을 보내는 대신, 전송할 총 바이트 수를 지
+   정합니다. 파일의 위치가 갱신됩니다, 이 메서드가 에러를 일으킬 때조
+   차. 그리고, "file.tell()" 는 실제 전송된 바이트 수를 얻는 데 사용될
+   수 있습니다.
+
+   *fallback* 을 "True" 로 설정하면, 플랫폼이 sendfile 시스템 호출을
+   지원하지 않을 때 (가령 유닉스에서 SSL 소켓을 사용하거나 윈도우인 경
+   우), asyncio 가 파일을 수동으로 읽고 보내도록 합니다.
+
+   시스템이 *sendfile* 시스템 호출을 지원하지 않고 *fallback* 이
+   "False" 면 "SendfileNotAvailableError" 를 발생시킵니다.
+
+   버전 3.7에 추가.
+
+
+TLS 업그레이드
+--------------
+
+coroutine loop.start_tls(transport, protocol, sslcontext, *, server_side=False, server_hostname=None, ssl_handshake_timeout=None)
+
+   기존 트랜스포트 기반 연결을 TLS로 업그레이드합니다.
+
+   Create a TLS coder/decoder instance and insert it between the
+   *transport* and the *protocol*. The coder/decoder implements both
+   *transport*-facing protocol and *protocol*-facing transport.
+
+   Return the created two-interface instance. After *await*, the
+   *protocol* must stop using the original *transport* and communicate
+   with the returned object only because the coder caches
+   *protocol*-side data and sporadically exchanges extra TLS session
+   packets with *transport*.
+
+   In some situations (e.g. when the passed transport is already
+   closing) this may return "None".
+
+   매개 변수:
+
+   * "create_server()"와 "create_connection()" 같은 메서드가 반환하는
+     *transport* 와 *protocol* 인스턴스.
+
+   * *sslcontext*: 구성된 "SSLContext" 의 인스턴스.
+
+   * ("create_server()" 에 의해 생성된 것과 같은) 서버 측 연결이 업그
+     레이드될 때 *server_side* 에 "True" 를 전달합니다.
+
+   * *server_hostname*: 대상 서버의 인증서가 일치될 호스트 이름을 설정
+     하거나 대체합니다.
+
+   * *ssl_handshake_timeout* 은 (TLS 연결의 경우) 연결을 중단하기 전에
+     TLS 핸드 셰이크가 완료될 때까지 대기하는 시간(초)입니다. "None" (
+     기본값) 이면 "60.0" 초가 사용됩니다.
+
+   버전 3.7에 추가.
+
+
+파일 기술자 관찰하기
+--------------------
+
+loop.add_reader(fd, callback, *args)
+
+   *fd* 파일 기술자가 읽기 가능한지 관찰하기 시작하고, 일단 *fd*가 읽
+   기 가능해지면 지정한 인자로 *callback* 을 호출합니다.
+
+loop.remove_reader(fd)
+
+   *fd* 파일 기술자가 읽기 가능한지 관찰하는 것을 중단합니다. *fd*가
+   이전에 읽기에 대해 관찰 중이었으면 "True"를 반환합니다.
+
+loop.add_writer(fd, callback, *args)
+
+   *fd* 파일 기술자가 쓰기 가능한지 관찰하기 시작하고, 일단 *fd*가 쓰
+   기 가능해지면 지정한 인자로 *callback* 을 호출합니다.
+
+   *callback* 에 키워드 인자를 전달하려면 "functools.partial()"를 사용
+   하십시오.
+
+loop.remove_writer(fd)
+
+   *fd* 파일 기술자가 쓰기 가능한지 관찰하는 것을 중단합니다. *fd*가
+   이전에 쓰기에 대해 관찰 중이었으면 "True"를 반환합니다.
+
+이 메서드의 일부 제한 사항은 플랫폼 지원 절을 참조하십시오.
+
+
+소켓 객체로 직접 작업하기
+-------------------------
+
+일반적으로 "loop.create_connection()" 및 "loop.create_server()"와 같은
+트랜스포트 기반 API를 사용하는 프로토콜 구현은 소켓을 직접 사용하는 구
+현보다 빠릅니다. 그러나, 성능이 결정적이지 않고 "socket" 객체로 직접
+작업하는 것이 더 편리한 사용 사례가 있습니다.
+
+coroutine loop.sock_recv(sock, nbytes)
+
+   *sock* 에서 최대 *nbytes* 를 수신합니다. "socket.recv()" 의 비동기
+   버전.
+
+   수신한 데이터를 바이트열 객체로 반환합니다.
+
+   *sock* 은 반드시 비 블로킹 소켓이어야 합니다.
+
+   버전 3.7에서 변경: 이 메서드가 항상 코루틴 메서드라고 설명되어왔지
+   만, 파이썬 3.7 이전에는 "Future"를 반환했습니다. 파이썬 3.7부터, 이
+   것은 "async def" 메서드입니다.
+
+coroutine loop.sock_recv_into(sock, buf)
+
+   *sock* 에서 *buf* 버퍼로 데이터를 수신합니다. 블로킹
+   "socket.recv_into()" 메서드를 따라 만들어졌습니다.
+
+   버퍼에 기록된 바이트 수를 돌려줍니다.
+
+   *sock* 은 반드시 비 블로킹 소켓이어야 합니다.
+
+   버전 3.7에 추가.
+
+coroutine loop.sock_sendall(sock, data)
+
+   *data* 를 *sock* 소켓으로 보냅니다. "socket.sendall()" 의 비동기 버
+   전.
+
+   이 메서드는 *data* 의 모든 데이터가 송신되거나 에러가 발생할 때까지
+   소켓으로 계속 송신합니다. 성공하면 "None" 이 반환됩니다. 에러가 발
+   생하면 예외가 발생합니다. 또한, 연결의 수신 단에서 성공적으로 처리
+   한 (있기는 하다면) 데이터의 크기를 확인하는 방법은 없습니다.
+
+   *sock* 은 반드시 비 블로킹 소켓이어야 합니다.
+
+   버전 3.7에서 변경: Even though the method was always documented as
+   a coroutine method, before Python 3.7 it returned an "Future".
+   Since Python 3.7, this is an "async def" method.
+
+coroutine loop.sock_connect(sock, address)
+
+   *sock*을 *address*에 있는 원격 소켓에 연결합니다.
+
+   "socket.connect()" 의 비동기 버전.
+
+   *sock* 은 반드시 비 블로킹 소켓이어야 합니다.
+
+   버전 3.5.2에서 변경: "address" 는 더는 결정될 필요가 없습니다.
+   "sock_connect" 는 "socket.inet_pton()"을 호출하여 *address* 가 이미
+   결정되었는지를 검사합니다. 그렇지 않으면, "loop.getaddrinfo()" 가
+   *address* 를 결정하는 데 사용됩니다.
+
+   더 보기: "loop.create_connection()"과 "asyncio.open_connection()".
+
+coroutine loop.sock_accept(sock)
+
+   연결을 받아들입니다. 블로킹 "socket.accept()" 메서드를 따라 만들어
+   졌습니다.
+
+   소켓은 주소에 바인드 되어 연결을 리스닝해야 합니다. 반환 값은
+   "(conn, address)" 쌍인데, *conn* 은 연결로 데이터를 주고받을 수 있
+   는 *새* 소켓 객체이고, *address* 는 연결의 반대편 끝의 소켓에 바인
+   드 된 주소입니다.
+
+   *sock* 은 반드시 비 블로킹 소켓이어야 합니다.
+
+   버전 3.7에서 변경: 이 메서드가 항상 코루틴 메서드라고 설명되어왔지
+   만, 파이썬 3.7 이전에는 "Future"를 반환했습니다. 파이썬 3.7부터, 이
+   것은 "async def" 메서드입니다.
+
+   더 보기: "loop.create_server()"와 "start_server()".
+
+coroutine loop.sock_sendfile(sock, file, offset=0, count=None, *, fallback=True)
+
+   가능하면 고성능 "os.sendfile" 을 사용하여 파일을 보냅니다. 전송된
+   총 바이트 수를 반환합니다.
+
+   "socket.sendfile()"의 비동기 버전.
+
+   *sock* 은 반드시 비 블로킹 "socket.SOCK_STREAM" "socket" 이어야 합
+   니다.
+
+   *file* 는 바이너리 모드로 열린 일반 파일 객체여야 합니다.
+
+   *offset* 은 파일 읽기 시작할 위치를 알려줍니다. *count* 를 제공하면
+   , EOF에 도달할 때까지 파일을 보내는 대신, 전송할 총 바이트 수를 지
+   정합니다. 파일의 위치가 갱신됩니다, 이 메서드가 에러를 일으킬 때조
+   차. 그리고, "file.tell()" 는 실제 전송된 바이트 수를 얻는 데 사용될
+   수 있습니다.
+
+   *fallback* 을 "True" 로 설정하면, 플랫폼이 sendfile 시스템 호출을
+   지원하지 않을 때 (가령 유닉스에서 SSL 소켓을 사용하거나 윈도우인 경
+   우), asyncio 가 파일을 수동으로 읽고 보내도록 합니다.
+
+   시스템이 *sendfile* 시스템 호출을 지원하지 않고 *fallback* 이
+   "False" 면 "SendfileNotAvailableError" 를 발생시킵니다.
+
+   *sock* 은 반드시 비 블로킹 소켓이어야 합니다.
+
+   버전 3.7에 추가.
+
+
+DNS
+---
+
+coroutine loop.getaddrinfo(host, port, *, family=0, type=0, proto=0, flags=0)
+
+   "socket.getaddrinfo()" 의 비동기 버전.
+
+coroutine loop.getnameinfo(sockaddr, flags=0)
+
+   "socket.getnameinfo()" 의 비동기 버전.
+
+버전 3.7에서 변경: *getaddrinfo* 와 *getnameinfo* 메서드는 모두 코루틴
+메서드라고 설명되어왔지만, 파이썬 3.7 이전에 실제로는 "asyncio.Future"
+객체를 반환했습니다. 파이썬 3.7부터 두 가지 메서드 모두 코루틴입니다.
+
+
+파이프로 작업하기
+-----------------
+
+coroutine loop.connect_read_pipe(protocol_factory, pipe)
+
+   이벤트 루프에 *pipe*의 읽기용 끝을 등록합니다.
+
+   *protocol_factory* 는 반드시 asyncio 프로토콜 구현을 반환하는 콜러
+   블이어야 합니다.
+
+   *pipe*는 *파일류 객체*입니다.
+
+   쌍 "(transport, protocol)"를 반환합니다. 여기서 *transport*는
+   "ReadTransport" 인터페이스를 지원하고, *protocol*은
+   *protocol_factory*에 의해 인스턴스로 만들어진 객체입니다.
+
+   "SelectorEventLoop" 이벤트 루프를 사용하면, *pipe* 는 비 블로킹 모
+   드로 설정됩니다.
+
+coroutine loop.connect_write_pipe(protocol_factory, pipe)
+
+   이벤트 루프에 *pipe*의 쓰기용 끝을 등록합니다.
+
+   *protocol_factory* 는 반드시 asyncio 프로토콜 구현을 반환하는 콜러
+   블이어야 합니다.
+
+   *pipe*는 *파일류 객체*입니다.
+
+   쌍 "(transport, protocol)"를 반환합니다. 여기서 *transport*는
+   "WriteTransport" 인터페이스를 지원하고, *protocol*은
+   *protocol_factory*에 의해 인스턴스로 만들어진 객체입니다.
+
+   "SelectorEventLoop" 이벤트 루프를 사용하면, *pipe* 는 비 블로킹 모
+   드로 설정됩니다.
+
+참고:
+
+  윈도우에서 "SelectorEventLoop"는 위의 메서드들을 지원하지 않습니다.
+  윈도우에서는 대신 "ProactorEventLoop"를 사용하십시오.
+
+더 보기: "loop.subprocess_exec()" 와 "loop.subprocess_shell()" 메서드.
+
+
+유닉스 시그널
+-------------
+
+loop.add_signal_handler(signum, callback, *args)
+
+   *callback*을 *signum* 시그널의 처리기로 설정합니다.
+
+   콜백은 다른 대기 중인 콜백과 해당 이벤트 루프의 실행 가능한 코루틴
+   과 함께 *loop*에 의해 호출됩니다. "signal.signal()"을 사용하여 등록
+   된 시그널 처리기와 달리, 이 함수로 등록된 콜백은 이벤트 루프와 상호
+   작용할 수 있습니다.
+
+   시그널 번호가 유효하지 않거나 잡을 수 없으면 "ValueError" 를 발생시
+   킵니다. 처리기를 설정하는 데 문제가 있는 경우 "RuntimeError" 를 발
+   생시킵니다.
+
+   *callback* 에 키워드 인자를 전달하려면 "functools.partial()"를 사용
+   하십시오.
+
+   "signal.signal()"와 마찬가지로, 이 함수는 메인 스레드에서 호출되어
+   야 합니다.
+
+loop.remove_signal_handler(sig)
+
+   *sig* 시그널의 처리기를 제거합니다.
+
+   시그널 처리기가 제거되면 "True" 를, 주어진 시그널에 처리기가 설정되
+   지 않았으면 "False" 를 반환합니다.
+
+   Availability: Unix.
+
+더 보기: "signal" 모듈.
+
+
+스레드 또는 프로세스 풀에서 코드를 실행하기
+-------------------------------------------
+
+awaitable loop.run_in_executor(executor, func, *args)
+
+   지정된 실행기에서 *func* 가 호출되도록 배치합니다.
+
+   The *executor* argument should be an "concurrent.futures.Executor"
+   instance. The default executor is used if *executor* is "None".
+
+   예:
+
+      import asyncio
+      import concurrent.futures
+
+      def blocking_io():
+          # File operations (such as logging) can block the
+          # event loop: run them in a thread pool.
+          with open('/dev/urandom', 'rb') as f:
+              return f.read(100)
+
+      def cpu_bound():
+          # CPU-bound operations will block the event loop:
+          # in general it is preferable to run them in a
+          # process pool.
+          return sum(i * i for i in range(10 ** 7))
+
+      async def main():
+          loop = asyncio.get_running_loop()
+
+          ## Options:
+
+          # 1. Run in the default loop's executor:
+          result = await loop.run_in_executor(
+              None, blocking_io)
+          print('default thread pool', result)
+
+          # 2. Run in a custom thread pool:
+          with concurrent.futures.ThreadPoolExecutor() as pool:
+              result = await loop.run_in_executor(
+                  pool, blocking_io)
+              print('custom thread pool', result)
+
+          # 3. Run in a custom process pool:
+          with concurrent.futures.ProcessPoolExecutor() as pool:
+              result = await loop.run_in_executor(
+                  pool, cpu_bound)
+              print('custom process pool', result)
+
+      if __name__ == '__main__':
+          asyncio.run(main())
+
+   Note that the entry point guard ("if __name__ == '__main__'") is
+   required for option 3 due to the peculiarities of
+   "multiprocessing", which is used by "ProcessPoolExecutor". See Safe
+   importing of main module.
+
+   이 메서드는 "asyncio.Future" 객체를 반환합니다.
+
+   *func* 에 키워드 인자를 전달하려면 "functools.partial()"를 사용하십
+   시오.
+
+   버전 3.5.3에서 변경: "loop.run_in_executor()" 는 더는 자신이 만드는
+   스레드 풀 실행기의 "max_workers" 를 설정하지 않습니다. 대신 스레드
+   풀 실행기("ThreadPoolExecutor")가 스스로 기본값을 설정하도록 합니다
+   .
+
+loop.set_default_executor(executor)
+
+   Set *executor* as the default executor used by "run_in_executor()".
+   *executor* should be an instance of "ThreadPoolExecutor".
+
+   버전 3.8부터 폐지: Using an executor that is not an instance of
+   "ThreadPoolExecutor" is deprecated and will trigger an error in
+   Python 3.9.
+
+   *executor* must be an instance of
+   "concurrent.futures.ThreadPoolExecutor".
+
+
+에러 처리 API
+-------------
+
+이벤트 루프에서 예외를 처리하는 방법을 사용자 정의 할 수 있습니다.
+
+loop.set_exception_handler(handler)
+
+   *handler* 를 새 이벤트 루프 예외 처리기로 설정합니다.
+
+   *handler*가 "None" 이면, 기본 예외 처리기가 설정됩니다. 그렇지 않으
+   면, *handler*는 반드시 "(loop, context)" 와 일치하는 서명을 가진 콜
+   러블이어야 합니다. 여기서 "loop"는 활성 이벤트 루프에 대한 참조가
+   될 것이고, "context" 는 예외에 관한 세부 정보를 담고 있는 "dict" 객
+   체가 됩니다 (context에 대한 자세한 내용은
+   "call_exception_handler()" 문서를 참조하십시오).
+
+loop.get_exception_handler()
+
+   현재 예외 처리기를 반환하거나, 사용자 정의 예외 처리기가 설정되지
+   않았으면 "None" 을 반환합니다.
+
+   버전 3.5.2에 추가.
+
+loop.default_exception_handler(context)
+
+   기본 예외 처리기.
+
+   예외가 발생하고 예외 처리기가 설정되지 않았을 때 호출됩니다. 기본
+   동작으로 위임하려는 사용자 정의 예외 처리기가 호출할 수 있습니다.
+
+   *context* 매개 변수는 "call_exception_handler()" 에서와 같은 의미입
+   니다.
+
+loop.call_exception_handler(context)
+
+   현재 이벤트 루프 예외 처리기를 호출합니다.
+
+   *context* 는 다음 키를 포함하는 "dict" 객체입니다 (새 키가 미래의
+   파이썬 버전에서 추가될 수 있습니다):
+
+   * 'message': 에러 메시지;
+
+   * 'exception' (선택적): 예외 객체;
+
+   * 'future' (선택적): "asyncio.Future" 인스턴스;
+
+   * 'task' (선택적): "asyncio.Task" 인스턴스;
+
+   * 'handle' (선택적): "asyncio.Handle" 인스턴스;
+
+   * 'protocol' (선택적): 프로토콜 인스턴스;
+
+   * 'transport' (선택적): 트랜스포트 인스턴스;
+
+   * 'socket' (선택적): "socket.socket" 인스턴스;
+
+   * 'asyncgen' (optional): Asynchronous generator that caused
+        예외.
+
+   참고:
+
+     This method should not be overloaded in subclassed event loops.
+     For custom exception handling, use the "set_exception_handler()"
+     method.
+
+
+디버그 모드 활성화
+------------------
+
+loop.get_debug()
+
+   이벤트 루프의 디버그 모드("bool")를 가져옵니다.
+
+   기본값은 환경 변수 "PYTHONASYNCIODEBUG" 가 비어 있지 않은 문자열로
+   설정되면 "True" 이고, 그렇지 않으면 "False" 입니다.
+
+loop.set_debug(enabled: bool)
+
+   이벤트 루프의 디버그 모드를 설정합니다.
+
+   버전 3.7에서 변경: 이제 새로운 파이썬 개발 모드를 사용하여 디버그
+   모드를 활성화할 수도 있습니다.
+
+더 보기: asyncio의 디버그 모드.
+
+
+자식 프로세스 실행하기
+----------------------
+
+이 하위 절에서 설명하는 메서드는 저수준입니다. 일반적인 async/await 코
+드에서는 대신 고수준의 "asyncio.create_subprocess_shell()" 및
+"asyncio.create_subprocess_exec()" 편리 함수를 사용하는 것을 고려하십
+시오.
+
+참고:
+
+  윈도우에서, 기본 이벤트 루프 "ProactorEventLoop"는 자식 프로세스를
+  지원합니다, 반면에 "SelectorEventLoop"는 지원하지 않습니다. 자세한
+  내용은 윈도우에서의 자식 프로세스 지원을 참조하십시오.
+
+coroutine loop.subprocess_exec(protocol_factory, *args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+
+   *args*로 지정된 하나 이상의 문자열 인자로 서브 프로세스를 만듭니다.
+
+   *args*는 반드시 다음과 같은 것으로 표현되는 문자열의 목록이어야 합
+   니다:
+
+   * "str";
+
+   * 또는 파일 시스템 인코딩으로로 인코딩된 "bytes".
+
+   첫 번째 문자열은 프로그램 실행 파일을 지정하고, 나머지 문자열은 인
+   자를 지정합니다. 함께, 문자열 인자들은 프로그램의 "argv"를 구성합니
+   다.
+
+   이것은 "shell=False"와 문자열의 목록을 첫 번째 인자로 호출된 표준
+   라이브러리 "subprocess.Popen" 클래스와 유사합니다. 그러나 "Popen"이
+   문자열 목록인 단일 인자를 받아들이지만, *subprocess_exec*는 여러 문
+   자열 인자를 받아들입니다.
+
+   *protocol_factory*는 반드시 "asyncio.SubprocessProtocol" 클래스의
+   서브 클래스를 반환하는 콜러블이어야 합니다.
+
+   다른 매개 변수:
+
+   * *stdin*은 다음 중 하나일 수 있습니다:
+
+     * a file-like object representing a pipe to be connected to the
+       subprocess's standard input stream using "connect_write_pipe()"
+
+     * "subprocess.PIPE" 상수 (기본값), 새 파이프를 만들고 연결합니다,
+
+     * 서브 프로세스가 이 프로세스의 파일 기술자를 상속하게 하는 값
+       "None"
+
+     * 특수 "os.devnull" 파일이 사용될 것임을 나타내는
+       "subprocess.DEVNULL" 상수
+
+   * *stdout*은 다음 중 하나일 수 있습니다:
+
+     * a file-like object representing a pipe to be connected to the
+       subprocess's standard output stream using
+       "connect_write_pipe()"
+
+     * "subprocess.PIPE" 상수 (기본값), 새 파이프를 만들고 연결합니다,
+
+     * 서브 프로세스가 이 프로세스의 파일 기술자를 상속하게 하는 값
+       "None"
+
+     * 특수 "os.devnull" 파일이 사용될 것임을 나타내는
+       "subprocess.DEVNULL" 상수
+
+   * *stderr*은 다음 중 하나일 수 있습니다:
+
+     * a file-like object representing a pipe to be connected to the
+       subprocess's standard error stream using "connect_write_pipe()"
+
+     * "subprocess.PIPE" 상수 (기본값), 새 파이프를 만들고 연결합니다,
+
+     * 서브 프로세스가 이 프로세스의 파일 기술자를 상속하게 하는 값
+       "None"
+
+     * 특수 "os.devnull" 파일이 사용될 것임을 나타내는
+       "subprocess.DEVNULL" 상수
+
+     * "subprocess.STDOUT" 상수, 표준 에러 스트림을 프로세스의 표준 출
+       력 스트림에 연결합니다
+
+   * 다른 모든 키워드 인자는 해석 없이 "subprocess.Popen"로 전달됩니다
+     . 다만, *bufsize*, *universal_newlines*, *shell*, *text*,
+     *encoding* 및 *errors*는 예외인데, 이것들은 지정되지 않아야 합니
+     다.
+
+     "asyncio" 서브 프로세스 API는 스트림을 텍스트로 디코딩하는 것을
+     지원하지 않습니다. "bytes.decode()"는 스트림에서 반환된 바이트열
+     을 텍스트로 변환하는 데 사용될 수 있습니다.
+
+   다른 인자에 관한 설명은 "subprocess.Popen" 클래스의 생성자를 참조하
+   십시오.
+
+   "(transport, protocol)" 쌍을 반환합니다. 여기에서 *transport*는
+   "asyncio.SubprocessTransport" 베이스 클래스를 따르고, *protocol*은
+   *protocol_factory*에 의해 인스턴스로 만들어진 객체입니다.
+
+coroutine loop.subprocess_shell(protocol_factory, cmd, *, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+
+   플랫폼의 "셸" 구문을 사용하는 *cmd*로 자식 프로세스를 만듭니다.
+   *cmd*는 "str"이나 파일 시스템 인코딩으로 인코딩된 "bytes" 일 수 있
+   습니다.
+
+   이것은 "shell=True"로 호출된 표준 라이브러리 "subprocess.Popen" 클
+   래스와 유사합니다.
+
+   *protocol_factory*는 반드시 "SubprocessProtocol" 클래스의 서브 클래
+   스를 반환하는 콜러블이어야 합니다.
+
+   나머지 인자에 관한 자세한 내용은 "subprocess_exec()"를 참조하십시오
+   .
+
+   "(transport, protocol)" 쌍을 반환합니다. 여기서 *transport*는
+   "SubprocessTransport" 베이스 클래스를 따르고, *protocol*은
+   *protocol_factory*에 의해 인스턴스로 만들어진 객체입니다.
+
+참고:
+
+  셸 주입 취약점을 피하고자 모든 공백과 특수 문자를 적절하게 따옴표 처
+  리하는 것은 응용 프로그램의 책임입니다. "shlex.quote()" 함수를 사용
+  하여 셸 명령을 구성하는 데 사용될 문자열에 있는 공백 및 특수 문자를
+  올바르게 이스케이프 할 수 있습니다.
+
+
+콜백 핸들
+=========
+
+class asyncio.Handle
+
+   "loop.call_soon()", "loop.call_soon_threadsafe()" 에 의해 반환되는
+   콜백 래퍼 객체.
+
+   cancel()
+
+      콜백을 취소합니다. 콜백이 이미 취소되었거나 실행되었다면 이 메서
+      드는 아무 효과가 없습니다.
+
+   cancelled()
+
+      콜백이 취소되었으면 "True" 을 반환합니다.
+
+      버전 3.7에 추가.
+
+class asyncio.TimerHandle
+
+   "loop.call_later()" 및 "loop.call_at()" 에 의해 반환되는 콜백 래퍼
+   객체.
+
+   이 클래스는 "Handle"의 서브 클래스입니다.
+
+   when()
+
+      예약된 콜백 시간을 "float" 초로 반환합니다.
+
+      시간은 절대 타임스탬프입니다. "loop.time()" 과 같은 시간 참조를
+      사용합니다.
+
+      버전 3.7에 추가.
+
+
+서버 객체
+=========
+
+Server 객체는 "loop.create_server()", "loop.create_unix_server()",
+"start_server()", "start_unix_server()"로 만듭니다.
+
+Do not instantiate the class directly.
+
+class asyncio.Server
+
+   *Server* 객체는 비동기 컨텍스트 관리자입니다. "async with" 문에서
+   사용될 때, "async with" 문이 완료되면 서버 객체가 닫혀 있고 새 연결
+   을 받아들이지 않는다는 것이 보장됩니다:
+
+      srv = await loop.create_server(...)
+
+      async with srv:
+          # some code
+
+      # At this point, srv is closed and no longer accepts new connections.
+
+   버전 3.7에서 변경: Server 객체는 파이썬 3.7부터 비동기 컨텍스트 관
+   리자입니다.
+
+   close()
+
+      서버를 중지합니다: 리스닝 소켓을 닫고 "sockets" 어트리뷰트를
+      "None" 으로 설정합니다.
+
+      이미 받아들여진 클라이언트 연결을 나타내는 소켓은 열린 채로 있습
+      니다.
+
+      The server is closed asynchronously, use the "wait_closed()"
+      coroutine to wait until the server is closed.
+
+   get_loop()
+
+      서버 객체와 연관된 이벤트 루프를 반환합니다.
+
+      버전 3.7에 추가.
+
+   coroutine start_serving()
+
+      연결을 받아들이기 시작합니다.
+
+      This method is idempotent, so it can be called when the server
+      is already being serving.
+
+      "loop.create_server()"와 "asyncio.start_server()" 의
+      *start_serving* 키워드 전용 매개 변수는 즉시 연결을 받아들이지
+      않는 서버 객체를 만들 수 있도록 합니다. 이 경우
+      "Server.start_serving()", 또는 "Server.serve_forever()"를 사용하
+      여 Server가 연결을 받아들이기 시작하도록 할 수 있습니다.
+
+      버전 3.7에 추가.
+
+   coroutine serve_forever()
+
+      코루틴이 취소될 때까지 연결을 받아들이기 시작합니다.
+      "serve_forever" 태스크를 취소하면 서버가 닫힙니다.
+
+      이 메서드는 서버가 이미 연결을 받아들이고 있어도 호출 할 수 있습
+      니다. 하나의 *Server* 객체 당 하나의 "serve_forever" 태스크만 존
+      재할 수 있습니다.
+
+      예:
+
+         async def client_connected(reader, writer):
+             # Communicate with the client with
+             # reader/writer streams.  For example:
+             await reader.readline()
+
+         async def main(host, port):
+             srv = await asyncio.start_server(
+                 client_connected, host, port)
+             await srv.serve_forever()
+
+         asyncio.run(main('127.0.0.1', 0))
+
+      버전 3.7에 추가.
+
+   is_serving()
+
+      서버가 새 연결을 받아들이고 있으면 "True" 를 반환합니다.
+
+      버전 3.7에 추가.
+
+   coroutine wait_closed()
+
+      Wait until the "close()" method completes.
+
+   sockets
+
+      List of "socket.socket" objects the server is listening on.
+
+      버전 3.7에서 변경: 파이썬 3.7 이전에는 "Server.sockets" 가 서버
+      소켓의 내부 리스트를 직접 반환했습니다. 3.7에서는 그 리스트의 복
+      사본이 반환됩니다.
+
+
+이벤트 루프 구현
+================
+
+asyncio에는 두 가지 이벤트 루프 구현이 함께 제공됩니다:
+"SelectorEventLoop" 및 "ProactorEventLoop".
+
+By default asyncio is configured to use "SelectorEventLoop" on Unix
+and "ProactorEventLoop" on Windows.
+
+class asyncio.SelectorEventLoop
+
+   An event loop based on the "selectors" module.
+
+   주어진 플랫폼에서 사용할 수 있는 가장 효율적인 *selector*를 사용합
+   니다. 정확한 셀렉터 구현을 수동으로 구성하여 사용할 수도 있습니다.:
+
+      import asyncio
+      import selectors
+
+      class MyPolicy(asyncio.DefaultEventLoopPolicy):
+         def new_event_loop(self):
+            selector = selectors.SelectSelector()
+            return asyncio.SelectorEventLoop(selector)
+
+      asyncio.set_event_loop_policy(MyPolicy())
+
+   Availability: Unix, Windows.
+
+class asyncio.ProactorEventLoop
+
+   An event loop for Windows that uses "I/O Completion Ports" (IOCP).
+
+   Availability: Windows.
+
+   더 보기: MSDN documentation on I/O Completion Ports.
+
+class asyncio.AbstractEventLoop
+
+   asyncio 호환 이벤트 루프의 추상 베이스 클래스.
+
+   이벤트 루프 메서드 절은 "AbstractEventLoop"의 다른 구현이 정의해야
+   하는 모든 메서드를 나열합니다.
+
+
+예제
+====
+
+이 절의 모든 예는 **의도적으로** "loop.run_forever()" 및
+"loop.call_soon()"와 같은 저수준 이벤트 루프 API를 사용하는 방법을 보
+여줍니다. 현대 asyncio 응용 프로그램은 거의 이런 식으로 작성할 필요가
+없습니다; "asyncio.run()"과 같은 고수준 함수를 사용하는 것을 고려하십
+시오.
+
+
+call_soon()을 사용하는 Hello World
+----------------------------------
+
+콜백을 예약하기 위해 "loop.call_soon()" 메서드를 사용하는 예제. 콜백은
+""Hello World"" 를 표시한 다음 이벤트 루프를 중지합니다:
+
+   import asyncio
+
+   def hello_world(loop):
+       """A callback to print 'Hello World' and stop the event loop"""
+       print('Hello World')
+       loop.stop()
+
+   loop = asyncio.get_event_loop()
+
+   # Schedule a call to hello_world()
+   loop.call_soon(hello_world, loop)
+
+   # Blocking call interrupted by loop.stop()
+   try:
+       loop.run_forever()
+   finally:
+       loop.close()
+
+더 보기: 코루틴과 "run()" 함수로 작성된 유사한 Hello World 예제.
+
+
+call_later()로 현재 날짜를 표시합니다.
+--------------------------------------
+
+초마다 현재 날짜를 표시하는 콜백의 예입니다. 콜백은
+"loop.call_later()" 메서드를 사용하여 5초 동안 자신을 다시 예약한 다음
+이벤트 루프를 중지합니다:
+
+   import asyncio
+   import datetime
+
+   def display_date(end_time, loop):
+       print(datetime.datetime.now())
+       if (loop.time() + 1.0) < end_time:
+           loop.call_later(1, display_date, end_time, loop)
+       else:
+           loop.stop()
+
+   loop = asyncio.get_event_loop()
+
+   # Schedule the first call to display_date()
+   end_time = loop.time() + 5.0
+   loop.call_soon(display_date, end_time, loop)
+
+   # Blocking call interrupted by loop.stop()
+   try:
+       loop.run_forever()
+   finally:
+       loop.close()
+
+더 보기: 코루틴과 "run()" 함수로 작성된 유사한 현재 날짜 예제.
+
+
+파일 기술자에서 읽기 이벤트를 관찰하기
+--------------------------------------
+
+"loop.add_reader()" 메서드를 사용하여 파일 기술자가 데이터를 수신할 때
+까지 기다렸다가 이벤트 루프를 닫습니다:
+
+   import asyncio
+   from socket import socketpair
+
+   # Create a pair of connected file descriptors
+   rsock, wsock = socketpair()
+
+   loop = asyncio.get_event_loop()
+
+   def reader():
+       data = rsock.recv(100)
+       print("Received:", data.decode())
+
+       # We are done: unregister the file descriptor
+       loop.remove_reader(rsock)
+
+       # Stop the event loop
+       loop.stop()
+
+   # Register the file descriptor for read event
+   loop.add_reader(rsock, reader)
+
+   # Simulate the reception of data from the network
+   loop.call_soon(wsock.send, 'abc'.encode())
+
+   try:
+       # Run the event loop
+       loop.run_forever()
+   finally:
+       # We are done. Close sockets and the event loop.
+       rsock.close()
+       wsock.close()
+       loop.close()
+
+더 보기:
+
+  * 트랜스포트, 프로토콜, "loop.create_connection()" 메서드를 사용한
+    유사한 예제.
+
+  * 고수준의 "asyncio.open_connection()" 함수와 스트림을 사용하는 또
+    다른 유사한 예제.
+
+
+SIGINT 및 SIGTERM에 대한 시그널 처리기 설정
+-------------------------------------------
+
+(이 "signals" 예제는 유닉스에서만 작동합니다.)
+
+Register handlers for signals "SIGINT" and "SIGTERM" using the
+"loop.add_signal_handler()" method:
+
+   import asyncio
+   import functools
+   import os
+   import signal
+
+   def ask_exit(signame, loop):
+       print("got signal %s: exit" % signame)
+       loop.stop()
+
+   async def main():
+       loop = asyncio.get_running_loop()
+
+       for signame in {'SIGINT', 'SIGTERM'}:
+           loop.add_signal_handler(
+               getattr(signal, signame),
+               functools.partial(ask_exit, signame, loop))
+
+       await asyncio.sleep(3600)
+
+   print("Event loop running for 1 hour, press Ctrl+C to interrupt.")
+   print(f"pid {os.getpid()}: send SIGINT or SIGTERM to exit.")
+
+   asyncio.run(main())

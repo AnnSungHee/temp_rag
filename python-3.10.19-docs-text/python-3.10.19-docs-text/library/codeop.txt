@@ -1,0 +1,66 @@
+"codeop" --- Compile Python code
+********************************
+
+**소스 코드:** Lib/codeop.py
+
+======================================================================
+
+"codeop" 모듈은 "code" 모듈에서와같이 파이썬 읽기-평가-인쇄 루프를 에
+뮬레이트 할 수 있는 유틸리티를 제공합니다. 결과적으로, 모듈을 직접 사
+용하고 싶지 않을 것입니다; 여러분의 프로그램에 이러한 루프를 포함 시키
+려면 대신 "code" 모듈을 사용하는 것이 좋습니다.
+
+이 작업에는 두 가지 부분이 있습니다:
+
+1. 입력 줄이 파이썬 문장을 완성하는지 알려주는 것: 간단히 말해서,
+   '">>>"' 나 '"..."' 를 다음에 인쇄할지 알려주기.
+
+2. 사용자가 입력한 퓨처 문을 기억해서, 후속 입력을 컴파일할 때 이것들
+   이 효과가 있도록 하기.
+
+"codeop" 모듈은 이들을 각각 수행하는 방법과 이들을 모두 수행하는 방법
+을 제공합니다.
+
+단지 전자를 수행하려면:
+
+codeop.compile_command(source, filename='<input>', symbol='single')
+
+   *source*를 컴파일하려고 시도합니다. *source*는 파이썬 코드의 문자열
+   이어야 하며, *source*가 유효한 파이썬 코드면 코드 객체를 반환합니다
+   . 이 경우, 코드 객체의 filename 어트리뷰트는 *filename*가 되는데,
+   기본값은 "'<input>'"입니다. *source*가 *유효한 파이썬 코드가 *아니
+   지만* 유효한 파이썬 코드의 앞부분이면 "None"을 반환합니다.
+
+   *source*에 문제가 있으면, 예외가 발생합니다. 유효하지 않은 파이썬
+   구문이 있으면 "SyntaxError"가 발생하고, 유효하지 않은 리터럴이 있으
+   면 "OverflowError" 나 "ValueError"가 발생합니다.
+
+   *symbol* 인자는 *source*가 문장("'single'", 기본값)으로 컴파일되는
+   지, *문장*의 시퀀스("'exec'")로 컴파일되는지 또는 *표현식
+   *("'eval'")으로 컴파일되는지 결정합니다. 다른 값을 지정하면
+   "ValueError"가 발생합니다.
+
+   참고:
+
+     구문 분석기가 source의 끝에 도달하기 전에 성공적인 결과로 구문 분
+     석을 중지하는 것이 가능합니다 (하지만 대체로 그렇지 않습니다); 이
+     경우, 뒤따르는 기호는 에러를 유발하는 대신 무시 될 수 있습니다.
+     예를 들어, 백 슬래시 뒤에 두 개의 개행이 오면 그 뒤에 임의의 가비
+     지가 올 수 있습니다. 구문 분석기를 위한 API가 개선되면 이 문제가
+     해결될 것입니다.
+
+class codeop.Compile
+
+   Instances of this class have "__call__()" methods identical in
+   signature to the built-in function "compile()", but with the
+   difference that if the instance compiles program text containing a
+   "__future__" statement, the instance 'remembers' and compiles all
+   subsequent program texts with the statement in force.
+
+class codeop.CommandCompiler
+
+   Instances of this class have "__call__()" methods identical in
+   signature to "compile_command()"; the difference is that if the
+   instance compiles program text containing a "__future__" statement,
+   the instance 'remembers' and compiles all subsequent program texts
+   with the statement in force.

@@ -1,0 +1,462 @@
+"os.path" --- Common pathname manipulations
+*******************************************
+
+**Source code:** Lib/posixpath.py (for POSIX) and Lib/ntpath.py (for
+Windows).
+
+======================================================================
+
+이 모듈은 경로명에 유용한 함수를 구현합니다. 파일을 읽거나 쓰려면
+"open()"을 참조하고, 파일 시스템에 액세스하려면 "os" 모듈을 참조하십시
+오. 경로 매개 변수는 문자열, 바이트열 또는 "os.PathLike" 프로토콜을 구
+현하는 모든 객체로 전달할 수 있습니다.
+
+유닉스 셸과 달리, 파이썬은 어떤 *자동* 경로 확장도 수행하지 않습니다.
+"expanduser()"와 "expandvars()"와 같은 함수는 응용 프로그램이 셸과 같
+은 경로 확장을 원할 때 명시적으로 호출할 수 있습니다. ("glob" 모듈도
+참조하십시오.)
+
+더 보기: "pathlib" 모듈은 고수준의 경로 객체를 제공합니다.
+
+참고:
+
+  이 모든 함수는 매개 변수가 모두 바이트열 객체이거나 모두 문자열 객체
+  인 것만 허락합니다. 경로나 파일 이름이 반환되면, 결과는 같은 형의 객
+  체입니다.
+
+참고:
+
+  운영 체제마다 경로 이름 규칙이 다르기 때문에, 표준 라이브러리에 이
+  모듈의 여러 버전이 있습니다. "os.path" 모듈은 항상 파이썬이 실행 중
+  인 운영 체제에 적합한 경로 모듈이고, 따라서 지역 경로에 사용할 수 있
+  습니다. 그러나, *항상* 다른 형식 중 하나인 경로를 조작하려면 개별 모
+  듈을 임포트 해서 사용할 수도 있습니다. 그들은 모두 같은 인터페이스를
+  가지고 있습니다:
+
+  * 유닉스 스타일 경로는 "posixpath"
+
+  * 윈도우 경로는 "ntpath"
+
+버전 3.8에서 변경: "exists()", "lexists()", "isdir()", "isfile()",
+"islink()" 및 "ismount()"는 이제 OS 수준에서 표현할 수 없는 문자나 바
+이트를 포함하는 경로에 대해 예외를 발생시키는 대신 "False"를 반환합니
+다.
+
+os.path.abspath(path)
+
+   경로명 *path*의 정규화된 절대 버전을 반환합니다. 대부분의 플랫폼에
+   서, 이는 다음과 같이 "normpath()" 함수를 호출하는 것과 동등합니다:
+   "normpath(join(os.getcwd(), path))".
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.basename(path)
+
+   경로명 *path*의 기본 이름을 반환합니다. 이것은 *path*를 함수
+   "split()"에 전달하여 반환된 쌍의 두 번째 요소입니다. 이 함수의 결과
+   는 유닉스 **basename** 프로그램과 다름에 유의하십시오;
+   "'/foo/bar/'"에 대해 **basename**은 "'bar'"를 반환하고,
+   "basename()" 함수는 빈 문자열("''")을 반환합니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.commonpath(paths)
+
+   Return the longest common sub-path of each pathname in the sequence
+   *paths*.  Raise "ValueError" if *paths* contain both absolute and
+   relative pathnames, the *paths* are on the different drives or if
+   *paths* is empty.  Unlike "commonprefix()", this returns a valid
+   path.
+
+   Availability: Unix, Windows.
+
+   버전 3.5에 추가.
+
+   버전 3.6에서 변경: *경로류 객체*의 시퀀스를 받아들입니다.
+
+os.path.commonprefix(list)
+
+   *list*에 있는 모든 경로의 접두사인 가장 긴 경로 접두사(문자 단위로
+   취합니다)를 반환합니다. *list*가 비어 있으면, 빈 문자열("''")을 반
+   환합니다.
+
+   참고:
+
+     이 함수는 한 번에 한 문자씩 다루기 때문에 유효하지 않은 경로를 반
+     환할 수 있습니다. 유효한 경로를 얻으려면, "commonpath()"를 참조하
+     십시오.
+
+        >>> os.path.commonprefix(['/usr/lib', '/usr/local/lib'])
+        '/usr/l'
+
+        >>> os.path.commonpath(['/usr/lib', '/usr/local/lib'])
+        '/usr'
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.dirname(path)
+
+   경로명 *path*의 디렉터리 이름을 반환합니다. 이것은 *path*를 함수
+   "split()"에 전달하여 반환된 쌍의 첫 번째 요소입니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.exists(path)
+
+   *path*가 기존 경로나 열린 파일 기술자를 참조하면 "True"를 반환합니
+   다. 깨진 심볼릭 링크에 대해서는 "False"를 반환합니다. 일부 플랫폼에
+   서, *path*가 물리적으로 존재하더라도, 요청된 파일에 대해
+   "os.stat()"을 실행할 권한이 없으면 이 함수는 "False"를 반환할 수 있
+   습니다.
+
+   버전 3.3에서 변경: *path*는 이제 정수가 될 수 있습니다: 열린 파일
+   기술자이면 "True"가 반환되고, 그렇지 않으면 "False"가 반환됩니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.lexists(path)
+
+   Return "True" if *path* refers to an existing path. Returns "True"
+   for broken symbolic links.   Equivalent to "exists()" on platforms
+   lacking "os.lstat()".
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.expanduser(path)
+
+   유닉스와 윈도우에서, "~"나 "~user"의 초기 구성 요소가 해당 *사용자*
+   의 홈 디렉터리로 치환된 인자를 반환합니다.
+
+   유닉스에서, 초기 "~"는 환경 변수 "HOME"이 설정되어 있다면 그것으로
+   치환됩니다; 그렇지 않으면 현재 사용자의 홈 디렉터리가 내장 모듈
+   "pwd"를 통해 비밀번호 디렉터리에서 조회됩니다. 초기 "~user"는 비밀
+   번호 디렉터리에서 직접 조회됩니다.
+
+   윈도우에서, "USERPROFILE"이 설정되었으면 이것이 사용됩니다, 그렇지
+   않으면 "HOMEPATH"와 "HOMEDRIVE"의 조합이 사용됩니다. 초기 "~user"는
+   현재 사용자의 홈 디렉터리의 마지막 디렉터리 구성 요소가 "USERNAME"
+   과 일치하는지 확인하고, 일치하면 교체하는 방식으로 처리됩니다.
+
+   확장이 실패하거나 경로가 물결표로 시작하지 않으면, 경로는 변경되지
+   않은 상태로 반환됩니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+   버전 3.8에서 변경: 더는 윈도우에서 "HOME"을 사용하지 않습니다.
+
+os.path.expandvars(path)
+
+   환경 변수로 확장된 인자를 반환합니다. "$name"이나 "${name}" 형식의
+   부분 문자열이 환경 변수 *name*의 값으로 치환됩니다. 잘못된 변수 이
+   름과 존재하지 않는 변수에 대한 참조는 변경되지 않고 남습니다.
+
+   윈도우에서, "$name"과 "${name}" 외에 "%name%" 확장이 지원됩니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.getatime(path)
+
+   Return the time of last access of *path*.  The return value is a
+   floating point number giving the number of seconds since the epoch
+   (see the  "time" module).  Raise "OSError" if the file does not
+   exist or is inaccessible.
+
+os.path.getmtime(path)
+
+   Return the time of last modification of *path*.  The return value
+   is a floating point number giving the number of seconds since the
+   epoch (see the  "time" module). Raise "OSError" if the file does
+   not exist or is inaccessible.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.getctime(path)
+
+   시스템의 ctime을 반환하는데, 일부 시스템(가령 유닉스)에서는 마지막
+   메타 데이터 변경 시간이고, 다른 시스템(가령 윈도우)에서는 *path* 생
+   성 시간입니다. 반환 값은 에포크(epoch) 이후 초 수를 나타내는 부동
+   소수점 숫자입니다 ("time" 모듈을 참조하십시오). 파일이 없거나 액세
+   스할 수 없으면 "OSError"를 발생시킵니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.getsize(path)
+
+   *path*의 크기를 바이트 단위로 반환합니다. 파일이 없거나 액세스할 수
+   없으면 "OSError"를 발생시킵니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.isabs(path)
+
+   Return "True" if *path* is an absolute pathname.  On Unix, that
+   means it begins with a slash, on Windows that it begins with a
+   (back)slash after chopping off a potential drive letter.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.isfile(path)
+
+   *path*가 "존재하는" 일반 파일이면 "True"를 반환합니다. 이것은 심볼
+   릭 링크를 따르므로, 같은 경로에 대해 "islink()"와 "isfile()"이 모두
+   참일 수 있습니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.isdir(path)
+
+   *path*가 "존재하는" 디렉터리이면 "True"를 반환합니다. 이것은 심볼릭
+   링크를 따르므로, 같은 경로에 대해 "islink()"와 "isdir()"이 모두 참
+   일 수 있습니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.islink(path)
+
+   *path*가 심볼릭 링크인 "존재하는" 디렉터리 항목을 가리키면 "True"를
+   반환합니다. 파이썬 런타임에서 심볼릭 링크를 지원하지 않으면 항상
+   "False"입니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.ismount(path)
+
+   경로명 *path*가 *마운트 지점(mount point)*이면 "True"를 반환합니다:
+   다른 파일 시스템이 마운트된 파일 시스템의 지점. POSIX에서, 이 함수
+   는 *path*의 부모 "*path*/.."가 *path*와 다른 장치에 있는지, 또는
+   "*path*/.."와 *path*가 같은 장치에서 같은 i-노드를 가리키는지를 확
+   인합니다 --- 이 방법은 모든 유닉스와 POSIX 변형에서 마운트 지점을
+   감지해야 합니다. 같은 파일 시스템에서의 바인드 마운트(bind mounts)
+   를 신뢰성 있게 감지할 수 없습니다. 윈도우에서, 드라이브 문자 루트와
+   공유 UNC는 항상 마운트 지점이며, 다른 경로의 경우
+   "GetVolumePathName"을 호출해서 입력 경로와 다른지 봅니다.
+
+   버전 3.4에 추가: Support for detecting non-root mount points on
+   Windows.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.join(path, *paths)
+
+   하나 이상의 경로 세그먼트를 지능적으로 결합합니다. 반환 값은 마지막
+   을 제외한 *path*와 **paths*의 모든 멤버에 대해 비어 있지 않은 각 부
+   분 다음에 정확히 하나의 디렉터리 구분자가 오도록 이어붙인 것입니다.
+   즉 마지막 부분이 비어 있거나 구분자로 끝날 때만 결과가 구분자로 끝
+   남을 의미합니다. 세그먼트가 절대 경로이면 (윈도우에서는 드라이브와
+   루트가 모두 필요합니다), 그 앞의 모든 세그먼트가 무시되고 절대 경로
+   세그먼트에서부터 결합이 계속됩니다.
+
+   윈도우에서 루트 경로 세그먼트(예를 들어 "r'\foo'")를 만날 때 드라이
+   브가 재설정되지 않습니다. 세그먼트가 다른 드라이브이거나 절대 경로
+   면, 이전의 모든세그먼트는 무시되고 드라이브를 재설정합니다. 각 드라
+   이브에 현재 디렉터리가 있기 때문에, "os.path.join("c:", "foo")"는
+   "c:\foo"가 아니라 드라이브 "C:"의 현재 디렉터리에 상대적인 경로를
+   나타냅니다 ("c:foo").
+
+   버전 3.6에서 변경: *path*와 *paths*에 대해 *경로류 객체*를 받아들입
+   니다.
+
+os.path.normcase(path)
+
+   경로명의 대소 문자를 정규화합니다. 윈도우에서는, 경로명의 모든 문자
+   를 소문자로 변환하고, 슬래시도 역 슬래시로 변환합니다. 다른 운영 체
+   제에서는, 경로를 변경하지 않고 반환합니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.normpath(path)
+
+      중복된 구분자와 상위 수준 참조를 접어 경로명을 정규화합니다. 그
+      래서 "A//B", "A/B/", "A/./B" 및 "A/foo/../B"가 모두 "A/B"가 됩니
+      다. 이 문자열 조작은 심볼릭 링크가 포함된 경로의 의미를 변경할
+      수 있습니다. 윈도우에서는, 슬래시를 역 슬래시로 변환합니다. 대소
+      문자를 정규화하려면, "normcase()"를 사용하십시오.
+
+   참고:
+
+        On POSIX systems, in accordance with IEEE Std 1003.1 2013
+        Edition; 4.13 Pathname Resolution, if a pathname begins with
+        exactly two slashes, the first component following the leading
+        characters may be interpreted in an implementation-defined
+        manner, although more than two leading characters shall be
+        treated as a single character.
+
+     버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.realpath(path, *, strict=False)
+
+   Return the canonical path of the specified filename, eliminating
+   any symbolic links encountered in the path (if they are supported
+   by the operating system).
+
+   By default, the path is evaluated up to the first component that
+   does not exist, is a symlink loop, or whose evaluation raises
+   "OSError". All such components are appended unchanged to the
+   existing part of the path.
+
+   Some errors that are handled this way include "access denied", "not
+   a directory", or "bad argument to internal function". Thus, the
+   resulting path may be missing or inaccessible, may still contain
+   links or loops, and may traverse non-directories.
+
+   This behavior can be modified by keyword arguments:
+
+   If *strict* is "True", the first error encountered when evaluating
+   the path is re-raised. In particular, "FileNotFoundError" is raised
+   if *path* does not exist, or another "OSError" if it is otherwise
+   inaccessible.
+
+   If *strict* is "os.path.ALLOW_MISSING", errors other than
+   "FileNotFoundError" are re-raised (as with "strict=True"). Thus,
+   the returned path will not contain any symbolic links, but the
+   named file and some of its parent directories may be missing.
+
+   참고:
+
+     This function emulates the operating system's procedure for
+     making a path canonical, which differs slightly between Windows
+     and UNIX with respect to how links and subsequent path components
+     interact.Operating system APIs make paths canonical as needed, so
+     it's not normally necessary to call this function.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+   버전 3.8에서 변경: 윈도우에서 심볼릭 링크와 정션(junctions)이 이제
+   해석됩니다.
+
+   버전 3.10에서 변경: The *strict* parameter was added.
+
+   버전 3.10.18에서 변경: The "ALLOW_MISSING" value for the *strict*
+   parameter was added.
+
+os.path.ALLOW_MISSING
+
+   Special value used for the *strict* argument in "realpath()".
+
+   버전 3.10.18에 추가.
+
+os.path.relpath(path, start=os.curdir)
+
+   현재 디렉터리나 선택적 *start* 디렉터리로부터 *path*로의 상대 파일
+   경로를 반환합니다. 이것은 경로 계산입니다: *path*나 *start*의 존재
+   나 특성을 확인하기 위해 파일 시스템을 액세스하지 않습니다. 윈도우에
+   서, *path*와 *start*가 다른 드라이브에 있을 때 "ValueError"가 발생
+   합니다.
+
+   *start* defaults to "os.curdir".
+
+   Availability: Unix, Windows.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.samefile(path1, path2)
+
+   두 경로명 인자가 같은 파일이나 디렉터리를 가리키면 "True"를 반환합
+   니다. 장치 번호와 i-노드 번호로 결정하며 경로명 중 어느 하나에 대해
+   "os.stat()" 호출이 실패하면 예외를 발생시킵니다.
+
+   Availability: Unix, Windows.
+
+   버전 3.2에서 변경: 윈도우 지원이 추가되었습니다.
+
+   버전 3.4에서 변경: 윈도우는 이제 다른 모든 플랫폼과 같은 구현을 사
+   용합니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.sameopenfile(fp1, fp2)
+
+   파일 기술자 *fp1*과 *fp2*가 같은 파일을 가리키면 "True"를 반환합니
+   다.
+
+   Availability: Unix, Windows.
+
+   버전 3.2에서 변경: 윈도우 지원이 추가되었습니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.samestat(stat1, stat2)
+
+   stat 튜플 *stat1*과 *stat2*가 같은 파일을 가리키면 "True"를 반환합
+   니다. 이러한 구조는 "os.fstat()", "os.lstat()" 또는 "os.stat()"에
+   의해 반환되었을 수 있습니다. 이 함수는 "samefile()"과
+   "sameopenfile()"에서 사용하는 하부 비교를 구현합니다.
+
+   Availability: Unix, Windows.
+
+   버전 3.4에서 변경: 윈도우 지원이 추가되었습니다.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.split(path)
+
+   *path* 경로명을 "(head, tail)" 쌍으로 분할합니다. 여기서 *tail*은
+   마지막 경로명 구성 요소이고 *head*는 그 앞에 오는 모든 것입니다.
+   *tail* 부분에는 슬래시가 포함되지 않습니다; *path*가 슬래시로 끝나
+   면, *tail*은 비어 있습니다. *path*에 슬래시가 없으면, *head*는 비어
+   있습니다. *path*가 비어 있으면, *head*와 *tail*이 모두 비어 있습니
+   다. 후행 슬래시는 루트(하나나 그 이상의 슬래시로만 구성됩니다)가 아
+   니라면 *head*에서 제거됩니다. 모든 경우에, "join(head, tail)"은
+   *path*와 같은 위치에 대한 경로를 반환합니다 (하지만 문자열은 다를
+   수 있습니다). "dirname()"과 "basename()" 함수도 참조하십시오.
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.splitdrive(path)
+
+   경로명 *path*를 쌍 "(drive, tail)"로 분할합니다. 여기서 *drive*는
+   마운트 지점이나 빈 문자열입니다. 드라이브 지정을 사용하지 않는 시스
+   템에서 *drive*는 항상 빈 문자열입니다. 모든 경우에, "drive + tail"
+   은 *path*와 같습니다.
+
+   윈도우에서는, 경로명을 드라이브/UNC 공유 지점과 상대 경로로 분할합
+   니다.
+
+   경로에 드라이브 문자가 포함되면, drive는 콜론까지의 콜론을 포함하는
+   모든 것을 포함합니다:
+
+      >>> splitdrive("c:/dir")
+      ("c:", "/dir")
+
+   If the path contains a UNC path, drive will contain the host name
+   and share, up to but not including the fourth separator:
+
+      >>> splitdrive("//host/computer/dir")
+      ("//host/computer", "/dir")
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.splitext(path)
+
+   경로명 *path*를 "root + ext == path"가 되도록 쌍 "(root, ext)"로 분
+   할하는데, 확장자 *ext*는 비어 있거나 마침표로 시작하고 최대 하나의
+   마침표를 포함합니다.
+
+   If the path contains no extension, *ext* will be "''":
+
+      >>> splitext('bar')
+      ('bar', '')
+
+   If the path contains an extension, then *ext* will be set to this
+   extension, including the leading period. Note that previous periods
+   will be ignored:
+
+      >>> splitext('foo.bar.exe')
+      ('foo.bar', '.exe')
+      >>> splitext('/foo/bar.exe')
+      ('/foo/bar', '.exe')
+
+   Leading periods of the last component of the path are considered to
+   be part of the root:
+
+      >>> splitext('.cshrc')
+      ('.cshrc', '')
+      >>> splitext('/foo/....jpg')
+      ('/foo/....jpg', '')
+
+   버전 3.6에서 변경: *경로류 객체*를 받아들입니다.
+
+os.path.supports_unicode_filenames
+
+   (파일 시스템에 의해 부과된 제한 내에서) 임의의 유니코드 문자열을 파
+   일 이름으로 사용할 수 있으면 "True".

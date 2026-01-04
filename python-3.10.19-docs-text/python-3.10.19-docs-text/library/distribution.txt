@@ -1,0 +1,44 @@
+소프트웨어 패키징 및 배포
+*************************
+
+이 라이브러리는 파이썬 소프트웨어를 게시하고 설치하는 데 도움을 줍니다
+. 이 모듈은 파이썬 패키지 색인과 함께 작동하도록 설계되었지만, 로컬 색
+인 서버와 함께 사용할 수도, 색인 서버 없이 사용할 수도 있습니다.
+
+* "distutils" --- Building and installing Python modules
+
+* "ensurepip" --- Bootstrapping the "pip" installer
+
+  * 명령 줄 인터페이스
+
+  * 모듈 API
+
+* "venv" --- Creation of virtual environments
+
+  * 가상 환경 만들기
+
+  * How venvs work
+
+  * API
+
+  * "EnvBuilder" 확장 예제
+
+* "zipapp" --- Manage executable Python zip archives
+
+  * 기본 예
+
+  * 명령 줄 인터페이스
+
+  * 파이썬 API
+
+  * 예
+
+  * 인터프리터 지정하기
+
+  * zipapp으로 독립형 응용 프로그램 만들기
+
+    * Making a Windows executable
+
+    * 경고
+
+  * 파이썬 Zip 응용 프로그램 아카이브 형식

@@ -1,0 +1,291 @@
+정수 객체
+*********
+
+모든 정수는 임의의 크기의 "long" 정수 객체로 구현됩니다.
+
+에러 시, 대부분의 "PyLong_As*" API는 숫자와 구별할 수 없는 "(return
+type)-1"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"를 사용하
+십시오.
+
+type PyLongObject
+    * Part of the Limited API (as an opaque struct).*
+
+   이 "PyObject"의 서브 형은 파이썬 정수 객체를 나타냅니다.
+
+PyTypeObject PyLong_Type
+    * Part of the Stable ABI.*
+
+   이 "PyTypeObject" 인스턴스는 파이썬 정수 형을 나타냅니다. 이것은 파
+   이썬 계층의 "int"와 같은 객체입니다.
+
+int PyLong_Check(PyObject *p)
+
+   인자가 "PyLongObject"이나 "PyLongObject"의 서브 형이면 참을 반환합
+   니다. 이 함수는 항상 성공합니다.
+
+int PyLong_CheckExact(PyObject *p)
+
+   인자가 "PyLongObject" 이지만 "PyLongObject"의 서브 형이 아니면 참을
+   반환합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyLong_FromLong(long v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *v*로부터 새 "PyLongObject" 객체를 반환하거나, 실패하면 "NULL"을 반
+   환합니다.
+
+   현재 구현은 "-5"와 "256" 사이의 모든 정수에 대해 정수 객체의 배열을
+   유지합니다. 이 범위에 있는 정수를 만들면 실제로는 기존 객체에 대한
+   참조만 반환됩니다.
+
+PyObject *PyLong_FromUnsignedLong(unsigned long v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   C "unsigned long"으로부터 새 "PyLongObject" 객체를 반환하거나, 실패
+   하면 "NULL"을 반환합니다.
+
+PyObject *PyLong_FromSsize_t(Py_ssize_t v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   C "Py_ssize_t"로부터 새 "PyLongObject" 객체를 반환하거나, 실패하면
+   "NULL"을 반환합니다.
+
+PyObject *PyLong_FromSize_t(size_t v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   C "size_t"로부터 새 "PyLongObject" 객체를 반환하거나, 실패하면
+   "NULL"을 반환합니다.
+
+PyObject *PyLong_FromLongLong(long long v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   C "long long"으로부터 새 "PyLongObject" 객체를 반환하거나, 실패하면
+   "NULL"을 반환합니다.
+
+PyObject *PyLong_FromUnsignedLongLong(unsigned long long v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   C "unsigned long long"으로부터 새 "PyLongObject" 객체를 반환하거나,
+   실패하면 "NULL"을 반환합니다.
+
+PyObject *PyLong_FromDouble(double v)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   *v*의 정수 부분으로부터 새 "PyLongObject" 객체를 반환하거나, 실패하
+   면 "NULL"을 반환합니다.
+
+PyObject *PyLong_FromString(const char *str, char **pend, int base)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   Return a new "PyLongObject" based on the string value in *str*,
+   which is interpreted according to the radix in *base*.  If *pend*
+   is non-"NULL", **pend* will point to the first character in *str*
+   which follows the representation of the number.  If *base* is "0",
+   *str* is interpreted using the 정수 리터럴 definition; in this
+   case, leading zeros in a non-zero decimal number raises a
+   "ValueError". If *base* is not "0", it must be between "2" and
+   "36", inclusive.  Leading spaces and single underscores after a
+   base specifier and between digits are ignored.  If there are no
+   digits, "ValueError" will be raised.
+
+   더 보기:
+
+     Python methods "int.to_bytes()" and "int.from_bytes()" to convert
+     a "PyLongObject" to/from an array of bytes in base "256". You can
+     call those from C using "PyObject_CallMethod()".
+
+PyObject *PyLong_FromUnicodeObject(PyObject *u, int base)
+    *반환값: 새 참조.*
+
+   문자열 *u*에 있는 유니코드 숫자의 시퀀스를 파이썬 정숫값으로 변환합
+   니다.
+
+   버전 3.3에 추가.
+
+PyObject *PyLong_FromVoidPtr(void *p)
+    *반환값: 새 참조.** Part of the Stable ABI.*
+
+   포인터 *p*로부터 파이썬 정수를 만듭니다. 포인터 값은
+   "PyLong_AsVoidPtr()"를 사용하여 결괏값에서 조회할 수 있습니다.
+
+long PyLong_AsLong(PyObject *obj)
+    * Part of the Stable ABI.*
+
+   Return a C "long" representation of *obj*.  If *obj* is not an
+   instance of "PyLongObject", first call its "__index__()" method (if
+   present) to convert it to a "PyLongObject".
+
+   *obj*의 값이 "long"의 범위를 벗어나면 "OverflowError"를 발생시킵니
+   다.
+
+   에러 시 "-1"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"를
+   사용하십시오.
+
+   버전 3.8에서 변경: Use "__index__()" if available.
+
+   버전 3.10에서 변경: This function will no longer use "__int__()".
+
+long PyLong_AsLongAndOverflow(PyObject *obj, int *overflow)
+    * Part of the Stable ABI.*
+
+   Return a C "long" representation of *obj*.  If *obj* is not an
+   instance of "PyLongObject", first call its "__index__()" method (if
+   present) to convert it to a "PyLongObject".
+
+   If the value of *obj* is greater than "LONG_MAX" or less than
+   "LONG_MIN", set **overflow* to "1" or "-1", respectively, and
+   return "-1"; otherwise, set **overflow* to "0".  If any other
+   exception occurs set **overflow* to "0" and return "-1" as usual.
+
+   에러 시 "-1"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"를
+   사용하십시오.
+
+   버전 3.8에서 변경: Use "__index__()" if available.
+
+   버전 3.10에서 변경: This function will no longer use "__int__()".
+
+long long PyLong_AsLongLong(PyObject *obj)
+    * Part of the Stable ABI.*
+
+   Return a C "long long" representation of *obj*.  If *obj* is not an
+   instance of "PyLongObject", first call its "__index__()" method (if
+   present) to convert it to a "PyLongObject".
+
+   *obj*의 값이 "long long"의 범위를 벗어나면 "OverflowError"를 발생시
+   킵니다.
+
+   에러 시 "-1"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"를
+   사용하십시오.
+
+   버전 3.8에서 변경: Use "__index__()" if available.
+
+   버전 3.10에서 변경: This function will no longer use "__int__()".
+
+long long PyLong_AsLongLongAndOverflow(PyObject *obj, int *overflow)
+    * Part of the Stable ABI.*
+
+   Return a C "long long" representation of *obj*.  If *obj* is not an
+   instance of "PyLongObject", first call its "__index__()" method (if
+   present) to convert it to a "PyLongObject".
+
+   If the value of *obj* is greater than "LLONG_MAX" or less than
+   "LLONG_MIN", set **overflow* to "1" or "-1", respectively, and
+   return "-1"; otherwise, set **overflow* to "0".  If any other
+   exception occurs set **overflow* to "0" and return "-1" as usual.
+
+   에러 시 "-1"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"를
+   사용하십시오.
+
+   버전 3.2에 추가.
+
+   버전 3.8에서 변경: Use "__index__()" if available.
+
+   버전 3.10에서 변경: This function will no longer use "__int__()".
+
+Py_ssize_t PyLong_AsSsize_t(PyObject *pylong)
+    * Part of the Stable ABI.*
+
+   *pylong*의 C "Py_ssize_t" 표현을 반환합니다. *pylong*은
+   "PyLongObject"의 인스턴스여야 합니다.
+
+   *pylong*의 값이 "Py_ssize_t"의 범위를 벗어나면 "OverflowError"를 발
+   생시킵니다.
+
+   에러 시 "-1"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"를
+   사용하십시오.
+
+unsigned long PyLong_AsUnsignedLong(PyObject *pylong)
+    * Part of the Stable ABI.*
+
+   *pylong*의 C "unsigned long" 표현을 반환합니다. *pylong*은
+   "PyLongObject"의 인스턴스여야 합니다.
+
+   *pylong*의 값이 "unsigned long"의 범위를 벗어나면 "OverflowError"를
+   발생시킵니다.
+
+   에러 시 "(unsigned long)-1"을 반환합니다. 모호성을 제거하려면
+   "PyErr_Occurred()"를 사용하십시오.
+
+size_t PyLong_AsSize_t(PyObject *pylong)
+    * Part of the Stable ABI.*
+
+   *pylong*의 C "size_t" 표현을 반환합니다. *pylong*은 "PyLongObject"
+   의 인스턴스여야 합니다.
+
+   *pylong*의 값이 "size_t"의 범위를 벗어나면 "OverflowError"를 발생시
+   킵니다.
+
+   에러 시 "(size_t)-1"을 반환합니다. 모호성을 제거하려면
+   "PyErr_Occurred()"를 사용하십시오.
+
+unsigned long long PyLong_AsUnsignedLongLong(PyObject *pylong)
+    * Part of the Stable ABI.*
+
+   *pylong*의 C "unsigned long long" 표현을 반환합니다. *pylong*은
+   "PyLongObject"의 인스턴스여야 합니다.
+
+   *pylong*의 값이 "unsigned long long"의 범위를 벗어나면
+   "OverflowError"를 발생시킵니다.
+
+   에러 시 "(unsigned long long)-1"을 반환합니다. 모호성을 제거하려면
+   "PyErr_Occurred()"를 사용하십시오.
+
+   버전 3.1에서 변경: 음의 *pylong*는 이제 "TypeError"가 아니라
+   "OverflowError"를 발생시킵니다.
+
+unsigned long PyLong_AsUnsignedLongMask(PyObject *obj)
+    * Part of the Stable ABI.*
+
+   Return a C "unsigned long" representation of *obj*.  If *obj* is
+   not an instance of "PyLongObject", first call its "__index__()"
+   method (if present) to convert it to a "PyLongObject".
+
+   *obj*의 값이 "unsigned long"의 범위를 벗어나면, 그 값의 모듈로
+   "ULONG_MAX + 1" 환원을 반환합니다.
+
+   에러 시 "(unsigned long)-1"을 반환합니다. 모호성을 제거하려면
+   "PyErr_Occurred()"를 사용하십시오.
+
+   버전 3.8에서 변경: Use "__index__()" if available.
+
+   버전 3.10에서 변경: This function will no longer use "__int__()".
+
+unsigned long long PyLong_AsUnsignedLongLongMask(PyObject *obj)
+    * Part of the Stable ABI.*
+
+   Return a C "unsigned long long" representation of *obj*.  If *obj*
+   is not an instance of "PyLongObject", first call its "__index__()"
+   method (if present) to convert it to a "PyLongObject".
+
+   *obj*의 값이 "unsigned long long"의 범위를 벗어나면, 그 값의 모듈로
+   "ULLONG_MAX + 1" 환원을 반환합니다.
+
+   에러 시 "(unsigned long long)-1"을 반환합니다. 모호성을 제거하려면
+   "PyErr_Occurred()"를 사용하십시오.
+
+   버전 3.8에서 변경: Use "__index__()" if available.
+
+   버전 3.10에서 변경: This function will no longer use "__int__()".
+
+double PyLong_AsDouble(PyObject *pylong)
+    * Part of the Stable ABI.*
+
+   *pylong*의 C "double" 표현을 반환합니다. *pylong*은 "PyLongObject"
+   의 인스턴스여야 합니다.
+
+   *pylong*의 값이 "double"의 범위를 벗어나면 "OverflowError"를 발생시
+   킵니다.
+
+   에러 시 "-1.0"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"
+   를 사용하십시오.
+
+void *PyLong_AsVoidPtr(PyObject *pylong)
+    * Part of the Stable ABI.*
+
+   파이썬 정수 *pylong*을 C "void" 포인터로 변환합니다. *pylong*을 변
+   환할 수 없으면, "OverflowError"가 발생합니다. 이것은
+   "PyLong_FromVoidPtr()"로 만들어진 값에 대해서만 사용할 수 있는
+   "void" 포인터를 생성하는 것이 보장됩니다.
+
+   에러 시 "NULL"을 반환합니다. 모호성을 제거하려면 "PyErr_Occurred()"
+   를 사용하십시오.

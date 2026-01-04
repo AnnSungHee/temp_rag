@@ -1,0 +1,1426 @@
+"xml.etree.ElementTree" --- The ElementTree XML API
+***************************************************
+
+**소스 코드:** Lib/xml/etree/ElementTree.py
+
+======================================================================
+
+"xml.etree.ElementTree" 모듈은 XML 데이터를 구문 분석하고 만들기 위한
+단순하고 효율적인 API를 구현합니다.
+
+버전 3.3에서 변경: 이 모듈은 가능할 때마다 빠른 구현을 사용합니다.
+
+버전 3.3부터 폐지: The "xml.etree.cElementTree" module is deprecated.
+
+경고:
+
+  "xml.etree.ElementTree" 모듈은 악의적으로 구성된 데이터로부터 안전하
+  지 않습니다. 신뢰할 수 없거나 인증되지 않은 데이터를 구문 분석해야
+  하면 XML 취약점을 참조하십시오.
+
+
+자습서
+======
+
+이것은 "xml.etree.ElementTree"(줄여서 "ET")를 사용하기 위한 간단한 자
+습서입니다. 목표는 모듈의 일부 빌딩 블록과 기본 개념을 예시하는 것입니
+다.
+
+
+XML 트리와 엘리먼트
+-------------------
+
+XML은 본질적으로 위계적(hierarchical) 데이터 형식이며, 이를 나타내는
+가장 자연스러운 방법은 트리를 사용하는 것입니다. "ET"에는 이 목적을 위
+한 두 가지 클래스가 있습니다 - "ElementTree"는 전체 XML 문서를 트리로
+나타내고, "Element"는 이 트리에 있는 단일 노드를 나타냅니다. 전체 문서
+와의 상호 작용(파일 읽기와 쓰기)은 일반적으로 "ElementTree" 수준에서
+수행됩니다. 단일 XML 엘리먼트와 해당 서브 엘리먼트와의 상호 작용은
+"Element" 수준에서 수행됩니다.
+
+
+XML 구문 분석하기
+-----------------
+
+We'll be using the following XML document as the sample data for this
+section:
+
+   <?xml version="1.0"?>
+   <data>
+       <country name="Liechtenstein">
+           <rank>1</rank>
+           <year>2008</year>
+           <gdppc>141100</gdppc>
+           <neighbor name="Austria" direction="E"/>
+           <neighbor name="Switzerland" direction="W"/>
+       </country>
+       <country name="Singapore">
+           <rank>4</rank>
+           <year>2011</year>
+           <gdppc>59900</gdppc>
+           <neighbor name="Malaysia" direction="N"/>
+       </country>
+       <country name="Panama">
+           <rank>68</rank>
+           <year>2011</year>
+           <gdppc>13600</gdppc>
+           <neighbor name="Costa Rica" direction="W"/>
+           <neighbor name="Colombia" direction="E"/>
+       </country>
+   </data>
+
+파일을 읽어서 이 데이터를 가져올 수 있습니다:
+
+   import xml.etree.ElementTree as ET
+   tree = ET.parse('country_data.xml')
+   root = tree.getroot()
+
+또는 문자열에서 직접:
+
+   root = ET.fromstring(country_data_as_string)
+
+"fromstring()"은 문자열에서 "Element"로 XML을 직접 구문 분석하는데, 구
+문 분석된 트리의 루트 엘리먼트입니다. 다른 구문 분석 함수는
+"ElementTree"를 만들 수 있습니다. 설명서를 확인하십시오.
+
+"Element"로서, "root"에는 태그(tag)와 어트리뷰트 딕셔너리가 있습니다:
+
+   >>> root.tag
+   'data'
+   >>> root.attrib
+   {}
+
+또한 우리가 이터레이트 할 수 있는 자식 노드가 있습니다:
+
+   >>> for child in root:
+   ...     print(child.tag, child.attrib)
+   ...
+   country {'name': 'Liechtenstein'}
+   country {'name': 'Singapore'}
+   country {'name': 'Panama'}
+
+자식은 중첩되며, 인덱스로 특정 자식 노드에 액세스 할 수 있습니다:
+
+   >>> root[0][1].text
+   '2008'
+
+참고:
+
+  XML 입력의 모든 엘리먼트가 구문 분석된 트리의 엘리먼트가 되는 것은
+  아닙니다. 현재, 이 모듈은 입력에서 XML 주석, 처리 명령(processing
+  instructions) 및 문서 형 선언(document type declarations)을 건너뜁니
+  다. 그런데도, XML 텍스트를 구문 분석하는 대신 이 모듈의 API를 사용하
+  여 만들어진 트리에는 주석과 처리 명령이 있을 수 있습니다; 이들은 XML
+  출력을 생성할 때 포함됩니다. 사용자 정의 "TreeBuilder" 인스턴스를
+  "XMLParser" 생성자에 전달하여 문서 형 선언에 액세스 할 수 있습니다.
+
+
+비 블로킹 구문 분석을 위한 풀(pull) API
+---------------------------------------
+
+이 모듈이 제공하는 대부분의 구문 분석 함수는 결과를 반환하기 전에 전체
+문서를 한 번에 읽도록 요구합니다. "XMLParser"를 사용하고 점진적으로 데
+이터를 공급하는 것이 가능하지만, 콜백 대상에 메서드를 호출하는 푸시
+(push) API로, 대부분의 경우 너무 저 수준이고 불편합니다. 때로 사용자가
+실제로 원하는 것은 완전히 구성된 "Element" 객체의 편리함을 즐기면서 연
+산을 블로킹하지 않고 XML을 점진적으로 구문 분석할 수 있는 것입니다.
+
+이를 위한 가장 강력한 도구는 "XMLPullParser" 입니다. XML 데이터를 얻기
+위해 블로킹 읽기가 필요하지 않으며, 대신 "XMLPullParser.feed()" 호출을
+통해 점진적으로 데이터가 제공됩니다. 구문 분석된 XML 엘리먼트를 얻으려
+면, "XMLPullParser.read_events()"를 호출하십시오. 예를 들면 다음과 같
+습니다:
+
+   >>> parser = ET.XMLPullParser(['start', 'end'])
+   >>> parser.feed('<mytag>sometext')
+   >>> list(parser.read_events())
+   [('start', <Element 'mytag' at 0x7fa66db2be58>)]
+   >>> parser.feed(' more text</mytag>')
+   >>> for event, elem in parser.read_events():
+   ...     print(event)
+   ...     print(elem.tag, 'text=', elem.text)
+   ...
+   end
+
+명백한 사용 사례는 XML 데이터가 소켓에서 수신되거나 일부 저장 장치에서
+점진적으로 읽히는 비 블로킹 방식으로 작동하는 응용 프로그램입니다. 이
+럴 때, 블로킹 읽기는 허용되지 않습니다.
+
+"XMLPullParser"는 매우 유연하기 때문에 더 단순한 사용 사례에 사용하기
+불편할 수 있습니다. 응용 프로그램이 XML 데이터 읽기를 블로킹해도 상관
+없지만, 여전히 점진적인 구문 분석 기능이 필요하면, "iterparse()"를 살
+펴보십시오. 큰 XML 문서를 읽을 때 메모리에 전체를 저장하지 않으려는 경
+우 유용할 수 있습니다.
+
+Where *immediate* feedback through events is wanted, calling method
+"XMLPullParser.flush()" can help reduce delay; please make sure to
+study the related security notes.
+
+
+흥미로운 엘리먼트 찾기
+----------------------
+
+"Element"에는 그 아래의 모든 서브 트리(자식, 자식의 자식 등)를 재귀적
+으로 이터레이트 하는 데 도움을 주는 유용한 메서드가 있습니다. 예를 들
+어, "Element.iter()":
+
+   >>> for neighbor in root.iter('neighbor'):
+   ...     print(neighbor.attrib)
+   ...
+   {'name': 'Austria', 'direction': 'E'}
+   {'name': 'Switzerland', 'direction': 'W'}
+   {'name': 'Malaysia', 'direction': 'N'}
+   {'name': 'Costa Rica', 'direction': 'W'}
+   {'name': 'Colombia', 'direction': 'E'}
+
+"Element.findall()"은 현재 엘리먼트의 직접적인 자식인 태그가 있는 엘리
+먼트만 찾습니다. "Element.find()"는 특정 태그가 있는 *첫 번째* 자식을
+찾고, "Element.text"는 엘리먼트의 텍스트 내용에 액세스합니다.
+"Element.get()"은 엘리먼트의 어트리뷰트에 액세스합니다:
+
+   >>> for country in root.findall('country'):
+   ...     rank = country.find('rank').text
+   ...     name = country.get('name')
+   ...     print(name, rank)
+   ...
+   Liechtenstein 1
+   Singapore 4
+   Panama 68
+
+XPath를 사용하면 찾을 엘리먼트를 더 정교하게 지정할 수 있습니다.
+
+
+XML 파일 수정하기
+-----------------
+
+"ElementTree"는 XML 문서를 구축하고 파일에 쓰는 간단한 방법을 제공합니
+다. "ElementTree.write()" 메서드가 이 용도입니다.
+
+일단 만들어지면, "Element" 객체는 필드(가령 "Element.text")를 직접 변
+경하고, 어트리뷰트를 추가하고 수정("Element.set()" 메서드)하는 것뿐만
+아니라 새로운 자식을 추가하여 (예를 들어 "Element.append()") 조작 할
+수 있습니다.
+
+각각의 국가(country)의 순위(rank)에 1을 더하고, rank 엘리먼트에
+"updated" 어트리뷰트를 추가하고 싶다고 합시다:
+
+   >>> for rank in root.iter('rank'):
+   ...     new_rank = int(rank.text) + 1
+   ...     rank.text = str(new_rank)
+   ...     rank.set('updated', 'yes')
+   ...
+   >>> tree.write('output.xml')
+
+우리의 XML은 이제 다음과 같습니다:
+
+   <?xml version="1.0"?>
+   <data>
+       <country name="Liechtenstein">
+           <rank updated="yes">2</rank>
+           <year>2008</year>
+           <gdppc>141100</gdppc>
+           <neighbor name="Austria" direction="E"/>
+           <neighbor name="Switzerland" direction="W"/>
+       </country>
+       <country name="Singapore">
+           <rank updated="yes">5</rank>
+           <year>2011</year>
+           <gdppc>59900</gdppc>
+           <neighbor name="Malaysia" direction="N"/>
+       </country>
+       <country name="Panama">
+           <rank updated="yes">69</rank>
+           <year>2011</year>
+           <gdppc>13600</gdppc>
+           <neighbor name="Costa Rica" direction="W"/>
+           <neighbor name="Colombia" direction="E"/>
+       </country>
+   </data>
+
+"Element.remove()"를 사용하여 엘리먼트를 제거할 수 있습니다. rank가 50
+보다 큰 모든 국가를 제거하려고 한다고 합시다:
+
+   >>> for country in root.findall('country'):
+   ...     # using root.findall() to avoid removal during traversal
+   ...     rank = int(country.find('rank').text)
+   ...     if rank > 50:
+   ...         root.remove(country)
+   ...
+   >>> tree.write('output.xml')
+
+이터레이션 하는 동안 동시 수정은 파이썬 리스트나 딕셔너리를 이터레이션
+할 때와 마찬가지로 문제를 유발할 수 있음에 유의하십시오. 따라서, 이 예
+제에서는 먼저 "root.findall()"로 일치하는 모든 엘리먼트를 수집한 다음,
+일치 항목 리스트를 이터레이트 합니다.
+
+우리의 XML은 이제 다음과 같습니다:
+
+   <?xml version="1.0"?>
+   <data>
+       <country name="Liechtenstein">
+           <rank updated="yes">2</rank>
+           <year>2008</year>
+           <gdppc>141100</gdppc>
+           <neighbor name="Austria" direction="E"/>
+           <neighbor name="Switzerland" direction="W"/>
+       </country>
+       <country name="Singapore">
+           <rank updated="yes">5</rank>
+           <year>2011</year>
+           <gdppc>59900</gdppc>
+           <neighbor name="Malaysia" direction="N"/>
+       </country>
+   </data>
+
+
+XML 문서 구축하기
+-----------------
+
+"SubElement()" 함수는 주어진 엘리먼트에 대해 새로운 서브 엘리먼트를 만
+드는 편리한 방법을 제공합니다:
+
+   >>> a = ET.Element('a')
+   >>> b = ET.SubElement(a, 'b')
+   >>> c = ET.SubElement(a, 'c')
+   >>> d = ET.SubElement(c, 'd')
+   >>> ET.dump(a)
+   <a><b /><c><d /></c></a>
+
+
+이름 공간이 있는 XML 구문 분석하기
+----------------------------------
+
+XML 입력에 이름 공간(namespaces)이 있으면, "prefix:sometag" 형식의 접
+두사가 있는 태그와 어트리뷰트는 "{uri}sometag"로 확장되는데, 여기서
+*prefix*는 전체 *URI*로 대체됩니다. 또한 기본 이름 공간(default
+namespace)이 있으면, 그 전체 URI가 접두사가 없는 모든 태그 앞에 추가됩
+니다.
+
+다음은 두 개의 이름 공간을 통합한 XML 예제입니다, 하나는 접두사가
+"fictional"이고 다른 하나는 기본 이름 공간으로 사용됩니다:
+
+   <?xml version="1.0"?>
+   <actors xmlns:fictional="http://characters.example.com"
+           xmlns="http://people.example.com">
+       <actor>
+           <name>John Cleese</name>
+           <fictional:character>Lancelot</fictional:character>
+           <fictional:character>Archie Leach</fictional:character>
+       </actor>
+       <actor>
+           <name>Eric Idle</name>
+           <fictional:character>Sir Robin</fictional:character>
+           <fictional:character>Gunther</fictional:character>
+           <fictional:character>Commander Clement</fictional:character>
+       </actor>
+   </actors>
+
+이 XML 예제를 검색하고 탐색하는 한 가지 방법은 "find()"나 "findall()"
+의 xpath에 있는 모든 태그나 어트리뷰트에 URI를 수동으로 추가하는 것입
+니다:
+
+   root = fromstring(xml_text)
+   for actor in root.findall('{http://people.example.com}actor'):
+       name = actor.find('{http://people.example.com}name')
+       print(name.text)
+       for char in actor.findall('{http://characters.example.com}character'):
+           print(' |-->', char.text)
+
+이름 공간이 있는 XML 예제를 검색하는 더 좋은 방법은 여러분 자신의 접두
+사가 담긴 딕셔너리를 만들고 검색 함수에서 사용하는 것입니다:
+
+   ns = {'real_person': 'http://people.example.com',
+         'role': 'http://characters.example.com'}
+
+   for actor in root.findall('real_person:actor', ns):
+       name = actor.find('real_person:name', ns)
+       print(name.text)
+       for char in actor.findall('role:character', ns):
+           print(' |-->', char.text)
+
+이 두 가지 방법 모두 다음과 같이 출력합니다:
+
+   John Cleese
+    |--> Lancelot
+    |--> Archie Leach
+   Eric Idle
+    |--> Sir Robin
+    |--> Gunther
+    |--> Commander Clement
+
+
+XPath 지원
+==========
+
+이 모듈은 트리에서 엘리먼트를 찾기 위해 XPath 표현식을 제한적으로 지원
+합니다. 목표는 축약된 문법의 작은 부분 집합을 지원하는 것입니다; 완전
+한 XPath 엔진은 이 모듈의 범위를 벗어납니다.
+
+
+예
+--
+
+다음은 모듈의 일부 XPath 기능을 보여주는 예입니다. XML 구문 분석하기
+섹션의 "countrydata" XML 문서를 사용할 것입니다:
+
+   import xml.etree.ElementTree as ET
+
+   root = ET.fromstring(countrydata)
+
+   # Top-level elements
+   root.findall(".")
+
+   # All 'neighbor' grand-children of 'country' children of the top-level
+   # elements
+   root.findall("./country/neighbor")
+
+   # Nodes with name='Singapore' that have a 'year' child
+   root.findall(".//year/..[@name='Singapore']")
+
+   # 'year' nodes that are children of nodes with name='Singapore'
+   root.findall(".//*[@name='Singapore']/year")
+
+   # All 'neighbor' nodes that are the second child of their parent
+   root.findall(".//neighbor[2]")
+
+이름 공간이 있는 XML의 경우, 일반적인 정규화된 "{namespace}tag" 표기법
+을 사용하십시오:
+
+   # All dublin-core "title" tags in the document
+   root.findall(".//{http://purl.org/dc/elements/1.1/}title")
+
+
+지원되는 XPath 문법
+-------------------
+
++-------------------------+--------------------------------------------------------+
+| 문법                    | 의미                                                   |
+|=========================|========================================================|
+| "tag"                   | 주어진 태그를 가진 모든 자식 엘리먼트를 선택합니다. 예 |
+|                         | 를 들어, "spam" 은 "spam"이라는 모든 자식 엘리먼트를   |
+|                         | 선택하고, "spam/egg"는 "spam"이라 는 모든 자식의 "egg" |
+|                         | 라는 모든 손자를 선택합니다. "{namespace}*"는 지정 된  |
+|                         | 이름 공간의 모든 태그를 선택하고, "{*}spam"은 모든 이  |
+|                         | 름 공간의 (또 는 이름 공간이 없는) "spam"이라는 태그를 |
+|                         | 선택하고, "{}*"은 이름 공간이 없는 태그만 선택합니다.  |
+|                         | 버전 3.8에서 변경: 애스터리스크 와일드카드 지원이 추가 |
+|                         | 되었습니다.                                            |
++-------------------------+--------------------------------------------------------+
+| "*"                     | 주석과 처리 명령을 포함한 모든 자식 엘리먼트를 선택합  |
+|                         | 니다. 예를 들어, "*/egg"는 "egg"라는 모든 손자를 선택  |
+|                         | 합니다.                                                |
++-------------------------+--------------------------------------------------------+
+| "."                     | 현재 노드를 선택합니다. 상대 경로임을 나타내기 위해 경 |
+|                         | 로의 시작 부분에 서 주로 유용합니다.                   |
++-------------------------+--------------------------------------------------------+
+| "//"                    | 현재 엘리먼트 아래의 모든 수준에서 모든 서브 엘리먼트  |
+|                         | 를 선택합니다. 예 를 들어, ".//egg"는 전체 트리에서 모 |
+|                         | 든 "egg" 엘리먼트를 선택합니다.                        |
++-------------------------+--------------------------------------------------------+
+| ".."                    | 부모 엘리먼트를 선택합니다. 경로가 (엘리먼트 "find"가  |
+|                         | 호출된) 시작 엘 리먼트의 조상에 도달하려고 하면 "None" |
+|                         | 을 반환합니다.                                         |
++-------------------------+--------------------------------------------------------+
+| "[@attrib]"             | 주어진 어트리뷰트를 가진 모든 엘리먼트를 선택합니다.   |
++-------------------------+--------------------------------------------------------+
+| "[@attrib='value']"     | 주어진 어트리뷰트가 주어진 값을 갖는 모든 엘리먼트를   |
+|                         | 선택합니다. 값은 따옴표를 포함할 수 없습니다.          |
++-------------------------+--------------------------------------------------------+
+| "[@attrib!='value']"    | 주어진 어트리뷰트가 주어진 값을 갖지 않는 모든 엘리먼  |
+|                         | 트를 선택합니다. 값은 따옴표를 포함할 수 없습니다.  버 |
+|                         | 전 3.10에 추가.                                        |
++-------------------------+--------------------------------------------------------+
+| "[tag]"                 | "tag"라는 자식이 있는 모든 엘리먼트를 선택합니다. 직계 |
+|                         | 자식만 지원됩니 다.                                    |
++-------------------------+--------------------------------------------------------+
+| "[.='text']"            | 자손을 포함한 전체 텍스트 내용이 주어진 "text"와 같은  |
+|                         | 모든 엘리먼트를 선택합니다.  버전 3.7에 추가.          |
++-------------------------+--------------------------------------------------------+
+| "[.!='text']"           | 자손을 포함한 전체 텍스트 내용이 주어진 "text"와 다른  |
+|                         | 모든 엘리먼트를 선택합니다.  버전 3.10에 추가.         |
++-------------------------+--------------------------------------------------------+
+| "[tag='text']"          | 자손을 포함한 전체 텍스트 내용이 지정된 "text"와 같은  |
+|                         | 이름이 "tag"인 자식이 있는 모든 엘리먼트를 선택합니다. |
++-------------------------+--------------------------------------------------------+
+| "[tag!='text']"         | 자손을 포함한 전체 텍스트 내용이 지정된 "text"와 다른  |
+|                         | 이름이 "tag"인 자식이 있는 모든 엘리먼트를 선택합니다. |
+|                         | 버전 3.10에 추가.                                      |
++-------------------------+--------------------------------------------------------+
+| "[position]"            | 주어진 위치(position)에 있는 모든 엘리먼트를 선택합니  |
+|                         | 다. 위치 (position)는 정수(1이 첫 번째 위치입니다), 표 |
+|                         | 현식 "last()" (마지막 위 치) 또는 마지막 위치에 상대적 |
+|                         | 인 위치(예를 들어 "last()-1")일 수 있습니 다.          |
++-------------------------+--------------------------------------------------------+
+
+술어 (대괄호 안에 있는 표현식) 앞에는 태그 이름, 애스터리스크 또는 다
+른 술어가 와야 합니다. "position" 술어 앞에는 태그 이름이 와야 합니다.
+
+
+레퍼런스
+========
+
+
+함수
+----
+
+xml.etree.ElementTree.canonicalize(xml_data=None, *, out=None, from_file=None, **options)
+
+   C14N 2.0 변환 함수.
+
+   Canonicalization is a way to normalise XML output in a way that
+   allows byte-by-byte comparisons and digital signatures.  It reduced
+   the freedom that XML serializers have and instead generates a more
+   constrained XML representation.  The main restrictions regard the
+   placement of namespace declarations, the ordering of attributes,
+   and ignorable whitespace.
+
+   이 함수는 XML 데이터 문자열(*xml_data*)이나 파일 경로 또는 파일류
+   객체(*from_file*)를 입력으로 받아서, 규범적 형식으로 변환한 후, 제
+   공된다면 *out* 파일(류) 객체를 사용하여 기록하고, 그렇지 않으면 텍
+   스트 문자열로 반환합니다. 출력 파일은 바이트열이 아닌 텍스트를 받습
+   니다. 따라서 "utf-8" 인코딩을 사용하여 텍스트 모드로 열어야 합니다.
+
+   일반적인 사용:
+
+      xml_data = "<root>...</root>"
+      print(canonicalize(xml_data))
+
+      with open("c14n_output.xml", mode='w', encoding='utf-8') as out_file:
+          canonicalize(xml_data, out=out_file)
+
+      with open("c14n_output.xml", mode='w', encoding='utf-8') as out_file:
+          canonicalize(from_file="inputfile.xml", out=out_file)
+
+   구성 *options*는 다음과 같습니다:
+
+   * *with_comments*: 주석을 포함하려면 참으로 설정합니다 (기본값: 거
+     짓).
+
+   * *strip_text*: 텍스트 내용 전후의 공백을 제거하려면 참으로 설정합
+     니다
+        (기본값: 거짓)
+
+   * *rewrite_prefixes*: 이름 공간 접두사를 "n{number}" 로 바꾸려면 참
+     으로 설정합니다
+        (기본값: 거짓)
+
+   * *qname_aware_tags*: 텍스트 내용에서 접두사를 대체해야 하는 qname
+     인식 태그 이름 집합
+        (기본값: 비어 있음)
+
+   * *qname_aware_attrs*: 텍스트 내용에서 접두사를 대체해야 하는 qname
+     인식 어트리뷰트 이름 집합
+        (기본값: 비어 있음)
+
+   * *exclude_attrs*: 직렬화하면 안 되는 어트리뷰트 이름 집합
+
+   * *exclude_tags*: 직렬화하면 안 되는 태그 이름 집합
+
+   위의 옵션 목록에서, "집합"은 문자열의 모든 컬렉션이나 이터러블을 가
+   리키며, 순서는 고려하지 않습니다.
+
+   버전 3.8에 추가.
+
+xml.etree.ElementTree.Comment(text=None)
+
+   주석 엘리먼트 팩토리. 이 팩토리 함수는 표준 직렬화기가 XML 주석으로
+   직렬화할 특수 엘리먼트를 만듭니다. 주석 문자열은 바이트 문자열이나
+   유니코드 문자열일 수 있습니다. *text*는 주석 문자열이 포함된 문자열
+   입니다. 주석을 나타내는 엘리먼트 인스턴스를 반환합니다.
+
+   "XMLParser"는 주석 객체를 만드는 대신 입력에서 주석을 건너뜀에 유의
+   하십시오. "ElementTree"는 "Element" 메서드 중 하나를 사용하여 트리
+   에 삽입된 주석 노드만 포함합니다.
+
+xml.etree.ElementTree.dump(elem)
+
+   엘리먼트 트리나 엘리먼트 구조를 sys.stdout에 씁니다. 이 함수는 디버
+   깅에만 사용해야 합니다.
+
+   정확한 출력 형식은 구현에 따라 다릅니다. 이 버전에서는, 일반 XML 파
+   일로 기록됩니다.
+
+   *elem*은 엘리먼트 트리나 개별 엘리먼트입니다.
+
+   버전 3.8에서 변경: "dump()" 함수는 이제 사용자가 지정한 어트리뷰트
+   순서를 유지합니다.
+
+xml.etree.ElementTree.fromstring(text, parser=None)
+
+   문자열 상수에서 XML 섹션을 구문 분석합니다. "XML()"과 같습니다.
+   *text*는 XML 데이터를 포함하는 문자열입니다. *parser*는 선택적 구문
+   분석기 인스턴스입니다. 지정하지 않으면, 표준 "XMLParser" 구문 분석
+   기가 사용됩니다. "Element" 인스턴스를 반환합니다.
+
+xml.etree.ElementTree.fromstringlist(sequence, parser=None)
+
+   문자열 조각의 시퀀스에서 XML 문서를 구문 분석합니다. *sequence*는
+   XML 데이터 조각을 포함하는 리스트나 다른 시퀀스입니다. *parser*는
+   선택적 구문 분석기 인스턴스입니다. 지정하지 않으면 표준 "XMLParser"
+   구문 분석기가 사용됩니다. "Element" 인스턴스를 반환합니다.
+
+   버전 3.2에 추가.
+
+xml.etree.ElementTree.indent(tree, space='  ', level=0)
+
+   트리를 시각적으로 들여쓰기하기 위해 서브 트리에 공백을 추가합니다.
+   이것은 예쁘게 인쇄된 XML 출력을 생성하는 데 사용될 수 있습니다.
+   *tree*는 Element나 ElementTree 일 수 있습니다. *space*는 각 들여쓰
+   기 수준에 삽입되는 공백 문자열이며 기본적으로 두 개의 스페이스 문자
+   입니다. 이미 들여쓰기 된 트리 내부에서 부분 서브 트리를 들여 쓰려면
+   , 초기 들여쓰기 수준을 *level*로 전달하십시오.
+
+   버전 3.9에 추가.
+
+xml.etree.ElementTree.iselement(element)
+
+   객체가 유효한 엘리먼트 객체로 보이는지 확인합니다. *element*는 엘리
+   먼트 인스턴스입니다. 이것이 엘리먼트 객체이면 "True"를 반환합니다.
+
+xml.etree.ElementTree.iterparse(source, events=None, parser=None)
+
+   Parses an XML section into an element tree incrementally, and
+   reports what's going on to the user.  *source* is a filename or
+   *file object* containing XML data.  *events* is a sequence of
+   events to report back.  The supported events are the strings
+   ""start"", ""end"", ""comment"", ""pi"", ""start-ns"" and ""end-
+   ns"" (the "ns" events are used to get detailed namespace
+   information).  If *events* is omitted, only ""end"" events are
+   reported. *parser* is an optional parser instance.  If not given,
+   the standard "XMLParser" parser is used.  *parser* must be a
+   subclass of "XMLParser" and can only use the default "TreeBuilder"
+   as a target.  Returns an *iterator* providing "(event, elem)"
+   pairs.
+
+   "iterparse()"는 점진적으로 트리를 구축하지만, *source*(또는 그 이름
+   의 파일)에 대한 블로킹 읽기를 유발함에 유의하십시오. 따라서, 블로킹
+   읽기를 할 수 없는 응용 프로그램에는 적합하지 않습니다. 완전한 비 블
+   로킹 구문 분석에 대해서는 "XMLPullParser"를 참조하십시오.
+
+   참고:
+
+     "iterparse()"는 "start" 이벤트를 방출할 때 시작 태그의 ">" 문자를
+     보았다는 것만 보장해서, 어트리뷰트는 정의되지만, 텍스트의 내용과
+     테일(tail) 어트리뷰트는 그 시점에 정의되지 않습니다. 자식 엘리먼
+     트에도 마찬가지로 적용됩니다; 그들은 존재할 수도 그렇지 않을 수도
+     있습니다.완전히 채워진 엘리먼트가 필요하면, 대신 "end" 이벤트를
+     찾으십시오.
+
+   버전 3.4부터 폐지: *parser* 인자.
+
+   버전 3.8에서 변경: "comment"와 "pi" 이벤트가 추가되었습니다.
+
+xml.etree.ElementTree.parse(source, parser=None)
+
+   XML 섹션을 엘리먼트 트리로 구문 분석합니다. *source*는 XML 데이터를
+   포함하는 파일명이나 파일 객체입니다. *parser*는 선택적 구문 분석기
+   인스턴스입니다. 지정하지 않으면 표준 "XMLParser" 구문 분석기가 사용
+   됩니다. "ElementTree" 인스턴스를 반환합니다.
+
+xml.etree.ElementTree.ProcessingInstruction(target, text=None)
+
+   PI 엘리먼트 팩토리. 이 팩토리 함수는 XML 처리 명령으로 직렬화될 특
+   수 엘리먼트를 만듭니다. *target*은 PI 대상을 포함하는 문자열입니다.
+   주어지면, *text*는 PI 내용을 포함하는 문자열입니다. 처리 명령을 나
+   타내는 엘리먼트 인스턴스를 반환합니다.
+
+   Note that "XMLParser" skips over processing instructions in the
+   input instead of creating comment objects for them. An
+   "ElementTree" will only contain processing instruction nodes if
+   they have been inserted into to the tree using one of the "Element"
+   methods.
+
+xml.etree.ElementTree.register_namespace(prefix, uri)
+
+   이름 공간 접두사를 등록합니다. 레지스트리는 전역적이며, 지정된 접두
+   사나 이름 공간 URI에 대한 기존 매핑이 제거됩니다. *prefix*는 이름
+   공간 접두사입니다. *uri*는 이름 공간 URI입니다. 이 이름 공간의 태그
+   와 어트리뷰트는 가능하다면 주어진 접두사로 직렬화됩니다.
+
+   버전 3.2에 추가.
+
+xml.etree.ElementTree.SubElement(parent, tag, attrib={}, **extra)
+
+   서브 엘리먼트 팩토리. 이 함수는 엘리먼트 인스턴스를 만들어 기존 엘
+   리먼트에 추가합니다.
+
+   엘리먼트 이름, 어트리뷰트 이름 및 어트리뷰트 값은 바이트 문자열이나
+   유니코드 문자열일 수 있습니다. *parent*는 부모 엘리먼트입니다.
+   *tag*는 서브 엘리먼트 이름입니다. *attrib*는 엘리먼트 어트리뷰트를
+   포함하는 선택적 딕셔너리입니다. *extra*에는 키워드 인자로 지정된 추
+   가 어트리뷰트가 포함됩니다. 엘리먼트 인스턴스를 반환합니다.
+
+xml.etree.ElementTree.tostring(element, encoding='us-ascii', method='xml', *, xml_declaration=None, default_namespace=None, short_empty_elements=True)
+
+   모든 서브 엘리먼트를 포함하는, XML 엘리먼트의 문자열 표현을 생성합
+   니다. *element*는 "Element" 인스턴스입니다. *encoding* [1] 은 출력
+   인코딩입니다 (기본값은 US-ASCII입니다). "encoding="unicode""를 사용
+   하여 유니코드 문자열을 생성하십시오 (그렇지 않으면 바이트 문자열이
+   생성됩니다). *method*는 ""xml"", ""html"" 또는 ""text""입니다 (기본
+   값은 ""xml""입니다). *xml_declaration*, *default_namespace* 및
+   *short_empty_elements*는 "ElementTree.write()"에서와 같은 의미입니
+   다. XML 데이터를 포함하는 (선택적으로) 인코딩된 문자열을 반환합니다
+   .
+
+   버전 3.4에 추가: The *short_empty_elements* parameter.
+
+   버전 3.8에 추가: The *xml_declaration* and *default_namespace*
+   parameters.
+
+   버전 3.8에서 변경: "tostring()" 함수는 이제 사용자가 지정한 어트리
+   뷰트 순서를 유지합니다.
+
+xml.etree.ElementTree.tostringlist(element, encoding='us-ascii', method='xml', *, xml_declaration=None, default_namespace=None, short_empty_elements=True)
+
+   모든 서브 엘리먼트를 포함하는, XML 엘리먼트의 문자열 표현을 생성합
+   니다. *element*는 "Element" 인스턴스입니다. *encoding* [1] 은 출력
+   인코딩입니다 (기본값은 US-ASCII입니다). "encoding="unicode""를 사용
+   하여 유니코드 문자열을 생성하십시오 (그렇지 않으면 바이트 문자열이
+   생성됩니다). *method*는 ""xml"", ""html"" 또는 ""text""입니다 (기본
+   값은 ""xml""입니다). *xml_declaration*, *default_namespace* 및
+   *short_empty_elements*는 "ElementTree.write()"에서와 같은 의미입니
+   다. XML 데이터가 포함된 (선택적으로) 인코딩된 문자열의 리스트를 반
+   환합니다. "b"".join(tostringlist(element)) == tostring(element)"라
+   는 사실을 제외하고는, 특정 시퀀스를 보장하지는 않습니다.
+
+   버전 3.2에 추가.
+
+   버전 3.4에 추가: The *short_empty_elements* parameter.
+
+   버전 3.8에 추가: The *xml_declaration* and *default_namespace*
+   parameters.
+
+   버전 3.8에서 변경: "tostringlist()" 함수는 이제 사용자가 지정한 어
+   트리뷰트 순서를 유지합니다.
+
+xml.etree.ElementTree.XML(text, parser=None)
+
+   문자열 상수에서 XML 섹션을 구문 분석합니다. 이 함수는 "XML 리터럴"
+   을 파이썬 코드에 내장시키는 데 사용할 수 있습니다. *text*는 XML 데
+   이터를 포함하는 문자열입니다. *parser*는 선택적 구문 분석기 인스턴
+   스입니다. 지정하지 않으면 표준 "XMLParser" 구문 분석기가 사용됩니다
+   . "Element" 인스턴스를 반환합니다.
+
+xml.etree.ElementTree.XMLID(text, parser=None)
+
+   문자열 상수에서 XML 섹션을 구문 분석하고, 엘리먼트 id:s 를 엘리먼트
+   로 매핑하는 딕셔너리도 반환합니다. *text*는 XML 데이터를 포함하는
+   문자열입니다. *parser*는 선택적 구문 분석기 인스턴스입니다. 지정하
+   지 않으면 표준 "XMLParser" 구문 분석기가 사용됩니다. "Element" 인스
+   턴스와 딕셔너리를 포함하는 튜플을 반환합니다.
+
+
+XInclude 지원
+=============
+
+이 모듈은 "xml.etree.ElementInclude" 도우미 모듈을 통해 XInclude 지시
+어를 제한적으로 지원합니다. 이 모듈은 트리의 정보를 기반으로, 서브 트
+리와 텍스트 문자열을 엘리먼트 트리에 삽입하는 데 사용할 수 있습니다.
+
+
+예
+--
+
+다음은 XInclude 모듈의 사용법을 보여주는 예입니다. 현재 문서에 XML 문
+서를 포함 시키려면, "{http://www.w3.org/2001/XInclude}include" 엘리먼
+트를 사용하고 **parse** 어트리뷰트를 ""xml""로 설정하고, **href** 어트
+리뷰트를 사용하여 포함할 문서를 지정하십시오.
+
+   <?xml version="1.0"?>
+   <document xmlns:xi="http://www.w3.org/2001/XInclude">
+     <xi:include href="source.xml" parse="xml" />
+   </document>
+
+기본적으로, **href** 어트리뷰트는 파일 이름으로 취급됩니다. 사용자 정
+의 로더를 사용하여 이 동작을 대체 할 수 있습니다. 또한 표준 도우미는
+XPointer 문법을 지원하지 않음에 유의하십시오.
+
+이 파일을 처리하려면, 평소와 같이 로드하고, 루트 엘리먼트를
+"xml.etree.ElementTree" 모듈에 전달하십시오:
+
+   from xml.etree import ElementTree, ElementInclude
+
+   tree = ElementTree.parse("document.xml")
+   root = tree.getroot()
+
+   ElementInclude.include(root)
+
+ElementInclude 모듈은 "{http://www.w3.org/2001/XInclude}include" 엘리
+먼트를 **source.xml** 문서의 루트 엘리먼트로 바꿉니다. 결과는 다음과
+같습니다:
+
+   <document xmlns:xi="http://www.w3.org/2001/XInclude">
+     <para>This is a paragraph.</para>
+   </document>
+
+**parse** 어트리뷰트가 생략되면, 기본값은 "xml"입니다. href 어트리뷰트
+는 필수입니다.
+
+텍스트 문서를 포함 시키려면,
+"{http://www.w3.org/2001/XInclude}include" 엘리먼트를 사용하고,
+**parse** 어트리뷰트를 "text"로 설정하십시오:
+
+   <?xml version="1.0"?>
+   <document xmlns:xi="http://www.w3.org/2001/XInclude">
+     Copyright (c) <xi:include href="year.txt" parse="text" />.
+   </document>
+
+결과는 다음과 같습니다:
+
+   <document xmlns:xi="http://www.w3.org/2001/XInclude">
+     Copyright (c) 2003.
+   </document>
+
+
+레퍼런스
+========
+
+
+함수
+----
+
+xml.etree.ElementInclude.default_loader(href, parse, encoding=None)
+
+   Default loader. This default loader reads an included resource from
+   disk.  *href* is a URL. *parse* is for parse mode either "xml" or
+   "text".  *encoding* is an optional text encoding.  If not given,
+   encoding is "utf-8".  Returns the expanded resource.  If the parse
+   mode is ""xml"", this is an ElementTree instance.  If the parse
+   mode is "text", this is a Unicode string.  If the loader fails, it
+   can return None or raise an exception.
+
+xml.etree.ElementInclude.include(elem, loader=None, base_url=None, max_depth=6)
+
+   This function expands XInclude directives.  *elem* is the root
+   element.  *loader* is an optional resource loader.  If omitted, it
+   defaults to "default_loader()". If given, it should be a callable
+   that implements the same interface as "default_loader()".
+   *base_url* is base URL of the original file, to resolve relative
+   include file references.  *max_depth* is the maximum number of
+   recursive inclusions.  Limited to reduce the risk of malicious
+   content explosion. Pass a negative value to disable the limitation.
+
+   Returns the expanded resource.  If the parse mode is ""xml"", this
+   is an ElementTree instance.  If the parse mode is "text", this is a
+   Unicode string.  If the loader fails, it can return None or raise
+   an exception.
+
+   버전 3.9에 추가: The *base_url* and *max_depth* parameters.
+
+
+Element 객체
+------------
+
+class xml.etree.ElementTree.Element(tag, attrib={}, **extra)
+
+   Element 클래스. 이 클래스는 Element 인터페이스를 정의하고, 이 인터
+   페이스의 참조 구현을 제공합니다.
+
+   엘리먼트 이름, 어트리뷰트 이름 및 어트리뷰트 값은 바이트 문자열이나
+   유니코드 문자열일 수 있습니다. *tag*는 엘리먼트 이름입니다.
+   *attrib*는 엘리먼트 어트리뷰트를 포함하는 선택적 딕셔너리입니다.
+   *extra*에는 키워드 인자로 지정된 추가 어트리뷰트가 포함되어 있습니
+   다.
+
+   tag
+
+      이 엘리먼트가 나타내는 데이터 종류(즉, 엘리먼트 유형)를 식별하는
+      문자열.
+
+   text
+   tail
+
+      이 어트리뷰트는 엘리먼트와 연관된 추가 데이터를 담는 데 사용될
+      수 있습니다. 해당 값은 일반적으로 문자열이지만 임의의 응용 프로
+      그램별 객체일 수 있습니다. 엘리먼트가 XML 파일에서 만들어지면,
+      *text* 어트리뷰트는 엘리먼트의 시작 태그와 첫 번째 자식이나 종료
+      태그 사이의 텍스트를 담거나 "None"이고, *tail* 어트리뷰트는 엘리
+      먼트의 종료 태그와 다음 태그 사이의 텍스트를 담거나 "None"입니다
+      . 다음과 같은 XML 데이터의 경우
+
+         <a><b>1<c>2<d/>3</c></b>4</a>
+
+      *a* 엘리먼트는 *text*와 *tail* 어트리뷰트 모두에 대해 "None"을
+      갖고, *b* 엘리먼트는 *text* ""1""과 *tail* ""4""를 갖고, *c* 엘
+      리먼트는 *text* ""2""와 *tail* "None"을 갖고, *d* 엘리먼트는
+      *text* "None"과 *tail* ""3""을 갖습니다.
+
+      엘리먼트의 내부 텍스트를 수집하려면, "itertext()"를 참조하십시오
+      , 예를 들어 """.join(element.itertext())".
+
+      응용 프로그램은 이 어트리뷰트들에 임의의 객체를 저장할 수 있습니
+      다.
+
+   attrib
+
+      엘리먼트의 어트리뷰트를 포함하는 딕셔너리. *attrib* 값은 항상 진
+      짜 가변 파이썬 딕셔너리이지만, ElementTree 구현은 다른 내부 표현
+      을 사용하도록 선택하고, 누군가가 요청할 때만 딕셔너리를 만들 수
+      있습니다. 이러한 구현의 이점을 활용하려면, 가능한 한 아래의 딕셔
+      너리 메서드를 사용하십시오.
+
+   다음과 같은 딕셔너리와 유사한 메서드가 엘리먼트 어트리뷰트에서 작동
+   합니다.
+
+   clear()
+
+      엘리먼트를 재설정합니다. 이 함수는 모든 서브 엘리먼트를 제거하고
+      , 모든 어트리뷰트를 지우고, text 및 tail 어트리뷰트를 "None"으로
+      설정합니다.
+
+   get(key, default=None)
+
+      *key*라는 이름의 엘리먼트 어트리뷰트를 가져옵니다.
+
+      어트리뷰트 값을 반환하거나, 어트리뷰트를 찾을 수 없으면
+      *default*를 반환합니다.
+
+   items()
+
+      엘리먼트 어트리뷰트를 (이름, 값) 쌍의 시퀀스로 반환합니다. 어트
+      리뷰트는 임의의 순서로 반환됩니다.
+
+   keys()
+
+      엘리먼트 어트리뷰트 이름을 리스트로 반환합니다. 이름은 임의의 순
+      서로 반환됩니다.
+
+   set(key, value)
+
+      엘리먼트의 *key* 어트리뷰트를 *value*로 설정합니다.
+
+   다음 메서드는 엘리먼트의 자식(서브 엘리먼트)에서 작동합니다.
+
+   append(subelement)
+
+      이 엘리먼트의 내부 서브 엘리먼트 리스트 끝에 엘리먼트
+      *subelement*를 추가합니다. *subelement*가 "Element"가 아니면
+      "TypeError"를 발생시킵니다.
+
+   extend(subelements)
+
+      Appends *subelements* from a sequence object with zero or more
+      elements. Raises "TypeError" if a subelement is not an
+      "Element".
+
+      버전 3.2에 추가.
+
+   find(match, namespaces=None)
+
+      *match*와 일치하는 첫 번째 서브 엘리먼트를 찾습니다. *match*는
+      태그 이름이나 경로일 수 있습니다. 엘리먼트 인스턴스나 "None"을
+      반환합니다. *namespaces*는 이름 공간 접두사에서 전체 이름으로의
+      선택적 매핑입니다. 표현식에서 접두사가 없는 모든 태그 이름을 지
+      정된 이름 공간으로 이동하려면 "''"를 접두사로 전달하십시오.
+
+   findall(match, namespaces=None)
+
+      태그 이름이나 경로로 일치하는 모든 서브 엘리먼트를 찾습니다. 일
+      치하는 모든 엘리먼트가 문서 순서로 포함된 리스트를 반환합니다.
+      *namespaces*는 이름 공간 접두사에서 전체 이름으로의 선택적 매핑
+      입니다. 표현식에서 접두사가 없는 모든 태그 이름을 지정된 이름 공
+      간으로 이동하려면 "''"를 접두사로 전달하십시오.
+
+   findtext(match, default=None, namespaces=None)
+
+      *match*와 일치하는 첫 번째 서브 엘리먼트의 텍스트를 찾습니다.
+      *match*는 태그 이름이나 경로일 수 있습니다. 일치하는 첫 번째 엘
+      리먼트의 텍스트 내용을 반환하거나, 엘리먼트가 없으면 *default*를
+      반환합니다. 일치하는 엘리먼트에 텍스트 내용이 없으면 빈 문자열이
+      반환됨에 유의하십시오. *namespaces*는 이름 공간 접두사에서 전체
+      이름으로의 선택적 매핑입니다. 표현식에서 접두사가 없는 모든 태그
+      이름을 지정된 이름 공간으로 이동하려면 "''"를 접두사로 전달하십
+      시오.
+
+   insert(index, subelement)
+
+      이 엘리먼트의 지정된 위치에 *subelement*를 삽입합니다.
+      *subelement*가 "Element"가 아니면 "TypeError"를 발생시킵니다.
+
+   iter(tag=None)
+
+      현재 엘리먼트를 루트로 하여 트리 *이터레이터*를 만듭니다. 이터레
+      이터는 이 엘리먼트와 그 아래의 모든 엘리먼트를 문서 순서로 (깊이
+      우선) 이터레이트 합니다. *tag*가 "None"이나 "'*'"가 아니면, 태그
+      가 *tag*와 같은 엘리먼트만 이터레이터에서 반환됩니다. 이터레이션
+      중에 트리 구조가 수정되면, 결과는 정의되지 않습니다.
+
+      버전 3.2에 추가.
+
+   iterfind(match, namespaces=None)
+
+      태그 이름이나 경로로 일치하는 모든 서브 엘리먼트를 찾습니다. 일
+      치하는 모든 엘리먼트를 문서 순서로 산출하는 이터러블을 반환합니
+      다. *namespaces*는 이름 공간 접두사에서 전체 이름으로의 선택적
+      매핑입니다.
+
+      버전 3.2에 추가.
+
+   itertext()
+
+      텍스트 이터레이터를 만듭니다. 이터레이터는 이 엘리먼트와 모든 서
+      브 엘리먼트를 문서 순서대로 루핑하고, 모든 내부 텍스트를 반환합
+      니다.
+
+      버전 3.2에 추가.
+
+   makeelement(tag, attrib)
+
+      이 엘리먼트와 같은 유형의 새 엘리먼트 객체를 만듭니다. 이 메서드
+      를 호출하지 말고, 대신 "SubElement()" 팩토리 함수를 사용하십시오
+      .
+
+   remove(subelement)
+
+      엘리먼트에서 *subelement*를 제거합니다. find* 메서드와 달리 이
+      메서드는 태그값이나 내용이 아닌 인스턴스 아이덴티티를 기준으로
+      엘리먼트를 비교합니다.
+
+   "Element" 객체는 서브 엘리먼트 작업을 위한 "__delitem__()",
+   "__getitem__()", "__setitem__()", "__len__()" 시퀀스 형 메서드도 지
+   원합니다.
+
+   Caution: Elements with no subelements will test as "False".  This
+   behavior will change in future versions.  Use specific "len(elem)"
+   or "elem is None" test instead.
+
+      element = root.find('foo')
+
+      if not element:  # careful!
+          print("element not found, or element has no subelements")
+
+      if element is None:
+          print("element not found")
+
+   파이썬 3.8 이전에는, 어트리뷰트를 이름으로 정렬하여 엘리먼트의 XML
+   어트리뷰트의 직렬화 순서를 인위적으로 예측할 수 있도록 했습니다. 이
+   제 보장되는 딕셔너리 순서를 기반으로, 이 임의 재정렬은 파이썬 3.8에
+   서 제거되어 어트리뷰트가 원래 구문 분석되거나 사용자 코드에 의해 만
+   들어진 순서를 유지합니다.
+
+   일반적으로, 사용자 코드는 XML Information Set이 정보 전달에서 어트
+   리뷰트 순서를 명시적으로 제외한다는 점에서 구체적인 어트리뷰트 순서
+   에 의존하지 않아야 합니다. 입력의 모든 순서를 다룰 수 있도록 코드를
+   준비해야 합니다. 예를 들어 암호화 서명이나 테스트 데이터 집합과 같
+   이 결정론적 XML 출력이 필요한 경우, "canonicalize()" 함수로 규범적
+   직렬화를 사용할 수 있습니다.
+
+   규범적 출력이 적용되지는 않지만, 출력에서 특정 어트리뷰트 순서가 여
+   전히 필요하면, 코드는 코드를 읽는 사람의 지각 불일치를 피하고자, 원
+   하는 순서로 어트리뷰트를 직접 만드는 것을 목표로 해야 합니다. 이를
+   달성하기 어려운 경우, Element 생성과 독립적으로 순서를 강제하기 위
+   해 직렬화 전에 다음과 같은 조리법을 적용 할 수 있습니다:
+
+      def reorder_attributes(root):
+          for el in root.iter():
+              attrib = el.attrib
+              if len(attrib) > 1:
+                  # adjust attribute order, e.g. by sorting
+                  attribs = sorted(attrib.items())
+                  attrib.clear()
+                  attrib.update(attribs)
+
+
+ElementTree 객체
+----------------
+
+class xml.etree.ElementTree.ElementTree(element=None, file=None)
+
+   ElementTree 래퍼 클래스. 이 클래스는 전체 엘리먼트 위계를 나타내며,
+   표준 XML과의 직렬화에 대한 추가 지원을 추가합니다.
+
+   *element*는 루트 엘리먼트입니다. 주어지면 XML *file*의 내용으로 트
+   리가 초기화됩니다.
+
+   _setroot(element)
+
+      이 트리의 루트 엘리먼트를 교체합니다. 이것은 트리의 현재 내용을
+      버리고, 주어진 엘리먼트로 대체합니다. 주의해서 사용하십시오.
+      *element*는 엘리먼트 인스턴스입니다.
+
+   find(match, namespaces=None)
+
+      "Element.find()"와 같습니다, 트리의 루트에서 시작합니다.
+
+   findall(match, namespaces=None)
+
+      "Element.findall()"과 같습니다, 트리의 루트에서 시작합니다.
+
+   findtext(match, default=None, namespaces=None)
+
+      "Element.findtext()"와 같습니다, 트리의 루트에서 시작합니다.
+
+   getroot()
+
+      이 트리의 루트 엘리먼트를 반환합니다.
+
+   iter(tag=None)
+
+      루트 엘리먼트에 대한 트리 이터레이터를 만들고 반환합니다. 이터레
+      이터는 이 트리의 모든 엘리먼트를 섹션 순서대로 루핑합니다. *tag*
+      는 찾을 태그입니다 (기본값은 모든 엘리먼트를 반환하는 것입니다).
+
+   iterfind(match, namespaces=None)
+
+      "Element.iterfind()"와 같습니다, 트리의 루트에서 시작합니다.
+
+      버전 3.2에 추가.
+
+   parse(source, parser=None)
+
+      이 엘리먼트 트리에 외부 XML 섹션을 로드합니다. *source*는 파일
+      이름이나 *파일 객체*입니다. *parser*는 선택적 구문 분석기 인스턴
+      스입니다. 지정하지 않으면 표준 "XMLParser" 구문 분석기가 사용됩
+      니다. 섹션 루트 엘리먼트를 반환합니다.
+
+   write(file, encoding='us-ascii', xml_declaration=None, default_namespace=None, method='xml', *, short_empty_elements=True)
+
+      엘리먼트 트리를 XML로 파일에 씁니다. *file*은 파일 이름이거나 쓰
+      기 위해 열린 *파일 객체*입니다. *encoding* [1] 은 출력 인코딩입
+      니다 (기본값은 US-ASCII입니다). *xml_declaration*은 파일에 XML
+      선언을 추가해야 하는지를 제어합니다. 추가하지 말아야 하면
+      "False", 항상 추가하면 "True", US-ASCII나 UTF-8이나 유니코드가
+      아닐 때만 추가하면 "None"을 사용하십시오 (기본값은 "None"입니다
+      ). *default_namespace*는 기본 XML 이름 공간을 설정합니다
+      ("xmlns"). *method*는 ""xml"", ""html"" 또는 ""text""입니다 (기
+      본값은 ""xml""입니다). 키워드 전용 *short_empty_elements* 매개
+      변수는 내용이 없는 엘리먼트의 포매팅을 제어합니다. "True"(기본값
+      )이면, 단일 스스로 닫힌 태그로 방출되고, 그렇지 않으면 한 쌍의
+      시작/종료 태그로 방출됩니다.
+
+      출력은 문자열("str")이나 바이너리("bytes")입니다. 이것은
+      *encoding* 인자에 의해 제어됩니다. *encoding*이 ""unicode""이면,
+      출력은 문자열입니다; 그렇지 않으면 바이너리입니다. *file*이 열린
+      *파일 객체*이면 *file*의 유형과 충돌할 수 있음에 유의하십시오;
+      문자열을 바이너리 스트림에 쓰거나 그 반대로 하지 않도록 하십시오
+      .
+
+      버전 3.4에 추가: The *short_empty_elements* parameter.
+
+      버전 3.8에서 변경: "write()" 메서드는 이제 사용자가 지정한 어트
+      리뷰트 순서를 유지합니다.
+
+이것은 조작될 XML 파일입니다:
+
+   <html>
+       <head>
+           <title>Example page</title>
+       </head>
+       <body>
+           <p>Moved to <a href="http://example.org/">example.org</a>
+           or <a href="http://example.com/">example.com</a>.</p>
+       </body>
+   </html>
+
+첫 번째 문단에 있는 모든 링크의 어트리뷰트 "target"을 변경하는 예:
+
+   >>> from xml.etree.ElementTree import ElementTree
+   >>> tree = ElementTree()
+   >>> tree.parse("index.xhtml")
+   <Element 'html' at 0xb77e6fac>
+   >>> p = tree.find("body/p")     # Finds first occurrence of tag p in body
+   >>> p
+   <Element 'p' at 0xb77ec26c>
+   >>> links = list(p.iter("a"))   # Returns list of all links
+   >>> links
+   [<Element 'a' at 0xb77ec2ac>, <Element 'a' at 0xb77ec1cc>]
+   >>> for i in links:             # Iterates through all found links
+   ...     i.attrib["target"] = "blank"
+   >>> tree.write("output.xhtml")
+
+
+QName 객체
+----------
+
+class xml.etree.ElementTree.QName(text_or_uri, tag=None)
+
+   QName 래퍼. 출력에서 이름 공간을 올바르게 처리하기 위해, QName 어트
+   리뷰트 값을 래핑하는 데 사용할 수 있습니다. *text_or_uri*는
+   {uri}local 형식으로 QName 값을 포함하는 문자열이거나, tag 인자가 제
+   공되면 QName의 URI 부분입니다. *tag*가 제공되면, 첫 번째 인자는 URI
+   로 해석되고, 이 인자는 로컬 이름으로 해석됩니다. "QName" 인스턴스는
+   불투명합니다.
+
+
+TreeBuilder 객체
+----------------
+
+class xml.etree.ElementTree.TreeBuilder(element_factory=None, *, comment_factory=None, pi_factory=None, insert_comments=False, insert_pis=False)
+
+   일반 엘리먼트 구조 빌더. 이 빌더는 일련의 start, data, end, comment
+   및 pi 메서드 호출을 올바른 형식의 엘리먼트 구조로 변환합니다. 이 클
+   래스를 사용하여 사용자 정의 XML 구문 분석기를 사용하거나 다른 XML
+   형식의 구문 분석기를 사용하는 엘리먼트 구조를 구축할 수 있습니다.
+
+   주어지면 *element_factory*는 두 개의 위치 인자를 받아들이는 콜러블
+   이어야 합니다: 태그와 어트리뷰트 딕셔너리. 새로운 엘리먼트 인스턴스
+   를 반환할 것으로 기대합니다.
+
+   주어지면, *comment_factory*와 *pi_factory* 함수는 주석과 처리 명령
+   을 만들기 위해 "Comment()"와 "ProcessingInstruction()" 함수처럼 동
+   작해야 합니다. 지정하지 않으면, 기본 팩토리가 사용됩니다.
+   *insert_comments* 및/또는 *insert_pis*가 참이면, 주석/처리 명령이
+   루트 엘리먼트 내에 있으면 (하지만 외부에 있지 않으면) 트리에 삽입됩
+   니다.
+
+   close()
+
+      빌더 버퍼를 플러시하고, 최상위 문서 엘리먼트를 반환합니다.
+      "Element" 인스턴스를 반환합니다.
+
+   data(data)
+
+      현재 엘리먼트에 텍스트를 추가합니다. *data*는 문자열입니다. 바이
+      트 문자열이거나 유니코드 문자열이어야 합니다.
+
+   end(tag)
+
+      현재 엘리먼트를 닫습니다. *tag*는 엘리먼트 이름입니다. 닫힌 엘리
+      먼트를 반환합니다.
+
+   start(tag, attrs)
+
+      새로운 엘리먼트를 엽니다. *tag*는 엘리먼트 이름입니다. *attrs*는
+      엘리먼트 어트리뷰트를 포함하는 딕셔너리입니다. 열린 엘리먼트를
+      반환합니다.
+
+   comment(text)
+
+      주어진 *text*로 주석을 만듭니다. "insert_comments"가 참이면, 트
+      리에 추가합니다.
+
+      버전 3.8에 추가.
+
+   pi(target, text)
+
+      Creates a comment with the given *target* name and *text*.  If
+      "insert_pis" is true, this will also add it to the tree.
+
+      버전 3.8에 추가.
+
+   또한, 사용자 정의 "TreeBuilder" 객체는 다음 메서드를 제공할 수 있습
+   니다:
+
+   doctype(name, pubid, system)
+
+      doctype 선언을 처리합니다. *name*은 doctype 이름입니다. *pubid*
+      는 공개 식별자입니다. *system*은 시스템 식별자입니다. 이 메서드
+      는 기본 "TreeBuilder" 클래스에 없습니다.
+
+      버전 3.2에 추가.
+
+   start_ns(prefix, uri)
+
+      구문 분석기가 새 이름 공간 선언을 발견할 때마다 이를 정의하는 여
+      는 엘리먼트에 대한 "start()" 콜백 전에 호출됩니다. *prefix*는 기
+      본 이름 공간의 경우 "''"이고, 그렇지 않으면 선언된 이름 공간 접
+      두사 이름입니다. *uri*는 이름 공간 URI입니다.
+
+      버전 3.8에 추가.
+
+   end_ns(prefix)
+
+      이름 공간 접두사 매핑을 선언한 엘리먼트의 "end()" 콜백 후에, 스
+      코프를 벗어난 *prefix*의 이름으로 호출됩니다.
+
+      버전 3.8에 추가.
+
+class xml.etree.ElementTree.C14NWriterTarget(write, *, with_comments=False, strip_text=False, rewrite_prefixes=False, qname_aware_tags=None, qname_aware_attrs=None, exclude_attrs=None, exclude_tags=None)
+
+   C14N 2.0 기록기. 인자는 "canonicalize()" 함수와 같습니다. 이 클래스
+   는 트리를 구축하지 않지만, *write* 함수를 사용하여 콜백 이벤트를 직
+   렬화된 형식으로 직접 변환합니다.
+
+   버전 3.8에 추가.
+
+
+XMLParser 객체
+--------------
+
+class xml.etree.ElementTree.XMLParser(*, target=None, encoding=None)
+
+   이 클래스는 모듈의 저수준 빌딩 블록입니다. 효율적인 이벤트 기반 XML
+   구문 분석을 위해 "xml.parsers.expat"을 사용합니다. "feed()" 메서드
+   를 사용하여 XML 데이터를 점진적으로 공급할 수 있으며, 구문 분석 이
+   벤트는 *target* 객체에서 콜백을 호출하여 푸시 API로 변환됩니다.
+   *target*을 생략하면, 표준 "TreeBuilder"가 사용됩니다. *encoding*
+   [1] 이 제공되면, 값이 XML 파일에 지정된 인코딩을 대체합니다.
+
+   버전 3.8에서 변경: Parameters are now keyword-only. The *html*
+   argument no longer supported.
+
+   close()
+
+      구문 분석기로의 데이터 공급을 완료합니다. 생성 중에 전달된
+      *target*의 "close()" 메서드를 호출한 결과를 반환합니다; 기본적으
+      로, 최상위 문서 엘리먼트입니다.
+
+   feed(data)
+
+      구문 분석기에 데이터를 공급합니다. *data*는 인코딩된 데이터입니
+      다.
+
+   flush()
+
+      Triggers parsing of any previously fed unparsed data, which can
+      be used to ensure more immediate feedback, in particular with
+      Expat >=2.6.0. The implementation of "flush()" temporarily
+      disables reparse deferral with Expat (if currently enabled) and
+      triggers a reparse. Disabling reparse deferral has security
+      consequences; please see
+      "xml.parsers.expat.xmlparser.SetReparseDeferralEnabled()" for
+      details.
+
+      Note that "flush()" has been backported to some prior releases
+      of CPython as a security fix.  Check for availability of
+      "flush()" using "hasattr()" if used in code running across a
+      variety of Python versions.
+
+      버전 3.10.14에 추가.
+
+   "XMLParser.feed()"는 각 여는 태그마다 *target*의 "start(tag,
+   attrs_dict)" 메서드를 호출하고, 닫는 태그마다 "end(tag)" 메서드를
+   호출하며, 데이터는 메서드 "data(data)"로 처리됩니다. 추가로 지원되
+   는 콜백 메서드는, "TreeBuilder" 클래스를 참조하십시오.
+   "XMLParser.close()"는 *target*의 메서드 "close()"를 호출합니다.
+   "XMLParser"는 트리 구조 구축에만 사용할 수 있는 것은 아닙니다. 다음
+   은 XML 파일의 최대 깊이를 계산하는 예입니다:
+
+      >>> from xml.etree.ElementTree import XMLParser
+      >>> class MaxDepth:                     # The target object of the parser
+      ...     maxDepth = 0
+      ...     depth = 0
+      ...     def start(self, tag, attrib):   # Called for each opening tag.
+      ...         self.depth += 1
+      ...         if self.depth > self.maxDepth:
+      ...             self.maxDepth = self.depth
+      ...     def end(self, tag):             # Called for each closing tag.
+      ...         self.depth -= 1
+      ...     def data(self, data):
+      ...         pass            # We do not need to do anything with data.
+      ...     def close(self):    # Called when all data has been parsed.
+      ...         return self.maxDepth
+      ...
+      >>> target = MaxDepth()
+      >>> parser = XMLParser(target=target)
+      >>> exampleXml = """
+      ... <a>
+      ...   <b>
+      ...   </b>
+      ...   <b>
+      ...     <c>
+      ...       <d>
+      ...       </d>
+      ...     </c>
+      ...   </b>
+      ... </a>"""
+      >>> parser.feed(exampleXml)
+      >>> parser.close()
+      4
+
+
+XMLPullParser 객체
+------------------
+
+class xml.etree.ElementTree.XMLPullParser(events=None)
+
+   비 블로킹 응용 프로그램에 적합한 풀 구문 분석기. 입력 측 API는
+   "XMLParser"의 것과 유사하지만, 콜백 대상으로 호출을 푸시하는 대신,
+   "XMLPullParser"는 내부 구문 분석 이벤트 리스트를 수집하여 사용자가
+   여기서 읽을 수 있도록 합니다. *events*는 보고할 이벤트의 시퀀스입니
+   다. 지원되는 이벤트는 문자열 ""start"", ""end"", ""comment"",
+   ""pi"", ""start-ns"" 및 ""end-ns""입니다 ("ns" 이벤트는 자세한 이름
+   공간 정보를 얻는 데 사용됩니다). *events*를 생략하면, ""end"" 이벤
+   트만 보고됩니다.
+
+   feed(data)
+
+      주어진 바이트열 데이터를 구문 분석기에 공급합니다.
+
+   flush()
+
+      Triggers parsing of any previously fed unparsed data, which can
+      be used to ensure more immediate feedback, in particular with
+      Expat >=2.6.0. The implementation of "flush()" temporarily
+      disables reparse deferral with Expat (if currently enabled) and
+      triggers a reparse. Disabling reparse deferral has security
+      consequences; please see
+      "xml.parsers.expat.xmlparser.SetReparseDeferralEnabled()" for
+      details.
+
+      Note that "flush()" has been backported to some prior releases
+      of CPython as a security fix.  Check for availability of
+      "flush()" using "hasattr()" if used in code running across a
+      variety of Python versions.
+
+      버전 3.10.14에 추가.
+
+   close()
+
+      구문 분석기에 데이터 스트림이 종료되었음을 알립니다.
+      "XMLParser.close()"와 달리, 이 메서드는 항상 "None"을 반환합니다
+      . 구문 분석기가 닫힐 때 아직 꺼내지 않은 이벤트는
+      "read_events()"로 계속 읽을 수 있습니다.
+
+   read_events()
+
+      구문 분석기에 공급된 데이터에서 발생한 이벤트에 대한 이터레이터
+      를 반환합니다. 이터레이터는 "(event, elem)" 쌍을 산출합니다, 여
+      기서 *event*는 이벤트 유형을 나타내는 문자열(예를 들어 ""end"")
+      이고 *elem*은 발견된 "Element" 객체나, 다음과 같은 기타 문맥 값
+      입니다.
+
+      * "start", "end": 현재 엘리먼트.
+
+      * "comment", "pi": 현재 주석 / 처리 명령
+
+      * "start-ns": 선언된 이름 공간 매핑을 명명하는 튜플 "(prefix,
+        uri)"
+
+      * "end-ns": "None" (향후 버전에서 변경될 수 있습니다)
+
+      "read_events()"에 대한 이전 호출에서 제공된 이벤트는 다시 산출되
+      지 않습니다. 이벤트는 이터레이터에서 꺼낼 때만 내부 큐에서 소비
+      되므로, "read_events()"에서 얻은 이터레이터에 대해 병렬로 이터레
+      이션 하는 여러 판독기는 예측할 수 없는 결과를 얻게 됩니다.
+
+   참고:
+
+     "XMLPullParser" 는 "start" 이벤트를 방출할 때 시작 태그의 ">" 문
+     자를 보았다는 것만 보장해서, 어트리뷰트는 정의되지만, 텍스트의 내
+     용과 테일(tail) 어트리뷰트는 그 시점에 정의되지 않습니다. 자식 엘
+     리먼트에도 마찬가지로 적용됩니다; 그들은 존재할 수도 그렇지 않을
+     수도 있습니다.완전히 채워진 엘리먼트가 필요하면, 대신 "end" 이벤
+     트를 찾으십시오.
+
+   버전 3.4에 추가.
+
+   버전 3.8에서 변경: "comment"와 "pi" 이벤트가 추가되었습니다.
+
+
+예외
+----
+
+class xml.etree.ElementTree.ParseError
+
+   XML 구문 분석 에러, 이 모듈의 다양한 구문 분석 메서드가 구문 분석이
+   실패할 때 발생시킵니다. 이 예외 인스턴스의 문자열 표현에는 사용자
+   친화적인 에러 메시지가 포함됩니다. 또한, 다음과 같은 어트리뷰트를
+   사용할 수 있습니다:
+
+   code
+
+      expat 구문 분석기의 숫자 에러 코드. 에러 코드와 의미의 목록은
+      "xml.parsers.expat" 설명서를 참조하십시오.
+
+   position
+
+      에러가 발생한 위치를 지정하는, *line*, *column* 숫자의 튜플.
+
+-[ 각주 ]-
+
+[1] XML 출력에 포함된 인코딩 문자열은 적절한 표준을 준수해야 합니다.
+    예를 들어, "UTF-8"은 유효하지만, "UTF8"은 유효하지 않습니다.
+    https://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl and
+    https://www.iana.org/assignments/character-sets/character-
+    sets.xhtml 을 참조하십시오.

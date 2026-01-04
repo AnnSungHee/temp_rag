@@ -1,0 +1,349 @@
+"tempfile" --- Generate temporary files and directories
+*******************************************************
+
+**소스 코드:** Lib/tempfile.py
+
+======================================================================
+
+This module creates temporary files and directories.  It works on all
+supported platforms. "TemporaryFile", "NamedTemporaryFile",
+"TemporaryDirectory", and "SpooledTemporaryFile" are high-level
+interfaces which provide automatic cleanup and can be used as context
+managers. "mkstemp()" and "mkdtemp()" are lower-level functions which
+require manual cleanup.
+
+사용자가 호출할 수 있는 모든 함수와 생성자는 임시 파일과 디렉터리의 위
+치와 이름을 직접 제어할 수 있도록 하는 추가 인자를 취합니다. 이 모듈에
+서 사용하는 파일 이름에는 무작위 문자의 문자열이 포함되어있어 공유 임
+시 디렉터리에서 해당 파일을 안전하게 만들 수 있도록 합니다. 이전 버전
+과의 호환성을 유지하기 위해, 인자 순서는 다소 이상합니다; 명확성을 위
+해 키워드 인자를 사용하는 것이 좋습니다.
+
+이 모듈은 다음과 같은 사용자 호출 가능 항목을 정의합니다:
+
+tempfile.TemporaryFile(mode='w+b', buffering=- 1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, *, errors=None)
+
+   임시 저장 영역으로 사용할 수 있는 *파일류 객체*를 반환합니다.
+   "mkstemp()"와 같은 규칙을 사용하여 파일이 안전하게 만들어집니다. 닫
+   히는 즉시 삭제됩니다 (객체가 가비지 수집될 때 묵시적인 닫기를 포함
+   합니다). 유닉스에서, 파일의 디렉터리 항목은 전혀 만들어지지 않거나
+   파일이 만들어진 직후에 제거됩니다. 다른 플랫폼은 이를 지원하지 않습
+   니다; 코드는 이 함수를 사용하여 만들어진 임시 파일이 파일 시스템에
+   서 보이는 이름이 있거나 없는지에 의존해서는 안 됩니다.
+
+   The resulting object can be used as a context manager (see 예).  On
+   completion of the context or destruction of the file object the
+   temporary file will be removed from the filesystem.
+
+   *mode* 매개 변수는 기본적으로 "'w+b'"로 설정되므로 만들어진 파일을
+   닫지 않고 읽고 쓸 수 있습니다. 저장된 데이터와 관계없이 모든 플랫폼
+   에서 일관되게 작동하도록 바이너리 모드가 사용됩니다. *buffering*,
+   *encoding*, *errors* 및 *newline*은 "open()"처럼 해석됩니다.
+
+   *dir*, *prefix* 및 *suffix* 매개 변수는 "mkstemp()"와 같은 의미와
+   기본값을 갖습니다.
+
+   반환된 객체는 POSIX 플랫폼에서 실제 파일 객체입니다. 다른 플랫폼에
+   서는, "file" 어트리뷰트가 하부 실제 파일 객체인 파일류 객체입니다.
+
+   The "os.O_TMPFILE" flag is used if it is available and works
+   (Linux-specific, requires Linux kernel 3.11 or later).
+
+   On platforms that are neither Posix nor Cygwin, TemporaryFile is an
+   alias for NamedTemporaryFile.
+
+   인자 "fullpath"로 감사 이벤트 "tempfile.mkstemp"를 발생시킵니다.
+
+   버전 3.5에서 변경: The "os.O_TMPFILE" flag is now used if
+   available.
+
+   버전 3.8에서 변경: *errors* 매개 변수를 추가했습니다.
+
+tempfile.NamedTemporaryFile(mode='w+b', buffering=- 1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, delete=True, *, errors=None)
+
+   This function operates exactly as "TemporaryFile()" does, except
+   that the file is guaranteed to have a visible name in the file
+   system (on Unix, the directory entry is not unlinked).  That name
+   can be retrieved from the "name" attribute of the returned file-
+   like object.  Whether the name can be used to open the file a
+   second time, while the named temporary file is still open, varies
+   across platforms (it can be so used on Unix; it cannot on Windows).
+   If *delete* is true (the default), the file is deleted as soon as
+   it is closed. The returned object is always a file-like object
+   whose "file" attribute is the underlying true file object. This
+   file-like object can be used in a "with" statement, just like a
+   normal file.
+
+   인자 "fullpath"로 감사 이벤트 "tempfile.mkstemp"를 발생시킵니다.
+
+   버전 3.8에서 변경: *errors* 매개 변수를 추가했습니다.
+
+class tempfile.SpooledTemporaryFile(max_size=0, mode='w+b', buffering=- 1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, *, errors=None)
+
+   This class operates exactly as "TemporaryFile()" does, except that
+   data is spooled in memory until the file size exceeds *max_size*,
+   or until the file's "fileno()" method is called, at which point the
+   contents are written to disk and operation proceeds as with
+   "TemporaryFile()".
+
+   The resulting file has one additional method, "rollover()", which
+   causes the file to roll over to an on-disk file regardless of its
+   size.
+
+   The returned object is a file-like object whose "_file" attribute
+   is either an "io.BytesIO" or "io.TextIOWrapper" object (depending
+   on whether binary or text *mode* was specified) or a true file
+   object, depending on whether "rollover()" has been called.  This
+   file-like object can be used in a "with" statement, just like a
+   normal file.
+
+   버전 3.3에서 변경: the truncate method now accepts a "size"
+   argument.
+
+   버전 3.8에서 변경: *errors* 매개 변수를 추가했습니다.
+
+class tempfile.TemporaryDirectory(suffix=None, prefix=None, dir=None, ignore_cleanup_errors=False)
+
+   This class securely creates a temporary directory using the same
+   rules as "mkdtemp()". The resulting object can be used as a context
+   manager (see 예).  On completion of the context or destruction of
+   the temporary directory object, the newly created temporary
+   directory and all its contents are removed from the filesystem.
+
+   The directory name can be retrieved from the "name" attribute of
+   the returned object.  When the returned object is used as a context
+   manager, the "name" will be assigned to the target of the "as"
+   clause in the "with" statement, if there is one.
+
+   The directory can be explicitly cleaned up by calling the
+   "cleanup()" method. If *ignore_cleanup_errors* is true, any
+   unhandled exceptions during explicit or implicit cleanup (such as a
+   "PermissionError" removing open files on Windows) will be ignored,
+   and the remaining removable items deleted on a "best-effort" basis.
+   Otherwise, errors will be raised in whatever context cleanup occurs
+   (the "cleanup()" call, exiting the context manager, when the object
+   is garbage-collected or during interpreter shutdown).
+
+   인자 "fullpath"로 감사 이벤트 "tempfile.mkdtemp"를 발생시킵니다.
+
+   버전 3.2에 추가.
+
+   버전 3.10에서 변경: *ignore_cleanup_errors* 매개 변수를 추가했습니
+   다.
+
+tempfile.mkstemp(suffix=None, prefix=None, dir=None, text=False)
+
+   가장 안전한 방식으로 임시 파일을 만듭니다. 플랫폼이 "os.open()"에서
+   "os.O_EXCL" 플래그를 올바르게 구현한다고 가정할 때, 파일 생성에 경
+   쟁 조건이 없습니다. 파일은 만드는 사용자 ID만 읽고 쓸 수 있습니다.
+   플랫폼이 권한 비트를 사용하여 파일이 실행 가능한지를 나타내면, 파일
+   은 아무도 실행할 수 없습니다. 파일 기술자는 자식 프로세스에 의해 상
+   속되지 않습니다.
+
+   "TemporaryFile()"과 달리, "mkstemp()"의 사용자는 임시 파일로의 작업
+   을 끝내면 파일을 삭제해야 합니다.
+
+   *suffix*가 "None"이 아니면, 파일 이름은 해당 접미사로 끝납니다, 그
+   렇지 않으면 접미사가 없습니다. "mkstemp()"는 파일 이름과 접미사 사
+   이에 점을 넣지 않습니다; 필요하면 *suffix*의 시작 부분에 넣으십시오
+   .
+
+   *prefix*가 "None"이 아니면, 파일 이름은 해당 접두사로 시작합니다;
+   그렇지 않으면 기본 접두사가 사용됩니다. 기본값은 "gettempprefix()"
+   나 "gettempprefixb()" 중 적절한 것의 반환 값입니다.
+
+   *dir*이 "None"이 아니면, 파일은 해당 디렉터리에 만들어집니다; 그렇
+   지 않으면 기본 디렉터리가 사용됩니다. 기본 디렉터리는 플랫폼별 목록
+   에서 선택되지만, 응용 프로그램 사용자는 *TMPDIR*, *TEMP* 또는 *TMP*
+   환경 변수를 설정하여 디렉터리 위치를 제어할 수 있습니다. 따라서 생
+   성된 파일명이 "os.popen()"을 통해 외부 명령에 전달될 때 따옴표 처리
+   할 필요가 없는 것과 같은 멋진 속성을 가질 것이라는 보장은 없습니다.
+
+   *suffix*, *prefix* 및 *dir* 중 어느 것이라도 "None"이 아니면, 그들
+   은 같은 형이어야 합니다. 이들이 바이트열이면, 반환되는 이름은 str
+   대신 바이트열입니다. 기본 동작으로 바이트열 반환 값을 강제하려면
+   "suffix=b''"를 전달하십시오.
+
+   *text*가 지정되고 참이면, 파일은 텍스트 모드로 열립니다. 그렇지 않
+   으면 (기본값) 파일은 바이너리 모드로 열립니다.
+
+   "mkstemp()"는 열린 파일에 대한 OS 수준 핸들("os.open()"에서 반환하
+   는 것)과 해당 파일의 절대 경로를 이 순서대로 포함하는 튜플을 반환합
+   니다.
+
+   인자 "fullpath"로 감사 이벤트 "tempfile.mkstemp"를 발생시킵니다.
+
+   버전 3.5에서 변경: 바이트열 반환 값을 얻기 위해 *suffix*, *prefix*
+   및 *dir*를 이제 바이트열로 제공할 수 있습니다. 이전에는, str만 허용
+   되었습니다. *suffix*와 *prefix*는 이제 기본값이 "None"이고 적절한
+   기본값이 사용되도록 합니다.
+
+   버전 3.6에서 변경: *dir* 매개 변수는 이제 *경로류 객체*를 받아들입
+   니다.
+
+tempfile.mkdtemp(suffix=None, prefix=None, dir=None)
+
+   가장 안전한 방식으로 임시 디렉터리를 만듭니다. 디렉터리 생성에 경쟁
+   조건이 없습니다. 디렉터리는 만드는 사용자 ID만 읽고 쓰고 검색할 수
+   있습니다.
+
+   "mkdtemp()"의 사용자는 임시 디렉터리로의 작업을 끝내면 임시 디렉터
+   리와 디렉터리의 내용을 삭제해야 합니다.
+
+   *prefix*, *suffix* 및 *dir* 인자는 "mkstemp()"와 같습니다.
+
+   "mkdtemp()"는 새 디렉터리의 절대 경로명을 반환합니다.
+
+   인자 "fullpath"로 감사 이벤트 "tempfile.mkdtemp"를 발생시킵니다.
+
+   버전 3.5에서 변경: 바이트열 반환 값을 얻기 위해 *suffix*, *prefix*
+   및 *dir*를 이제 바이트열로 제공할 수 있습니다. 이전에는, str만 허용
+   되었습니다. *suffix*와 *prefix*는 이제 기본값이 "None"이고 적절한
+   기본값이 사용되도록 합니다.
+
+   버전 3.6에서 변경: *dir* 매개 변수는 이제 *경로류 객체*를 받아들입
+   니다.
+
+tempfile.gettempdir()
+
+   임시 파일에 사용된 디렉터리 이름을 반환합니다. 이것은 이 모듈의 모
+   든 함수에 대한 *dir* 인자의 기본값을 정의합니다.
+
+   파이썬은 표준 디렉터리 목록을 검색하여 호출하는 사용자가 파일을 만
+   들 수 있는 디렉터리를 찾습니다. 목록은 다음과 같습니다:
+
+   1. "TMPDIR" 환경 변수로 명명된 디렉터리.
+
+   2. "TEMP" 환경 변수로 명명된 디렉터리.
+
+   3. "TMP" 환경 변수로 명명된 디렉터리.
+
+   4. 플랫폼별 위치:
+
+      * 윈도우에서, 디렉터리 "C:\TEMP", "C:\TMP", "\TEMP" 및 "\TMP",
+        이 순서대로.
+
+      * 다른 모든 플랫폼에서, 디렉터리 "/tmp", "/var/tmp" 및
+        "/usr/tmp", 이 순서대로.
+
+   5. 최후의 수단으로, 현재 작업 디렉터리.
+
+   이 검색 결과는 캐시 됩니다, 아래 "tempdir" 설명을 참조하십시오.
+
+   버전 3.10에서 변경: Always returns a str.  Previously it would
+   return any "tempdir" value regardless of type so long as it was not
+   "None".
+
+tempfile.gettempdirb()
+
+   "gettempdir()"과 같지만, 반환 값이 바이트열입니다.
+
+   버전 3.5에 추가.
+
+tempfile.gettempprefix()
+
+   임시 파일을 만드는 데 사용된 파일명 접두사를 반환합니다. 디렉터리
+   구성 요소가 포함되어 있지 않습니다.
+
+tempfile.gettempprefixb()
+
+   "gettempprefix()"와 같지만, 반환 값이 바이트열입니다.
+
+   버전 3.5에 추가.
+
+모듈은 전역 변수를 사용하여 "gettempdir()"이 반환한 임시 파일에 사용되
+는 디렉터리의 이름을 저장합니다. 선택 절차를 무시하도록 직접 설정할 수
+있지만, 권장하지 않습니다. 이 모듈의 모든 함수는 디렉터리를 지정하는
+데 사용할 수 있는 *dir* 인자를 사용합니다. 이는 전역 API 동작을 변경하
+여 주의하지 않는 다른 코드를 놀라게 하지 않도록 권장되는 방법입니다.
+
+tempfile.tempdir
+
+   "None" 이외의 값으로 설정되면, 이 변수는 이 모듈에 정의된 함수의
+   *dir* 인자의 기본값을 정의합니다 (형이 바이트열인지 문자열인지도 정
+   의합니다). *경로류 객체*일 수 없습니다.
+
+   "gettempprefix()"를 제외한 위의 함수를 호출할 때 "tempdir"이
+   "None"(기본값)이면 "gettempdir()"에 설명된 알고리즘에 따라 초기화됩
+   니다.
+
+   참고:
+
+     Beware that if you set "tempdir" to a bytes value, there is a
+     nasty side effect: The global default return type of "mkstemp()"
+     and "mkdtemp()" changes to bytes when no explicit "prefix",
+     "suffix", or "dir" arguments of type str are supplied. Please do
+     not write code expecting or depending on this. This awkward
+     behavior is maintained for compatibility with the historical
+     implementation.
+
+
+예
+==
+
+다음은 "tempfile" 모듈의 일반적인 사용법에 대한 몇 가지 예입니다:
+
+   >>> import tempfile
+
+   # create a temporary file and write some data to it
+   >>> fp = tempfile.TemporaryFile()
+   >>> fp.write(b'Hello world!')
+   # read data from file
+   >>> fp.seek(0)
+   >>> fp.read()
+   b'Hello world!'
+   # close the file, it will be removed
+   >>> fp.close()
+
+   # create a temporary file using a context manager
+   >>> with tempfile.TemporaryFile() as fp:
+   ...     fp.write(b'Hello world!')
+   ...     fp.seek(0)
+   ...     fp.read()
+   b'Hello world!'
+   >>>
+   # file is now closed and removed
+
+   # create a temporary directory using the context manager
+   >>> with tempfile.TemporaryDirectory() as tmpdirname:
+   ...     print('created temporary directory', tmpdirname)
+   >>>
+   # directory and contents have been removed
+
+
+폐지된 함수와 변수
+==================
+
+임시 파일을 만드는 역사적인 방법은 먼저 "mktemp()" 함수를 사용하여 파
+일 이름을 생성한 다음 이 이름을 사용하여 파일을 만드는 것입니다. 불행
+히도 "mktemp()" 호출과 파일을 만들려는 후속 시도 사이에 다른 프로세스
+가 이 이름으로 파일을 만들 수 있어서 이 방법은 안전하지 않습니다. 해결
+책은 두 단계를 결합하고 파일을 즉시 만드는 것입니다. 이 접근법이
+"mkstemp()"와 위에서 설명한 다른 함수에서 사용됩니다.
+
+tempfile.mktemp(suffix='', prefix='tmp', dir=None)
+
+   버전 2.3부터 폐지: 대신 "mkstemp()"를 사용하십시오.
+
+   호출하는 시점에 존재하지 않는 파일의 절대 경로명을 반환합니다.
+   *prefix*, *suffix* 및 *dir* 인자는 바이트열 파일 이름,
+   "suffix=None" 및 "prefix=None"이 지원되지 않는다는 점을 제외하고
+   "mkstemp()"의 같은 인자와 유사합니다.
+
+   경고:
+
+     이 함수를 사용하면 프로그램에 보안 허점이 생길 수 있습니다. 반환
+     된 파일 이름으로 무언가를 하면서 시간을 보내는 동안, 다른 누군가
+     가 당신에게 펀치를 날릴 수 있습니다. "mktemp()" 사용은
+     "delete=False" 매개 변수를 전달하여 "NamedTemporaryFile()"로 쉽게
+     대체할 수 있습니다:
+
+        >>> f = NamedTemporaryFile(delete=False)
+        >>> f.name
+        '/tmp/tmptjujjt'
+        >>> f.write(b"Hello World!\n")
+        13
+        >>> f.close()
+        >>> os.unlink(f.name)
+        >>> os.path.exists(f.name)
+        False

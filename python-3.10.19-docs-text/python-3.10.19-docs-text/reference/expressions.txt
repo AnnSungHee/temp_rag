@@ -1,0 +1,1511 @@
+6. 표현식
+*********
+
+이 장은 파이썬에서 사용되는 표현식 요소들의 의미를 설명합니다.
+
+**문법 유의 사항:** 여기와 이어지는 장에서는, 어휘 분석이 아니라 문법
+을 설명하기 위해 확장 BNF 표기법을 사용합니다. 문법 규칙이 다음과 같은
+형태를 가지고,
+
+   name ::= othername
+
+뜻(semantics)을 주지 않으면, 이 형태의 "name" 의 뜻은 "othername" 과
+같습니다.
+
+
+6.1. 산술 변환
+==============
+
+다음에 나오는 산술 연산자의 설명이 "숫자 인자들은 공통 형으로 변환된다
+"라는 구절을 사용할 때, 내장형의 연산자 구현이 다음과 같이 동작한다는
+뜻입니다:
+
+* 어느 한 인자가 복소수면 다른 하나는 복소수로 변환됩니다;
+
+* otherwise, if either argument is a floating point number, the other
+  is converted to floating point;
+
+* 그렇지 않으면, 두 인자는 모두 정수여야 하고, 변환은 필요 없습니다.
+
+어떤 연산자들(예를 들어, '%' 연산자의 왼쪽 인자로 주어지는 문자열)에
+대해서는 몇 가지 추가의 규칙이 적용됩니다. 확장(extension)은 그들 자신
+의 변환 규칙을 정의해야 합니다.
+
+
+6.2. 아톰 (Atoms)
+=================
+
+아톰은 표현식의 가장 기본적인 요소입니다. 가장 간단한 아톰은 식별자와
+리터럴입니다. 괄호, 대괄호, 중괄호로 둘러싸인 형태도 문법적으로 아톰으
+로 분류됩니다. 아톰의 문법은 이렇습니다:
+
+   atom      ::= identifier | literal | enclosure
+   enclosure ::= parenth_form | list_display | dict_display | set_display
+                 | generator_expression | yield_atom
+
+
+6.2.1. 식별자 (이름)
+--------------------
+
+아톰으로 등장하는 식별자는 이름입니다. 어휘 정의에 대해서는 식별자와
+키워드 섹션을, 이름과 연결에 대한 문서는 이름과 연결(binding) 섹션을
+보세요.
+
+이름이 객체에 연결될 때, 아톰의 값을 구하면 객체가 나옵니다. 이름이 연
+결되지 않았을 때, 값을 구하려고 하면 "NameError" 예외가 일어납니다.
+
+**Private name mangling:** When an identifier that textually occurs in
+a class definition begins with two or more underscore characters and
+does not end in two or more underscores, it is considered a *private
+name* of that class. Private names are transformed to a longer form
+before code is generated for them.  The transformation inserts the
+class name, with leading underscores removed and a single underscore
+inserted, in front of the name.  For example, the identifier "__spam"
+occurring in a class named "Ham" will be transformed to "_Ham__spam".
+This transformation is independent of the syntactical context in which
+the identifier is used.  If the transformed name is extremely long
+(longer than 255 characters), implementation defined truncation may
+happen. If the class name consists only of underscores, no
+transformation is done.
+
+
+6.2.2. 리터럴 (Literals)
+------------------------
+
+파이썬은 문자열과 바이트열 리터럴과 여러 가지 숫자 리터럴들을 지원합니
+다:
+
+   literal ::= stringliteral | bytesliteral
+               | integer | floatnumber | imagnumber
+
+Evaluation of a literal yields an object of the given type (string,
+bytes, integer, floating point number, complex number) with the given
+value.  The value may be approximated in the case of floating point
+and imaginary (complex) literals.  See section 리터럴 for details.
+
+모든 리터럴은 불변 데이터형에 대응하기 때문에, 객체의 아이덴티티는 값
+보다 덜 중요합니다. 같은 값의 리터럴에 대해 반복적으로 값을 구하면 (프
+로그램 텍스트의 같은 장소에 있거나 다른 장소에 있을 때) 같은 객체를 얻
+을 수도 있고, 같은 값의 다른 객체를 얻을 수도 있습니다.
+
+
+6.2.3. 괄호 안에 넣은 형
+------------------------
+
+괄호 안에 넣은 형은, 괄호로 둘러싸인 생략 가능한 표현식 목록입니다:
+
+   parenth_form ::= "(" [starred_expression] ")"
+
+괄호 안에 넣은 표현식 목록은, 무엇이건 그 표현식 목록이 산출하는 것이
+됩니다: 목록이 적어도 하나의 쉼표를 포함하면, 튜플이 됩니다; 그렇지 않
+으면 표현식 목록을 구성한 단일 표현식이 됩니다.
+
+빈 괄호 쌍은 빈 튜플 객체를 만듭니다. 튜플은 불변이기 때문에 리터럴에
+서와 같은 규칙이 적용됩니다 (즉, 두 개의 빈 튜플은 같은 객체일 수도 있
+고 그렇지 않을 수도 있습니다).
+
+Note that tuples are not formed by the parentheses, but rather by use
+of the comma operator.  The exception is the empty tuple, for which
+parentheses *are* required --- allowing unparenthesized "nothing" in
+expressions would cause ambiguities and allow common typos to pass
+uncaught.
+
+
+6.2.4. 리스트, 집합, 딕셔너리의 디스플레이(display)
+---------------------------------------------------
+
+리스트, 집합, 딕셔너리를 구성하기 위해, 파이썬은 "디스플레이
+(displays)"라고 부르는 특별한 문법을 각기 두 가지 스타일로 제공합니다:
+
+* 컨테이너의 내용을 명시적으로 나열하거나,
+
+* 일련의 루프와 필터링 지시들을 통해 계산되는데, *컴프리헨션
+  (comprehension)* 이라고 불립니다.
+
+컴프리헨션의 공통 문법 요소들은 이렇습니다:
+
+   comprehension ::= assignment_expression comp_for
+   comp_for      ::= ["async"] "for" target_list "in" or_test [comp_iter]
+   comp_iter     ::= comp_for | comp_if
+   comp_if       ::= "if" or_test [comp_iter]
+
+컴프리헨션은 하나의 표현식과 그 뒤를 따르는 최소한 하나의 "for" 절과
+없거나 여러 개의 "for" 또는 "if" 절로 구성됩니다. 이 경우, 새 컨테이너
+의 요소들은 각 "for" 또는 "if" 절이 왼쪽에서 오른쪽으로 중첩된 블록을
+이루고, 가장 안쪽에 있는 블록에서 표현식의 값을 구해서 만들어낸 것들입
+니다.
+
+하지만, 가장 왼쪽의 "for" 절에 있는 이터러블 표현식을 제외하고는, 컴프
+리헨션은 묵시적으로 중첩된 스코프에서 실행됩니다. 이렇게 해서
+"target_list" 에서 대입되는 이름이 둘러싸는 스코프로 "누수" 되지 않도
+록 합니다.
+
+가장 왼쪽의 "for" 절의 이터러블 표현식은, 둘러싸는 스코프에서 직접 평
+가된 다음, 묵시적으로 중첩된 스코프로 인자로 전달됩니다. 뒤따르는
+"for" 절과 가장 왼쪽 "for" 절의 모든 필터 조건은, 가장 왼쪽 이터러블에
+서 얻은 값에 따라 달라질 수 있으므로 둘러싸는 스코프에서 평가할 수 없
+습니다. 예를 들면, "[x*y for x in range(10) for y in range(x, x+10)]".
+
+컴프리헨션이 항상 적절한 형의 컨테이너가 되게 하려고, 묵시적으로 중첩
+된 스코프에서 "yield" 와 "yield from" 표현식은 금지됩니다.
+
+Since Python 3.6, in an "async def" function, an "async for" clause
+may be used to iterate over a *asynchronous iterator*. A comprehension
+in an "async def" function may consist of either a "for" or "async
+for" clause following the leading expression, may contain additional
+"for" or "async for" clauses, and may also use "await" expressions. If
+a comprehension contains either "async for" clauses or "await"
+expressions it is called an *asynchronous comprehension*.  An
+asynchronous comprehension may suspend the execution of the coroutine
+function in which it appears. See also **PEP 530**.
+
+버전 3.6에 추가: 비동기 컴프리헨션이 도입되었습니다.
+
+버전 3.8에서 변경: "yield" 와 "yield from" 은 묵시적으로 중첩된 스코프
+에서 금지됩니다.
+
+
+6.2.5. 리스트 디스플레이
+------------------------
+
+리스트 디스플레이는 대괄호(square brackets)로 둘러싸인 표현식의 나열인
+데 비어있을 수 있습니다:
+
+   list_display ::= "[" [starred_list | comprehension] "]"
+
+리스트 디스플레이는 리스트 객체를 만드는데, 그 내용은 표현식의 목록이
+나 컴프리헨션으로 지정할 수 있습니다. 쉼표로 분리된 표현식의 목록이 제
+공될 때, 그 요소들은 왼쪽에서 오른쪽으로 값이 구해지고, 그 순서대로 리
+스트 객체에 삽입됩니다. 컴프리헨션이 제공될 때, 리스트는 컴프리헨션으
+로 만들어지는 요소들로 구성됩니다.
+
+
+6.2.6. 집합 디스플레이
+----------------------
+
+집합 디스플레이는 중괄호(curly braces)로 표시되고, 키와 값을 분리하는
+콜론(colon)이 없는 것으로 딕셔너리 디스플레이와 구분될 수 있습니다.
+
+   set_display ::= "{" (starred_list | comprehension) "}"
+
+집합 디스플레이는 새 가변 집합 객체를 만드는데, 그 내용은 표현식의 시
+퀀스나 컴프리헨션으로 지정됩니다. 쉼표로 분리된 표현식의 목록이 제공될
+때, 그 요소들은 왼쪽에서 오른쪽으로 값이 구해지고, 집합 객체에 더해집
+니다. 컴프리헨션이 제공될 때, 집합은 컴프리헨션으로 만들어지는 요소들
+로 구성됩니다.
+
+빈 집합은 "{}" 으로 만들어질 수 없습니다; 이 리터럴은 빈 딕셔너리를 만
+듭니다.
+
+
+6.2.7. 딕셔너리 디스플레이
+--------------------------
+
+A dictionary display is a possibly empty series of key/datum pairs
+enclosed in curly braces:
+
+   dict_display       ::= "{" [key_datum_list | dict_comprehension] "}"
+   key_datum_list     ::= key_datum ("," key_datum)* [","]
+   key_datum          ::= expression ":" expression | "**" or_expr
+   dict_comprehension ::= expression ":" expression comp_for
+
+딕셔너리 디스플레이는 새 딕셔너리 객체를 만듭니다.
+
+If a comma-separated sequence of key/datum pairs is given, they are
+evaluated from left to right to define the entries of the dictionary:
+each key object is used as a key into the dictionary to store the
+corresponding datum.  This means that you can specify the same key
+multiple times in the key/datum list, and the final dictionary's value
+for that key will be the last one given.
+
+A double asterisk "**" denotes *dictionary unpacking*. Its operand
+must be a *mapping*.  Each mapping item is added to the new
+dictionary.  Later values replace values already set by earlier
+key/datum pairs and earlier dictionary unpackings.
+
+버전 3.5에 추가: **PEP 448** 에서 처음 제안된 딕셔너리 디스플레이로의
+언 패킹.
+
+딕셔너리 컴프리헨션은, 리스트와 집합 컴프리헨션에 대비해서, 일반적인
+"for" 와 "if" 절 앞에 콜론으로 분리된 두 개의 표현식을 필요로 합니다.
+컴프리헨션이 실행될 때, 만들어지는 키와 값 요소들이 만들어지는 순서대
+로 딕셔너리에 삽입됩니다.
+
+Restrictions on the types of the key values are listed earlier in
+section 표준형 계층.  (To summarize, the key type should be
+*hashable*, which excludes all mutable objects.)  Clashes between
+duplicate keys are not detected; the last datum (textually rightmost
+in the display) stored for a given key value prevails.
+
+버전 3.8에서 변경: 파이썬 3.8 이전에는, 딕셔너리 컴프리헨션에서, 키와
+값의 평가 순서가 잘 정의되어 있지 않았습니다. CPython에서, 값이 키보다
+먼저 평가되었습니다. 3.8부터는, **PEP 572**의 제안에 따라 키가 값보다
+먼저 평가됩니다.
+
+
+6.2.8. 제너레이터 표현식 (Generator expressions)
+------------------------------------------------
+
+제너레이터 표현식은 괄호로 둘러싸인 간결한 제너레이터 표기법입니다.
+
+   generator_expression ::= "(" expression comp_for ")"
+
+제너레이터 표현식은 새 제너레이터 객체를 만듭니다. 문법은 대괄호나 중
+괄호 대신 괄호로 둘러싸인다는 점만 제외하면 컴프리헨션과 같습니다.
+
+제너레이터 표현식에 사용되는 변수들은 제너레이터 객체의 "__next__()"
+메서드가 호출될 때 느긋하게(lazily) 값이 구해집니다 (일반 제너레이터와
+마찬가지입니다). 그러나 가장 왼쪽의 "for" 절에 있는 이터러블 표현식은
+즉시 값이 구해져서, 그것으로 인해 발생하는 에러는 첫 번째 값이 검색되
+는 지점이 아니라 제너레이터 표현식이 정의된 지점에서 발생합니다. 후속
+"for" 절과 가장 왼쪽 "for" 절의 모든 필터 조건은, 가장 왼쪽 이터러블에
+서 가져온 값에 따라 달라질 수 있으므로 둘러싸는 스코프에서 평가할 수
+없습니다. 예를 들어: "(x*y for x in range(10) for y in range(x,
+x+10))".
+
+단지 하나의 인자만 갖는 호출에서는 괄호를 생략할 수 있습니다. 자세한
+내용은 호출 섹션을 보세요.
+
+제너레이터 표현식 자체의 기대되는 연산을 방해하지 않기 위해, 묵시적으
+로 정의된 제너레이터에서 "yield" 와 "yield from" 표현식은 금지됩니다.
+
+제너레이터 표현식이 "async for" 절이나 "await" 표현식을 포함하면 *비동
+기 제너레이터 표현식 (asynchronous generator expression)* 이라고 불립
+니다. 비동기 제너레이터 표현식은 새 비동기 제너레이터 객체를 돌려주는
+데 이것은 비동기 이터레이터입니다 (비동기 이터레이터(Asynchronous
+Iterators) 를 참조하세요).
+
+버전 3.6에 추가: 비동기식 제너레이터 표현식이 도입되었습니다.
+
+버전 3.7에서 변경: 파이썬 3.7 이전에는, 비동기 제너레이터 표현식이
+"async def" 코루틴에만 나타날 수 있었습니다. 3.7부터는, 모든 함수가 비
+동기식 제너레이터 표현식을 사용할 수 있습니다.
+
+버전 3.8에서 변경: "yield" 와 "yield from" 은 묵시적으로 중첩된 스코프
+에서 금지됩니다.
+
+
+6.2.9. 일드 표현식(Yield expressions)
+-------------------------------------
+
+   yield_atom       ::= "(" yield_expression ")"
+   yield_expression ::= "yield" [expression_list | "from" expression]
+
+The yield expression is used when defining a *generator* function or
+an *asynchronous generator* function and thus can only be used in the
+body of a function definition.  Using a yield expression in a
+function's body causes that function to be a generator function, and
+using it in an "async def" function's body causes that coroutine
+function to be an asynchronous generator function. For example:
+
+   def gen():  # defines a generator function
+       yield 123
+
+   async def agen(): # defines an asynchronous generator function
+       yield 123
+
+둘러싸는 스코프에 대한 부작용으로 인해, "yield" 표현식은 컴프리헨션과
+제너레이터 표현식을 구현하는 데 사용되는 묵시적으로 정의된 스코프에 사
+용될 수 없습니다.
+
+버전 3.8에서 변경: 일드 표현식은 컴프리헨션과 제너레이터 표현식을 구현
+하는 데 사용되는 묵시적으로 정의된 스코프에서 금지됩니다.
+
+제너레이터 함수는 다음에서 설명합니다. 반면에 비동기 제너레이터 함수는
+비동기 제너레이터 함수 섹션에서 별도로 설명합니다.
+
+When a generator function is called, it returns an iterator known as a
+generator.  That generator then controls the execution of the
+generator function.  The execution starts when one of the generator's
+methods is called. At that time, the execution proceeds to the first
+yield expression, where it is suspended again, returning the value of
+"expression_list" to the generator's caller, or "None" if
+"expression_list" is omitted. By suspended, we mean that all local
+state is retained, including the current bindings of local variables,
+the instruction pointer, the internal evaluation stack, and the state
+of any exception handling. When the execution is resumed by calling
+one of the generator's methods, the function can proceed exactly as if
+the yield expression were just another external call.  The value of
+the yield expression after resuming depends on the method which
+resumed the execution.  If "__next__()" is used (typically via either
+a "for" or the "next()" builtin) then the result is "None".
+Otherwise, if "send()" is used, then the result will be the value
+passed in to that method.
+
+이 모든 것들은 제너레이터 함수를 코루틴과 아주 비슷하게 만듭니다; 여러
+번 결과를 만들고, 하나 이상의 진입 지점을 갖고 있으며, 실행이 일시 중
+지될 수 있습니다. 유일한 차이점은 제너레이터 함수는 yield 한 후에 실행
+이 어디에서 계속되어야 하는지를 제어할 수 없다는 점입니다; 제어는 항상
+제너레이터의 호출자로 전달됩니다.
+
+일드 표현식은 "try" 구조물의 어디에서건 허락됩니다. 제너레이터가 (참조
+횟수가 0이 되거나 가비지 수거됨으로써) 파이널라이즈(finalize)되기 전에
+재개되지 않으면, 제너레이터-이터레이터의 "close()" 메서드가 호출되어,
+대기 중인 "finally" 절이 실행되도록 허락합니다.
+
+"yield from <expr>" 이 사용될 때, 제공된 표현식은 어터러블이어야 합니
+다. 그 이터러블을 이터레이트 해서 생성되는 값들은 현재 제너레이터 메서
+드의 호출자에게 바로 전달됩니다. "send()" 로 전달된 모든 값과
+"throw()" 로 전달된 모든 예외는 밑에 있는(underlying) 이터레이터가 해
+당 메서드를 갖고 있다면 그곳으로 전달됩니다. 그렇지 않다면, "send()"
+는 "AttributeError" 나 "TypeError" 를 일으키지만, "throw()" 는 전달된
+예외를 즉시 일으킨다.
+
+밑에 있는 이러레이터가 완료될 때, 발생하는 "StopIteration" 인스턴스의
+"value" 어트리뷰트는 일드 표현식의 값이 됩니다. "StopIteration" 를 일
+으킬 때 명시적으로 설정되거나, 서브 이터레이터가 제너레이터일 경우는
+자동으로 이루어집니다 (서브 제너레이터가 값을 돌려(return)줌으로써).
+
+   버전 3.3에서 변경: 서브 이터레이터로 제어 흐름을 위임하는 "yield
+   from <expr>" 를 추가했습니다.
+
+일드 표현식이 대입문의 우변에 홀로 나온다면 괄호를 생략할 수 있습니다.
+
+더 보기:
+
+  **PEP 255** - 간단한 제너레이터
+     파이썬에 제너레이터와 "yield" 문을 추가하는 제안.
+
+  **PEP 342** - 개선된 제너레이터를 통한 코루틴
+     제너레이터의 API와 문법을 개선해서, 간단한 코루틴으로 사용할 수
+     있도록 만드는 제안.
+
+  **PEP 380** - 서브 제너레이터로 위임하는 문법
+     The proposal to introduce the "yield_from" syntax, making
+     delegation to subgenerators easy.
+
+  **PEP 525** - 비동기 제너레이터
+     코루틴 함수에 제너레이터 기능을 추가하여 **PEP 492**을 확장한 제
+     안.
+
+
+6.2.9.1. 제너레이터-이터레이터 메서드
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+이 서브섹션은 제너레이터 이터레이터의 메서드들을 설명합니다. 제너레이
+터 함수의 실행을 제어하는데 사용될 수 있습니다.
+
+제너레이터가 이미 실행 중일 때 아래에 나오는 메서드들을 호출하면
+"ValueError" 예외를 일으키는 것에 주의해야 합니다.
+
+generator.__next__()
+
+   Starts the execution of a generator function or resumes it at the
+   last executed yield expression.  When a generator function is
+   resumed with a "__next__()" method, the current yield expression
+   always evaluates to "None".  The execution then continues to the
+   next yield expression, where the generator is suspended again, and
+   the value of the "expression_list" is returned to "__next__()"'s
+   caller.  If the generator exits without yielding another value, a
+   "StopIteration" exception is raised.
+
+   이 메서드는 보통 묵시적으로 호출됩니다, 예를 들어, "for" 루프나 내
+   장 "next()" 함수에 의해.
+
+generator.send(value)
+
+   실행을 재개하고 제너레이터 함수로 값을 "보냅니다(send)". *value* 인
+   자는 현재 일드 표현식의 값이 됩니다. "send()" 메서드는 제너레이터가
+   yield 하는 다음 값을 돌려주거나, 제너레이터가 다른 값을 yield 하지
+   않고 종료하면 "StopIteration" 을 일으킵니다. "send()" 가 제너레이터
+   를 시작시키도록 호출될 때, 값을 받을 일드 표현식이 없으므로, 인자로
+   는 반드시 "None" 을 전달해야 합니다.
+
+generator.throw(value)
+generator.throw(type[, value[, traceback]])
+
+   Raises an exception at the point where the generator was paused,
+   and returns the next value yielded by the generator function.  If
+   the generator exits without yielding another value, a
+   "StopIteration" exception is raised.  If the generator function
+   does not catch the passed-in exception, or raises a different
+   exception, then that exception propagates to the caller.
+
+   In typical use, this is called with a single exception instance
+   similar to the way the "raise" keyword is used.
+
+   For backwards compatibility, however, the second signature is
+   supported, following a convention from older versions of Python.
+   The *type* argument should be an exception class, and *value*
+   should be an exception instance. If the *value* is not provided,
+   the *type* constructor is called to get an instance. If *traceback*
+   is provided, it is set on the exception, otherwise any existing
+   "__traceback__" attribute stored in *value* may be cleared.
+
+generator.close()
+
+   Raises a "GeneratorExit" at the point where the generator function
+   was paused.  If the generator function then exits gracefully, is
+   already closed, or raises "GeneratorExit" (by not catching the
+   exception), close returns to its caller.  If the generator yields a
+   value, a "RuntimeError" is raised.  If the generator raises any
+   other exception, it is propagated to the caller.  "close()" does
+   nothing if the generator has already exited due to an exception or
+   normal exit.
+
+
+6.2.9.2. 사용 예
+~~~~~~~~~~~~~~~~
+
+여기에 제너레이터와 제너레이터 함수의 동작을 시연하는 간단한 예가 있습
+니다:
+
+   >>> def echo(value=None):
+   ...     print("Execution starts when 'next()' is called for the first time.")
+   ...     try:
+   ...         while True:
+   ...             try:
+   ...                 value = (yield value)
+   ...             except Exception as e:
+   ...                 value = e
+   ...     finally:
+   ...         print("Don't forget to clean up when 'close()' is called.")
+   ...
+   >>> generator = echo(1)
+   >>> print(next(generator))
+   Execution starts when 'next()' is called for the first time.
+   1
+   >>> print(next(generator))
+   None
+   >>> print(generator.send(2))
+   2
+   >>> generator.throw(TypeError, "spam")
+   TypeError('spam',)
+   >>> generator.close()
+   Don't forget to clean up when 'close()' is called.
+
+"yield from" 을 사용하는 예는, "What's New in Python." 에 있는 PEP
+380: Syntax for Delegating to a Subgenerator 을 보세요.
+
+
+6.2.9.3. 비동기 제너레이터 함수
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+"async def" 를 사용한 함수나 메서드에서 일드 표현식의 존재는 그 함수를
+*비동기 제너레이터* 함수로 정의합니다.
+
+비동기 제너레이터 함수가 호출되면, 비동기 제너레이터 객체로 알려진 비
+동기 이터레이터를 돌려줍니다. 그런 다음 그 객체는 제너레이터 함수의 실
+행을 제어합니다. 비동기 제너레이터 객체는 보통 코루틴 함수의 "async
+for" 문에서 사용되는데, 제너레이터 객체가 "for" 문에서 사용되는 방식과
+유사합니다.
+
+Calling one of the asynchronous generator's methods returns an
+*awaitable* object, and the execution starts when this object is
+awaited on. At that time, the execution proceeds to the first yield
+expression, where it is suspended again, returning the value of
+"expression_list" to the awaiting coroutine. As with a generator,
+suspension means that all local state is retained, including the
+current bindings of local variables, the instruction pointer, the
+internal evaluation stack, and the state of any exception handling.
+When the execution is resumed by awaiting on the next object returned
+by the asynchronous generator's methods, the function can proceed
+exactly as if the yield expression were just another external call.
+The value of the yield expression after resuming depends on the method
+which resumed the execution.  If "__anext__()" is used then the result
+is "None". Otherwise, if "asend()" is used, then the result will be
+the value passed in to that method.
+
+If an asynchronous generator happens to exit early by "break", the
+caller task being cancelled, or other exceptions, the generator's
+async cleanup code will run and possibly raise exceptions or access
+context variables in an unexpected context--perhaps after the lifetime
+of tasks it depends, or during the event loop shutdown when the async-
+generator garbage collection hook is called. To prevent this, the
+caller must explicitly close the async generator by calling "aclose()"
+method to finalize the generator and ultimately detach it from the
+event loop.
+
+비동기 제너레이터 함수에서, 일드 표현식은 "try" 구조물의 어디에서건 허
+락됩니다. 하지만, 비동기 제너레이터가 (참조 횟수가 0이 되거나 가비지
+수거됨으로써) 파이널라이즈(finalize)되기 전에 재개되지 않으면, "try"
+구조물 내의 일드 표현식은 대기 중인 "finally" 절을 실행하는 데 실패할
+수 있습니다. 이 경우에, 비동기 제너레이터-이터레이터의 "aclose()" 를
+호출하고, 그 결과로 오는 코루틴 객체를 실행해서, 대기 중인 "finally"
+절이 실행되도록 하는 책임은, 비동기 제너레이터를 실행하는 이벤트 루프
+(event loop)나 스케줄러(scheduler)에게 있습니다.
+
+To take care of finalization upon event loop termination, an event
+loop should define a *finalizer* function which takes an asynchronous
+generator-iterator and presumably calls "aclose()" and executes the
+coroutine. This  *finalizer* may be registered by calling
+"sys.set_asyncgen_hooks()". When first iterated over, an asynchronous
+generator-iterator will store the registered *finalizer* to be called
+upon finalization. For a reference example of a *finalizer* method see
+the implementation of "asyncio.Loop.shutdown_asyncgens" in
+Lib/asyncio/base_events.py.
+
+표현식 "yield from <expr>" 를 비동기 제너레이터 함수에서 사용하는 것은
+문법 에러다.
+
+
+6.2.9.4. 비동기 제너레이터-이터레이터 메서드
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+이 서브섹션은 비동기 제너레이터 이터레이터의 메서드를 설명하는데, 제너
+레이터 함수의 실행을 제어하는 데 사용됩니다.
+
+coroutine agen.__anext__()
+
+   Returns an awaitable which when run starts to execute the
+   asynchronous generator or resumes it at the last executed yield
+   expression.  When an asynchronous generator function is resumed
+   with an "__anext__()" method, the current yield expression always
+   evaluates to "None" in the returned awaitable, which when run will
+   continue to the next yield expression. The value of the
+   "expression_list" of the yield expression is the value of the
+   "StopIteration" exception raised by the completing coroutine.  If
+   the asynchronous generator exits without yielding another value,
+   the awaitable instead raises a "StopAsyncIteration" exception,
+   signalling that the asynchronous iteration has completed.
+
+   이 메서드는 보통 "async for" 루프에 의해 묵시적으로 호출됩니다.
+
+coroutine agen.asend(value)
+
+   Returns an awaitable which when run resumes the execution of the
+   asynchronous generator. As with the "send()" method for a
+   generator, this "sends" a value into the asynchronous generator
+   function, and the *value* argument becomes the result of the
+   current yield expression. The awaitable returned by the "asend()"
+   method will return the next value yielded by the generator as the
+   value of the raised "StopIteration", or raises "StopAsyncIteration"
+   if the asynchronous generator exits without yielding another value.
+   When "asend()" is called to start the asynchronous generator, it
+   must be called with "None" as the argument, because there is no
+   yield expression that could receive the value.
+
+coroutine agen.athrow(value)
+coroutine agen.athrow(type[, value[, traceback]])
+
+   어웨이터블을 돌려주는데, 비동기 제너레이터가 일시 중지한 지점에
+   "type" 형의 예외를 일으키고, 제너레이터 함수가 yield 한 다음 값을
+   발생하는 "StopIteration" 예외의 값으로 돌려줍니다. 비동기 제너레이
+   터가 다른 값을 yield 하지 않고 종료하면, 어웨이터블에 의해
+   "StopAsyncIteration" 예외가 일어납니다. 제너레이터 함수가 전달된 예
+   외를 잡지 않거나, 다른 예외를 일으키면, 어웨이터블을 실행할 때 그
+   예외가 어웨이터블의 호출자에게 퍼집니다.
+
+coroutine agen.aclose()
+
+   어웨이터블을 돌려주는데, 실행하면, 비동기 제너레이터 함수가 일시 정
+   지한 지점으로 "GeneratorExit" 를 던집니다. 만약 그 이후에 비동기 제
+   너레이터 함수가 우아하게 (gracefully) 종료하거나, 이미 닫혔거나, (
+   그 예외를 잡지 않음으로써) "GeneratorExit" 를 일으키면, 돌려준 어웨
+   이터블은 "StopIteration" 예외를 일으킵니다. 이어지는 비동기 제너레
+   이터 호출이 돌려주는 추가의 어웨이터블들은 "StopAsyncIteration" 예
+   외를 일으킵니다. 만약 비동기 제너레이터가 값을 yield 하면 어웨이터
+   블에 의해 "RuntimeError" 가 발생합니다. 만약 비동기 제너레이터가 그
+   밖의 다른 예외를 일으키면, 어웨이터블의 호출자로 퍼집니다. 만약 비
+   동기 제너레이터가 예외나 정상 종료로 이미 종료했으면, 더 이어지는
+   "aclose()" 호출은 아무것도 하지 않는 어웨이터블을 돌려줍니다.
+
+
+6.3. 프라이머리
+===============
+
+프라이머리는 언어에서 가장 강하게 결합하는 연산들을 나타냅니다. 문법은
+이렇습니다:
+
+   primary ::= atom | attributeref | subscription | slicing | call
+
+
+6.3.1. 어트리뷰트 참조
+----------------------
+
+어트리뷰트 참조는 마침표(period)와 이름이 뒤에 붙은 프라이머리다:
+
+   attributeref ::= primary "." identifier
+
+The primary must evaluate to an object of a type that supports
+attribute references, which most objects do.  This object is then
+asked to produce the attribute whose name is the identifier.  This
+production can be customized by overriding the "__getattr__()" method.
+If this attribute is not available, the exception "AttributeError" is
+raised.  Otherwise, the type and value of the object produced is
+determined by the object.  Multiple evaluations of the same attribute
+reference may yield different objects.
+
+
+6.3.2. 서브스크립션(Subscriptions)
+----------------------------------
+
+The subscription of an instance of a container class will generally
+select an element from the container. The subscription of a *generic
+class* will generally return a GenericAlias object.
+
+   subscription ::= primary "[" expression_list "]"
+
+When an object is subscripted, the interpreter will evaluate the
+primary and the expression list.
+
+The primary must evaluate to an object that supports subscription. An
+object may support subscription through defining one or both of
+"__getitem__()" and "__class_getitem__()". When the primary is
+subscripted, the evaluated result of the expression list will be
+passed to one of these methods. For more details on when
+"__class_getitem__" is called instead of "__getitem__", see
+__class_getitem__ versus __getitem__.
+
+If the expression list contains at least one comma, it will evaluate
+to a "tuple" containing the items of the expression list. Otherwise,
+the expression list will evaluate to the value of the list's sole
+member.
+
+For built-in objects, there are two types of objects that support
+subscription via "__getitem__()":
+
+1. Mappings. If the primary is a *mapping*, the expression list must
+   evaluate to an object whose value is one of the keys of the
+   mapping, and the subscription selects the value in the mapping that
+   corresponds to that key. An example of a builtin mapping class is
+   the "dict" class.
+
+2. Sequences. If the primary is a *sequence*, the expression list must
+   evaluate to an "int" or a "slice" (as discussed in the following
+   section). Examples of builtin sequence classes include the "str",
+   "list" and "tuple" classes.
+
+The formal syntax makes no special provision for negative indices in
+*sequences*. However, built-in sequences all provide a "__getitem__()"
+method that interprets negative indices by adding the length of the
+sequence to the index so that, for example, "x[-1]" selects the last
+item of "x". The resulting value must be a nonnegative integer less
+than the number of items in the sequence, and the subscription selects
+the item whose index is that value (counting from zero). Since the
+support for negative indices and slicing occurs in the object's
+"__getitem__()" method, subclasses overriding this method will need to
+explicitly add that support.
+
+A "string" is a special kind of sequence whose items are *characters*.
+A character is not a separate data type but a string of exactly one
+character.
+
+
+6.3.3. 슬라이싱(Slicings)
+-------------------------
+
+슬라이싱은 시퀀스 객체 (예를 들어, 문자열 튜플 리스트)에서 어떤 범위의
+항목들을 선택합니다. 슬라이싱은 표현식이나 대입의 타깃이나 "del" 문에
+사용될 수 있습니다. 슬라이싱의 문법은 이렇습니다:
+
+   slicing      ::= primary "[" slice_list "]"
+   slice_list   ::= slice_item ("," slice_item)* [","]
+   slice_item   ::= expression | proper_slice
+   proper_slice ::= [lower_bound] ":" [upper_bound] [ ":" [stride] ]
+   lower_bound  ::= expression
+   upper_bound  ::= expression
+   stride       ::= expression
+
+이 형식 문법에는 모호함이 있습니다: 표현식 목록처럼 보이는 것들은 모두
+슬라이스 목록으로 보이기도 해서, 모든 서브스크립션이 슬라이싱으로 해석
+될 수도 있습니다. 문법을 더 복잡하게 만드는 대신, 이 경우에 서브스크립
+션으로 해석하는 것이 슬라이싱으로 해석하는 것에 우선한다고 정의하는 것
+으로 애매함을 제거합니다 (이 경우는 슬라이스 목록이 고유한 슬라이스
+(proper slice) 를 하나도 포함하지 않을 때입니다).
+
+The semantics for a slicing are as follows.  The primary is indexed
+(using the same "__getitem__()" method as normal subscription) with a
+key that is constructed from the slice list, as follows.  If the slice
+list contains at least one comma, the key is a tuple containing the
+conversion of the slice items; otherwise, the conversion of the lone
+slice item is the key.  The conversion of a slice item that is an
+expression is that expression.  The conversion of a proper slice is a
+slice object (see section 표준형 계층) whose "start", "stop" and
+"step" attributes are the values of the expressions given as lower
+bound, upper bound and stride, respectively, substituting "None" for
+missing expressions.
+
+
+6.3.4. 호출
+-----------
+
+호출은 콜러블 객체 (예를 들어, *함수*) 를 빌 수도 있는 *인자* 들의 목
+록으로 호출합니다.
+
+   call                 ::= primary "(" [argument_list [","] | comprehension] ")"
+   argument_list        ::= positional_arguments ["," starred_and_keywords]
+                       ["," keywords_arguments]
+                     | starred_and_keywords ["," keywords_arguments]
+                     | keywords_arguments
+   positional_arguments ::= positional_item ("," positional_item)*
+   positional_item      ::= assignment_expression | "*" expression
+   starred_and_keywords ::= ("*" expression | keyword_item)
+                            ("," "*" expression | "," keyword_item)*
+   keywords_arguments   ::= (keyword_item | "**" expression)
+                          ("," keyword_item | "," "**" expression)*
+   keyword_item         ::= identifier "=" expression
+
+생략할 수 있는 마지막 쉼표가 위치나 키워드 인자 뒤에 나타날 수 있지만,
+의미를 바꾸지 않습니다.
+
+The primary must evaluate to a callable object (user-defined
+functions, built-in functions, methods of built-in objects, class
+objects, methods of class instances, and all objects having a
+"__call__()" method are callable).  All argument expressions are
+evaluated before the call is attempted.  Please refer to section 함수
+정의 for the syntax of formal *parameter* lists.
+
+If keyword arguments are present, they are first converted to
+positional arguments, as follows.  First, a list of unfilled slots is
+created for the formal parameters.  If there are N positional
+arguments, they are placed in the first N slots.  Next, for each
+keyword argument, the identifier is used to determine the
+corresponding slot (if the identifier is the same as the first formal
+parameter name, the first slot is used, and so on).  If the slot is
+already filled, a "TypeError" exception is raised. Otherwise, the
+value of the argument is placed in the slot, filling it (even if the
+expression is "None", it fills the slot).  When all arguments have
+been processed, the slots that are still unfilled are filled with the
+corresponding default value from the function definition.  (Default
+values are calculated, once, when the function is defined; thus, a
+mutable object such as a list or dictionary used as default value will
+be shared by all calls that don't specify an argument value for the
+corresponding slot; this should usually be avoided.)  If there are any
+unfilled slots for which no default value is specified, a "TypeError"
+exception is raised.  Otherwise, the list of filled slots is used as
+the argument list for the call.
+
+**CPython 구현 상세:** 구현은 위치 매개변수가 이름을 갖지 않아서, 설사
+문서화의 목적으로 이름이 붙여졌다 하더라도, 키워드로 공급될 수 없는 내
+장 함수들을 제공할 수 있습니다. CPython 에서, 인자들을 파싱하기 위해
+"PyArg_ParseTuple()" 를 사용하는 C로 구현된 함수들이 이 경우입니다.
+
+형식 매개변수 슬롯들보다 많은 위치 인자들이 있으면, "*identifier" 문법
+을 사용하는 형식 매개변수가 있지 않은 한, "TypeError" 예외를 일으킵니
+다; 이 경우, 그 형식 매개변수는 남는 위치 인자들을 포함하는 튜플을 전
+달받습니다 (또는 남는 위치 인자들이 없으면 빈 튜플).
+
+키워드 인자가 형식 매개변수 이름에 대응하지 않으면, "**identifier" 문
+법을 사용하는 형식 매개변수가 있지 않은 한, "TypeError" 예외를 일으킵
+니다; 이 경우, 그 형식 매개변수는 남는 키워드 인자들을 포함하는 딕셔너
+리나, 남는 위치기반 인자들이 없으면 빈 (새) 딕셔너리를 전달받습니다.
+
+문법 "*expression" 이 함수 호출에 등장하면, "expression" 의 값은 *이터
+러블* 이 되어야 합니다. 이 이터러블의 요소들은, 그것들이 추가의 위치
+인자들인 것처럼 취급됩니다. 호출 "f(x1, x2, *y, x3, x4)" 의 경우, *y*
+의 값을 구할 때 시퀀스 *y1*, ..., *yM* 이 나온다면, 이것은 M+4개의 위
+치 인자들 *x1*, *x2*, *y1*, ..., *yM*, *x3*, *x4* 로 호출하는 것과 동
+등합니다.
+
+이로 인한 결과는 설사 "*expression" 문법이 명시적인 키워드 인자 *뒤에*
+나올 수는 있어도, 키워드 인자 (그리고 모든 "**expression" 인자들 -- 아
+래를 보라) *전에* 처리된다는 것입니다. 그래서:
+
+   >>> def f(a, b):
+   ...     print(a, b)
+   ...
+   >>> f(b=1, *(2,))
+   2 1
+   >>> f(a=1, *(2,))
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: f() got multiple values for keyword argument 'a'
+   >>> f(1, *(2,))
+   1 2
+
+It is unusual for both keyword arguments and the "*expression" syntax
+to be used in the same call, so in practice this confusion does not
+arise.
+
+If the syntax "**expression" appears in the function call,
+"expression" must evaluate to a *mapping*, the contents of which are
+treated as additional keyword arguments. If a parameter matching a key
+has already been given a value (by an explicit keyword argument, or
+from another unpacking), a "TypeError" exception is raised.
+
+When "**expression" is used, each key in this mapping must be a
+string. Each value from the mapping is assigned to the first formal
+parameter eligible for keyword assignment whose name is equal to the
+key. A key need not be a Python identifier (e.g. ""max-temp °F"" is
+acceptable, although it will not match any formal parameter that could
+be declared). If there is no match to a formal parameter the key-value
+pair is collected by the "**" parameter, if there is one, or if there
+is not, a "TypeError" exception is raised.
+
+문법 "*identifier" 이나 "**identifier" 를 사용하는 형식 매개변수들은
+위치 인자 슬롯이나 키워드 인자 아름들로 사용될 수 없습니다.
+
+버전 3.5에서 변경: 함수 호출은 임의의 개수의 "*" and "**" 언 패킹을 받
+아들이고, 위치 인자들이 이터러블 언 패킹 ("*") 뒤에 올 수 있고, 키워드
+인자가 딕셔너리 언 패킹 ("**") 뒤에 올 수 있습니다. 최초로 **PEP 448**
+에서 제안되었습니다.
+
+호출은 예외를 일으키지 않는 한, 항상 어떤 값을 돌려줍니다, "None" 일
+수 있습니다. 이 값이 어떻게 계산되는지는 콜러블 객체의 형에 달려있습니
+다.
+
+만약 그것이---
+
+사용자 정의 함수면:
+   The code block for the function is executed, passing it the
+   argument list.  The first thing the code block will do is bind the
+   formal parameters to the arguments; this is described in section 함
+   수 정의.  When the code block executes a "return" statement, this
+   specifies the return value of the function call.
+
+내장 함수나 메서드면:
+   결과는 인터프리터에 달려있습니다; 내장 함수와 메서드들에 대한 설명
+   은 내장 함수 를 보세요.
+
+클래스 객체면:
+   그 클래스의 새 인스턴스가 반환됩니다.
+
+클래스 인스턴스 메서드면:
+   대응하는 사용자 정의 함수가 호출되는데, 그 인스턴스가 첫 번째 인자
+   가 되는 하나만큼 더 긴 인자 목록이 전달됩니다.
+
+클래스 인스턴스면:
+   The class must define a "__call__()" method; the effect is then the
+   same as if that method was called.
+
+
+6.4. 어웨이트 표현식
+====================
+
+*어웨이터블* 에서 *코루틴* 의 실행을 일시 중지합니다. 오직 *코루틴 함
+수* 에서만 사용할 수 있습니다.
+
+   await_expr ::= "await" primary
+
+버전 3.5에 추가.
+
+
+6.5. 거듭제곱 연산자
+====================
+
+거듭제곱 연산자는 그것의 왼쪽에 붙는 일 항 연산자보다 더 강하게 결합합
+니다; 그것의 오른쪽에 붙는 일 항 연산자보다는 약하게 결합합니다. 문법
+은 이렇습니다:
+
+   power ::= (await_expr | primary) ["**" u_expr]
+
+그래서, 괄호가 없는 거듭제곱과 일 항 연산자의 시퀀스에서, 연산자는 오
+른쪽에서 왼쪽으로 값이 구해집니다 (이것이 피연산자의 값을 구하는 순서
+를 제약하는 것은 아닙니다): "-1**2" 은 "-1" 이 됩니다.
+
+거듭제곱 연산자는 내장 "pow()" 함수가 두 개의 인자로 호출될 때와 같은
+의미가 있습니다: 왼쪽 인자를 오른쪽 인자만큼 거듭제곱한 값을 줍니다.
+숫자 인자는 먼저 공통 형으로 변환되고, 결과는 그 형입니다.
+
+int 피연산자의 경우, 두 번째 인자가 음수가 아닌 이상 결과는 피연산자들
+과 같은 형을 갖습니다; 두 번째 인자가 음수면, 모든 인자는 float로 변환
+되고, float 결과가 전달됩니다. 예를 들어, "10**2" 는 "100" 를 돌려주지
+만, "10**-2" 는 "0.01" 를 돌려줍니다.
+
+"0.0" 를 음수로 거듭제곱하면 "ZeroDivisionError" 를 일으킵니다. 음수를
+분수로 거듭제곱하면 복소수("complex")가 나옵니다. (예전 버전에서는
+"ValueError" 를 일으켰습니다.)
+
+This operation can be customized using the special "__pow__()" method.
+
+
+6.6. 일 항 산술과 비트 연산
+===========================
+
+모든 일 항 산술과 비트 연산자는 같은 우선순위를 갖습니다.
+
+   u_expr ::= power | "-" u_expr | "+" u_expr | "~" u_expr
+
+The unary "-" (minus) operator yields the negation of its numeric
+argument; the operation can be overridden with the "__neg__()" special
+method.
+
+The unary "+" (plus) operator yields its numeric argument unchanged;
+the operation can be overridden with the "__pos__()" special method.
+
+The unary "~" (invert) operator yields the bitwise inversion of its
+integer argument.  The bitwise inversion of "x" is defined as
+"-(x+1)".  It only applies to integral numbers or to custom objects
+that override the "__invert__()" special method.
+
+세 가지 경우 모두, 인자가 올바른 형을 갖지 않는다면, "TypeError" 예외
+가 발생합니다.
+
+
+6.7. 이항 산술 연산
+===================
+
+이항 산술 연산자는 관습적인 우선순위를 갖습니다. 이 연산자 중 일부는
+일부 비 숫자 형에도 적용됨에 주의해야 합니다. 거듭제곱 연산자와는 별개
+로, 오직 두 가지 수준만 있는데, 하나는 곱셈형 연산자들이고, 하나는 덧
+셈형 연산자들입니다.
+
+   m_expr ::= u_expr | m_expr "*" u_expr | m_expr "@" m_expr |
+              m_expr "//" u_expr | m_expr "/" u_expr |
+              m_expr "%" u_expr
+   a_expr ::= m_expr | a_expr "+" m_expr | a_expr "-" m_expr
+
+"*" (곱셈) 연산자는 인자들의 곱을 줍니다. 인자들은 모두 숫자거나, 한
+인자는 정수고 다른 인자는 시퀀스여야 합니다. 앞의 경우에, 숫자들은 공
+통 형으로 변환된 후 곱해집니다. 후자의 경우, 시퀀스의 반복이 수행됩니
+다; 음의 반복 값은 빈 시퀀스를 만듭니다.
+
+This operation can be customized using the special "__mul__()" and
+"__rmul__()" methods.
+
+"@" (at) 연산자는 행렬 곱셈에 사용하려는 것입니다. 파이썬의 내장형들
+어느 것도 이 연산자를 구현하지 않습니다.
+
+버전 3.5에 추가.
+
+"/" (나눗셈)과 "//" (정수 나눗셈, floor division) 연산자들은 그 인자들
+의 몫(quotient)을 줍니다. 숫자 인자들은 먼저 공통형으로 변환됩니다. 정
+수들의 나눗셈은 실수를 만드는 반면, 정수들의 정수 나눗셈은 정숫값을 줍
+니다; 그 결과는 수학적인 나눗셈의 결과에 'floor' 함수를 적용한 것입니
+다. 0으로 나누는 것은 "ZeroDivisionError" 예외를 일으킵니다.
+
+This operation can be customized using the special "__truediv__()" and
+"__floordiv__()" methods.
+
+The "%" (modulo) operator yields the remainder from the division of
+the first argument by the second.  The numeric arguments are first
+converted to a common type.  A zero right argument raises the
+"ZeroDivisionError" exception.  The arguments may be floating point
+numbers, e.g., "3.14%0.7" equals "0.34" (since "3.14" equals "4*0.7 +
+0.34".)  The modulo operator always yields a result with the same sign
+as its second operand (or zero); the absolute value of the result is
+strictly smaller than the absolute value of the second operand [1].
+
+정수 나눗셈과 모듈로 연산자는 다음과 같은 항등식으로 연결되어 있습니다
+: "x == (x//y)*y + (x%y)". 정수 나눗셈과 모듈로는 내장 함수 "divmod()"
+와도 연결되어 있습니다: "divmod(x, y) == (x//y, x%y)". [2].
+
+숫자들에 대해 모듈로 연산을 수행하는 것에 더해, "%" 연산자는 예전 스타
+일의 문자열 포매팅 (인터폴레이션이라고도 알려져 있습니다)을 수행하기
+위해 문자열 객체에 의해 다시 정의됩니다. 문자열 포매팅의 문법은 파이썬
+라이브러리 레퍼런스의 섹션 printf 스타일 문자열 포매팅 에서 설명합니다
+.
+
+The *modulo* operation can be customized using the special "__mod__()"
+method.
+
+The floor division operator, the modulo operator, and the "divmod()"
+function are not defined for complex numbers.  Instead, convert to a
+floating point number using the "abs()" function if appropriate.
+
+"+" (덧셈) 연산자는 그 인자들의 합을 줍니다. 인자들은 둘 다 숫자거나,
+둘 다 같은 형의 시퀀스여야 합니다. 앞의 경우, 숫자들은 먼저 공통형으로
+변환된 후, 함께 합쳐집니다. 후자의 경우 시퀀스는 이어붙이게 됩니다.
+
+This operation can be customized using the special "__add__()" and
+"__radd__()" methods.
+
+"-" (빼기) 연산자는 그 인자들의 차를 줍니다. 숫자 인자들은 먼저 공통형
+으로 변환됩니다.
+
+This operation can be customized using the special "__sub__()" method.
+
+
+6.8. 시프트 연산
+================
+
+시프트 연산은 산술 연산보다 낮은 우선순위를 갖습니다.
+
+   shift_expr ::= a_expr | shift_expr ("<<" | ">>") a_expr
+
+이 연산들은 정수들을 인자로 받아들입니다. 첫 번째 인자를 두 번째 인자
+로 주어진 비트 수만큼 왼쪽이나 오른쪽으로 밉니다(shift).
+
+This operation can be customized using the special "__lshift__()" and
+"__rshift__()" methods.
+
+오른쪽으로 *n* 비트 시프트 하는 것은 "pow(2,n)" 로 정수 나눗셈하는 것
+으로 정의됩니다. 왼쪽으로 *n* 비트 시프트 하는 것은 "pow(2,n)" 를 곱하
+는 것으로 정의됩니다.
+
+
+6.9. 이항 비트 연산
+===================
+
+세 개의 비트 연산은 각기 다른 우선순위를 갖습니다:
+
+   and_expr ::= shift_expr | and_expr "&" shift_expr
+   xor_expr ::= and_expr | xor_expr "^" and_expr
+   or_expr  ::= xor_expr | or_expr "|" xor_expr
+
+The "&" operator yields the bitwise AND of its arguments, which must
+be integers or one of them must be a custom object overriding
+"__and__()" or "__rand__()" special methods.
+
+The "^" operator yields the bitwise XOR (exclusive OR) of its
+arguments, which must be integers or one of them must be a custom
+object overriding "__xor__()" or "__rxor__()" special methods.
+
+The "|" operator yields the bitwise (inclusive) OR of its arguments,
+which must be integers or one of them must be a custom object
+overriding "__or__()" or "__ror__()" special methods.
+
+
+6.10. 비교
+==========
+
+C와는 달리, 파이썬에서 모든 비교 연산은 같은 우선순위를 갖는데, 산술,
+시프팅, 비트 연산들보다 낮습니다. 또한, C와는 달리, "a < b < c" 와 같
+은 표현식이 수학에서와 같은 방식으로 해석됩니다.
+
+   comparison    ::= or_expr (comp_operator or_expr)*
+   comp_operator ::= "<" | ">" | "==" | ">=" | "<=" | "!="
+                     | "is" ["not"] | ["not"] "in"
+
+Comparisons yield boolean values: "True" or "False". Custom *rich
+comparison methods* may return non-boolean values. In this case Python
+will call "bool()" on such value in boolean contexts.
+
+비교는 자유롭게 연결될 수 있습니다, 예를 들어, "x < y <= z" 는 "x < y
+and y <= z" 와 동등한데, 차이점은 "y" 의 값을 오직 한 번만 구한다는 것
+입니다 (하지만 두 경우 모두 "x < y" 가 거짓이면 "z" 의 값은 구하지 않
+습니다).
+
+형식적으로, *a*, *b*, *c*, ..., *y*, *z* 가 표현식이고, *op1*, *op2*,
+..., *opN* 가 비교 연산자면, "a op1 b op2 c ... y opN z" 는 각 표현식
+의 값을 최대 한 번만 구한다는 점을 제외하고는 "a op1 b and b op2 c and
+... y opN z" 와 동등합니다.
+
+"a op1 b op2 c" 가 *a* 와 *c* 간의 어떤 종류의 비교도 암시하지 않기 때
+문에, 예를 들어, "x < y > z" 이 완벽하게 (아마 이쁘지는 않더라도) 올바
+르다는 것에 주의해야 합니다.
+
+
+6.10.1. 값 비교
+---------------
+
+연산자 "<", ">", "==", ">=", "<=", "!=" 는 두 객체의 값을 비교합니다.
+객체들이 같은 형일 필요는 없습니다.
+
+객체, 값, 형 장은 객체들이 (형과 아이덴티티에 더해) 값을 갖는다고 말하
+고 있습니다. 파이썬에서 객체의 값은 좀 추상적인 개념입니다: 예를 들어,
+객체의 값에 대한 규범적인(canonical) 액세스 방법은 없습니다. 또한, 객
+체의 값이 특별한 방식(예를 들어, 모든 데이터 어트리뷰트로 구성되는 것)
+으로 구성되어야 한다는 요구 사항도 없습니다. 비교 연산자는 객체의 값이
+무엇인지에 대한 특정한 종류의 개념을 구현합니다. 객체의 값을 비교를 통
+해 간접적으로 정의한다고 생각해도 좋습니다.
+
+Because all types are (direct or indirect) subtypes of "object", they
+inherit the default comparison behavior from "object".  Types can
+customize their comparison behavior by implementing *rich comparison
+methods* like "__lt__()", described in 기본적인 커스터마이제이션.
+
+동등 비교 ("==" 와 "!=") 의 기본 동작은 객체의 아이덴티티에 기반을 둡
+니다. 그래서, 같은 아이덴티티를 갖는 인스턴스 간의 동등 비교는 같음을
+주고, 다른 아이덴티티를 갖는 인스턴스 간의 동등 비교는 다름을 줍니다.
+이 기본 동작의 동기는 모든 객체가 반사적(reflexive) (즉, "x is y" 는
+"x == y" 를 암시합니다) 이도록 만들고자 하는 욕구입니다.
+
+기본 대소 비교(order comparison) ("<", ">", "<=", ">=") 는 제공되지 않
+습니다; 시도하면 "TypeError" 를 일으킵니다. 이 기본 동작의 동기는 동등
+함과 유사한 항등 관계가 없다는 것입니다.
+
+다른 아이덴티티를 갖는 인스턴스들이 항상 서로 다르다는, 기본 동등 비교
+의 동작은, 객체의 값과 값 기반의 동등함에 대한 나름의 정의를 가진 형들
+이 필요로 하는 것과는 크게 다를 수 있습니다. 그런 형들은 자신의 비교
+동작을 커스터마이즈 할 필요가 있고, 사실 많은 내장형이 그렇게 하고 있
+습니다.
+
+다음 목록은 가장 중요한 내장형들의 비교 동작을 기술합니다.
+
+* 내장 숫자 형 ((숫자 형 --- int, float, complex)) 과 표준 라이브러리
+  형 "fractions.Fraction" 과 "decimal.Decimal" 에 속하는 숫자들은, 복
+  소수가 대소 비교를 지원하지 않는다는 제약 사항만 빼고는, 같거나 다른
+  형들 간의 비교가 가능합니다. 관련된 형들의 한계 안에서, 정밀도의 손
+  실 없이 수학적으로 (알고리즘 적으로) 올바르게 비교합니다.
+
+  NaN(not-a-number) 값들 "float('NaN')" 과 "decimal.Decimal('NaN')"은
+  특별합니다. 모든 숫자와 NaN 간의 비교는 거짓입니다. 반 직관적으로 내
+  포하고 있는 것은, NaN 이 자신과 같지 않다는 것입니다. 예를 들어, "x
+  = float('NaN')", "3 < x", "x < 3" 및 "x == x"는 모두 거짓이지만, "x
+  != x"는 참입니다. 이 동작은 IEEE 754를 준수합니다.
+
+* "None" and "NotImplemented" are singletons.  **PEP 8** advises that
+  comparisons for singletons should always be done with "is" or "is
+  not", never the equality operators.
+
+* 바이너리 시퀀스들 ("bytes" 나 "bytearray" 의 인스턴스들)은 형을 건너
+  상호 비교될 수 있습니다. 이것들은 요소들의 숫자 값을 사용해서 사전식
+  으로(lexicographically) 비교합니다.
+
+* 문자열들 ("str" 의 인스턴스들) 은 문자들의 유니코드 코드 포인트
+  (Unicode code points) (내장 함수 "ord()" 의 결과)를 사용해서 사전식
+  으로 비교합니다. [3]
+
+  문자열과 바이너리 시퀀스는 직접 비교할 수 없습니다.
+
+* 시퀀스들 ("tuple", "list", "range" 의 인스턴스들)은 같은 형끼리 비교
+  될 수 있는데, range는 대소 비교를 지원하지 않습니다. 서로 다른 형들
+  간의 동등 비교는 다름을 주고, 서로 다른 형들 간의 대소 비교는
+  "TypeError" 를 일으킵니다.
+
+  시퀀스는 대응하는 요소 간의 비교를 사용해서 사전적으로 비교합니다.
+  내장 컨테이너는 일반적으로 동일한(identical) 객체가 자신과 같다고
+  (equal) 가정합니다. 이를 통해 동일한 객체에 대한 동등성(equality) 검
+  사를 우회하여 성능을 개선하고 내부 불변성을 유지합니다.
+
+  내장 컬렉션들의 사전적인 비교는 다음과 같이 이루어집니다:
+
+  * 두 컬렉션이 같다고 비교되기 위해서는, 같은 형이고, 길이가 같고, 대
+    응하는 요소들의 각 쌍이 같다고 비교되어야 합니다 (예를 들어,
+    "[1,2] == (1,2)" 는 거짓인데, 형이 다르기 때문입니다).
+
+  * 대소 비교를 지원하는 컬렉션들은 첫 번째로 다른 요소들과 같은 순서
+    를 줍니다 (예를 들어, "[1,2,x] <= [1,2,y]" 는 "x <= y" 와 같은 값
+    입니다). 대응하는 요소가 없는 경우 더 짧은 컬렉션이 작다고 비교됩
+    니다 (예를 들어, "[1,2] < [1,2,3]" 은 참입니다).
+
+* Mappings (instances of "dict") compare equal if and only if they
+  have equal "(key, value)" pairs. Equality comparison of the keys and
+  values enforces reflexivity.
+
+  대소 비교 ("<", ">", "<=", ">=") 는 "TypeError" 를 일으킵니다.
+
+* 집합들 ("set" 이나 "frozenset" 의 인스턴스들)은 같은 형들과 서로 다
+  른 형들 간에 비교될 수 있습니다.
+
+  이것들은 부분집합(subset)과 상위집합(superset)을 뜻하는 대소비교 연
+  산자들을 정의합니다. 이 관계는 전 순서(total ordering)를 정의하지 않
+  습니다 (예를 들어, 두 집합 "{1,2}" 와 "{2,3}" 는 다르면서도, 하나가
+  다른 하나의 부분집합이지도, 하나가 다른 하나의 상위집합이지도 않습니
+  다). 따라서, 전 순서에 의존하는 함수의 인자로는 적합하지 않습니다 (
+  예를 들어, "min()", "max()", "sorted()" 에 입력으로 집합의 리스트를
+  제공하면 정의되지 않은 결과를 줍니다).
+
+  집합의 비교는 그 요소들의 반사성을 강제합니다.
+
+* 대부분의 다른 내장형들은 비교 메서드들을 구현하지 않기 때문에, 기본
+  비교 동작을 계승합니다.
+
+비교 동작을 커스터마이즈하는 사용자 정의 클래스들은 가능하다면 몇 가지
+일관성 규칙을 준수해야 합니다:
+
+* 동등 비교는 반사적(reflexive)이어야 합니다. 다른 말로 표현하면, 아이
+  덴티티가 같은 객체는 같다고 비교되어야 합니다:
+
+     "x is y" 면 "x == y" 다.
+
+* 비교는 대칭적(symmetric)이어야 합니다. 다른 말로 표현하면, 다음과 같
+  은 표현식은 같은 결과를 주어야 합니다:
+
+     "x == y" 와 "y == x"
+
+     "x != y" 와 "y != x"
+
+     "x < y" 와 "y > x"
+
+     "x <= y" 와 "y >= x"
+
+* 비교는 추이적(transitive)이어야 합니다. 다음 (철저하지 않은) 예들이
+  이것을 예증합니다:
+
+     "x > y and y > z" 면 "x > z" 다
+
+     "x < y and y <= z" 면 "x < z" 다
+
+* 역 비교는 논리적 부정이 되어야 합니다. 다른 말로 표현하면, 다음 표현
+  식들이 같은 값을 주어야 합니다:
+
+     "x == y" 와 "not x != y"
+
+     "x < y" 와 "not x >= y" (전 순서의 경우)
+
+     "x > y" 와 "not x <= y" (전 순서의 경우)
+
+  마지막 두 표현식은 전 순서 컬렉션에 적용됩니다 (예를 들어, 시퀀스에
+  는 적용되지만, 집합과 매핑은 그렇지 않습니다). "total_ordering()" 데
+  코레이터도 보십시오.
+
+* "hash()" 결과는 동등성과 일관성을 유지해야 합니다. 같은 객체들은 같
+  은 해시값을 같거나 해시 불가능으로 지정되어야 합니다.
+
+파이썬은 이 일관성 규칙들을 강제하지 않습니다. 사실 NaN 값들은 이 규칙
+을 따르지 않는 예입니다.
+
+
+6.10.2. 멤버십 검사 연산
+------------------------
+
+연산자 "in" 과 "not in" 은 멤버십을 검사합니다. "x in s" 는 *x* 가 *s*
+의 멤버일 때 "True" 를, 그렇지 않을 때 "False" 를 줍니다. "x not in s"
+은 "x in s" 의 부정을 줍니다. 딕셔너리 뿐만 아니라 모든 내장 시퀀스들
+과 집합 형들이 이것을 지원하는데, 딕셔너리의 경우는 "in" 이 딕셔너리에
+주어진 키가 있는지 검사합니다. list, tuple, set, frozenset, dict,
+collections.deque 와 같은 컨테이너형들의 경우, 표현식 "x in y" 는
+"any(x is e or x == e for e in y)" 와 동등합니다.
+
+문자열과 바이트열 형의 경우, "x in y" 는 *x* 가 *y* 의 부분 문자열
+(substring)인 경우, 그리고 오직 그 경우만 "True" 입니다. 동등한 검사는
+"y.find(x) != -1" 입니다. 빈 문자열은 항상 다른 문자열들의 부분 문자열
+로 취급되기 때문에, """ in "abc"" 은 "True" 를 돌려줍니다.
+
+For user-defined classes which define the "__contains__()" method, "x
+in y" returns "True" if "y.__contains__(x)" returns a true value, and
+"False" otherwise.
+
+For user-defined classes which do not define "__contains__()" but do
+define "__iter__()", "x in y" is "True" if some value "z", for which
+the expression "x is z or x == z" is true, is produced while iterating
+over "y". If an exception is raised during the iteration, it is as if
+"in" raised that exception.
+
+Lastly, the old-style iteration protocol is tried: if a class defines
+"__getitem__()", "x in y" is "True" if and only if there is a non-
+negative integer index *i* such that "x is y[i] or x == y[i]", and no
+lower integer index raises the "IndexError" exception.  (If any other
+exception is raised, it is as if "in" raised that exception).
+
+연산자 "not in" 은 "in" 의 논리적 부정으로 정의됩니다.
+
+
+6.10.3. 아이덴티티 비교
+-----------------------
+
+연산자 "is" 와 "is not" 은 객체의 아이덴티티를 검사합니다: "x is y" 는
+*x* 와 *y* 가 아이덴티티가 같은 객체일 때, 그리고 오직 그 경우만 참입
+니다. 객체의 아이덴티티는 "id()" 함수를 사용해서 결정됩니다. "x is not
+y" 은 논리적 부정 값을 줍니다. [4]
+
+
+6.11. 논리 연산(Boolean operations)
+===================================
+
+   or_test  ::= and_test | or_test "or" and_test
+   and_test ::= not_test | and_test "and" not_test
+   not_test ::= comparison | "not" not_test
+
+In the context of Boolean operations, and also when expressions are
+used by control flow statements, the following values are interpreted
+as false: "False", "None", numeric zero of all types, and empty
+strings and containers (including strings, tuples, lists,
+dictionaries, sets and frozensets).  All other values are interpreted
+as true.  User-defined objects can customize their truth value by
+providing a "__bool__()" method.
+
+연산자 "not" 은 그 인자가 거짓이면 "True" 를, 그렇지 않으면 "False" 를
+줍니다.
+
+표현식 "x and y" 는 먼저 *x* 의 값을 구합니다; *x* 가 거짓이면 그 값을
+돌려줍니다; 그렇지 않으면 *y* 의 값을 구한 후에 그 결과를 돌려줍니다.
+
+표현식 "x or y" 는 먼저 *x* 의 값을 구합니다; *x* 가 참이면 그 값을 돌
+려줍니다. 그렇지 않으면 *y* 의 값을 구한 후에 그 결과를 돌려줍니다.
+
+"and" 와 "or" 어느 것도 반환 값이나 그 형을 "False" 와 "True" 로 제한
+하지 않고, 대신 마지막에 값이 구해진 인자를 돌려줌에 주의해야 합니다.
+이것은 때로 쓸모가 있습니다, 예를 들어 "s" 가 문자열이고 비어 있으면
+기본값으로 대체되어야 한다면, 표현식 "s or 'foo'" 는 원하는 값을 제공
+합니다. "not" 은 새 값을 만들어야 하므로, 그 인자의 형과 관계없이 논리
+값(boolean value)을 돌려줍니다 (예를 들어, "not 'foo'" 는 "''" 가 아니
+라 "False" 를 만듭니다.)
+
+
+6.12. 대입 표현식
+=================
+
+   assignment_expression ::= [identifier ":="] expression
+
+An assignment expression (sometimes also called a "named expression"
+or "walrus") assigns an "expression" to an "identifier", while also
+returning the value of the "expression".
+
+일반적인 사용 사례 중 하나는 일치하는 정규식을 처리할 때입니다:
+
+   if matching := pattern.search(data):
+       do_something(matching)
+
+또는, 청크로 파일 스트림을 처리할 때:
+
+   while chunk := file.read(9000):
+       process(chunk)
+
+Assignment expressions must be surrounded by parentheses when used as
+sub-expressions in slicing, conditional, lambda, keyword-argument, and
+comprehension-if expressions and in "assert" and "with" statements. In
+all other places where they can be used, parentheses are not required,
+including in "if" and "while" statements.
+
+버전 3.8에 추가: 대입 표현식에 대한 더 자세한 내용은 **PEP 572**를 참
+조하세요.
+
+
+6.13. 조건 표현식(Conditional expressions)
+==========================================
+
+   conditional_expression ::= or_test ["if" or_test "else" expression]
+   expression             ::= conditional_expression | lambda_expr
+
+조건 표현식은 (때로 "삼 항 연산자(ternary operator)"라고 불립니다) 모
+든 파이썬 연산에서 가장 낮은 우선순위를 갖습니다.
+
+표현식 "x if C else y" 은 먼저 *x* 대신에 조건 *C* 의 값을 구합니다.
+*C* 가 참이면, *x* 의 값이 구해지고 그 값을 돌려줍니다; 그렇지 않으면,
+*y* 의 값을 구한 후에 그 결과를 돌려줍니다.
+
+조건 표현식에 대한 더 자세한 내용은 **PEP 308** 를 참조하세요.
+
+
+6.14. 람다(Lambdas)
+===================
+
+   lambda_expr ::= "lambda" [parameter_list] ":" expression
+
+람다 표현식은 (때로 람다 형식(lambda forms)이라고 불립니다) 이름 없는
+함수를 만드는 데 사용됩니다. 표현식 "lambda parameters: expression" 는
+함수 객체를 줍니다. 이 이름 없는 객체는 이렇게 정의된 함수 객체처럼 동
+작합니다:
+
+   def <lambda>(parameters):
+       return expression
+
+매개변수 목록의 문법은 함수 정의 섹션을 보세요. 람다 표현식으로 만들어
+진 함수는 문장(statements)이나 어노테이션(annotations)을 포함할 수 없
+음에 주의해야 합니다.
+
+
+6.15. 표현식 목록(Expression lists)
+===================================
+
+   expression_list    ::= expression ("," expression)* [","]
+   starred_list       ::= starred_item ("," starred_item)* [","]
+   starred_expression ::= expression | (starred_item ",")* [starred_item]
+   starred_item       ::= assignment_expression | "*" or_expr
+
+리스트나 집합 디스플레이의 일부일 때를 제외하고, 최소한 하나의 쉼표를
+포함하는 표현식 목록은 튜플을 줍니다. 튜플의 길이는 목록에 있는 표현식
+의 개수입니다. 표현식들은 왼쪽에서 오른쪽으로 값이 구해집니다.
+
+애스터리스크(asterisk) "*" 는 이터러블 언 패킹(*iterable unpacking*)을
+나타냅니다. 피연산자는 반드시 *이터러블* 이어야 합니다. 그 이터러블이
+항목들의 시퀀스로 확장되어서, 언 패킹 지점에서 새 튜플, 리스트, 집합에
+포함됩니다.
+
+버전 3.5에 추가: 표현식 목록에서의 이터러블 언 패킹, **PEP 448** 에서
+최초로 제안되었습니다.
+
+The trailing comma is required only to create a single tuple (a.k.a. a
+*singleton*); it is optional in all other cases.  A single expression
+without a trailing comma doesn't create a tuple, but rather yields the
+value of that expression. (To create an empty tuple, use an empty pair
+of parentheses: "()".)
+
+
+6.16. 값을 구하는 순서
+======================
+
+파이썬은 왼쪽에서 오른쪽으로 표현식의 값을 구합니다. 대입의 값을 구하
+는 동안, 우변의 값이 좌변보다 먼저 구해짐에 주목하십시오.
+
+다음 줄들에서, 표현식은 그들의 끝에 붙은 숫자들의 순서대로 값이 구해집
+니다:
+
+   expr1, expr2, expr3, expr4
+   (expr1, expr2, expr3, expr4)
+   {expr1: expr2, expr3: expr4}
+   expr1 + expr2 * (expr3 - expr4)
+   expr1(expr2, expr3, *expr4, **expr5)
+   expr3, expr4 = expr1, expr2
+
+
+6.17. 연산자 우선순위
+=====================
+
+The following table summarizes the operator precedence in Python, from
+highest precedence (most binding) to lowest precedence (least
+binding).  Operators in the same box have the same precedence.  Unless
+the syntax is explicitly given, operators are binary.  Operators in
+the same box group left to right (except for exponentiation, which
+groups from right to left).
+
+비교, 멤버십 검사, 아이덴티티 검사들은 모두 같은 우선순위를 갖고 비교
+섹션에서 설명한 것처럼 왼쪽에서 오른쪽으로 이어붙이기(chaining) 하는
+기능을 갖습니다.
+
++-------------------------------------------------+---------------------------------------+
+| 연산자                                          | 설명                                  |
+|=================================================|=======================================|
+| "(expressions...)",  "[expressions...]", "{key: | 결합(binding) 또는 괄호 친 표현식, 리 |
+| value...}", "{expressions...}"                  | 스트 디스플레이, 딕셔너리 디스플 레이 |
+|                                                 | , 집합 디스플레이                     |
++-------------------------------------------------+---------------------------------------+
+| "x[index]", "x[index:index]",                   | 서브스크립션, 슬라이싱, 호출, 어트리  |
+| "x(arguments...)", "x.attribute"                | 뷰트 참조                             |
++-------------------------------------------------+---------------------------------------+
+| "await x"                                       | 어웨이트 표현식                       |
++-------------------------------------------------+---------------------------------------+
+| "**"                                            | 거듭제곱 [5]                          |
++-------------------------------------------------+---------------------------------------+
+| "+x", "-x", "~x"                                | 양, 음, 비트 NOT                      |
++-------------------------------------------------+---------------------------------------+
+| "*", "@", "/", "//", "%"                        | 곱셈, 행렬 곱셈, 나눗셈, 정수 나눗셈, |
+|                                                 | 나머지 [6]                            |
++-------------------------------------------------+---------------------------------------+
+| "+", "-"                                        | 덧셈과 뺄셈                           |
++-------------------------------------------------+---------------------------------------+
+| "<<", ">>"                                      | 시프트                                |
++-------------------------------------------------+---------------------------------------+
+| "&"                                             | 비트 AND                              |
++-------------------------------------------------+---------------------------------------+
+| "^"                                             | 비트 XOR                              |
++-------------------------------------------------+---------------------------------------+
+| "|"                                             | 비트 OR                               |
++-------------------------------------------------+---------------------------------------+
+| "in", "not in", "is", "is not", "<", "<=", ">", | 비교, 멤버십 검사와 아이덴티티 검사를 |
+| ">=", "!=", "=="                                | 포함합니다                            |
++-------------------------------------------------+---------------------------------------+
+| "not x"                                         | 논리 NOT                              |
++-------------------------------------------------+---------------------------------------+
+| "and"                                           | 논리 AND                              |
++-------------------------------------------------+---------------------------------------+
+| "or"                                            | 논리 OR                               |
++-------------------------------------------------+---------------------------------------+
+| "if" -- "else"                                  | 조건 표현식                           |
++-------------------------------------------------+---------------------------------------+
+| "lambda"                                        | 람다 표현식                           |
++-------------------------------------------------+---------------------------------------+
+| ":="                                            | 대입 표현식                           |
++-------------------------------------------------+---------------------------------------+
+
+-[ 각주 ]-
+
+[1] "abs(x%y) < abs(y)" 이 수학적으로는 참이지만, float의 경우에는 소
+    수점 자름(roundoff) 때문에 수치적으로 참이 아닐 수 있습니다. 예를
+    들어, 파이썬 float가 IEEE 754 배정도 숫자인 플랫폼을 가정할 때,
+    "-1e-100 % 1e100" 가 "1e100" 와 같은 부호를 가지기 위해, 계산된 결
+    과는 "-1e-100 + 1e100" 인데, 수치적으로는 "1e100" 과 정확히 같은
+    값입니다. 함수 "math.fmod()" 는 부호가 첫 번째 인자의 부호에 맞춰
+    진 결과를 주기 때문에, 이 경우 "-1e-100" 을 돌려줍니다. 어떤 접근
+    법이 더 적절한지는 응용 프로그램에 달려있습니다.
+
+[2] x가 y의 정확한 정수배와 아주 가까우면, 라운딩(rounding) 때문에
+    "x//y" 는 "(x-x%y)//y" 보다 1 클 수 있습니다. 그런 경우,
+    "divmod(x,y)[0] * y + x % y" 가 "x" 와 아주 가깝도록 유지하기 위해
+    , 파이썬은 뒤의 결과를 돌려줍니다.
+
+[3] 유니코드 표준은 코드 포인트(*code points*) (예를 들어, U+0041) 와
+    추상 문자(*abstract characters*) (예를 들어, "LATIN CAPITAL LETTER
+    A") 를 구분합니다. 유니코드에 있는 대부분의 추상 문자들이 오직 하
+    나의 코드 포인트만으로 표현되지만, 추가로 하나 이상의 코드 포인트
+    의 시퀀스로 표현될 수 있는 추상 문자들이 많이 있습니다. 예를 들어,
+    추상 문자 "LATIN CAPITAL LETTER C WITH CEDILLA" 는 코드 위치
+    U+00C7 에 있는 한 개의 복합 문자(*precomposed character*) 나 코드
+    위치 U+0043 (LATIN CAPITAL LETTER C) 에 있는 기본 문자(*base
+    character*) 와 뒤따르는 코드 위치 U+0327 (COMBINING CEDILLA) 에 있
+    는 결합 문자(*combining character*) 의 시퀀스로 표현될 수 있습니다
+    .
+
+    문자열의 비교 연산자는 유니코드 코드 포인트 수준에서 비교합니다.
+    이것은 사람에게 반 직관적일 수 있습니다. 예를 들어, ""\u00C7" ==
+    "\u0043\u0327"" 는 거짓입니다, 설사 두 문자열이 같은 추상 문자
+    "LATIN CAPITAL LETTER C WITH CEDILLA"를 표현할지라도 그렇습니다.
+
+    문자열을 추상 문자 수준에서 비교하려면 (즉, 사람에게 직관적인 방법
+    으로), "unicodedata.normalize()" 를 사용하십시오.
+
+[4] 자동 가비지-수거(automatic garbage-collection)와 자유 목록(free
+    lists)과 디스크립터(descriptor)의 동적인 성격 때문에, "is" 연산자
+    를 인스턴스 메서드들이나 상수들을 비교하는 것과 같은 특정한 방식으
+    로 사용할 때, 겉으로 보기에 이상한 동작을 감지할 수 있습니다. 더
+    자세한 정보는 그들의 문서를 확인하십시오.
+
+[5] 거듭제곱 연산자 "**" 는 오른쪽에 오는 산술이나 비트 일 항 연산자보
+    다 약하게 결합합니다, 즉, "2**-1" 는 "0.5" 입니다.
+
+[6] "%" 연산자는 문자열 포매팅에도 사용됩니다; 같은 우선순위가 적용됩
+    니다.

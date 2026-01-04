@@ -1,0 +1,128 @@
+참조 횟수
+*********
+
+The macros in this section are used for managing reference counts of
+Python objects.
+
+void Py_INCREF(PyObject *o)
+
+   Indicate taking a new *strong reference* to object *o*, indicating
+   it is in use and should not be destroyed.
+
+   This function is usually used to convert a *borrowed reference* to
+   a *strong reference* in-place. The "Py_NewRef()" function can be
+   used to create a new *strong reference*.
+
+   When done using the object, release it by calling "Py_DECREF()".
+
+   객체는 "NULL" 일 수 없습니다; "NULL"이 아닌지 확실하지 않으면,
+   "Py_XINCREF()"를 사용하십시오.
+
+   Do not expect this function to actually modify *o* in any way.
+
+void Py_XINCREF(PyObject *o)
+
+   Similar to "Py_INCREF()", but the object *o* can be "NULL", in
+   which case this has no effect.
+
+   See also "Py_XNewRef()".
+
+PyObject *Py_NewRef(PyObject *o)
+    * Part of the Stable ABI since version 3.10.*
+
+   Create a new *strong reference* to an object: call "Py_INCREF()" on
+   *o* and return the object *o*.
+
+   When the *strong reference* is no longer needed, "Py_DECREF()"
+   should be called on it to release the reference.
+
+   The object *o* must not be "NULL"; use "Py_XNewRef()" if *o* can be
+   "NULL".
+
+   예를 들어:
+
+      Py_INCREF(obj);
+      self->attr = obj;
+
+   can be written as:
+
+      self->attr = Py_NewRef(obj);
+
+   See also "Py_INCREF()".
+
+   버전 3.10에 추가.
+
+PyObject *Py_XNewRef(PyObject *o)
+    * Part of the Stable ABI since version 3.10.*
+
+   Similar to "Py_NewRef()", but the object *o* can be NULL.
+
+   If the object *o* is "NULL", the function just returns "NULL".
+
+   버전 3.10에 추가.
+
+void Py_DECREF(PyObject *o)
+
+   Release a *strong reference* to object *o*, indicating the
+   reference is no longer used.
+
+   마지막 *강한 참조*가 해제되면 (즉 객체의 참조 횟수가 0이 되면), 객
+   체 형의 할당 해제 함수 (반드시 "NULL"이 아니어야 합니다)가 호출됩니
+   다.
+
+   This function is usually used to delete a *strong reference* before
+   exiting its scope.
+
+   객체는 "NULL" 일 수 없습니다; "NULL"이 아닌지 확실하지 않으면,
+   "Py_XDECREF()"를 사용하십시오.
+
+   Do not expect this function to actually modify *o* in any way.
+
+   경고:
+
+     The deallocation function can cause arbitrary Python code to be
+     invoked (e.g. when a class instance with a "__del__()" method is
+     deallocated).  While exceptions in such code are not propagated,
+     the executed code has free access to all Python global variables.
+     This means that any object that is reachable from a global
+     variable should be in a consistent state before "Py_DECREF()" is
+     invoked.  For example, code to delete an object from a list
+     should copy a reference to the deleted object in a temporary
+     variable, update the list data structure, and then call
+     "Py_DECREF()" for the temporary variable.
+
+void Py_XDECREF(PyObject *o)
+
+   Similar to "Py_DECREF()", but the object *o* can be "NULL", in
+   which case this has no effect. The same warning from "Py_DECREF()"
+   applies here as well.
+
+void Py_CLEAR(PyObject *o)
+
+   객체 *o*에 대한 *강한 참조*를 해제합니다. 객체는 "NULL" 일 수 있습
+   니다, 이때 매크로는 효과가 없습니다; 그렇지 않으면 인자도 "NULL"로
+   설정된다는 점을 제외하고는, 효과가 "Py_DECREF()"와 같습니다. 매크로
+   가 임시 변수를 신중하게 사용하고, 참조를 해제하기 전에 인자를
+   "NULL"로 설정하기 때문에, "Py_DECREF()"에 대한 경고는 전달된 객체와
+   관련하여 적용되지 않습니다.
+
+   가비지 수집 중에 탐색 될 수 있는 객체에 대한 참조를 해제할 때마다
+   이 매크로를 사용하는 것이 좋습니다.
+
+void Py_IncRef(PyObject *o)
+    * Part of the Stable ABI.*
+
+   Indicate taking a new *strong reference* to object *o*. A function
+   version of "Py_XINCREF()". It can be used for runtime dynamic
+   embedding of Python.
+
+void Py_DecRef(PyObject *o)
+    * Part of the Stable ABI.*
+
+   Release a *strong reference* to object *o*. A function version of
+   "Py_XDECREF()". It can be used for runtime dynamic embedding of
+   Python.
+
+The following functions or macros are only for use within the
+interpreter core: "_Py_Dealloc()", "_Py_ForgetReference()",
+"_Py_NewReference()", as well as the global variable "_Py_RefTotal".

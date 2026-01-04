@@ -1,0 +1,200 @@
+파이썬 개발 모드
+****************
+
+버전 3.7에 추가.
+
+파이썬 개발 모드에는 기본적으로 활성화하기에 너무 비싼 추가 실행 시간
+검사를 도입합니다. 코드가 올바르면 기본값보다 더 상세하지(verbose) 않
+아야 합니다; 새로운 경고는 문제가 감지될 때만 발생합니다.
+
+"-X dev" 명령 줄 옵션을 사용하거나 "PYTHONDEVMODE" 환경 변수를 "1"로
+설정하여 활성화할 수 있습니다.
+
+See also Python debug build.
+
+
+파이썬 개발 모드의 효과
+***********************
+
+파이썬 개발 모드를 활성화하는 것은 다음 명령과 유사하지만, 아래에 설명
+된 추가 효과가 있습니다:
+
+   PYTHONMALLOC=debug PYTHONASYNCIODEBUG=1 python3 -W default -X faulthandler
+
+파이썬 개발 모드의 효과:
+
+* "default" 경고 필터를 추가합니다. 다음과 같은 경고가 표시됩니다:
+
+  * "DeprecationWarning"
+
+  * "ImportWarning"
+
+  * "PendingDeprecationWarning"
+
+  * "ResourceWarning"
+
+  일반적으로, 위의 경고는 기본 경고 필터가 필터링합니다.
+
+  "-W default" 명령 줄 옵션이 사용된 것처럼 작동합니다.
+
+  경고를 에러로 처리하려면 "-W error" 명령 줄 옵션을 사용하거나
+  "PYTHONWARNINGS" 환경 변수를 "error"로 설정하십시오.
+
+* 메모리 할당자에 디버그 훅을 설치하여 다음을 확인합니다:
+
+  * 버퍼 언더플로
+
+  * 버퍼 오버플로
+
+  * 메모리 할당자 API 위반
+
+  * GIL의 안전하지 않은 사용
+
+  "PyMem_SetupDebugHooks()" C 함수를 참조하십시오.
+
+  "PYTHONMALLOC" 환경 변수가 "debug"로 설정된 것처럼 동작합니다.
+
+  메모리 할당자에 디버그 훅을 설치하지 않고 파이썬 개발 모드를 사용하
+  려면, "PYTHONMALLOC" 환경 변수를 "default"로 설정하십시오.
+
+* Call "faulthandler.enable()" at Python startup to install handlers
+  for the "SIGSEGV", "SIGFPE", "SIGABRT", "SIGBUS" and "SIGILL"
+  signals to dump the Python traceback on a crash.
+
+  "-X faulthandler" 명령 줄 옵션이 사용되거나 "PYTHONFAULTHANDLER" 환
+  경 변수가 "1"로 설정된 것처럼 작동합니다.
+
+* asyncio 디버그 모드를 활성화합니다. 예를 들어, "asyncio"는 어웨이트
+  하지 않은 코루틴을 확인하고 이를 로그 합니다.
+
+  "PYTHONASYNCIODEBUG" 환경 변수가 "1"로 설정된 것처럼 동작합니다.
+
+* 문자열 인코딩과 디코딩 연산에 대해 *encoding*과 *errors* 인자를 확인
+  합니다. 예: "open()", "str.encode()" 및 "bytes.decode()".
+
+  기본적으로, 최상의 성능을 위해, *errors* 인자는 첫 번째 인코딩/디코
+  딩 에러에서만 검사되며 빈 문자열에 대해서는 *encoding* 인자가 무시되
+  는 경우가 있습니다.
+
+* "io.IOBase" 파괴자는 "close()" 예외를 로그 합니다.
+
+* Set the "dev_mode" attribute of "sys.flags" to "True".
+
+파이썬 개발 모드는 (성능과 메모리에 대한) 오버헤드 비용이 너무 비싸서,
+기본적으로 "tracemalloc" 모듈을 활성화하지 않습니다. "tracemalloc" 모
+듈을 활성화하면 일부 에러의 원인에 대한 추가 정보가 제공됩니다. 예를
+들어, "ResourceWarning"은 자원이 할당된 곳의 트레이스백을 로그하고, 버
+퍼 오버플로 에러는 메모리 블록이 할당된 곳의 트레이스백을 로그 합니다.
+
+파이썬 개발 모드는 "-O" 명령 줄 옵션이 "assert" 문을 제거하거나
+"__debug__"를 "False"로 설정하는 것을 막지 않습니다.
+
+The Python Development Mode can only be enabled at the Python startup.
+Its value can be read from "sys.flags.dev_mode".
+
+버전 3.8에서 변경: "io.IOBase" 파괴자는 이제 "close()" 예외를 로그 합
+니다.
+
+버전 3.9에서 변경: *encoding*과 *errors* 인자는 이제 문자열 인코딩과
+디코딩 연산을 검사합니다.
+
+
+ResourceWarning 예
+******************
+
+명령 줄에 지정된 텍스트 파일의 줄 수를 세는 스크립트의 예:
+
+   import sys
+
+   def main():
+       fp = open(sys.argv[1])
+       nlines = len(fp.readlines())
+       print(nlines)
+       # The file is closed implicitly
+
+   if __name__ == "__main__":
+       main()
+
+스크립트는 파일을 명시적으로 닫지 않습니다. 기본적으로, 파이썬은 아무
+런 경고도 하지 않습니다. 269 줄이 있는 README.txt를 사용하는 예:
+
+   $ python3 script.py README.txt
+   269
+
+파이썬 개발 모드를 사용하면 "ResourceWarning" 경고가 표시됩니다:
+
+   $ python3 -X dev script.py README.txt
+   269
+   script.py:10: ResourceWarning: unclosed file <_io.TextIOWrapper name='README.rst' mode='r' encoding='UTF-8'>
+     main()
+   ResourceWarning: Enable tracemalloc to get the object allocation traceback
+
+또한, "tracemalloc"을 활성화하면 파일이 열린 줄이 표시됩니다:
+
+   $ python3 -X dev -X tracemalloc=5 script.py README.rst
+   269
+   script.py:10: ResourceWarning: unclosed file <_io.TextIOWrapper name='README.rst' mode='r' encoding='UTF-8'>
+     main()
+   Object allocated at (most recent call last):
+     File "script.py", lineno 10
+       main()
+     File "script.py", lineno 4
+       fp = open(sys.argv[1])
+
+수선은 파일을 명시적으로 닫는 것입니다. 컨텍스트 관리자를 사용하는 예:
+
+   def main():
+       # Close the file explicitly when exiting the with block
+       with open(sys.argv[1]) as fp:
+           nlines = len(fp.readlines())
+       print(nlines)
+
+자원을 명시적으로 닫지 않으면 예상보다 오래 자원을 열어둘 수 있습니다;
+파이썬을 종료할 때 심각한 문제가 발생할 수 있습니다. CPython에서도 나
+쁘지만, PyPy에서는 더 나쁩니다. 리소스를 명시적으로 닫으면 응용 프로그
+램을 더 결정적이고 안정적으로 만들 수 있습니다.
+
+
+잘못된 파일 기술자 에러 예
+**************************
+
+자신의 첫 줄을 표시하는 스크립트:
+
+   import os
+
+   def main():
+       fp = open(__file__)
+       firstline = fp.readline()
+       print(firstline.rstrip())
+       os.close(fp.fileno())
+       # The file is closed implicitly
+
+   main()
+
+기본적으로, 파이썬은 아무런 경고도 하지 않습니다:
+
+   $ python3 script.py
+   import os
+
+파이썬 개발 모드는 "ResourceWarning"을 표시하고 파일 객체를 파이널라이
+즈 할 때 "잘못된 파일 기술자(Bad file descriptor)" 에러를 로그 합니다:
+
+   $ python3 script.py
+   import os
+   script.py:10: ResourceWarning: unclosed file <_io.TextIOWrapper name='script.py' mode='r' encoding='UTF-8'>
+     main()
+   ResourceWarning: Enable tracemalloc to get the object allocation traceback
+   Exception ignored in: <_io.TextIOWrapper name='script.py' mode='r' encoding='UTF-8'>
+   Traceback (most recent call last):
+     File "script.py", line 10, in <module>
+       main()
+   OSError: [Errno 9] Bad file descriptor
+
+"os.close(fp.fileno())"는 파일 기술자를 닫습니다. 파일 객체 파이널라이
+저가 파일 기술자를 다시 닫으려고 하면, "Bad file descriptor" 에러로 실
+패합니다. 파일 기술자는 한 번만 닫아야 합니다. 최악의 시나리오에서는,
+두 번 닫을 때 충돌이 발생할 수 있습니다 (예는 bpo-18748을 참조하십시오
+).
+
+수선은 "os.close(fp.fileno())" 줄을 제거하거나, "closefd=False"로 파일
+을 여는 것입니다.

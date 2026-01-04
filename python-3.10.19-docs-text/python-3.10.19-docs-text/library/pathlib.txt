@@ -1,0 +1,1274 @@
+"pathlib" --- Object-oriented filesystem paths
+**********************************************
+
+버전 3.4에 추가.
+
+**Source code:** Lib/pathlib.py
+
+======================================================================
+
+이 모듈은 다른 운영 체제에 적합한 의미 체계를 가진 파일 시스템 경로를
+나타내는 클래스를 제공합니다. 경로 클래스는 I/O 없이 순수한 계산 연산
+을 제공하는 순수한 경로와 순수한 경로를 상속하지만, I/O 연산도 제공하
+는 구상 경로로 구분됩니다.
+
+[그림]
+
+이전에 이 모듈을 사용한 적이 없거나 어떤 클래스가 작업에 적합한지 확신
+이 없다면, "Path"가 가장 적합할 가능성이 높습니다. 코드가 실행되는 플
+랫폼의 구상 경로를 인스턴스화 합니다.
+
+순수한 경로는 특별한 경우에 유용합니다; 예를 들면:
+
+1. 유닉스 기계에서 윈도우 경로를 조작하려고 할 때 (또는 그 반대). 유닉
+   스에서 실행할 때는 "WindowsPath"를 인스턴스화 할 수 없지만,
+   "PureWindowsPath"는 인스턴스화 할 수 있습니다.
+
+2. 코드가 실제로 OS에 액세스하지 않고 경로만 조작한다는 확신이 필요할
+   때. 이 경우, 순수 클래스 중 하나를 인스턴스화 하면 OS 액세스 연산이
+   없어서 유용 할 수 있습니다.
+
+더 보기: **PEP 428**: pathlib 모듈 -- 객체 지향 파일 시스템 경로.
+
+더 보기: 문자열에 대한 저수준 경로 조작을 위해, "os.path" 모듈을 사용할 수도
+      있습니다.
+
+
+기본 사용
+=========
+
+메인 클래스 임포트 하기:
+
+   >>> from pathlib import Path
+
+서브 디렉터리 나열하기:
+
+   >>> p = Path('.')
+   >>> [x for x in p.iterdir() if x.is_dir()]
+   [PosixPath('.hg'), PosixPath('docs'), PosixPath('dist'),
+    PosixPath('__pycache__'), PosixPath('build')]
+
+이 디렉터리 트리에 있는 파이썬 소스 파일 나열하기:
+
+   >>> list(p.glob('**/*.py'))
+   [PosixPath('test_pathlib.py'), PosixPath('setup.py'),
+    PosixPath('pathlib.py'), PosixPath('docs/conf.py'),
+    PosixPath('build/lib/pathlib.py')]
+
+디렉터리 트리 내에서 탐색하기:
+
+   >>> p = Path('/etc')
+   >>> q = p / 'init.d' / 'reboot'
+   >>> q
+   PosixPath('/etc/init.d/reboot')
+   >>> q.resolve()
+   PosixPath('/etc/rc.d/init.d/halt')
+
+경로 속성 조회하기:
+
+   >>> q.exists()
+   True
+   >>> q.is_dir()
+   False
+
+파일 열기:
+
+   >>> with q.open() as f: f.readline()
+   ...
+   '#!/bin/bash\n'
+
+
+순수한 경로
+===========
+
+순수한 경로 객체는 실제로 파일 시스템에 액세스하지 않는 경로 처리 연산
+을 제공합니다. 이 클래스에 액세스하는 방법에는 세 가지가 있으며, *플레
+이버(flavours)*라고도 부릅니다:
+
+class pathlib.PurePath(*pathsegments)
+
+   시스템의 경로 플레이버를 나타내는 일반 클래스 (인스턴스화 하면
+   "PurePosixPath"나 "PureWindowsPath"를 만듭니다):
+
+      >>> PurePath('setup.py')      # Running on a Unix machine
+      PurePosixPath('setup.py')
+
+   Each element of *pathsegments* can be either a string representing
+   a path segment, an object implementing the "os.PathLike" interface
+   which returns a string, or another path object:
+
+      >>> PurePath('foo', 'some/path', 'bar')
+      PurePosixPath('foo/some/path/bar')
+      >>> PurePath(Path('foo'), Path('bar'))
+      PurePosixPath('foo/bar')
+
+   *pathsegments*가 비어 있으면, 현재 디렉터리를 가정합니다:
+
+      >>> PurePath()
+      PurePosixPath('.')
+
+   If a segment is an absolute path, all previous segments are ignored
+   (like "os.path.join()"):
+
+      >>> PurePath('/etc', '/usr', 'lib64')
+      PurePosixPath('/usr/lib64')
+      >>> PureWindowsPath('c:/Windows', 'd:bar')
+      PureWindowsPath('d:bar')
+
+   On Windows, the drive is not reset when a rooted relative path
+   segment (e.g., "r'\foo'") is encountered:
+
+      >>> PureWindowsPath('c:/Windows', '/Program Files')
+      PureWindowsPath('c:/Program Files')
+
+   Spurious slashes and single dots are collapsed, but double dots
+   ("'..'") and leading double slashes ("'//'") are not, since this
+   would change the meaning of a path for various reasons (e.g.
+   symbolic links, UNC paths):
+
+      >>> PurePath('foo//bar')
+      PurePosixPath('foo/bar')
+      >>> PurePath('//foo/bar')
+      PurePosixPath('//foo/bar')
+      >>> PurePath('foo/./bar')
+      PurePosixPath('foo/bar')
+      >>> PurePath('foo/../bar')
+      PurePosixPath('foo/../bar')
+
+   (나이브한 접근법은 "PurePosixPath('foo/../bar')"를
+   "PurePosixPath('bar')"와 동등하게 만드는데, "foo"가 다른 디렉터리에
+   대한 심볼릭 링크일 때는 잘못됩니다)
+
+   순수한 경로 객체는 "os.PathLike" 인터페이스를 구현하여, 이 인터페이
+   스가 허용되는 모든 위치에서 사용할 수 있습니다.
+
+   버전 3.6에서 변경: "os.PathLike" 인터페이스에 대한 지원이 추가되었
+   습니다.
+
+class pathlib.PurePosixPath(*pathsegments)
+
+   "PurePath"의 서브 클래스, 이 경로 플레이버는 윈도우 이외의 파일 시
+   스템 경로를 나타냅니다:
+
+      >>> PurePosixPath('/etc')
+      PurePosixPath('/etc')
+
+   *pathsegments*는 "PurePath"와 유사하게 지정됩니다.
+
+class pathlib.PureWindowsPath(*pathsegments)
+
+   A subclass of "PurePath", this path flavour represents Windows
+   filesystem paths, including UNC paths:
+
+      >>> PureWindowsPath('c:/Program Files/')
+      PureWindowsPath('c:/Program Files')
+      >>> PureWindowsPath('//server/share/file')
+      PureWindowsPath('//server/share/file')
+
+   *pathsegments*는 "PurePath"와 유사하게 지정됩니다.
+
+실행 중인 시스템과 관계없이, 이러한 모든 클래스를 인스턴스화 할 수 있
+는데, 시스템 호출을 수행하는 연산을 제공하지 않기 때문입니다.
+
+
+일반 속성
+---------
+
+Paths are immutable and *hashable*.  Paths of a same flavour are
+comparable and orderable.  These properties respect the flavour's
+case-folding semantics:
+
+   >>> PurePosixPath('foo') == PurePosixPath('FOO')
+   False
+   >>> PureWindowsPath('foo') == PureWindowsPath('FOO')
+   True
+   >>> PureWindowsPath('FOO') in { PureWindowsPath('foo') }
+   True
+   >>> PureWindowsPath('C:') < PureWindowsPath('d:')
+   True
+
+다른 플레이버의 경로는 다르다고 비교되며 대소 비교할 수 없습니다:
+
+   >>> PureWindowsPath('foo') == PurePosixPath('foo')
+   False
+   >>> PureWindowsPath('foo') < PurePosixPath('foo')
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: '<' not supported between instances of 'PureWindowsPath' and 'PurePosixPath'
+
+
+연산자
+------
+
+The slash operator helps create child paths, like "os.path.join()". If
+the argument is an absolute path, the previous path is ignored. On
+Windows, the drive is not reset when the argument is a rooted relative
+path (e.g., "r'\foo'"):
+
+   >>> p = PurePath('/etc')
+   >>> p
+   PurePosixPath('/etc')
+   >>> p / 'init.d' / 'apache2'
+   PurePosixPath('/etc/init.d/apache2')
+   >>> q = PurePath('bin')
+   >>> '/usr' / q
+   PurePosixPath('/usr/bin')
+   >>> p / '/an_absolute_path'
+   PurePosixPath('/an_absolute_path')
+   >>> PureWindowsPath('c:/Windows', '/Program Files')
+   PureWindowsPath('c:/Program Files')
+
+경로 객체는 "os.PathLike"을 구현하는 객체가 허용되는 모든 곳에서 사용
+할 수 있습니다:
+
+   >>> import os
+   >>> p = PurePath('/etc')
+   >>> os.fspath(p)
+   '/etc'
+
+경로의 문자열 표현은 원시 파일 시스템 경로 자체(네이티브 형식으로, 예
+를 들어 윈도우에서 역 슬래시)로, 파일 경로를 문자열로 받아들이는 모든
+함수에 전달할 수 있습니다:
+
+   >>> p = PurePath('/etc')
+   >>> str(p)
+   '/etc'
+   >>> p = PureWindowsPath('c:/Program Files')
+   >>> str(p)
+   'c:\\Program Files'
+
+마찬가지로, 경로에 대해 "bytes"를 호출하면 "os.fsencode()"로 인코딩된
+바이트열 객체로 원시 파일 시스템 경로를 제공합니다:
+
+   >>> bytes(p)
+   b'/etc'
+
+참고:
+
+  "bytes" 호출은 유닉스에서만 권장됩니다. 윈도우에서, 유니코드 형식이
+  파일 시스템 경로의 규범적(canonical) 표현입니다.
+
+
+개별 부분에 액세스하기
+----------------------
+
+경로의 개별 "부분"(구성 요소)에 액세스하려면, 다음 프로퍼티를 사용하십
+시오:
+
+PurePath.parts
+
+   경로의 다양한 구성 요소로의 액세스를 제공하는 튜플:
+
+      >>> p = PurePath('/usr/bin/python3')
+      >>> p.parts
+      ('/', 'usr', 'bin', 'python3')
+
+      >>> p = PureWindowsPath('c:/Program Files/PSF')
+      >>> p.parts
+      ('c:\\', 'Program Files', 'PSF')
+
+   (드라이브와 로컬 루트가 단일 부분으로 다시 그룹화되는 방식에 유의하
+   십시오)
+
+
+메서드와 프로퍼티
+-----------------
+
+순수한 경로는 다음과 같은 메서드와 프로퍼티를 제공합니다:
+
+PurePath.drive
+
+   드라이브 문자나 이름을 나타내는 문자열, 있다면:
+
+      >>> PureWindowsPath('c:/Program Files/').drive
+      'c:'
+      >>> PureWindowsPath('/Program Files/').drive
+      ''
+      >>> PurePosixPath('/etc').drive
+      ''
+
+   UNC 공유도 드라이브로 간주합니다:
+
+      >>> PureWindowsPath('//host/share/foo.txt').drive
+      '\\\\host\\share'
+
+PurePath.root
+
+   (로컬이나 글로벌) 루트를 나타내는 문자열, 있다면:
+
+      >>> PureWindowsPath('c:/Program Files/').root
+      '\\'
+      >>> PureWindowsPath('c:Program Files/').root
+      ''
+      >>> PurePosixPath('/etc').root
+      '/'
+
+   UNC 공유에는 항상 루트가 있습니다:
+
+      >>> PureWindowsPath('//host/share').root
+      '\\'
+
+   If the path starts with more than two successive slashes,
+   "PurePosixPath" collapses them:
+
+      >>> PurePosixPath('//etc').root
+      '//'
+      >>> PurePosixPath('///etc').root
+      '/'
+      >>> PurePosixPath('////etc').root
+      '/'
+
+   참고:
+
+     This behavior conforms to *The Open Group Base Specifications
+     Issue 6*, paragraph 4.11 Pathname Resolution:*"A pathname that
+     begins with two successive slashes may be interpreted in an
+     implementation-defined manner, although more than two leading
+     slashes shall be treated as a single slash."*
+
+PurePath.anchor
+
+   드라이브와 루트의 이어 붙이기:
+
+      >>> PureWindowsPath('c:/Program Files/').anchor
+      'c:\\'
+      >>> PureWindowsPath('c:Program Files/').anchor
+      'c:'
+      >>> PurePosixPath('/etc').anchor
+      '/'
+      >>> PureWindowsPath('//host/share').anchor
+      '\\\\host\\share\\'
+
+PurePath.parents
+
+   경로의 논리적 조상에 대한 액세스를 제공하는 불변 시퀀스:
+
+      >>> p = PureWindowsPath('c:/foo/bar/setup.py')
+      >>> p.parents[0]
+      PureWindowsPath('c:/foo/bar')
+      >>> p.parents[1]
+      PureWindowsPath('c:/foo')
+      >>> p.parents[2]
+      PureWindowsPath('c:/')
+
+   버전 3.10에서 변경: The parents sequence now supports *slices* and
+   negative index values.
+
+PurePath.parent
+
+   경로의 논리적 부모:
+
+      >>> p = PurePosixPath('/a/b/c/d')
+      >>> p.parent
+      PurePosixPath('/a/b/c')
+
+   앵커나 빈 경로를 넘어갈 수 없습니다:
+
+      >>> p = PurePosixPath('/')
+      >>> p.parent
+      PurePosixPath('/')
+      >>> p = PurePosixPath('.')
+      >>> p.parent
+      PurePosixPath('.')
+
+   참고:
+
+     이것은 순수한 어휘(lexical) 연산이라서, 다음과 같이 동작합니다:
+
+        >>> p = PurePosixPath('foo/..')
+        >>> p.parent
+        PurePosixPath('foo')
+
+     If you want to walk an arbitrary filesystem path upwards, it is
+     recommended to first call "Path.resolve()" so as to resolve
+     symlinks and eliminate *".."* components.
+
+PurePath.name
+
+   드라이브와 루트를 제외하고, 마지막 경로 구성 요소를 나타내는 문자열
+   , 있다면:
+
+      >>> PurePosixPath('my/library/setup.py').name
+      'setup.py'
+
+   UNC 드라이브 이름은 고려되지 않습니다:
+
+      >>> PureWindowsPath('//some/share/setup.py').name
+      'setup.py'
+      >>> PureWindowsPath('//some/share').name
+      ''
+
+PurePath.suffix
+
+   The file extension of the final component, if any:
+
+      >>> PurePosixPath('my/library/setup.py').suffix
+      '.py'
+      >>> PurePosixPath('my/library.tar.gz').suffix
+      '.gz'
+      >>> PurePosixPath('my/library').suffix
+      ''
+
+PurePath.suffixes
+
+   A list of the path's file extensions:
+
+      >>> PurePosixPath('my/library.tar.gar').suffixes
+      ['.tar', '.gar']
+      >>> PurePosixPath('my/library.tar.gz').suffixes
+      ['.tar', '.gz']
+      >>> PurePosixPath('my/library').suffixes
+      []
+
+PurePath.stem
+
+   suffix가 없는, 마지막 경로 구성 요소:
+
+      >>> PurePosixPath('my/library.tar.gz').stem
+      'library.tar'
+      >>> PurePosixPath('my/library.tar').stem
+      'library'
+      >>> PurePosixPath('my/library').stem
+      'library'
+
+PurePath.as_posix()
+
+   슬래시("/")가 있는 경로의 문자열 표현을 반환합니다:
+
+      >>> p = PureWindowsPath('c:\\windows')
+      >>> str(p)
+      'c:\\windows'
+      >>> p.as_posix()
+      'c:/windows'
+
+PurePath.as_uri()
+
+   Represent the path as a "file" URI.  "ValueError" is raised if the
+   path isn't absolute.
+
+   >>> p = PurePosixPath('/etc/passwd')
+   >>> p.as_uri()
+   'file:///etc/passwd'
+   >>> p = PureWindowsPath('c:/Windows')
+   >>> p.as_uri()
+   'file:///c:/Windows'
+
+PurePath.is_absolute()
+
+   경로가 절대적인지 아닌지를 반환합니다. 루트와 (플레이버가 허락하면)
+   드라이브가 모두 있으면 경로를 절대적이라고 간주합니다:
+
+      >>> PurePosixPath('/a/b').is_absolute()
+      True
+      >>> PurePosixPath('a/b').is_absolute()
+      False
+
+      >>> PureWindowsPath('c:/a/b').is_absolute()
+      True
+      >>> PureWindowsPath('/a/b').is_absolute()
+      False
+      >>> PureWindowsPath('c:').is_absolute()
+      False
+      >>> PureWindowsPath('//some/share').is_absolute()
+      True
+
+PurePath.is_relative_to(*other)
+
+   이 경로가 *other* 경로에 상대적인지를 반환합니다.
+
+   >>> p = PurePath('/etc/passwd')
+   >>> p.is_relative_to('/etc')
+   True
+   >>> p.is_relative_to('/usr')
+   False
+
+   버전 3.9에 추가.
+
+PurePath.is_reserved()
+
+   "PureWindowsPath"에서는, 경로를 윈도우에서 예약된 것으로 간주하면
+   "True"를, 그렇지 않으면 "False"를 반환합니다. "PurePosixPath"에서는
+   , 항상 "False"가 반환됩니다.
+
+   >>> PureWindowsPath('nul').is_reserved()
+   True
+   >>> PurePosixPath('nul').is_reserved()
+   False
+
+   File system calls on reserved paths can fail mysteriously or have
+   unintended effects.
+
+PurePath.joinpath(*other)
+
+   Calling this method is equivalent to combining the path with each
+   of the *other* arguments in turn:
+
+      >>> PurePosixPath('/etc').joinpath('passwd')
+      PurePosixPath('/etc/passwd')
+      >>> PurePosixPath('/etc').joinpath(PurePosixPath('passwd'))
+      PurePosixPath('/etc/passwd')
+      >>> PurePosixPath('/etc').joinpath('init.d', 'apache2')
+      PurePosixPath('/etc/init.d/apache2')
+      >>> PureWindowsPath('c:').joinpath('/Program Files')
+      PureWindowsPath('c:/Program Files')
+
+PurePath.match(pattern)
+
+   Match this path against the provided glob-style pattern.  Return
+   "True" if matching is successful, "False" otherwise.
+
+   If *pattern* is relative, the path can be either relative or
+   absolute, and matching is done from the right:
+
+      >>> PurePath('a/b.py').match('*.py')
+      True
+      >>> PurePath('/a/b/c.py').match('b/*.py')
+      True
+      >>> PurePath('/a/b/c.py').match('a/*.py')
+      False
+
+   If *pattern* is absolute, the path must be absolute, and the whole
+   path must match:
+
+      >>> PurePath('/a.py').match('/*.py')
+      True
+      >>> PurePath('a/b.py').match('/*.py')
+      False
+
+   다른 메서드와 마찬가지로, 대소 문자를 구분할지는 플랫폼 기본값을 따
+   릅니다:
+
+      >>> PurePosixPath('b.py').match('*.PY')
+      False
+      >>> PureWindowsPath('b.py').match('*.PY')
+      True
+
+PurePath.relative_to(*other)
+
+   Compute a version of this path relative to the path represented by
+   *other*.  If it's impossible, ValueError is raised:
+
+      >>> p = PurePosixPath('/etc/passwd')
+      >>> p.relative_to('/')
+      PurePosixPath('etc/passwd')
+      >>> p.relative_to('/etc')
+      PurePosixPath('passwd')
+      >>> p.relative_to('/usr')
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+        File "pathlib.py", line 694, in relative_to
+          .format(str(self), str(formatted)))
+      ValueError: '/etc/passwd' is not in the subpath of '/usr' OR one path is relative and the other absolute.
+
+   NOTE: This function is part of "PurePath" and works with strings.
+   It does not check or access the underlying file structure.
+
+PurePath.with_name(name)
+
+   "name"이 변경된 새 경로를 반환합니다. 원래 경로에 이름(name)이 없으
+   면 ValueError가 발생합니다:
+
+      >>> p = PureWindowsPath('c:/Downloads/pathlib.tar.gz')
+      >>> p.with_name('setup.py')
+      PureWindowsPath('c:/Downloads/setup.py')
+      >>> p = PureWindowsPath('c:/')
+      >>> p.with_name('setup.py')
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+        File "/home/antoine/cpython/default/Lib/pathlib.py", line 751, in with_name
+          raise ValueError("%r has an empty name" % (self,))
+      ValueError: PureWindowsPath('c:/') has an empty name
+
+PurePath.with_stem(stem)
+
+   "stem"이 변경된 새 경로를 반환합니다. 원래 경로에 이름(name)이 없으
+   면, ValueError가 발생합니다:
+
+      >>> p = PureWindowsPath('c:/Downloads/draft.txt')
+      >>> p.with_stem('final')
+      PureWindowsPath('c:/Downloads/final.txt')
+      >>> p = PureWindowsPath('c:/Downloads/pathlib.tar.gz')
+      >>> p.with_stem('lib')
+      PureWindowsPath('c:/Downloads/lib.gz')
+      >>> p = PureWindowsPath('c:/')
+      >>> p.with_stem('')
+      Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+        File "/home/antoine/cpython/default/Lib/pathlib.py", line 861, in with_stem
+          return self.with_name(stem + self.suffix)
+        File "/home/antoine/cpython/default/Lib/pathlib.py", line 851, in with_name
+          raise ValueError("%r has an empty name" % (self,))
+      ValueError: PureWindowsPath('c:/') has an empty name
+
+   버전 3.9에 추가.
+
+PurePath.with_suffix(suffix)
+
+   "suffix"가 변경된 새 경로를 반환합니다. 원래 경로에 접미사(suffix)
+   가 없으면, 새 *suffix*가 대신 추가됩니다. *suffix*가 빈 문자열이면,
+   원래 접미사가 제거됩니다:
+
+      >>> p = PureWindowsPath('c:/Downloads/pathlib.tar.gz')
+      >>> p.with_suffix('.bz2')
+      PureWindowsPath('c:/Downloads/pathlib.tar.bz2')
+      >>> p = PureWindowsPath('README')
+      >>> p.with_suffix('.txt')
+      PureWindowsPath('README.txt')
+      >>> p = PureWindowsPath('README.txt')
+      >>> p.with_suffix('')
+      PureWindowsPath('README')
+
+
+구상 경로
+=========
+
+구상 경로는 순수한 경로 클래스의 서브 클래스입니다. 후자가 제공하는 연
+산 외에도, 경로 객체에 대해 시스템 호출을 수행하는 메서드도 제공합니다
+. 구상 경로를 인스턴스화 하는 세 가지 방법이 있습니다:
+
+class pathlib.Path(*pathsegments)
+
+   "PurePath"의 서브 클래스, 이 클래스는 시스템의 경로 플레이버의 구상
+   경로를 나타냅니다 (인스턴스화 하면 "PosixPath"나 "WindowsPath"를 만
+   듭니다):
+
+      >>> Path('setup.py')
+      PosixPath('setup.py')
+
+   *pathsegments*는 "PurePath"와 유사하게 지정됩니다.
+
+class pathlib.PosixPath(*pathsegments)
+
+   "Path"와 "PurePosixPath"의 서브 클래스, 이 클래스는 윈도우 이외의
+   구상 파일 시스템 경로를 나타냅니다:
+
+      >>> PosixPath('/etc')
+      PosixPath('/etc')
+
+   *pathsegments*는 "PurePath"와 유사하게 지정됩니다.
+
+class pathlib.WindowsPath(*pathsegments)
+
+   "Path"와 "PureWindowsPath"의 서브 클래스, 이 클래스는 구상 윈도우
+   파일 시스템 경로를 나타냅니다:
+
+      >>> WindowsPath('c:/Program Files/')
+      WindowsPath('c:/Program Files')
+
+   *pathsegments*는 "PurePath"와 유사하게 지정됩니다.
+
+여러분의 시스템에 해당하는 클래스 플레이버만 인스턴스화 할 수 있습니다
+(호환되지 않는 경로 플레이버에 대한 시스템 호출을 허용하면 응용 프로그
+램에서 버그나 실패가 발생할 수 있습니다):
+
+   >>> import os
+   >>> os.name
+   'posix'
+   >>> Path('setup.py')
+   PosixPath('setup.py')
+   >>> PosixPath('setup.py')
+   PosixPath('setup.py')
+   >>> WindowsPath('setup.py')
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "pathlib.py", line 798, in __new__
+       % (cls.__name__,))
+   NotImplementedError: cannot instantiate 'WindowsPath' on your system
+
+
+Methods
+-------
+
+Concrete paths provide the following methods in addition to pure paths
+methods.  Many of these methods can raise an "OSError" if a system
+call fails (for example because the path doesn't exist).
+
+버전 3.8에서 변경: "exists()", "is_dir()", "is_file()", "is_mount()",
+"is_symlink()", "is_block_device()", "is_char_device()", "is_fifo()",
+"is_socket()" now return "False" instead of raising an exception for
+paths that contain characters unrepresentable at the OS level.
+
+classmethod Path.cwd()
+
+   현재 디렉터리를 나타내는 새 경로 객체를 반환합니다. "os.getcwd()"가
+   반환하는 것과 유사합니다:
+
+      >>> Path.cwd()
+      PosixPath('/home/antoine/pathlib')
+
+classmethod Path.home()
+
+   Return a new path object representing the user's home directory (as
+   returned by "os.path.expanduser()" with "~" construct). If the home
+   directory can't be resolved, "RuntimeError" is raised.
+
+      >>> Path.home()
+      PosixPath('/home/antoine')
+
+   버전 3.5에 추가.
+
+Path.stat(*, follow_symlinks=True)
+
+   Return a "os.stat_result" object containing information about this
+   path, like "os.stat()". The result is looked up at each call to
+   this method.
+
+   This method normally follows symlinks; to stat a symlink add the
+   argument "follow_symlinks=False", or use "lstat()".
+
+      >>> p = Path('setup.py')
+      >>> p.stat().st_size
+      956
+      >>> p.stat().st_mtime
+      1327883547.852554
+
+   버전 3.10에서 변경: The *follow_symlinks* parameter was added.
+
+Path.chmod(mode, *, follow_symlinks=True)
+
+   Change the file mode and permissions, like "os.chmod()".
+
+   This method normally follows symlinks. Some Unix flavours support
+   changing permissions on the symlink itself; on these platforms you
+   may add the argument "follow_symlinks=False", or use "lchmod()".
+
+      >>> p = Path('setup.py')
+      >>> p.stat().st_mode
+      33277
+      >>> p.chmod(0o444)
+      >>> p.stat().st_mode
+      33060
+
+   버전 3.10에서 변경: The *follow_symlinks* parameter was added.
+
+Path.exists()
+
+   Whether the path points to an existing file or directory:
+
+      >>> Path('.').exists()
+      True
+      >>> Path('setup.py').exists()
+      True
+      >>> Path('/etc').exists()
+      True
+      >>> Path('nonexistentfile').exists()
+      False
+
+   참고:
+
+     If the path points to a symlink, "exists()" returns whether the
+     symlink *points to* an existing file or directory.
+
+Path.expanduser()
+
+   Return a new path with expanded "~" and "~user" constructs, as
+   returned by "os.path.expanduser()". If a home directory can't be
+   resolved, "RuntimeError" is raised.
+
+      >>> p = PosixPath('~/films/Monty Python')
+      >>> p.expanduser()
+      PosixPath('/home/eric/films/Monty Python')
+
+   버전 3.5에 추가.
+
+Path.glob(pattern)
+
+   이 경로로 표현되는 디렉터리에서, 주어진 상대 *pattern*을 glob 하여,
+   일치하는 모든 파일을 (종류와 관계없이) 산출합니다:
+
+      >>> sorted(Path('.').glob('*.py'))
+      [PosixPath('pathlib.py'), PosixPath('setup.py'), PosixPath('test_pathlib.py')]
+      >>> sorted(Path('.').glob('*/*.py'))
+      [PosixPath('docs/conf.py')]
+
+   Patterns are the same as for "fnmatch", with the addition of ""**""
+   which means "this directory and all subdirectories, recursively".
+   In other words, it enables recursive globbing:
+
+      >>> sorted(Path('.').glob('**/*.py'))
+      [PosixPath('build/lib/pathlib.py'),
+       PosixPath('docs/conf.py'),
+       PosixPath('pathlib.py'),
+       PosixPath('setup.py'),
+       PosixPath('test_pathlib.py')]
+
+   참고:
+
+     Using the ""**"" pattern in large directory trees may consume an
+     inordinate amount of time.
+
+   인자 "self", "pattern"으로 감사 이벤트 "pathlib.Path.glob"을 발생시
+   킵니다.
+
+Path.group()
+
+   Return the name of the group owning the file.  "KeyError" is raised
+   if the file's gid isn't found in the system database.
+
+Path.is_dir()
+
+   Return "True" if the path points to a directory (or a symbolic link
+   pointing to a directory), "False" if it points to another kind of
+   file.
+
+   경로가 존재하지 않거나 깨진 심볼릭 링크일 때도 "False"가 반환됩니다
+   ; 다른 에러(가령 권한 에러)는 전파됩니다.
+
+Path.is_file()
+
+   Return "True" if the path points to a regular file (or a symbolic
+   link pointing to a regular file), "False" if it points to another
+   kind of file.
+
+   경로가 존재하지 않거나 깨진 심볼릭 링크일 때도 "False"가 반환됩니다
+   ; 다른 에러(가령 권한 에러)는 전파됩니다.
+
+Path.is_mount()
+
+   Return "True" if the path is a *mount point*: a point in a file
+   system where a different file system has been mounted.  On POSIX,
+   the function checks whether *path*'s parent, "path/..", is on a
+   different device than *path*, or whether "path/.." and *path* point
+   to the same i-node on the same device --- this should detect mount
+   points for all Unix and POSIX variants.  Not implemented on
+   Windows.
+
+   버전 3.7에 추가.
+
+Path.is_symlink()
+
+   경로가 심볼릭 링크를 가리키면 "True"를, 그렇지 않으면 "False"를 반
+   환합니다.
+
+   경로가 존재하지 않아도 "False"가 반환됩니다; 다른 에러(가령 권한 오
+   류)는 전파됩니다.
+
+Path.is_socket()
+
+   경로가 유닉스 소켓(또는 유닉스 소켓을 가리키는 심볼릭 링크)을 가리
+   키면 "True"를, 다른 유형의 파일을 가리키면 "False"를 반환합니다.
+
+   경로가 존재하지 않거나 깨진 심볼릭 링크일 때도 "False"가 반환됩니다
+   ; 다른 에러(가령 권한 에러)는 전파됩니다.
+
+Path.is_fifo()
+
+   경로가 FIFO(또는 FIFO를 가리키는 심볼릭 링크)를 가리키면 "True"를,
+   다른 유형의 파일을 가리키면 "False"를 반환합니다.
+
+   경로가 존재하지 않거나 깨진 심볼릭 링크일 때도 "False"가 반환됩니다
+   ; 다른 에러(가령 권한 에러)는 전파됩니다.
+
+Path.is_block_device()
+
+   경로가 블록 장치(또는 블록 장치를 가리키는 심볼릭 링크)를 가리키면
+   "True"를, 다른 유형의 파일을 가리키면 "False"를 반환합니다.
+
+   경로가 존재하지 않거나 깨진 심볼릭 링크일 때도 "False"가 반환됩니다
+   ; 다른 에러(가령 권한 에러)는 전파됩니다.
+
+Path.is_char_device()
+
+   경로가 문자 장치(또는 문자 장치를 가리키는 심볼릭 링크)를 가리키면
+   "True"를, 다른 유형의 파일을 가리키면 "False"를 반환합니다.
+
+   경로가 존재하지 않거나 깨진 심볼릭 링크일 때도 "False"가 반환됩니다
+   ; 다른 에러(가령 권한 에러)는 전파됩니다.
+
+Path.iterdir()
+
+   경로가 디렉터리를 가리킬 때, 디렉터리 내용의 경로 객체를 산출합니다
+   :
+
+      >>> p = Path('docs')
+      >>> for child in p.iterdir(): child
+      ...
+      PosixPath('docs/conf.py')
+      PosixPath('docs/_templates')
+      PosixPath('docs/make.bat')
+      PosixPath('docs/index.rst')
+      PosixPath('docs/_build')
+      PosixPath('docs/_static')
+      PosixPath('docs/Makefile')
+
+   The children are yielded in arbitrary order, and the special
+   entries "'.'" and "'..'" are not included.  If a file is removed
+   from or added to the directory after creating the iterator, whether
+   a path object for that file be included is unspecified.
+
+Path.lchmod(mode)
+
+   "Path.chmod()"와 비슷하지만, 경로가 심볼릭 링크를 가리키면, 대상이
+   아닌 심볼릭 링크의 모드가 변경됩니다.
+
+Path.lstat()
+
+   "Path.stat()"과 비슷하지만, 경로가 심볼릭 링크를 가리키면, 대상이
+   아닌 심볼릭 링크의 정보를 반환합니다.
+
+Path.mkdir(mode=0o777, parents=False, exist_ok=False)
+
+   Create a new directory at this given path.  If *mode* is given, it
+   is combined with the process' "umask" value to determine the file
+   mode and access flags.  If the path already exists,
+   "FileExistsError" is raised.
+
+   *parents*가 참이면, 이 경로의 누락 된 부모를 필요하면 만듭니다; 이
+   것들은 *mode*를 고려하지 않고 기본 권한으로 만들어집니다 (POSIX
+   "mkdir -p" 명령을 모방합니다).
+
+   *parents*가 거짓(기본값)이면, 누락된 부모가 "FileNotFoundError"를
+   발생시킵니다.
+
+   *exist_ok*가 거짓(기본값)이면, 대상 디렉터리가 이미 존재하면
+   "FileExistsError"가 발생합니다.
+
+   If *exist_ok* is true, "FileExistsError" exceptions will be ignored
+   (same behavior as the POSIX "mkdir -p" command), but only if the
+   last path component is not an existing non-directory file.
+
+   버전 3.5에서 변경: *exist_ok* 매개 변수가 추가되었습니다.
+
+Path.open(mode='r', buffering=- 1, encoding=None, errors=None, newline=None)
+
+   내장 "open()" 함수처럼, 경로가 가리키는 파일을 엽니다:
+
+      >>> p = Path('setup.py')
+      >>> with p.open() as f:
+      ...     f.readline()
+      ...
+      '#!/usr/bin/env python3\n'
+
+Path.owner()
+
+   Return the name of the user owning the file.  "KeyError" is raised
+   if the file's uid isn't found in the system database.
+
+Path.read_bytes()
+
+   가리키는 파일의 바이너리 내용을 바이트열 객체로 반환합니다:
+
+      >>> p = Path('my_binary_file')
+      >>> p.write_bytes(b'Binary file contents')
+      20
+      >>> p.read_bytes()
+      b'Binary file contents'
+
+   버전 3.5에 추가.
+
+Path.read_text(encoding=None, errors=None)
+
+   가리키는 파일의 디코딩된 내용을 문자열로 반환합니다:
+
+      >>> p = Path('my_text_file')
+      >>> p.write_text('Text file contents')
+      18
+      >>> p.read_text()
+      'Text file contents'
+
+   파일이 열린 다음에 닫힙니다. 선택적 매개 변수는 "open()"과 같은 의
+   미입니다.
+
+   버전 3.5에 추가.
+
+Path.readlink()
+
+   심볼릭 링크가 가리키는 경로를 반환합니다 ("os.readlink()"가 반환하
+   는 것과 유사합니다):
+
+      >>> p = Path('mylink')
+      >>> p.symlink_to('setup.py')
+      >>> p.readlink()
+      PosixPath('setup.py')
+
+   버전 3.9에 추가.
+
+Path.rename(target)
+
+   Rename this file or directory to the given *target*, and return a
+   new Path instance pointing to *target*.  On Unix, if *target*
+   exists and is a file, it will be replaced silently if the user has
+   permission. On Windows, if *target* exists, "FileExistsError" will
+   be raised. *target* can be either a string or another path object:
+
+      >>> p = Path('foo')
+      >>> p.open('w').write('some text')
+      9
+      >>> target = Path('bar')
+      >>> p.rename(target)
+      PosixPath('bar')
+      >>> target.open().read()
+      'some text'
+
+   The target path may be absolute or relative. Relative paths are
+   interpreted relative to the current working directory, *not* the
+   directory of the Path object.
+
+   It is implemented in terms of "os.rename()" and gives the same
+   guarantees.
+
+   버전 3.8에서 변경: Added return value, return the new Path
+   instance.
+
+Path.replace(target)
+
+   Rename this file or directory to the given *target*, and return a
+   new Path instance pointing to *target*.  If *target* points to an
+   existing file or empty directory, it will be unconditionally
+   replaced.
+
+   The target path may be absolute or relative. Relative paths are
+   interpreted relative to the current working directory, *not* the
+   directory of the Path object.
+
+   버전 3.8에서 변경: Added return value, return the new Path
+   instance.
+
+Path.resolve(strict=False)
+
+   심볼릭 링크를 결정하여, 경로를 절대적으로 만듭니다. 새로운 경로 객
+   체가 반환됩니다:
+
+      >>> p = Path()
+      >>> p
+      PosixPath('.')
+      >>> p.resolve()
+      PosixPath('/home/antoine/pathlib')
+
+   "".."" 구성 요소도 제거됩니다 (이것이 이렇게 하는 유일한 메서드입니
+   다):
+
+      >>> p = Path('docs/../setup.py')
+      >>> p.resolve()
+      PosixPath('/home/antoine/pathlib/setup.py')
+
+   If the path doesn't exist and *strict* is "True",
+   "FileNotFoundError" is raised.  If *strict* is "False", the path is
+   resolved as far as possible and any remainder is appended without
+   checking whether it exists.  If an infinite loop is encountered
+   along the resolution path, "RuntimeError" is raised.
+
+   버전 3.6에 추가: The *strict* argument (pre-3.6 behavior is
+   strict).
+
+Path.rglob(pattern)
+
+   This is like calling "Path.glob()" with ""**/"" added in front of
+   the given relative *pattern*:
+
+      >>> sorted(Path().rglob("*.py"))
+      [PosixPath('build/lib/pathlib.py'),
+       PosixPath('docs/conf.py'),
+       PosixPath('pathlib.py'),
+       PosixPath('setup.py'),
+       PosixPath('test_pathlib.py')]
+
+   인자 "self", "pattern"으로 감사 이벤트 "pathlib.Path.rglob"을 발생
+   시킵니다.
+
+Path.rmdir()
+
+   이 디렉터리를 제거합니다. 디렉터리는 비어 있어야 합니다.
+
+Path.samefile(other_path)
+
+   이 경로가 *other_path*와 같은 파일을 가리키는지를 반환합니다.
+   *other_path*는 Path 객체이거나 문자열일 수 있습니다. 의미는
+   "os.path.samefile()"과 "os.path.samestat()"과 유사합니다.
+
+   어떤 이유로 파일에 액세스할 수 없으면 "OSError"가 발생할 수 있습니
+   다.
+
+      >>> p = Path('spam')
+      >>> q = Path('eggs')
+      >>> p.samefile(q)
+      False
+      >>> p.samefile('spam')
+      True
+
+   버전 3.5에 추가.
+
+Path.symlink_to(target, target_is_directory=False)
+
+   Make this path a symbolic link to *target*.  Under Windows,
+   *target_is_directory* must be true (default "False") if the link's
+   target is a directory.  Under POSIX, *target_is_directory*'s value
+   is ignored.
+
+      >>> p = Path('mylink')
+      >>> p.symlink_to('setup.py')
+      >>> p.resolve()
+      PosixPath('/home/antoine/pathlib/setup.py')
+      >>> p.stat().st_size
+      956
+      >>> p.lstat().st_size
+      8
+
+   참고:
+
+     인자의 순서(링크, 대상)는 "os.symlink()"와 반대입니다.
+
+Path.hardlink_to(target)
+
+   Make this path a hard link to the same file as *target*.
+
+   참고:
+
+     The order of arguments (link, target) is the reverse of
+     "os.link()"'s.
+
+   버전 3.10에 추가.
+
+Path.link_to(target)
+
+   Make *target* a hard link to this path.
+
+   경고:
+
+     This function does not make this path a hard link to *target*,
+     despite the implication of the function and argument names. The
+     argument order (target, link) is the reverse of
+     "Path.symlink_to()" and "Path.hardlink_to()", but matches that of
+     "os.link()".
+
+   버전 3.8에 추가.
+
+   버전 3.10부터 폐지: This method is deprecated in favor of
+   "Path.hardlink_to()", as the argument order of "Path.link_to()"
+   does not match that of "Path.symlink_to()".
+
+Path.touch(mode=0o666, exist_ok=True)
+
+   Create a file at this given path.  If *mode* is given, it is
+   combined with the process' "umask" value to determine the file mode
+   and access flags.  If the file already exists, the function
+   succeeds if *exist_ok* is true (and its modification time is
+   updated to the current time), otherwise "FileExistsError" is
+   raised.
+
+Path.unlink(missing_ok=False)
+
+   이 파일이나 심볼릭 링크를 제거합니다. 경로가 디렉터리를 가리키면,
+   "Path.rmdir()"을 대신 사용하십시오.
+
+   *missing_ok*가 거짓(기본값)이면, 경로가 없을 때 "FileNotFoundError"
+   가 발생합니다.
+
+   *missing_ok*가 참이면, "FileNotFoundError" 예외는 무시됩니다 (POSIX
+   "rm -f" 명령과 같은 동작).
+
+   버전 3.8에서 변경: *missing_ok* 매개 변수가 추가되었습니다.
+
+Path.write_bytes(data)
+
+   가리키는 파일을 바이너리 모드로 열고, *data*를 쓴 다음, 파일을 닫습
+   니다:
+
+      >>> p = Path('my_binary_file')
+      >>> p.write_bytes(b'Binary file contents')
+      20
+      >>> p.read_bytes()
+      b'Binary file contents'
+
+   같은 이름의 기존 파일을 덮어씁니다.
+
+   버전 3.5에 추가.
+
+Path.write_text(data, encoding=None, errors=None, newline=None)
+
+   가리키는 파일을 텍스트 모드로 열고, *data*를 쓴 다음, 파일을 닫습니
+   다:
+
+      >>> p = Path('my_text_file')
+      >>> p.write_text('Text file contents')
+      18
+      >>> p.read_text()
+      'Text file contents'
+
+   같은 이름의 기존 파일을 덮어씁니다. 선택적 매개 변수는 "open()"에서
+   와 같은 의미입니다.
+
+   버전 3.5에 추가.
+
+   버전 3.10에서 변경: The *newline* parameter was added.
+
+
+Correspondence to tools in the "os" module
+==========================================
+
+아래는 다양한 "os" 함수를 해당 "PurePath"/"Path" 대응 물에 매핑하는 표
+입니다.
+
+참고:
+
+  Not all pairs of functions/methods below are equivalent. Some of
+  them, despite having some overlapping use-cases, have different
+  semantics. They include "os.path.abspath()" and "Path.resolve()",
+  "os.path.relpath()" and "PurePath.relative_to()".
+
++--------------------------------------+-----------------------------------+
+| "os" and "os.path"                   | "pathlib"                         |
+|======================================|===================================|
+| "os.path.abspath()"                  | "Path.resolve()" [1]              |
++--------------------------------------+-----------------------------------+
+| "os.chmod()"                         | "Path.chmod()"                    |
++--------------------------------------+-----------------------------------+
+| "os.mkdir()"                         | "Path.mkdir()"                    |
++--------------------------------------+-----------------------------------+
+| "os.makedirs()"                      | "Path.mkdir()"                    |
++--------------------------------------+-----------------------------------+
+| "os.rename()"                        | "Path.rename()"                   |
++--------------------------------------+-----------------------------------+
+| "os.replace()"                       | "Path.replace()"                  |
++--------------------------------------+-----------------------------------+
+| "os.rmdir()"                         | "Path.rmdir()"                    |
++--------------------------------------+-----------------------------------+
+| "os.remove()", "os.unlink()"         | "Path.unlink()"                   |
++--------------------------------------+-----------------------------------+
+| "os.getcwd()"                        | "Path.cwd()"                      |
++--------------------------------------+-----------------------------------+
+| "os.path.exists()"                   | "Path.exists()"                   |
++--------------------------------------+-----------------------------------+
+| "os.path.expanduser()"               | "Path.expanduser()" and           |
+|                                      | "Path.home()"                     |
++--------------------------------------+-----------------------------------+
+| "os.listdir()"                       | "Path.iterdir()"                  |
++--------------------------------------+-----------------------------------+
+| "os.path.isdir()"                    | "Path.is_dir()"                   |
++--------------------------------------+-----------------------------------+
+| "os.path.isfile()"                   | "Path.is_file()"                  |
++--------------------------------------+-----------------------------------+
+| "os.path.islink()"                   | "Path.is_symlink()"               |
++--------------------------------------+-----------------------------------+
+| "os.link()"                          | "Path.hardlink_to()"              |
++--------------------------------------+-----------------------------------+
+| "os.symlink()"                       | "Path.symlink_to()"               |
++--------------------------------------+-----------------------------------+
+| "os.readlink()"                      | "Path.readlink()"                 |
++--------------------------------------+-----------------------------------+
+| "os.path.relpath()"                  | "PurePath.relative_to()" [2]      |
++--------------------------------------+-----------------------------------+
+| "os.stat()"                          | "Path.stat()", "Path.owner()",    |
+|                                      | "Path.group()"                    |
++--------------------------------------+-----------------------------------+
+| "os.path.isabs()"                    | "PurePath.is_absolute()"          |
++--------------------------------------+-----------------------------------+
+| "os.path.join()"                     | "PurePath.joinpath()"             |
++--------------------------------------+-----------------------------------+
+| "os.path.basename()"                 | "PurePath.name"                   |
++--------------------------------------+-----------------------------------+
+| "os.path.dirname()"                  | "PurePath.parent"                 |
++--------------------------------------+-----------------------------------+
+| "os.path.samefile()"                 | "Path.samefile()"                 |
++--------------------------------------+-----------------------------------+
+| "os.path.splitext()"                 | "PurePath.stem" and               |
+|                                      | "PurePath.suffix"                 |
++--------------------------------------+-----------------------------------+
+
+-[ Footnotes ]-
+
+[1] "os.path.abspath()" does not resolve symbolic links while
+    "Path.resolve()" does.
+
+[2] "PurePath.relative_to()" requires "self" to be the subpath of the
+    argument, but "os.path.relpath()" does not.

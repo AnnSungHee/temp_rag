@@ -1,0 +1,650 @@
+"email.message": Representing an email message
+**********************************************
+
+**소스 코드:** Lib/email/message.py
+
+======================================================================
+
+버전 3.6에 추가: [1]
+
+"email" 패키지의 중심 클래스는 "email.message" 모듈에서 임포트 되는
+"EmailMessage" 클래스입니다. "email" 객체 모델의 베이스 클래스입니다.
+"EmailMessage"는 헤더 필드 설정과 조회, 메시지 본문 액세스 및 구조화된
+메시지 작성이나 수정을 위한 핵심 기능을 제공합니다.
+
+전자 메일 메시지는 *헤더(headers)*와 *페이 로드(payload)*(*내용
+(content)*이라고도 합니다)로 구성됩니다. 헤더는 **RFC 5322**나 **RFC
+6532** 스타일 필드 이름과 값이며, 필드 이름과 값은 콜론으로 구분됩니다
+. 콜론은 필드 이름이나 필드 값의 일부가 아닙니다. 페이 로드는 간단한
+텍스트 메시지, 바이너리 객체 또는 각각 자신만의 헤더 집합과 자신만의
+페이 로드를 갖는 서브 메시지들의 구조화된 시퀀스일 수 있습니다. 마지막
+유형의 페이 로드는 *multipart/**나 *message/rfc822*와 같은 MIME 유형을
+가진 메시지로 표시됩니다.
+
+"EmailMessage" 객체가 제공하는 개념적 모델은 메시지의 **RFC 5322** 본
+문을 나타내는 *payload*와 결합 된 헤더들의 순서 있는 딕셔너리이며, 본
+문은 서브-"EmailMessage" 객체의 리스트일 수 있습니다. 헤더 이름과 값에
+액세스하기 위한 일반적인 딕셔너리 메서드 외에도, 헤더에서 특수 정보(예
+를 들어 MIME 콘텐츠 유형)에 액세스하고, 페이 로드를 다루고, 메시지의
+직렬화된 버전을 생성하고, 객체 트리를 재귀적으로 탐색하는 메서드가 있
+습니다.
+
+The "EmailMessage" dictionary-like interface is indexed by the header
+names, which must be ASCII values.  The values of the dictionary are
+strings with some extra methods.  Headers are stored and returned in
+case-preserving form, but field names are matched case-insensitively.
+Unlike a real dict, there is an ordering to the keys, and there can be
+duplicate keys.  Additional methods are provided for working with
+headers that have duplicate keys.
+
+*페이 로드*는 간단한 메시지 객체의 경우 문자열이나 바이트열 객체이고,
+*multipart/**와 *message/rfc822* 메시지 객체와 같은 MIME 컨테이너 문서
+에서는 "EmailMessage" 객체의 리스트입니다.
+
+class email.message.EmailMessage(policy=default)
+
+   *policy*가 지정되면, 그것이 지정하는 규칙을 사용하여 메시지 표현을
+   갱신하고 직렬화합니다. *policy*가 설정되지 않으면, 줄 종료를 제외하
+   고는 전자 메일 RFC 규칙을 따르는 "default" 정책을 사용합니다 (RFC가
+   요구하는 "\r\n" 대신에, 파이썬 표준 "\n" 줄 종료를 사용합니다). 자
+   세한 내용은 "policy" 설명서를 참조하십시오.
+
+   as_string(unixfrom=False, maxheaderlen=None, policy=None)
+
+      Return the entire message flattened as a string.  When optional
+      *unixfrom* is true, the envelope header is included in the
+      returned string.  *unixfrom* defaults to "False".  For backward
+      compatibility with the base "Message" class *maxheaderlen* is
+      accepted, but defaults to "None", which means that by default
+      the line length is controlled by the "max_line_length" of the
+      policy.  The *policy* argument may be used to override the
+      default policy obtained from the message instance.  This can be
+      used to control some of the formatting produced by the method,
+      since the specified *policy* will be passed to the "Generator".
+
+      문자열로의 변환을 완료하기 위해 기본값을 채워야 하면 메시지를 평
+      평하게 만들 때 "EmailMessage"에 대한 변경이 발생할 수 있습니다 (
+      예를 들어, MIME 경계(boundaries)가 생성되거나 수정될 수 있습니다
+      ).
+
+      이 메서드는 편의상 제공되며, 응용 프로그램에서 메시지를 직렬화하
+      는 가장 유용한 방법은 아닐 수 있습니다, 특히 여러 메시지를 다룬
+      다면 그렇습니다. 메시지 직렬화를 위한 더 유연한 API는
+      "email.generator.Generator"를 참조하십시오. 또한 이 메서드는
+      "utf8"가 "False"(기본값)일 때 "7비트 클린"으로 직렬화된 메시지를
+      생성하는 것으로 제한됩니다.
+
+      버전 3.6에서 변경: *maxheaderlen*이 지정되지 않았을 때의 기본 동
+      작은 기본값을 0으로 하는 것에서 정책(policy)의 *max_line_length*
+      값을 기본값으로 사용하는 것으로 변경되었습니다.
+
+   __str__()
+
+      "as_string(policy=self.policy.clone(utf8=True))"와 동등합니다.
+      "str(msg)"가 직렬화된 메시지를 포함하는 문자열을 읽을 수 있는 형
+      식으로 생성할 수 있도록 합니다.
+
+      버전 3.4에서 변경: 이 메서드는 "utf8=True"를 사용하도록 변경되어
+      , "as_string()"의 직접적인 별칭인 대신, **RFC 6531**과 유사한 메
+      시지 표현을 생성합니다.
+
+   as_bytes(unixfrom=False, policy=None)
+
+      전체 메시지를 평평하게 만든 바이트열 객체를 반환합니다. 선택적
+      *unixfrom*이 참이면, 봉투 헤더(envelope header)가 반환된 문자열
+      에 포함됩니다. *unixfrom*의 기본값은 "False"입니다. *policy* 인
+      자는 메시지 인스턴스에서 얻은 기본 정책을 대체하는 데 사용될 수
+      있습니다. 지정된 *policy*가 "BytesGenerator"로 전달되기 때문에,
+      메서드가 생성하는 포매팅의 일부를 제어하는 데 사용할 수 있습니다
+      .
+
+      문자열로의 변환을 완료하기 위해 기본값을 채워야 하면 메시지를 평
+      평하게 만들 때 "EmailMessage"에 대한 변경이 발생할 수 있습니다 (
+      예를 들어, MIME 경계(boundaries)가 생성되거나 수정될 수 있습니다
+      ).
+
+      이 메서드는 편의상 제공되며, 응용 프로그램에서 메시지를 직렬화하
+      는 가장 유용한 방법은 아닐 수 있습니다, 특히 여러 메시지를 다룬
+      다면 그렇습니다. 메시지 직렬화를 위한 더 유연한 API는
+      "email.generator.BytesGenerator"를 참조하십시오.
+
+   __bytes__()
+
+      Equivalent to "as_bytes()".  Allows "bytes(msg)" to produce a
+      bytes object containing the serialized message.
+
+   is_multipart()
+
+      메시지의 페이 로드가 서브-"EmailMessage" 객체의 리스트면 "True"
+      를, 그렇지 않으면 "False"를 반환합니다. "is_multipart()"가
+      "False"를 반환할 때, 페이 로드는 문자열 객체(CTE 인코딩된 바이너
+      리 페이 로드일 수 있습니다)여야 합니다. "True"를 반환하는
+      "is_multipart()"가 반드시 "msg.get_content_maintype() ==
+      'multipart'"가 "True"를 반환한다는 것을 의미하지는 않습니다. 예
+      를 들어, "EmailMessage"가 "message/rfc822" 유형일 때
+      "is_multipart"는 "True"를 반환합니다.
+
+   set_unixfrom(unixfrom)
+
+      메시지의 봉투 헤더(envelope header)를 문자열이어야 하는
+      *unixfrom*으로 설정합니다. (이 헤더에 대한 간단한 설명은
+      "mboxMessage"를 참조하십시오.)
+
+   get_unixfrom()
+
+      메시지의 봉투 헤더(envelope header)를 반환합니다. 봉투 헤더가 설
+      정되지 않았으면 기본값은 "None"입니다.
+
+   다음 메서드는 메시지 헤더에 액세스하기 위한 매핑류 인터페이스를 구
+   현합니다. 이 메서드들과 일반 매핑(즉, 딕셔너리) 인터페이스 사이에는
+   의미상 차이가 있습니다. 예를 들어, 딕셔너리에는 중복 키가 없지만,
+   여기서는 중복 메시지 헤더가 있을 수 있습니다. 또한 딕셔너리에서는
+   "keys()"가 반환한 키의 순서가 보장되지 않지만, "EmailMessage" 객체
+   에서는 헤더가 항상 원래 메시지에 나타난 순서대로, 또는 나중에 메시
+   지에 추가된 순서대로 반환됩니다. 삭제한 후 다시 추가된 헤더는 항상
+   헤더 리스트의 끝에 추가됩니다.
+
+   이러한 의미적 차이는 의도적이며 가장 흔한 사용 사례에서의 편의를 추
+   구하는 쪽으로 기울어져 있습니다.
+
+   모든 경우에, 메시지에 존재하는 봉투 헤더는 매핑 인터페이스에 포함되
+   지 않습니다.
+
+   __len__()
+
+      중복을 포함하여, 총 헤더 수를 반환합니다.
+
+   __contains__(name)
+
+      메시지 객체에 *name*이라는 필드가 있으면 "True"를 반환합니다. 대
+      소 문자를 구분하지 않고 일치하며, *name*은 후행 콜론을 포함하지
+      않습니다. "in" 연산자에 사용됩니다. 예를 들면:
+
+         if 'message-id' in myMessage:
+            print('Message-ID:', myMessage['message-id'])
+
+   __getitem__(name)
+
+      이름으로 지정된 헤더 필드의 값을 반환합니다. *name*은 콜론 필드
+      구분자를 포함하지 않습니다. 헤더가 없으면 "None"이 반환됩니다;
+      "KeyError"가 발생하지 않습니다.
+
+      이름이 지정된 필드가 메시지 헤더에 두 번 이상 나타나면, 해당 필
+      드 값 중 정확히 어떤 필드 값이 반환되는지 정의되지 않습니다.
+      "get_all()" 메서드를 사용하여 *name*으로 이름이 지정된 모든 기존
+      헤더의 값을 가져오십시오.
+
+      표준 ("compat32"가 아닌) 정책을 사용하여, 반환된 값은
+      "email.headerregistry.BaseHeader"의 서브 클래스 인스턴스입니다.
+
+   __setitem__(name, val)
+
+      필드 이름이 *name*이고 값이 *val*인 헤더를 메시지에 추가합니다.
+      필드는 메시지의 기존 헤더들 끝에 추가됩니다.
+
+      같은 이름을 가진 기존 헤더를 덮어쓰거나 삭제하지 *않습니다*. 새
+      헤더가 메시지에서 필드 이름이 *name*인 유일한 것이 되도록 하려면
+      , 먼저 필드를 삭제하십시오. 예를 들어:
+
+         del msg['subject']
+         msg['subject'] = 'Python roolz!'
+
+      If the "policy" defines certain headers to be unique (as the
+      standard policies do), this method may raise a "ValueError" when
+      an attempt is made to assign a value to such a header when one
+      already exists.  This behavior is intentional for consistency's
+      sake, but do not depend on it as we may choose to make such
+      assignments do an automatic deletion of the existing header in
+      the future.
+
+   __delitem__(name)
+
+      메시지 헤더에서 이름이 *name*인 모든 필드를 삭제합니다. 해당 이
+      름의 필드가 헤더에 없어도 예외가 발생하지 않습니다.
+
+   keys()
+
+      메시지의 모든 헤더 필드 이름의 리스트를 반환합니다.
+
+   values()
+
+      메시지의 모든 필드 값의 리스트를 반환합니다.
+
+   items()
+
+      메시지의 모든 필드 헤더와 값을 담은 2-튜플의 리스트를 반환합니다
+      .
+
+   get(name, failobj=None)
+
+      Return the value of the named header field.  This is identical
+      to "__getitem__()" except that optional *failobj* is returned if
+      the named header is missing (*failobj* defaults to "None").
+
+   추가적인 유용한 헤더 관련 메서드는 다음과 같습니다:
+
+   get_all(name, failobj=None)
+
+      *name*으로 명명된 필드의 모든 값의 리스트를 반환합니다. 메시지에
+      그런 이름의 헤더가 없으면 *failobj*가 반환됩니다 (기본값은
+      "None").
+
+   add_header(_name, _value, **_params)
+
+      확장된 헤더 설정. 이 메서드는 추가 헤더 파라미터가 키워드 인자로
+      제공될 수 있다는 점을 제외하고는 "__setitem__()"과 유사합니다.
+      *_name*은 추가할 헤더 필드이고 *_value*는 헤더의 *기본(primary)*
+      값입니다.
+
+      키워드 인자 딕셔너리 *_params*의 각 항목에 대해, 키는 파라미터
+      이름으로 사용되며 밑줄은 대시로 변환됩니다 (대시는 파이썬 식별자
+      에서 유효하지 않기 때문입니다). 일반적으로, 값이 "None"이 아니면
+      파라미터가 "key="value""로 추가되며, None이면 키만 추가됩니다.
+
+      값에 ASCII가 아닌 문자가 포함되면, 값을 "(CHARSET, LANGUAGE,
+      VALUE)" 형식의 3-튜플로 지정하여 문자 집합과 언어를 명시적으로
+      제어 할 수 있습니다. 여기서 "CHARSET"은 값을 인코딩하는 데 사용
+      할 문자 집합의 이름을 지정하는 문자열이고, "LANGUAGE"는 보통
+      "None"이나 빈 문자열(다른 가능성은 **RFC 2231**을 참조하십시오)
+      로 설정되고, "VALUE"는 비 ASCII 코드 포인트를 포함하는 문자열 값
+      입니다. 3-튜플이 전달되지 않고 값에 ASCII가 아닌 문자가 포함되면
+      , "CHARSET"으로 "utf-8", "LANGUAGE"로 "None"을 사용하여 **RFC
+      2231** 형식으로 자동 인코딩됩니다.
+
+      예를 들면 다음과 같습니다:
+
+         msg.add_header('Content-Disposition', 'attachment', filename='bud.gif')
+
+      이것은 다음과 같은 헤더를 추가합니다
+
+         Content-Disposition: attachment; filename="bud.gif"
+
+      비 ASCII 문자가 있는 확장 인터페이스의 예:
+
+         msg.add_header('Content-Disposition', 'attachment',
+                        filename=('iso-8859-1', '', 'Fußballer.ppt'))
+
+   replace_header(_name, _value)
+
+      헤더를 교체합니다. 메시지에서 발견된 *_name*과 일치하는 첫 번째
+      헤더를 교체하고, 원래 헤더의 헤더 순서와 필드 이름 케이스(case)
+      를 유지합니다. 일치하는 헤더가 없으면 "KeyError"를 발생시킵니다.
+
+   get_content_type()
+
+      *maintype/subtype* 형식의 소문자로 강제 변환된 메시지의 콘텐츠
+      유형을 반환합니다. 메시지에 *Content-Type* 헤더가 없으면
+      "get_default_type()"이 반환하는 값을 반환합니다. *Content-Type*
+      헤더가 유효하지 않으면 "text/plain"을 반환합니다.
+
+      (**RFC 2045**에 따라, 메시지는 항상 기본 유형을 가지며,
+      "get_content_type()"은 항상 값을 반환합니다. **RFC 2045**는
+      *multipart/digest* 컨테이너 내에 등장하면 기본 유형이
+      *message/rfc822*이고, 그렇지 않으면 기본 유형을 *text/plain*으로
+      정의합니다. *Content-Type* 헤더가 유효하지 않은 유형 지정이면,
+      **RFC 2045**는 기본 유형을 *text/plain*으로 강제합니다.)
+
+   get_content_maintype()
+
+      메시지의 메인 콘텐츠 유형을 반환합니다. 이것은
+      "get_content_type()"이 반환한 문자열의 *maintype* 부분입니다.
+
+   get_content_subtype()
+
+      메시지의 서브 콘텐츠 유형을 반환합니다. 이것은
+      "get_content_type()"이 반환한 문자열의 *subtype* 부분입니다.
+
+   get_default_type()
+
+      기본 콘텐츠 유형을 반환합니다. *multipart/digest* 컨테이너의 서
+      브 파트인 메시지를 제외하고 대부분의 메시지는 기본 콘텐츠 유형이
+      *text/plain*입니다. 이러한 서브 파트는 기본 콘텐츠 유형이
+      *message/rfc822*입니다.
+
+   set_default_type(ctype)
+
+      기본 콘텐츠 유형을 설정합니다. *ctype*은 *text/plain*이나
+      *message/rfc822*여야 하지만, 이것을 강제하지는 않습니다. 기본 콘
+      텐츠 유형은 *Content-Type* 헤더에 저장되지 않기 때문에, 메시지에
+      *Content-Type* 헤더가 없을 때 "get_content_type" 메서드의 반환
+      값에만 영향을 줍니다.
+
+   set_param(param, value, header='Content-Type', requote=True, charset=None, language='', replace=False)
+
+      *Content-Type* 헤더에 파라미터를 설정합니다. 파라미터가 이미 헤
+      더에 존재하면, 해당 값을 *value*로 바꿉니다. *header*가
+      "Content-Type"(기본값)이고 헤더가 메시지에 아직 없으면, 헤더를
+      추가하고 값을 *text/plain*으로 설정한 다음 새 파라미터 값을 추가
+      합니다. 선택적 *header*는 *Content-Type*의 대체 헤더를 지정합니
+      다.
+
+      값에 ASCII가 아닌 문자가 포함되면, 선택적 *charset*과 *language*
+      매개 변수를 사용하여 문자 집합과 언어를 명시적으로 지정할 수 있
+      습니다. 선택적 *language*는 **RFC 2231** 언어를 지정하며, 기본값
+      은 빈 문자열입니다. *charset*과 *language*는 모두 문자열이어야
+      합니다. 기본값은 "utf8" *charset*과 "None" *language*를 사용하는
+      것입니다.
+
+      *replace*가 "False"(기본값)이면 헤더는 헤더 리스트의 끝으로 이동
+      합니다. *replace*가 "True"이면, 헤더는 제자리에서 갱신됩니다.
+
+      "EmailMessage" 객체에 *requote* 매개 변수를 사용하는 것은 폐지되
+      었습니다.
+
+      Note that existing parameter values of headers may be accessed
+      through the "params" attribute of the header value (for example,
+      "msg['Content-Type'].params['charset']").
+
+      버전 3.4에서 변경: "replace" 키워드가 추가되었습니다.
+
+   del_param(param, header='content-type', requote=True)
+
+      *Content-Type* 헤더에서 지정된 파라미터를 완전히 제거합니다. 헤
+      더는 해당 파라미터나 그 값 없이 제자리에서 다시 작성됩니다. 선택
+      적 *header*는 *Content-Type*의 대체 헤더를 지정합니다.
+
+      "EmailMessage" 객체에 *requote* 매개 변수를 사용하는 것은 폐지되
+      었습니다.
+
+   get_filename(failobj=None)
+
+      메시지의 *Content-Disposition* 헤더의 "filename" 파라미터값을 반
+      환합니다. 헤더에 "filename" 파라미터가 없으면, 이 메서드는
+      *Content-Type* 헤더에서 "name" 파라미터를 찾는 것으로 폴백
+      (fallback)합니다. 둘 다 없거나 헤더가 없으면, *failobj*가 반환됩
+      니다. 반환된 문자열은 항상 "email.utils.unquote()"에 따라
+      unquote 됩니다.
+
+   get_boundary(failobj=None)
+
+      메시지의 *Content-Type* 헤더의 "boundary" 파라미터값, 또는 헤더
+      가 없거나 "boundary" 파라미터가 없으면 *failobj*를 반환합니다.
+      반환된 문자열은 항상 "email.utils.unquote()"에 따라 unquote 됩니
+      다.
+
+   set_boundary(boundary)
+
+      *Content-Type* 헤더의 "boundary" 파라미터를 *boundary*로 설정합
+      니다. 필요하면 "set_boundary()"는 항상 *boundary*를 quote 합니다
+      . 메시지 객체에 *Content-Type* 헤더가 없으면 "HeaderParseError"
+      가 발생합니다.
+
+      "set_boundary()"가 헤더 리스트에서 *Content-Type* 헤더의 순서를
+      유지하기 때문에, 이 메서드를 사용하는 것은 이전 *Content-Type*
+      헤더를 삭제하고 "add_header()"를 통해 새 boundary로 새 헤더를 추
+      가하는 것과는 미묘한 차이가 있음에 유의하십시오.
+
+   get_content_charset(failobj=None)
+
+      *Content-Type* 헤더의 "charset" 파라미터를 소문자로 강제 변환하
+      여 반환합니다. *Content-Type* 헤더가 없거나 헤더에 "charset" 파
+      라미터가 없으면 *failobj*가 반환됩니다.
+
+   get_charsets(failobj=None)
+
+      메시지 내의 문자 집합 이름들을 포함하는 리스트를 반환합니다. 메
+      시지가 *multipart*이면, 리스트는 페이 로드의 각 서브 파트마다 하
+      나의 요소를 포함하며, 그렇지 않으면 길이 1인 리스트가 됩니다.
+
+      리스트의 각 항목은 표현된 서브 파트에 대한 *Content-Type* 헤더의
+      "charset" 파라미터의 값인 문자열입니다. 서브 파트에 *Content-
+      Type* 헤더가 없거나, "charset" 파라미터가 없거나, *text* 메인
+      MIME 유형이 아니면, 반환된 리스트의 해당 항목은 *failobj*입니다.
+
+   is_attachment()
+
+      *Content-Disposition* 헤더가 있고 (대소 문자를 구분하지 않는) 값
+      이 "attachment"이면 "True"를, 그렇지 않으면 "False"를 반환합니다
+      .
+
+      버전 3.4.2에서 변경: "is_multipart()"와 일관성을 유지하기 위해,
+      is_attachment는 이제 프로퍼티 대신 메서드입니다.
+
+   get_content_disposition()
+
+      메시지의 *Content-Disposition* 헤더가 있으면 소문자로 변환된 (파
+      라미터 없는) 값을, 그렇지 않으면 "None"을 반환합니다. 메시지가
+      **RFC 2183**을 따르면, 이 메서드의 가능한 값은 *inline*,
+      *attachment* 또는 "None"입니다.
+
+      버전 3.5에 추가.
+
+   다음 메서드는 메시지의 내용(페이 로드)을 조사하고 조작하는 것과 관
+   련이 있습니다.
+
+   walk()
+
+      "walk()" 메서드는 메시지 객체 트리의 모든 파트와 서브 파트를 깊
+      이 우선 탐색 순서로 이터레이트 하는 데 사용할 수 있는 범용 제너
+      레이터입니다. 일반적으로 "walk()"를 "for" 루프에서 이터레이터로
+      사용합니다; 각 이터레이션은 다음 서브 파트를 반환합니다.
+
+      다음은 멀티 파트 메시지 구조의 모든 파트의 MIME 유형을 인쇄하는
+      예입니다:
+
+         >>> for part in msg.walk():
+         ...     print(part.get_content_type())
+         multipart/report
+         text/plain
+         message/delivery-status
+         text/plain
+         text/plain
+         message/rfc822
+         text/plain
+
+      "msg.get_content_maintype() == 'multipart'"가 "False"를 반환하더
+      라도, "walk"는 "is_multipart()"가 "True"를 반환하는 모든 파트의
+      서브 파트를 이터레이트 합니다. "_structure" 디버그 도우미 함수를
+      사용하여 예제에서 이를 확인할 수 있습니다:
+
+         >>> from email.iterators import _structure
+         >>> for part in msg.walk():
+         ...     print(part.get_content_maintype() == 'multipart',
+         ...           part.is_multipart())
+         True True
+         False False
+         False True
+         False False
+         False False
+         False True
+         False False
+         >>> _structure(msg)
+         multipart/report
+             text/plain
+             message/delivery-status
+                 text/plain
+                 text/plain
+             message/rfc822
+                 text/plain
+
+      여기서 "message" 파트는 "multiparts"는 아니지만, 서브 파트를 포
+      함합니다. "is_multipart()"는 "True"를 반환하고 "walk"는 서브 파
+      트로 내려갑니다.
+
+   get_body(preferencelist=('related', 'html', 'plain'))
+
+      메시지의 "본문"이 될 수 있는 가장 적합한 후보인 MIME 파트를 반환
+      합니다.
+
+      *preferencelist*는 "related", "html" 및 "plain" 집합의 문자열 시
+      퀀스이어야 하며, 반환된 파트의 콘텐츠 유형에 대한 선호 순서를 나
+      타냅니다.
+
+      "get_body" 메서드가 호출된 객체와 일치하는 후보를 찾기 시작합니
+      다.
+
+      "related"가 *preferencelist*에 포함되지 않으면, (서브) 파트가 선
+      호와 일치하면 후보로 만난 모든 관련(related)의 루트 파트(또는 루
+      트 파트의 서브 파트)를 고려합니다.
+
+      "multipart/related"와 만날 때, "start" 파라미터를 확인하고 일치
+      하는 *Content-ID*가 있는 파트를 발견하면, 일치하는 후보를 찾을
+      때만 고려합니다. 그렇지 않으면 "multipart/related"의 첫 번째 (기
+      본 루트) 파트만 고려합니다.
+
+      파트에 *Content-Disposition* 헤더가 있으면, 헤더 값이 "inline"일
+      때만 해당 파트를 후보로 간주합니다.
+
+      *preferencelist*의 선호 어느 것과도 일치하는 후보가 없으면,
+      "None"을 반환합니다.
+
+      참고: (1) 대부분의 응용 프로그램에서 실제로 의미가 있는
+      *preferencelist* 조합은 "('plain',)", "('html', 'plain')" 및 기
+      본 "('related', 'html', 'plain')"뿐입니다. (2) "get_body"가 호출
+      되는 객체에서 일치가 시작되므로, *preferencelist*가 기본값이면
+      "multipart/related"에서 "get_body"를 호출하면 객체 자신을 반환합
+      니다. (3) *Content-Type*을 지정하지 않거나 *Content-Type* 헤더가
+      유효하지 않은 메시지(또는 메시지 파트)는 마치 "text/plain" 유형
+      인 것처럼 처리되어, 간혹 "get_body"가 예기치 않은 결과를 반환하
+      도록 합니다.
+
+   iter_attachments()
+
+      "본문" 파트 후보가 아닌 메시지의 모든 직접적인 서브 파트에 대한
+      이터레이터를 반환합니다. 즉, "text/plain", "text/html",
+      "multipart/related" 또는 "multipart/alternative" 각각의 첫 번째
+      등장을 건너뛰고 (*Content-Disposition: attachment*를 통해 첨부
+      파일로 명시적으로 표시되지 않은 한), 나머지 모든 파트를 반환합니
+      다. "multipart/related"에 직접 적용될 때, 루트 파트(즉: "start"
+      파라미터가 가리키는 파트나 "start" 파라미터가 없거나 "start" 파
+      라미터가 파트들의 *Content-ID*와 일치하지 않으면 첫 번째 파트)를
+      제외한 모든 관련 파트에 대한 이터레이터를 반환합니다.
+      "multipart/alternative" 또는 비-"multipart"에 직접 적용되면 빈
+      이터레이터를 반환합니다.
+
+   iter_parts()
+
+      메시지의 모든 직계 서브 파트에 대한 이터레이터를 반환합니다.
+      "multipart"가 아니면 비어있게 됩니다. ("walk()"도 참조하십시오.)
+
+   get_content(*args, content_manager=None, **kw)
+
+      *content_manager*의 "get_content()" 메서드를 호출합니다. 추가 인
+      자로 제공되는 인자나 키워드와 함께 self를 메시지 객체로 전달합니
+      다. *content_manager*가 지정되지 않으면, 현재 "policy"가 지정하
+      는 "content_manager"를 사용합니다.
+
+   set_content(*args, content_manager=None, **kw)
+
+      *content_manager*의 "set_content()" 메서드를 호출합니다. 추가 인
+      자로 제공되는 인자나 키워드와 함께 self를 메시지 객체로 전달합니
+      다. *content_manager*가 지정되지 않으면, 현재 "policy"가 지정하
+      는 "content_manager"를 사용합니다.
+
+   make_related(boundary=None)
+
+      비 "multipart" 메시지를 "multipart/related" 메시지로 변환합니다.
+      기존 *Content-* 헤더와 페이 로드를 "multipart"의 (새로운) 첫 파
+      트로 옮깁니다. *boundary*가 지정되면, multipart에서 경계 문자열
+      로 사용하고, 그렇지 않으면 필요할 때 (예를 들어, 메시지가 직렬화
+      될 때) 경계가 자동으로 만들어지도록 둡니다.
+
+   make_alternative(boundary=None)
+
+      비 "multipart"나 "multipart/related"를 "multipart/alternative"로
+      변환합니다. 기존 *Content-* 헤더와 페이 로드를 "multipart"의 (새
+      로운) 첫 파트로 옮깁니다. *boundary*가 지정되면, multipart에서
+      경계 문자열로 사용하고, 그렇지 않으면 필요할 때 (예를 들어, 메시
+      지가 직렬화될 때) 경계가 자동으로 만들어지도록 둡니다.
+
+   make_mixed(boundary=None)
+
+      비 "multipart", "multipart/related" 또는 "multipart-alternative"
+      를 "multipart/mixed"로 변환합니다. 기존 *Content-* 헤더와 페이
+      로드를 "multipart"의 (새로운) 첫 파트로 옮깁니다. *boundary*가
+      지정되면, multipart에서 경계 문자열로 사용하고, 그렇지 않으면 필
+      요할 때 (예를 들어, 메시지가 직렬화될 때) 경계가 자동으로 만들어
+      지도록 둡니다.
+
+   add_related(*args, content_manager=None, **kw)
+
+      메시지가 "multipart/related"이면, 새 메시지 객체를 만들고, 모든
+      인자를 그것의 "set_content()" 메서드에 전달하고, 그것을
+      "multipart"에 "attach()"합니다. 메시지가 "multipart"가 아니면,
+      "make_related()"를 호출한 다음 위에서처럼 진행합니다. 메시지가
+      다른 유형의 "multipart"이면, "TypeError"를 발생시킵니다.
+      *content_manager*가 지정되지 않으면, 현재 "policy"가 지정하는
+      "content_manager"를 사용합니다. 추가된 파트에 *Content-
+      Disposition* 헤더가 없으면, 값 "inline"으로 추가합니다.
+
+   add_alternative(*args, content_manager=None, **kw)
+
+      메시지가 "multipart/alternative"이면, 새 메시지 객체를 만들고,
+      모든 인자를 그것의 "set_content()" 메서드에 전달하고, 그것을
+      "multipart"에 "attach()"합니다. 메시지가 "multipart"가 아니거나
+      "multipart/related"이면, "make_alternative()"를 호출한 다음 위에
+      서처럼 진행합니다. 메시지가 다른 유형의 "multipart"이면,
+      "TypeError"를 발생시킵니다. *content_manager*가 지정되지 않으면,
+      현재 "policy"가 지정하는 "content_manager"를 사용합니다.
+
+   add_attachment(*args, content_manager=None, **kw)
+
+      메시지가 "multipart/mixed"이면, 새 메시지 객체를 만들고, 모든 인
+      자를 그것의 "set_content()" 메서드에 전달하고, 그것을
+      "multipart"에 "attach()"합니다. 메시지가 "multipart"가 아니거나,
+      "multipart/related"나 "multipart/alternative"이면,
+      "make_mixed()"를 호출한 다음 위에서처럼 진행합니다.
+      *content_manager*가 지정되지 않으면, 현재 "policy"가 지정하는
+      "content_manager"를 사용합니다. 추가된 파트에 *Content-
+      Disposition* 헤더가 없으면, 값 "attachment"로 추가합니다. 이 메
+      서드는 "content_manager"에 적절한 옵션을 전달하여 명시적 첨부
+      (*Content-Disposition: attachment*)와 "inline" 첨부(*Content-
+      Disposition: inline*)에 모두 사용할 수 있습니다.
+
+   clear()
+
+      페이 로드와 모든 헤더를 제거합니다.
+
+   clear_content()
+
+      Remove the payload and all of the "Content-" headers, leaving
+      all other headers intact and in their original order.
+
+   "EmailMessage" 객체에는 다음과 같은 인스턴스 어트리뷰트가 있습니다:
+
+   preamble
+
+      MIME 문서의 형식은 헤더 다음의 빈 줄과 첫 번째 멀티 파트 경계 문
+      자열 사이에 어떤 텍스트를 허용합니다. 일반적으로 이 텍스트는 표
+      준 MIME 방어구를 벗어나기 때문에 MIME을 인식하는 메일 리더에서
+      보이지 않습니다. 그러나, 메시지의 원시 텍스트를 보거나, MIME을
+      인식하지 않는 리더에서 메시지를 볼 때 이 텍스트가 나타날 수 있습
+      니다.
+
+      *preamble* 어트리뷰트는 MIME 문서에 있는 이 선행 방어구 밖 텍스
+      트를 포함합니다. "Parser"가 헤더 다음이지만 첫 번째 경계 문자열
+      이전에 있는 어떤 텍스트를 발견하면, 이 텍스트를 메시지의
+      *preamble* 어트리뷰트에 대입합니다. "Generator"가 MIME 메시지의
+      일반 텍스트(plain text) 표현을 기록할 때, 메시지가 *preamble* 어
+      트리뷰트를 가진 것을 발견하면, 헤더와 첫 번째 경계 사이의 영역에
+      이 텍스트를 씁니다. 자세한 내용은 "email.parser"와
+      "email.generator"를 참조하십시오.
+
+      메시지 객체에 preamble이 없으면, *preamble* 어트리뷰트는 "None"
+      입니다.
+
+   epilogue
+
+      *epilogue* 어트리뷰트는 메시지의 마지막 경계와 끝 사이에 나타나
+      는 텍스트를 포함한다는 점을 제외하고 *preamble* 어트리뷰트와 같
+      은 방식으로 작동합니다. "preamble"과 마찬가지로 epilog 텍스트가
+      없으면, 이 어트리뷰트는 "None"입니다.
+
+   defects
+
+      *defects* 어트리뷰트는 이 메시지를 구문 분석할 때 발견된 모든 문
+      제점의 리스트를 포함합니다. 가능한 구문 분석 결함에 대한 자세한
+      설명은 "email.errors"를 참조하십시오.
+
+class email.message.MIMEPart(policy=default)
+
+   이 클래스는 MIME 메시지의 서브 파트를 나타냅니다. 서브 파트에는 자
+   체 *MIME-Version* 헤더가 필요하지 않아서, "set_content()"를 호출할
+   때 *MIME-Version* 헤더가 추가되지 않는다는 점을 제외하면
+   "EmailMessage"와 같습니다.
+
+-[ 각주 ]-
+
+[1] 원래 3.4에서 *잠정 모듈*로 추가되었습니다. 레거시 메시지 클래스를
+    위한 설명서는 email.message.Message: compat32 API를 사용하여 이메
+    일 메시지 표현하기로 옮겼습니다.

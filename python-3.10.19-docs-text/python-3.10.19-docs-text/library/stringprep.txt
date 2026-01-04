@@ -1,0 +1,116 @@
+"stringprep" --- Internet String Preparation
+********************************************
+
+**소스 코드:** Lib/stringprep.py
+
+======================================================================
+
+인터넷에서 무언가(가령 호스트 이름)를 식별할 때, 종종 그러한 식별에 대
+해 "동등" 비교할 필요가 있습니다. 이 비교가 실행되는 정확한 방법은 응
+용 프로그램 도메인에 따라 달라질 수 있습니다, 예를 들어 대/소문자를 구
+분하는지 그렇지 않은지. 또한 "인쇄 가능" 문자로만 구성된 식별만 허용하
+기 위해, 가능한 식별을 제한해야 할 수도 있습니다.
+
+**RFC 3454**는 인터넷 프로토콜에서 유니코드 문자열을 "준비" 하는 절차
+를 정의합니다. 문자열을 전선에 전달하기 전에, 준비 절차를 통해 문자열
+을 처리해서 어떤 정규화된 형식을 갖도록 만듭니다. RFC는 프로파일로 결
+합할 수 있는 테이블 집합을 정의합니다. 각 프로파일은 사용하는 테이블과
+"stringprep" 절차의 어떤 선택적 부분이 프로파일 일부인지 정의해야 합니
+다. "stringprep" 프로파일의 한 가지 예는 국제화된 도메인 이름에 사용되
+는 "nameprep"입니다.
+
+The module "stringprep" only exposes the tables from **RFC 3454**. As
+these tables would be very large to represent them as dictionaries or
+lists, the module uses the Unicode character database internally. The
+module source code itself was generated using the "mkstringprep.py"
+utility.
+
+결과적으로, 이러한 테이블은 데이터 구조가 아닌 함수로 노출됩니다. RFC
+에는 두 종류의 테이블이 있습니다: 집합과 매핑. 집합의 경우,
+"stringprep"는 "특성 함수", 즉 매개 변수가 집합 일부면 "True"를 반환하
+는 함수를 제공합니다. 매핑의 경우, 매핑 함수를 제공합니다: 주어진 키에
+대해, 연관된 값을 반환합니다. 다음은 모듈에서 사용할 수 있는 모든 함수
+의 목록입니다.
+
+stringprep.in_table_a1(code)
+
+   *code*가 tableA.1(유니코드 3.2에서 지정되지 않은 코드 포인트)에 있
+   는지 판별합니다.
+
+stringprep.in_table_b1(code)
+
+   *code*가 tableB.1(일반적으로 아무것도 매핑되지 않습니다)에 있는지
+   판별합니다.
+
+stringprep.map_table_b2(code)
+
+   tableB.2(NFKC와 함께 사용되는 케이스 폴딩용 매핑)에 따라 *code*의
+   매핑 된 값을 반환합니다.
+
+stringprep.map_table_b3(code)
+
+   tableB.3(정규화가 없는 케이스 폴딩용 매핑)에 따라 *code*의 매핑 된
+   값을 반환합니다.
+
+stringprep.in_table_c11(code)
+
+   *code*가 tableC.1.1(ASCII 스페이스 문자)에 있는지 판별합니다.
+
+stringprep.in_table_c12(code)
+
+   *code*가 tableC.1.2(비 ASCII 스페이스 문자)에 있는지 판별합니다.
+
+stringprep.in_table_c11_c12(code)
+
+   *code*가 tableC.1(스페이스 문자, C.1.1과 C.1.2의 합집합)에 있는지
+   판별합니다.
+
+stringprep.in_table_c21(code)
+
+   *code*가 tableC.2.1(ASCII 제어 문자)에 있는지 판별합니다.
+
+stringprep.in_table_c22(code)
+
+   *code*가 tableC.2.2(비 ASCII 제어 문자)에 있는지 판별합니다.
+
+stringprep.in_table_c21_c22(code)
+
+   *code*가 tableC.2(제어 문자, C.2.1과 C.2.2의 합집합)에 있는지 판별
+   합니다.
+
+stringprep.in_table_c3(code)
+
+   *code*가 tableC.3(개인 사용)에 있는지 판별합니다.
+
+stringprep.in_table_c4(code)
+
+   *code*가 tableC.4(비문자 코드 포인트)에 있는지 판별합니다.
+
+stringprep.in_table_c5(code)
+
+   *code*가 tableC.5(대리 코드)에 있는지 판별합니다.
+
+stringprep.in_table_c6(code)
+
+   *code*가 tableC.6(일반 텍스트에는 부적절)에 있는지 판별합니다.
+
+stringprep.in_table_c7(code)
+
+   *code*가 tableC.7(규범적 표현에는 부적절)에 있는지 판별합니다.
+
+stringprep.in_table_c8(code)
+
+   *code*가 tableC.8(표시 특성 변경 또는 폐지)에 있는지 판별합니다.
+
+stringprep.in_table_c9(code)
+
+   *code*가 tableC.9(문자 태깅)에 있는지 판별합니다.
+
+stringprep.in_table_d1(code)
+
+   *code*가 tableD.1(양방향 특성이 "R"이나 "AL"인 문자)에 있는지 판별
+   합니다.
+
+stringprep.in_table_d2(code)
+
+   *code*가 tableD.2(양방향 특성이 "L"인 문자)에 있는지 판별합니다.

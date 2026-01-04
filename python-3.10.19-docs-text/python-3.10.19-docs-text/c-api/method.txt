@@ -1,0 +1,78 @@
+인스턴스 메서드 객체
+********************
+
+An instance method is a wrapper for a "PyCFunction" and the new way to
+bind a "PyCFunction" to a class object. It replaces the former call
+"PyMethod_New(func, NULL, class)".
+
+PyTypeObject PyInstanceMethod_Type
+
+   이 "PyTypeObject" 인스턴스는 파이썬 인스턴스 메서드 형을 나타냅니다
+   . 파이썬 프로그램에는 노출되지 않습니다.
+
+int PyInstanceMethod_Check(PyObject *o)
+
+   *o*가 인스턴스 메서드 객체면 참을 반환합니다
+   ("PyInstanceMethod_Type" 형입니다). 매개 변수는 "NULL"이 아니어야
+   합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyInstanceMethod_New(PyObject *func)
+    *반환값: 새 참조.*
+
+   새 인스턴스 메서드 객체를 반환합니다. *func*는 임의의 콜러블 객체입
+   니다. *func*는 인스턴스 메서드가 호출될 때 호출될 함수입니다.
+
+PyObject *PyInstanceMethod_Function(PyObject *im)
+    *반환값: 빌린 참조.*
+
+   인스턴스 메서드 *im*과 연관된 함수 객체를 반환합니다.
+
+PyObject *PyInstanceMethod_GET_FUNCTION(PyObject *im)
+    *반환값: 빌린 참조.*
+
+   오류 검사를 피하는 "PyInstanceMethod_Function()"의 매크로 버전.
+
+
+메서드 객체
+***********
+
+메서드는 연결된(bound) 함수 객체입니다. 메서드는 항상 사용자 정의 클래
+스의 인스턴스에 연결됩니다. 연결되지 않은(unbound) 메서드(클래스 객체
+에 연결된 메서드)는 더는 사용할 수 없습니다.
+
+PyTypeObject PyMethod_Type
+
+   이 "PyTypeObject" 인스턴스는 파이썬 메서드 형을 나타냅니다. 이것은
+   파이썬 프로그램에 "types.MethodType"로 노출됩니다.
+
+int PyMethod_Check(PyObject *o)
+
+   *o*가 메서드 객체면 참을 반환합니다 ("PyMethod_Type" 형입니다). 매
+   개 변수는 "NULL"이 아니어야 합니다. 이 함수는 항상 성공합니다.
+
+PyObject *PyMethod_New(PyObject *func, PyObject *self)
+    *반환값: 새 참조.*
+
+   새로운 메서드 객체를 돌려줍니다. *func*는 임의의 콜러블 객체이며,
+   *self*는 메서드가 연결되어야 할 인스턴스입니다. *func*는 메서드가
+   호출될 때 호출될 함수입니다. *self*는 "NULL"이 아니어야 합니다.
+
+PyObject *PyMethod_Function(PyObject *meth)
+    *반환값: 빌린 참조.*
+
+   *meth* 메서드와 연관된 함수 객체를 반환합니다.
+
+PyObject *PyMethod_GET_FUNCTION(PyObject *meth)
+    *반환값: 빌린 참조.*
+
+   오류 검사를 피하는 "PyMethod_Function()"의 매크로 버전.
+
+PyObject *PyMethod_Self(PyObject *meth)
+    *반환값: 빌린 참조.*
+
+   *meth* 메서드와 연관된 인스턴스를 반환합니다.
+
+PyObject *PyMethod_GET_SELF(PyObject *meth)
+    *반환값: 빌린 참조.*
+
+   오류 검사를 피하는 "PyMethod_Self()"의 매크로 버전.

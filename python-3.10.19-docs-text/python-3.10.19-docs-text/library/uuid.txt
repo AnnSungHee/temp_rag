@@ -1,0 +1,260 @@
+"uuid" --- UUID objects according to **RFC 4122**
+*************************************************
+
+**소스 코드:** Lib/uuid.py
+
+======================================================================
+
+이 모듈은 **RFC 4122**에서 명시한 버전 1, 3, 4 및 5의 UUID를 생성하기
+위해 불변 "UUID" 객체("UUID" 클래스)와 "uuid1()", "uuid3()",
+"uuid4()", "uuid5()"를 제공합니다.
+
+고유 ID만을 얻고자 한다면 "uuid1()" 또는 "uuid4()"를 호출하는 것이 좋
+습니다. "uuid1()" 함수는 컴퓨터의 네트워크 주소를 포함하여 UUID를 생성
+하므로 개인정보가 노출될 수 있음을 명심해야 합니다. "uuid4()"는 무작위
+UUID를 생성합니다.
+
+Depending on support from the underlying platform, "uuid1()" may or
+may not return a "safe" UUID.  A safe UUID is one which is generated
+using synchronization methods that ensure no two processes can obtain
+the same UUID.  All instances of "UUID" have an "is_safe" attribute
+which relays any information about the UUID's safety, using this
+enumeration:
+
+class uuid.SafeUUID
+
+   버전 3.7에 추가.
+
+   safe
+
+      플랫폼이 다중 프로세스에 안전한 방식으로 UUID를 생성합니다.
+
+   unsafe
+
+      다중 프로세스에 안전한 방식으로 생성되지 않습니다.
+
+   unknown
+
+      플랫폼이 UUID를 안전하게 생성하였는지에 대한 정보를 제공하지 않
+      습니다.
+
+class uuid.UUID(hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, *, is_safe=SafeUUID.unknown)
+
+   32자리 16진수 문자열, *bytes* 인자에 빅 엔디안 순서 16바이트열,
+   *bytes_le* 인자에 리틀 엔디안 순서 16바이트열, *fields* 인자에 여섯
+   개의 정수로 이루어진 튜플(32-bit *time_low*, 16-bit *time_mid*,
+   16-bit *time_hi_version*, 8-bit *clock_seq_hi_variant*, 8-bit
+   *clock_seq_low*, 48-bit *node*), *int* 인자에 단일 128bit 정수 중
+   하나를 이용하여 UUID를 만듭니다. 16진수 문자열로 주어졌을 경우 중괄
+   호, 붙임표(hyphen), URN 접두어는 모두 선택사항입니다. 예를 들어, 아
+   래 표현들은 모두 같은 UUID를 산출합니다:
+
+      UUID('{12345678-1234-5678-1234-567812345678}')
+      UUID('12345678123456781234567812345678')
+      UUID('urn:uuid:12345678-1234-5678-1234-567812345678')
+      UUID(bytes=b'\x12\x34\x56\x78'*4)
+      UUID(bytes_le=b'\x78\x56\x34\x12\x34\x12\x78\x56' +
+                    b'\x12\x34\x56\x78\x12\x34\x56\x78')
+      UUID(fields=(0x12345678, 0x1234, 0x5678, 0x12, 0x34, 0x567812345678))
+      UUID(int=0x12345678123456781234567812345678)
+
+   *hex*, *bytes*, *bytes_le*, *fields*, *int* 중 하나는 반드시 주어져
+   야 합니다. *version* 인자는 선택사항입니다; 인자로 주어질 경우, 결
+   과로 생성된 UUID는 **RFC 4122**에 따라 변종 및 버전 번호를 설정하고
+   주어진 *hex*, *bytes*, *bytes_le*, *fields*, *int* 비트를 오버라이
+   딩 합니다.
+
+   UUID 객체끼리 비교할 때 "UUID.int" 어트리뷰트를 비교하여 수행합니다
+   . UUID가 아닌 객체와 비교하면 "TypeError"가 발생합니다.
+
+   "str(uuid)"는 "12345678-1234-5678-1234-567812345678"과같이 32자리
+   16진수 UUID로 표현합니다.
+
+"UUID" 객체는 다음과 같은 읽기 전용 어트리뷰트를 갖습니다.
+
+UUID.bytes
+
+   16바이트 문자열(여섯 개의 빅 엔디안 순서 정수 필드 포함)인 UUID
+
+UUID.bytes_le
+
+   16바이트 문자열(리틀 엔디안 순서 *time_low*, *time_mid*,
+   *time_hi_version*)인 UUID
+
+UUID.fields
+
+   UUID의 여섯 개의 정수 필드로 이루어진 튜플. 여섯 개의 개별 어트리뷰
+   트와 두 개의 파생된 어트리뷰트도 사용 가능:
+
+   +--------------------------------+---------------------------------+
+   | 필드                           | 의미                            |
+   |================================|=================================|
+   | "time_low"                     | the first 32 bits of the UUID   |
+   +--------------------------------+---------------------------------+
+   | "time_mid"                     | the next 16 bits of the UUID    |
+   +--------------------------------+---------------------------------+
+   | "time_hi_version"              | the next 16 bits of the UUID    |
+   +--------------------------------+---------------------------------+
+   | "clock_seq_hi_variant"         | the next 8 bits of the UUID     |
+   +--------------------------------+---------------------------------+
+   | "clock_seq_low"                | the next 8 bits of the UUID     |
+   +--------------------------------+---------------------------------+
+   | "node"                         | the last 48 bits of the UUID    |
+   +--------------------------------+---------------------------------+
+   | "time"                         | the 60-bit timestamp            |
+   +--------------------------------+---------------------------------+
+   | "clock_seq"                    | the 14-bit sequence number      |
+   +--------------------------------+---------------------------------+
+
+UUID.hex
+
+   32자리 소문자 16진수 문자열 UUID.
+
+UUID.int
+
+   128bit 정수 UUID
+
+UUID.urn
+
+   **RFC 4122**에서 명시한 URN의 UUID
+
+UUID.variant
+
+   UUID 변종은 UUID의 내부 레이아웃을 결정합니다. 이는 상수
+   "RESERVED_NCS", "RFC_4122", "RESERVED_MICROSOFT", 및
+   "RESERVED_FUTURE" 중 하나입니다.
+
+UUID.version
+
+   UUID 버전 번호 (1부터 5까지이며, 변종이 "RFC_4122"일 때만 유효)
+
+UUID.is_safe
+
+   플랫폼이 UUID를 다중 프로세스에 안전한 방식으로 생성했는지를 나타내
+   는 "SafeUUID"의 열거체입니다.
+
+   버전 3.7에 추가.
+
+"uuid" 모듈은 다음의 함수들을 정의합니다.
+
+uuid.getnode()
+
+   하드웨어 주소를 48bit 양의 정수로 가져옵니다. 최초 실행 시 별도의
+   프로그램으로 실행될 수 있고, 매우 느려질 수 있습니다. 하드웨어 주소
+   를 얻기 위한 시도가 모두 실패하면, **RFC 4122**가 권장하는 대로 멀
+   티캐스트 비트(첫 옥텟의 최하위 비트)가 1로 설정된 무작위 48bit 숫자
+   를 선택합니다. "하드웨어 주소"는 네트워크 인터페이스의 MAC 주소를
+   뜻합니다. 여러 네트워크 인터페이스를 가진 머신에서 보편적으로 관리
+   하는 MAC 주소(즉, 첫 번째 옥텟의 두 번째 최하위 비트가 *unset*인 경
+   우)는 로컬에서 관리하는 MAC 주소보다 우선하지만, 순서를 보장하지는
+   않습니다.
+
+   버전 3.7에서 변경: 보편적으로 관리하는 MAC 주소는 로컬로 관리하는
+   MAC 주소보다 우선합니다. 전자는 주소가 전 세계적으로 고유함을 보장
+   하지만, 후자는 그렇지 않기 때문입니다.
+
+uuid.uuid1(node=None, clock_seq=None)
+
+   호스트 ID, 시퀀스 번호 및 현재 시각으로 UUID 생성. *node*가 주어지
+   지 않으면, "getnode()"를 사용하여 하드웨어 주소를 얻습니다.
+   *clock_seq*가 주어지면 시퀀스 번호로 사용합니다. 그렇지 않을 경우,
+   무작위 14bit 시퀀스 번호를 사용합니다.
+
+uuid.uuid3(namespace, name)
+
+   Generate a UUID based on the MD5 hash of a namespace identifier
+   (which is a UUID) and a name (which is a string).
+
+uuid.uuid4()
+
+   무작위 UUID 생성.
+
+uuid.uuid5(namespace, name)
+
+   Generate a UUID based on the SHA-1 hash of a namespace identifier
+   (which is a UUID) and a name (which is a string).
+
+"uuid" 모듈은 "uuid3()"과 "uuid5()"를 위한 아래의 이름 공간 식별자를
+정의합니다.
+
+uuid.NAMESPACE_DNS
+
+   이 이름 공간이 지정되면 *name* 문자열은 전체 도메인 이름(FQDN)입니
+   다.
+
+uuid.NAMESPACE_URL
+
+   이 이름 공간이 지정되면 *name* 문자열은 URL입니다.
+
+uuid.NAMESPACE_OID
+
+   이 이름 공간이 지정되면 *name* 문자열은 ISO OID입니다.
+
+uuid.NAMESPACE_X500
+
+   이 이름 공간이 지정되면 *name* 문자열은 DER이나 텍스트 출력 형식의
+   X.500 DN입니다.
+
+The "uuid" module defines the following constants for the possible
+values of the "variant" attribute:
+
+uuid.RESERVED_NCS
+
+   NCS 호환성을 위해 예약됨.
+
+uuid.RFC_4122
+
+   **RFC 4122** 의 UUID 레이아웃 명시.
+
+uuid.RESERVED_MICROSOFT
+
+   마이크로소프트 호환성을 위해 예약됨.
+
+uuid.RESERVED_FUTURE
+
+   추후 정의를 위해 예약됨.
+
+더 보기:
+
+  **RFC 4122** - 범용 고유 식별자(UUID) URN 이름 공간
+     이 명세는 UUID를 위한 통합 자원 식별자 이름 공간, UUID의 내부 형
+     식 및 UUID 생성 방법을 정의합니다.
+
+
+예제
+====
+
+"uuid" 모듈을 사용하는 전형적인 몇 가지 예제입니다:
+
+   >>> import uuid
+
+   >>> # make a UUID based on the host ID and current time
+   >>> uuid.uuid1()
+   UUID('a8098c1a-f86e-11da-bd1a-00112444be1e')
+
+   >>> # make a UUID using an MD5 hash of a namespace UUID and a name
+   >>> uuid.uuid3(uuid.NAMESPACE_DNS, 'python.org')
+   UUID('6fa459ea-ee8a-3ca4-894e-db77e160355e')
+
+   >>> # make a random UUID
+   >>> uuid.uuid4()
+   UUID('16fd2706-8baf-433b-82eb-8c7fada847da')
+
+   >>> # make a UUID using a SHA-1 hash of a namespace UUID and a name
+   >>> uuid.uuid5(uuid.NAMESPACE_DNS, 'python.org')
+   UUID('886313e1-3b8a-5372-9b90-0c9aee199e5d')
+
+   >>> # make a UUID from a string of hex digits (braces and hyphens ignored)
+   >>> x = uuid.UUID('{00010203-0405-0607-0809-0a0b0c0d0e0f}')
+
+   >>> # convert a UUID to a string of hex digits in standard form
+   >>> str(x)
+   '00010203-0405-0607-0809-0a0b0c0d0e0f'
+
+   >>> # get the raw 16 bytes of the UUID
+   >>> x.bytes
+   b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f'
+
+   >>> # make a UUID from a 16-byte string
+   >>> uuid.UUID(bytes=x.bytes)
+   UUID('00010203-0405-0607-0809-0a0b0c0d0e0f')

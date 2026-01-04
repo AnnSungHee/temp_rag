@@ -1,0 +1,321 @@
+"xml.sax.xmlreader" --- Interface for XML parsers
+*************************************************
+
+**소스 코드:** Lib/xml/sax/xmlreader.py
+
+======================================================================
+
+SAX 구문 분석기는 "XMLReader" 인터페이스를 구현합니다. 이들은 함수
+"create_parser()"를 제공해야 하는 파이썬 모듈로 구현됩니다. 이 함수는
+새로운 구문 분석기 객체를 만들기 위해 인자 없이
+"xml.sax.make_parser()"에 의해 호출됩니다.
+
+class xml.sax.xmlreader.XMLReader
+
+   SAX 구문 분석기가 상속할 수 있는 베이스 클래스.
+
+class xml.sax.xmlreader.IncrementalParser
+
+   때에 따라 입력 소스를 한 번에 구문 분석하지 않고 문서를 사용 가능할
+   때마다 청크로 공급하는 것이 바람직합니다. 입력기(reader)는 일반적으
+   로 전체 파일을 읽지 않고 덩어리로 읽습니다; 여전히 전체 문서가 처리
+   될 때까지 "parse()"는 반환하지 않습니다. 따라서 "parse()"의 블로킹
+   동작이 바람직하지 않을 때 이 인터페이스를 사용해야 합니다.
+
+   구문 분석기가 인스턴스화 되면 즉시 feed 메서드에서 데이터를 받아들
+   일 수 있습니다. 구문 분석이 close 호출로 완료된 후, 구문 분석기가
+   feed나 parse 메서드를 사용하여 새 데이터를 받아들일 준비가 되도록
+   하려면 reset 메서드를 호출해야 합니다.
+
+   이러한 메서드들은 구문 분석 중, 즉 parse가 호출된 후 반환하기 전에
+   호출하지 *않아야* 합니다.
+
+   기본적으로, 이 클래스는 SAX 2.0 드라이버 작성자의 편의를 위해
+   IncrementalParser 인터페이스의 feed, close 및 reset 메서드를 사용하
+   여 XMLReader 인터페이스의 parse 메서드를 구현합니다.
+
+class xml.sax.xmlreader.Locator
+
+   SAX 이벤트를 문서 위치에 관련시키기 위한 인터페이스. 로케이터 객체
+   는 DocumentHandler 메서드들을 호출하는 동안에만 유효한 결과를 반환
+   합니다; 다른 때에는 결과를 예측할 수 없습니다. 정보가 없으면, 메서
+   드는 "None"을 반환할 수 있습니다.
+
+class xml.sax.xmlreader.InputSource(system_id=None)
+
+   엔티티를 읽기 위해 "XMLReader"에 필요한 정보의 캡슐화.
+
+   이 클래스는 공개 식별자, 시스템 식별자, 바이트 스트림 (문자 인코딩
+   정보도 포함할 수 있습니다) 및/또는 엔티티의 문자 스트림에 대한 정보
+   를 포함할 수 있습니다.
+
+   응용 프로그램은 "XMLReader.parse()" 메서드에서 사용하고
+   EntityResolver.resolveEntity에서 반환하기 위해 이 클래스의 객체를
+   만듭니다.
+
+   "InputSource"는 응용 프로그램에 속하며, "XMLReader"는 응용 프로그램
+   에서 전달된 "InputSource" 객체를 수정할 수는 없지만, 복사하여 수정
+   할 수는 있습니다.
+
+class xml.sax.xmlreader.AttributesImpl(attrs)
+
+   이것은 "Attributes" 인터페이스의 구현입니다 (Attributes 인터페이스
+   절을 참조하십시오). 이것은 "startElement()" 호출에서 요소 어트리뷰
+   트를 나타내는 딕셔너리류 객체입니다. 가장 유용한 딕셔너리 연산 외에
+   도, 인터페이스에서 설명하는 여러 가지 메서드를 지원합니다. 이 클래
+   스의 객체는 입력기(reader)가 인스턴스화 해야 합니다; *attrs*는 어트
+   리뷰트 이름에서 어트리뷰트 값으로의 매핑을 포함하는 딕셔너리류 객체
+   여야 합니다.
+
+class xml.sax.xmlreader.AttributesNSImpl(attrs, qnames)
+
+   "startElementNS()"에 전달될 "AttributesImpl"의 이름 공간(namespace)
+   인식 변형입니다. "AttributesImpl"에서 파생되었지만, *namespaceURI*
+   와 *localname*의 2-튜플로 구성된 어트리뷰트 이름을 이해합니다. 또한
+   , 원본 문서에 나타나는 정규화 된 이름을 기대하는 여러 가지 메서드를
+   제공합니다. 이 클래스는 "AttributesNS" 인터페이스를 구현합니다
+   (AttributesNS 인터페이스 절을 참조하십시오).
+
+
+XMLReader 객체
+==============
+
+"XMLReader" 인터페이스는 다음과 같은 메서드를 지원합니다:
+
+XMLReader.parse(source)
+
+   SAX 이벤트를 생성하면서 입력 소스를 처리합니다. *source* 객체는 시
+   스템 식별자 (입력 소스를 식별하는 문자열 -- 보통 파일 이름이나
+   URL), "pathlib.Path", *경로류* 객체 또는 "InputSource" 객체일 수 있
+   습니다. "parse()"가 반환되면, 입력이 완전히 처리된 것이고 구문 분석
+   기 객체를 파기하거나 재설정(reset)할 수 있습니다.
+
+   버전 3.5에서 변경: 문자 스트림 지원이 추가되었습니다.
+
+   버전 3.8에서 변경: 경로류 객체에 대한 지원이 추가되었습니다.
+
+XMLReader.getContentHandler()
+
+   현재 "ContentHandler"를 반환합니다.
+
+XMLReader.setContentHandler(handler)
+
+   현재 "ContentHandler"를 설정합니다. "ContentHandler"가 설정되지 않
+   으면, 내용 이벤트가 버려집니다.
+
+XMLReader.getDTDHandler()
+
+   현재 "DTDHandler"를 반환합니다.
+
+XMLReader.setDTDHandler(handler)
+
+   현재 "DTDHandler"를 설정합니다. "DTDHandler"가 설정되지 않으면, DTD
+   이벤트가 버려집니다.
+
+XMLReader.getEntityResolver()
+
+   현재 "EntityResolver"를 반환합니다.
+
+XMLReader.setEntityResolver(handler)
+
+   현재 "EntityResolver"를 설정합니다. "EntityResolver"가 설정되지 않
+   으면, 외부 엔티티를 결정하려고 할 때 엔티티에 대한 시스템 식별자가
+   열리게 되고, 사용할 수 없으면 실패합니다.
+
+XMLReader.getErrorHandler()
+
+   현재 "ErrorHandler"를 반환합니다.
+
+XMLReader.setErrorHandler(handler)
+
+   현재 에러 처리기를 설정합니다. "ErrorHandler"가 설정되지 않으면, 에
+   러는 예외를 발생시키고, 경고는 인쇄됩니다.
+
+XMLReader.setLocale(locale)
+
+   응용 프로그램이 에러와 경고에 대한 로케일을 설정하도록 합니다.
+
+   SAX 구문 분석기는 에러와 경고에 대한 지역화를 제공하지 않아도 됩니
+   다; 그러나, 요청된 로케일을 지원할 수 없으면 SAX 예외를 발생시켜야
+   합니다. 응용 프로그램은 구문 분석 중에 로케일 변경을 요청할 수 있습
+   니다.
+
+XMLReader.getFeature(featurename)
+
+   기능 *featurename*의 현재 설정을 반환합니다. 기능이 인식되지 않으면
+   , "SAXNotRecognizedException"이 발생합니다. 잘 알려진 기능 이름
+   (featurename)은 모듈 "xml.sax.handler"에 나열되어 있습니다.
+
+XMLReader.setFeature(featurename, value)
+
+   *featurename*을 *value*로 설정합니다. 기능이 인식되지 않으면,
+   "SAXNotRecognizedException"가 발생합니다. 구문 분석기가 기능이나 해
+   당 설정을 지원하지 않으면 *SAXNotSupportedException*이 발생합니다.
+
+XMLReader.getProperty(propertyname)
+
+   속성 *propertyname*의 현재 설정을 반환합니다. 속성이 인식되지 않으
+   면 "SAXNotRecognizedException"이 발생합니다. 잘 알려진 속성 이름은
+   모듈 "xml.sax.handler"에 나열되어 있습니다.
+
+XMLReader.setProperty(propertyname, value)
+
+   *propertyname*을 *value*로 설정합니다. 속성이 인식되지 않으면
+   "SAXNotRecognizedException"이 발생합니다. 구문 분석기가 속성이나 해
+   당 설정을 지원하지 않으면 *SAXNotSupportedException*이 발생합니다.
+
+
+IncrementalParser 객체
+======================
+
+"IncrementalParser" 인스턴스는 다음과 같은 추가 메서드를 제공합니다:
+
+IncrementalParser.feed(data)
+
+   *data* 청크를 처리합니다.
+
+IncrementalParser.close()
+
+   문서의 끝을 가정합니다. 끝에서만 확인할 수 있는 올바른 구성(well-
+   formedness) 조건을 확인하고, 처리기를 호출하며 구문 분석 중에 할당
+   된 자원을 정리할 수 있습니다.
+
+IncrementalParser.reset()
+
+   이 메서드는 close가 호출된 후에 호출되어 새 문서를 구문 분석할 수
+   있도록 구문 분석기를 재설정합니다. reset을 호출하지 않고, close 후
+   에 parse나 feed를 호출한 결과는 정의되지 않습니다.
+
+
+Locator 객체
+============
+
+"Locator" 인스턴스는 다음 메서드를 제공합니다:
+
+Locator.getColumnNumber()
+
+   현재 이벤트가 시작되는 열 번호를 반환합니다.
+
+Locator.getLineNumber()
+
+   현재 이벤트가 시작되는 줄 번호를 반환합니다.
+
+Locator.getPublicId()
+
+   현재 이벤트의 공개 식별자를 반환합니다.
+
+Locator.getSystemId()
+
+   현재 이벤트의 시스템 식별자를 반환합니다.
+
+
+InputSource 객체
+================
+
+InputSource.setPublicId(id)
+
+   이 "InputSource"의 공개 식별자를 설정합니다.
+
+InputSource.getPublicId()
+
+   이 "InputSource"의 공개 식별자를 반환합니다.
+
+InputSource.setSystemId(id)
+
+   이 "InputSource"의 시스템 식별자를 설정합니다.
+
+InputSource.getSystemId()
+
+   이 "InputSource"의 시스템 식별자를 반환합니다.
+
+InputSource.setEncoding(encoding)
+
+   이 "InputSource"의 문자 인코딩을 설정합니다.
+
+   인코딩은 XML 인코딩 선언에 허용되는 문자열이어야 합니다 (XML 권장
+   사항의 4.3.3 절을 참조하십시오).
+
+   "InputSource"에 문자 스트림도 포함되어 있으면 "InputSource"의 인코
+   딩 어트리뷰트는 무시됩니다.
+
+InputSource.getEncoding()
+
+   이 InputSource의 문자 인코딩을 가져옵니다.
+
+InputSource.setByteStream(bytefile)
+
+   이 입력 소스의 바이트 스트림(*바이너리 파일*)을 설정합니다.
+
+   문자 스트림도 지정되어 있으면 SAX 구문 분석기는 이것을 무시하지만,
+   URI 연결 자체를 여는 것보다 바이트 스트림을 먼저 사용합니다.
+
+   응용 프로그램이 바이트 스트림의 문자 인코딩을 알고 있으면,
+   setEncoding 메서드로 설정해야 합니다.
+
+InputSource.getByteStream()
+
+   이 입력 소스의 바이트 스트림을 가져옵니다.
+
+   getEncoding 메서드는 이 바이트 스트림의 문자 인코딩을 반환하거나,
+   알 수 없으면 "None"을 반환합니다.
+
+InputSource.setCharacterStream(charfile)
+
+   이 입력 소스에 대한 문자 스트림(*텍스트 파일*)을 설정합니다.
+
+   문자 스트림이 지정되면 SAX 구문 분석기는 모든 바이트 스트림을 무시
+   하고 시스템 식별자에 대한 URI 연결을 열려고 시도하지 않습니다.
+
+InputSource.getCharacterStream()
+
+   이 입력 소스의 문자 스트림을 가져옵니다.
+
+
+"Attributes" 인터페이스
+=======================
+
+"Attributes" 객체는 메서드 "copy()", "get()", "__contains__()",
+"items()", "keys()" 및 "values()"를 포함하는 *매핑 프로토콜*의 일부를
+구현합니다. 다음과 같은 메서드도 제공됩니다:
+
+Attributes.getLength()
+
+   어트리뷰트 수를 반환합니다.
+
+Attributes.getNames()
+
+   어트리뷰트의 이름을 반환합니다.
+
+Attributes.getType(name)
+
+   어트리뷰트 *name*의 유형을 반환합니다. 일반적으로 "'CDATA'"입니다.
+
+Attributes.getValue(name)
+
+   어트리뷰트 *name*의 값을 반환합니다.
+
+
+"AttributesNS" 인터페이스
+=========================
+
+이 인터페이스는 "Attributes" 인터페이스의 서브 형입니다 (Attributes 인
+터페이스 절을 참조하십시오). 그 인터페이스에서 지원하는 모든 메서드는
+"AttributesNS" 객체에서도 사용 가능합니다.
+
+다음과 같은 메서드도 제공됩니다:
+
+AttributesNS.getValueByQName(name)
+
+   정규화된 이름(qualified name)의 값을 반환합니다.
+
+AttributesNS.getNameByQName(name)
+
+   정규화된 *name*에 대한 "(namespace, localname)" 쌍을 반환합니다.
+
+AttributesNS.getQNameByName(name)
+
+   "(namespace, localname)" 쌍에 대한 정규화된 이름을 반환합니다.
+
+AttributesNS.getQNames()
+
+   모든 어트리뷰트의 정규화된 이름을 반환합니다.

@@ -1,0 +1,64 @@
+"email.encoders": Encoders
+**************************
+
+**소스 코드:** Lib/email/encoders.py
+
+======================================================================
+
+이 모듈은 레거시("Compat32") 이메일 API의 일부입니다. 새로운 API에서
+기능은 "set_content()" 메서드의 *cte* 매개 변수에 의해 제공됩니다.
+
+이 모듈은 파이썬 3에서 폐지되었습니다. "MIMEText" 클래스는 인스턴스 화
+중에 전달된 *_subtype*과 *_charset* 값을 사용하여 콘텐츠 유형과 CTE 헤
+더를 설정하므로 여기에 제공된 함수를 명시적으로 호출하면 안 됩니다.
+
+이 섹션의 나머지 텍스트는 모듈의 원본 설명서입니다.
+
+"Message" 객체를 처음부터 만들 때, 종종 호환 메일 서버를 통한 전송을
+위해 페이 로드를 인코딩해야 합니다. 바이너리 데이터가 포함된 *image/**
+와 *text/** 유형 메시지의 경우 특히 그렇습니다.
+
+The "email" package provides some convenient encoders in its
+"encoders" module.  These encoders are actually used by the
+"MIMEAudio" and "MIMEImage" class constructors to provide default
+encodings.  All encoder functions take exactly one argument, the
+message object to encode.  They usually extract the payload, encode
+it, and reset the payload to this newly encoded value.  They should
+also set the *Content-Transfer-Encoding* header as appropriate.
+
+이러한 함수는 멀티 파트 메시지에는 의미가 없음에 유의하십시오. 대신 개
+별 서브 파트에 적용해야 하며, 유형이 멀티 파트인 메시지를 전달하면
+"TypeError"가 발생합니다.
+
+제공되는 인코딩 함수는 다음과 같습니다:
+
+email.encoders.encode_quopri(msg)
+
+   페이 로드를 인용 quoted-printable 형식으로 인코딩하고 *Content-
+   Transfer-Encoding* 헤더를 "quoted-printable"로 설정합니다 [1]. 이것
+   은 대부분의 페이 로드가 인쇄 가능한 일반 데이터이지만, 인쇄할 수 없
+   는 문자가 몇 개 있을 때 사용하기에 적합한 인코딩입니다.
+
+email.encoders.encode_base64(msg)
+
+   페이 로드를 base64 형식으로 인코딩하고 *Content-Transfer-Encoding*
+   헤더를 "base64"로 설정합니다. 이것은 페이 로드가 대부분 인쇄할 수
+   없는 데이터일 때 사용하기에 좋은 인코딩입니다. quoted-printable보다
+   더 압축된 형식이기 때문입니다. base64 인코딩의 단점은 텍스트를 사람
+   이 읽을 수 없도록 만든다는 것입니다.
+
+email.encoders.encode_7or8bit(msg)
+
+   이것은 실제로 메시지의 페이 로드를 수정하지는 않지만, 페이 로드 데
+   이터를 기반으로, *Content-Transfer-Encoding* 헤더를 적절하게 "7bit"
+   나 "8bit"로 설정합니다.
+
+email.encoders.encode_noop(msg)
+
+   이것은 아무것도 하지 않습니다. 심지어 *Content-Transfer-Encoding*
+   헤더도 설정하지 않습니다.
+
+-[ 각주 ]-
+
+[1] "encode_quopri()"로 인코딩하면 데이터의 모든 탭과 공백 문자도 인코
+    딩됨에 유의하십시오.

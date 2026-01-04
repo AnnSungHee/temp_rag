@@ -1,0 +1,118 @@
+5. 윈도우에서 C와 C++ 확장 빌드하기
+***********************************
+
+이 장에서는 Microsoft Visual C++를 사용하여 파이썬 용 윈도우 확장 모듈
+을 만드는 방법을 간략히 설명하고, 이 확장 모듈의 작동 방식에 대한 보다
+자세한 배경 정보를 제공합니다. 설명 자료는 파이썬 확장을 빌드하는 법을
+배우는 윈도우 프로그래머와 유닉스와 윈도우 모두에서 성공적으로 빌드 할
+수 있는 소프트웨어 제작에 관심이 있는 유닉스 프로그래머 모두에게 유용
+합니다.
+
+모듈 저자는 확장 모듈을 빌드하는데 이 섹션에서 설명하는 것 대신
+distutils 접근 방식을 사용하는 것이 좋습니다. 파이썬을 빌드하는 데 사
+용된 C 컴파일러가 여전히 필요합니다; 보통 Microsoft Visual C++입니다.
+
+참고:
+
+  이 장에서는 인코딩된 파이썬 버전 번호를 포함하는 여러 파일 이름을 언
+  급합니다. 이 파일 이름은 "XY"로 나타낸 버전 번호로 표시됩니다; 실제
+  로, "'X'"는 주(major) 버전 번호이고 "'Y'"는 여러분이 작업 중인 파이
+  썬 배포의 부(minor) 버전 번호입니다. 예를 들어, 파이썬 2.2.1을 사용
+  하면, "XY"는 실제로는 "22"가 됩니다.
+
+
+5.1. 요리책 접근법
+==================
+
+There are two approaches to building extension modules on Windows,
+just as there are on Unix: use the "distutils" package to control the
+build process, or do things manually.  The distutils approach works
+well for most extensions; documentation on using "distutils" to build
+and package extension modules is available in Distributing Python
+Modules (Legacy version).  If you find you really need to do things
+manually, it may be instructive to study the project file for the
+winsound standard library module.
+
+
+5.2. 유닉스와 윈도우의 차이점
+=============================
+
+유닉스와 윈도우는 코드의 실행시간 로딩에 완전히 다른 패러다임을 사용합
+니다. 동적으로 로드 할 수 있는 모듈을 빌드하려고 시도하기 전에, 시스템
+작동 방식을 알고 있어야 합니다.
+
+유닉스에서, 공유 오브젝트 (".so") 파일은 프로그램에서 사용할 코드와 프
+로그램에서 찾을 것으로 예상되는 함수와 데이터의 이름을 포함합니다. 파
+일이 프로그램에 결합할 때, 파일의 코드에 있는 함수와 데이터의 모든 참
+조가 함수와 데이터가 메모리에 놓이게 되는 프로그램에서의 실제 위치를
+가리키도록 변경됩니다. 이것은 기본적으로 링크 작업입니다.
+
+윈도우에서, 동적 연결 라이브러리 (".dll") 파일에는 매달린(dangling) 참
+조가 없습니다. 대신, 함수나 데이터에 대한 액세스는 참조 테이블(lookup
+table)을 통해 이루어집니다. 따라서 DLL 코드는 프로그램의 메모리를 참조
+하도록 실행 시간에 수정될 필요가 없습니다; 대신, 코드는 이미 DLL의 참
+조 테이블을 사용하고 있고, 실행 시간에 참조 테이블이 함수와 데이터를
+가리 키도록 수정됩니다.
+
+유닉스에는, 한가지 유형의 라이브러리 파일(".a") 만 있는데, 여러 오브젝
+트 파일(".o")의 코드가 포함됩니다. 공유 오브젝트 파일(".so")을 만들기
+위한 링크 단계에서, 링커는 식별자가 정의된 위치를 알 수 없음을 발견할
+수 있습니다. 링커는 라이브러리의 오브젝트 파일에서 그것들을 찾습니다.
+발견하면, 그 오브젝트 파일의 모든 코드를 포함합니다.
+
+윈도우에는, 두 가지 유형의 라이브러리, 정적 라이브러리와 임포트 라이브
+러리가 있습니다 (둘 다 ".lib"라고 합니다). 정적 라이브러리는 유닉스
+".a" 파일과 같습니다; 필요할 때 포함될 코드가 들어 있습니다. 임포트 라
+이브러리는 기본적으로 특정 식별자가 합법적이고 DLL이 로드될 때 프로그
+램에 존재하게 된다고 링커를 안심시키기 위해서만 사용됩니다. 따라서 링
+커는 임포트 라이브러리의 정보를 사용하여 DLL에 포함되지 않은 식별자를
+사용하는 참조 테이블을 작성합니다. 응용 프로그램이나 DLL이 링크될 때,
+임포트 라이브러리가 만들어질 수 있습니다. 이것은 응용 프로그램이나 DLL
+의 심볼을 사용하는, 이후의 모든 DLL에 사용해야 합니다.
+
+다른 코드 블록 A를 공유해야 하는, 두 개의 동적 로드 모듈 B와 C를 빌드
+한다고 가정합니다. 유닉스에서는, "B.so"와 "C.so"에 대해 링커로 "A.a"를
+전달하지 *않습니다*; 전달하면 B와 C가 각각 자신의 복사본을 갖게 되어
+두 번 포함하게 됩니다. 윈도우에서는, "A.dll"를 빌드하면 "A.lib"도 빌드
+됩니다. 여러분은 B와 C에 대헤 링커로 "A.lib"를 전달 *합니다*. "A.lib"
+는 코드를 포함하지 않습니다; 실행 시간에 A의 코드에 액세스하는 데 사용
+될 정보만 포함합니다.
+
+윈도우에서, 임포트 라이브러리를 사용하는 것은 "import spam"을 사용하는
+것과 비슷합니다; 이것은 스팸의 이름에 액세스할 수 있도록 하지만, 별도
+의 복사본을 만들지는 않습니다. 유닉스에서, 라이브러리와 링크하는 것은
+"from spam import *"와 더 비슷합니다; 별도의 복사본을 만듭니다.
+
+
+5.3. DLL을 실제로 사용하기
+==========================
+
+윈도우 파이썬은 Microsoft Visual C++로 빌드되었습니다; 다른 컴파일러를
+사용하는 것은 동작할 수도 있고 그렇지 않을 수도 있습니다. 이 섹션의 나
+머지 부분은 MSVC++에만 해당합니다.
+
+윈도우에서 DLL을 만들 때, "pythonXY.lib"를 링커에 전달해야 합니다. 두
+개의 DLL, spam과 (spam에 있는 C 함수를 사용하는) ni를 빌드하려면, 다음
+명령을 사용할 수 있습니다:
+
+   cl /LD /I/python/include spam.c ../libs/pythonXY.lib
+   cl /LD /I/python/include ni.c spam.lib ../libs/pythonXY.lib
+
+첫 번째 명령은 세 개의 파일을 만들었습니다: "spam.obj", "spam.dll" 및
+"spam.lib". "Spam.dll"은 파이썬 함수(가령 "PyArg_ParseTuple()")를 포함
+하지 않지만, "pythonXY.lib" 덕분에 파이썬 코드를 찾는 방법을 알고 있습
+니다.
+
+두 번째 명령은 "ni.dll"(그리고 ".obj"와 ".lib")을 만들었습니다. spam과
+파이썬 실행 파일에서 필요한 함수를 찾는 방법을 알고 있습니다.
+
+모든 식별자를 참조 테이블로 내보내지는 않습니다. 다른 모듈(파이썬 포함
+)이 식별자를 볼 수 있게 하려면, "void _declspec(dllexport)
+initspam(void)"나 "PyObject _declspec(dllexport) *NiGetSpamData(void)"
+처럼 "_declspec(dllexport)"라고 선언해야 합니다.
+
+Developer Studio will throw in a lot of import libraries that you do
+not really need, adding about 100K to your executable.  To get rid of
+them, use the Project Settings dialog, Link tab, to specify *ignore
+default libraries*.  Add the correct "msvcrtxx.lib" to the list of
+libraries.

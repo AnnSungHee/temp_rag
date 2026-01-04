@@ -1,0 +1,250 @@
+데이터형
+********
+
+이 장에서 설명하는 모듈은 날짜와 시간, 고정형 배열, 힙 큐, 데크, 열거
+형과 같은 다양한 특수 데이터형을 제공합니다.
+
+파이썬은 또한 일부 내장 데이터형, 특히 "dict", "list", "set"과
+"frozenset", "tuple"을 제공합니다. "str" 클래스는 유니코드 문자열을 저
+장하는 데 사용되고, "bytes"와 "bytearray" 클래스는 바이너리 데이터를
+저장하는 데 사용됩니다.
+
+이 장에서는 다음 모듈에 관해 설명합니다:
+
+* "datetime" --- Basic date and time types
+
+  * 어웨어와 나이브 객체
+
+  * 상수
+
+  * 사용 가능한 형
+
+    * 공통 속성
+
+    * 객체가 어웨어한지 나이브한지 판단하기
+
+  * "timedelta" 객체
+
+    * 사용 예: "timedelta"
+
+  * "date" 객체
+
+    * 사용 예: "date"
+
+  * "datetime" 객체
+
+    * 사용 예: "datetime"
+
+  * "time" 객체
+
+    * 사용 예: "time"
+
+  * "tzinfo" 객체
+
+  * "timezone" 객체
+
+  * "strftime()" and "strptime()" Behavior
+
+    * "strftime()" and "strptime()" Format Codes
+
+    * 기술적 세부 사항
+
+* "zoneinfo" --- IANA time zone support
+
+  * "ZoneInfo" 사용하기
+
+  * 데이터 소스
+
+    * 데이터 소스 구성
+
+      * 컴파일 시간 구성
+
+      * 환경 구성
+
+      * 실행 시간 구성
+
+  * "ZoneInfo" 클래스
+
+    * 문자열 표현
+
+    * 피클 직렬화
+
+  * 함수
+
+  * 전역
+
+  * 예외와 경고
+
+* "calendar" --- General calendar-related functions
+
+* "collections" --- Container datatypes
+
+  * "ChainMap" 객체
+
+    * "ChainMap" 예제와 조리법
+
+  * "Counter" 객체
+
+  * "deque" 객체
+
+    * "deque" 조리법
+
+  * "defaultdict" 객체
+
+    * "defaultdict" 예
+
+  * 이름있는 필드를 가진 튜플을 위한 "namedtuple()" 팩토리 함수
+
+  * "OrderedDict" 객체
+
+    * "OrderedDict" 예제와 조리법
+
+  * "UserDict" 객체
+
+  * "UserList" 객체
+
+  * "UserString" 객체
+
+* "collections.abc" --- Abstract Base Classes for Containers
+
+  * Collections 추상 베이스 클래스
+
+  * Collections 추상 베이스 클래스 -- 상세한 설명
+
+  * 예제와 조리법
+
+* "heapq" --- Heap queue algorithm
+
+  * 기본 예
+
+  * 우선순위 큐 구현 참고 사항
+
+  * 이론
+
+* "bisect" --- Array bisection algorithm
+
+  * Performance Notes
+
+  * 정렬된 리스트 검색하기
+
+  * 예제
+
+* "array" --- Efficient arrays of numeric values
+
+* "weakref" --- 약한 참조
+
+  * 약한 참조 객체
+
+  * 예
+
+  * 파이널라이저 객체
+
+  * Comparing finalizers with "__del__()" methods
+
+* "types" --- Dynamic type creation and names for built-in types
+
+  * 동적 형 생성
+
+  * 표준 인터프리터 형
+
+  * 추가 유틸리티 클래스와 함수
+
+  * 코루틴 유틸리티 함수
+
+* "copy" --- Shallow and deep copy operations
+
+* "pprint" --- Data pretty printer
+
+  * PrettyPrinter 객체
+
+  * 예제
+
+* "reprlib" --- Alternate "repr()" implementation
+
+  * Repr 객체
+
+  * Repr 객체 서브 클래싱
+
+* "enum" --- Support for enumerations
+
+  * 모듈 내용
+
+  * Creating an Enum
+
+  * Programmatic access to enumeration members and their attributes
+
+  * Duplicating enum members and values
+
+  * Ensuring unique enumeration values
+
+  * Using automatic values
+
+  * Iteration
+
+  * Comparisons
+
+  * Allowed members and attributes of enumerations
+
+  * Restricted Enum subclassing
+
+  * Pickling
+
+  * Functional API
+
+  * Derived Enumerations
+
+    * IntEnum
+
+    * IntFlag
+
+    * Flag
+
+    * Others
+
+  * When to use "__new__()" vs. "__init__()"
+
+  * Interesting examples
+
+    * Omitting values
+
+      * Using "auto"
+
+      * Using "object"
+
+      * Using a descriptive string
+
+      * Using a custom "__new__()"
+
+    * OrderedEnum
+
+    * DuplicateFreeEnum
+
+    * Planet
+
+    * TimePeriod
+
+  * How are Enums different?
+
+    * Enum Classes
+
+    * Enum Members (aka instances)
+
+    * Finer Points
+
+      * 지원되는 "__dunder__" 이름
+
+      * 지원되는 "_sunder_" 이름
+
+      * _Private__names
+
+      * "Enum" member type
+
+      * Boolean value of "Enum" classes and members
+
+      * "Enum" classes with methods
+
+      * Combining members of "Flag"
+
+* "graphlib" --- Functionality to operate with graph-like structures
+
+  * 예외

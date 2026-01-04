@@ -1,0 +1,668 @@
+파이썬 표준 라이브러리
+**********************
+
+파이썬 언어 레퍼런스 는 파이썬 언어의 정확한 문법과 의미를 설명하고 있
+지만, 이 라이브러리 레퍼런스 설명서는 파이썬과 함께 배포되는 표준 라이
+브러리를 설명합니다. 또한, 파이썬 배포판에 일반적으로 포함되어있는 선
+택적 구성 요소 중 일부를 설명합니다.
+
+파이썬의 표준 라이브러리는 매우 광범위하며, 아래 나열된 긴 목차에 표시
+된 대로 다양한 기능을 제공합니다. 라이브러리에는 일상적인 프로그래밍에
+서 발생하는 많은 문제에 대한 표준적인 해결책을 제공하는 파이썬으로 작
+성된 모듈뿐만 아니라, 파일 I/O와 같은 시스템 기능에 액세스하는 (C로 작
+성된) 내장 모듈들이 포함됩니다 (이 모듈들이 없다면 파이썬 프로그래머가
+액세스할 방법은 없습니다). 이 모듈 중 일부는 플랫폼 관련 사항을 플랫폼
+중립적인 API들로 추상화시킴으로써, 파이썬 프로그램의 이식성을 권장하고
+개선하도록 명시적으로 설계되었습니다.
+
+윈도우 플랫폼용 파이썬 설치 프로그램은 일반적으로 전체 표준 라이브러리
+를 포함하며 종종 많은 추가 구성 요소도 포함합니다. 유닉스와 같은 운영
+체제의 경우, 파이썬은 일반적으로 패키지 모음으로 제공되기 때문에, 운영
+체제와 함께 제공되는 패키지 도구를 사용하여 선택적 구성 요소의 일부 또
+는 전부를 구해야 할 수 있습니다.
+
+In addition to the standard library, there is a growing collection of
+several thousand components (from individual programs and modules to
+packages and entire application development frameworks), available
+from the Python Package Index.
+
+* 소개
+
+  * 가용성에 대한 참고 사항
+
+* 내장 함수
+
+* 내장 상수
+
+  * "site" 모듈에 의해 추가된 상수들
+
+* 내장형
+
+  * 논리값 검사
+
+  * 논리 연산 --- "and", "or", "not"
+
+  * 비교
+
+  * 숫자 형 --- "int", "float", "complex"
+
+  * 이터레이터 형
+
+  * 시퀀스 형 --- "list", "tuple", "range"
+
+  * 텍스트 시퀀스 형 --- "str"
+
+  * 바이너리 시퀀스 형 --- "bytes", "bytearray", "memoryview"
+
+  * 집합 형 --- "set", "frozenset"
+
+  * 매핑 형 --- "dict"
+
+  * 컨텍스트 관리자 형
+
+  * Type Annotation Types --- *Generic Alias*, *Union*
+
+  * 기타 내장형
+
+  * 특수 어트리뷰트
+
+  * Integer string conversion length limitation
+
+* 내장 예외
+
+  * 예외 컨텍스트
+
+  * 내장 예외를 상속받기
+
+  * 베이스 클래스
+
+  * 구체적인 예외
+
+  * 경고
+
+  * 예외 계층 구조
+
+* 텍스트 처리 서비스
+
+  * "string" --- Common string operations
+
+  * "re" --- Regular expression operations
+
+  * "difflib" --- Helpers for computing deltas
+
+  * "textwrap" --- Text wrapping and filling
+
+  * "unicodedata" --- Unicode Database
+
+  * "stringprep" --- Internet String Preparation
+
+  * "readline" --- GNU readline interface
+
+  * "rlcompleter" --- Completion function for GNU readline
+
+* 바이너리 데이터 서비스
+
+  * "struct" --- Interpret bytes as packed binary data
+
+  * "codecs" --- Codec registry and base classes
+
+* 데이터형
+
+  * "datetime" --- Basic date and time types
+
+  * "zoneinfo" --- IANA time zone support
+
+  * "calendar" --- General calendar-related functions
+
+  * "collections" --- Container datatypes
+
+  * "collections.abc" --- Abstract Base Classes for Containers
+
+  * "heapq" --- Heap queue algorithm
+
+  * "bisect" --- Array bisection algorithm
+
+  * "array" --- Efficient arrays of numeric values
+
+  * "weakref" --- 약한 참조
+
+  * "types" --- Dynamic type creation and names for built-in types
+
+  * "copy" --- Shallow and deep copy operations
+
+  * "pprint" --- Data pretty printer
+
+  * "reprlib" --- Alternate "repr()" implementation
+
+  * "enum" --- Support for enumerations
+
+  * "graphlib" --- Functionality to operate with graph-like structures
+
+* 숫자와 수학 모듈
+
+  * "numbers" --- Numeric abstract base classes
+
+  * "math" --- Mathematical functions
+
+  * "cmath" --- Mathematical functions for complex numbers
+
+  * "decimal" --- Decimal fixed point and floating point arithmetic
+
+  * "fractions" --- Rational numbers
+
+  * "random" --- Generate pseudo-random numbers
+
+  * "statistics" --- Mathematical statistics functions
+
+* 함수형 프로그래밍 모듈
+
+  * "itertools" --- Functions creating iterators for efficient looping
+
+  * "functools" --- Higher-order functions and operations on callable
+    objects
+
+  * "operator" --- Standard operators as functions
+
+* 파일과 디렉터리 액세스
+
+  * "pathlib" --- Object-oriented filesystem paths
+
+  * "os.path" --- Common pathname manipulations
+
+  * "fileinput" --- Iterate over lines from multiple input streams
+
+  * "stat" --- Interpreting "stat()" results
+
+  * "filecmp" --- File and Directory Comparisons
+
+  * "tempfile" --- Generate temporary files and directories
+
+  * "glob" --- Unix style pathname pattern expansion
+
+  * "fnmatch" --- Unix filename pattern matching
+
+  * "linecache" --- Random access to text lines
+
+  * "shutil" --- High-level file operations
+
+* 데이터 지속성
+
+  * "pickle" --- Python object serialization
+
+  * "copyreg" --- Register "pickle" support functions
+
+  * "shelve" --- Python object persistence
+
+  * "marshal" --- Internal Python object serialization
+
+  * "dbm" --- Interfaces to Unix "databases"
+
+  * "sqlite3" --- DB-API 2.0 interface for SQLite databases
+
+* 데이터 압축 및 보관
+
+  * "zlib" --- Compression compatible with **gzip**
+
+  * "gzip" --- Support for **gzip** files
+
+  * "bz2" --- Support for **bzip2** compression
+
+  * "lzma" --- Compression using the LZMA algorithm
+
+  * "zipfile" --- Work with ZIP archives
+
+  * "tarfile" --- Read and write tar archive files
+
+* 파일 형식
+
+  * "csv" --- CSV File Reading and Writing
+
+  * "configparser" --- Configuration file parser
+
+  * "netrc" --- netrc file processing
+
+  * "plistlib" --- Generate and parse Apple ".plist" files
+
+* 암호화 서비스
+
+  * "hashlib" --- Secure hashes and message digests
+
+  * "hmac" --- Keyed-Hashing for Message Authentication
+
+  * "secrets" --- Generate secure random numbers for managing secrets
+
+* 일반 운영 체제 서비스
+
+  * "os" --- Miscellaneous operating system interfaces
+
+  * "io" --- Core tools for working with streams
+
+  * "time" --- Time access and conversions
+
+  * "argparse" --- Parser for command-line options, arguments and sub-
+    commands
+
+  * "getopt" --- C-style parser for command line options
+
+  * "logging" --- Logging facility for Python
+
+  * "logging.config" --- Logging configuration
+
+  * "logging.handlers" --- Logging handlers
+
+  * "getpass" --- Portable password input
+
+  * "curses" --- Terminal handling for character-cell displays
+
+  * "curses.textpad" --- curses 프로그램을 위한 텍스트 입력 위젯
+
+  * "curses.ascii" --- Utilities for ASCII characters
+
+  * "curses.panel" --- A panel stack extension for curses
+
+  * "platform" ---  Access to underlying platform's identifying data
+
+  * "errno" --- Standard errno system symbols
+
+  * "ctypes" --- A foreign function library for Python
+
+* 동시 실행
+
+  * "threading" --- Thread-based parallelism
+
+  * "multiprocessing" --- Process-based parallelism
+
+  * "multiprocessing.shared_memory" --- Shared memory for direct
+    access across processes
+
+  * The "concurrent" package
+
+  * "concurrent.futures" --- Launching parallel tasks
+
+  * "subprocess" --- Subprocess management
+
+  * "sched" --- Event scheduler
+
+  * "queue" --- A synchronized queue class
+
+  * "contextvars" --- Context Variables
+
+  * "_thread" --- Low-level threading API
+
+* 네트워킹과 프로세스 간 통신
+
+  * "asyncio" --- Asynchronous I/O
+
+  * "socket" --- Low-level networking interface
+
+  * "ssl" --- TLS/SSL wrapper for socket objects
+
+  * "select" --- Waiting for I/O completion
+
+  * "selectors" --- High-level I/O multiplexing
+
+  * "signal" --- Set handlers for asynchronous events
+
+  * "mmap" --- Memory-mapped file support
+
+* 인터넷 데이터 처리
+
+  * "email" --- An email and MIME handling package
+
+  * "json" --- JSON encoder and decoder
+
+  * "mailbox" --- Manipulate mailboxes in various formats
+
+  * "mimetypes" --- Map filenames to MIME types
+
+  * "base64" --- Base16, Base32, Base64, Base85 Data Encodings
+
+  * "binhex" --- Encode and decode binhex4 files
+
+  * "binascii" --- Convert between binary and ASCII
+
+  * "quopri" --- Encode and decode MIME quoted-printable data
+
+* 구조화된 마크업 처리 도구
+
+  * "html" --- HyperText Markup Language support
+
+  * "html.parser" --- Simple HTML and XHTML parser
+
+  * "html.entities" --- Definitions of HTML general entities
+
+  * XML 처리 모듈
+
+  * "xml.etree.ElementTree" --- The ElementTree XML API
+
+  * "xml.dom" --- The Document Object Model API
+
+  * "xml.dom.minidom" --- Minimal DOM implementation
+
+  * "xml.dom.pulldom" --- Support for building partial DOM trees
+
+  * "xml.sax" --- Support for SAX2 parsers
+
+  * "xml.sax.handler" --- Base classes for SAX handlers
+
+  * "xml.sax.saxutils" --- SAX Utilities
+
+  * "xml.sax.xmlreader" --- Interface for XML parsers
+
+  * "xml.parsers.expat" --- Fast XML parsing using Expat
+
+* 인터넷 프로토콜과 지원
+
+  * "webbrowser" --- Convenient web-browser controller
+
+  * "wsgiref" --- WSGI Utilities and Reference Implementation
+
+  * "urllib" --- URL handling modules
+
+  * "urllib.request" --- Extensible library for opening URLs
+
+  * "urllib.response" --- urllib가 사용하는 응답 클래스
+
+  * "urllib.parse" --- Parse URLs into components
+
+  * "urllib.error" --- Exception classes raised by urllib.request
+
+  * "urllib.robotparser" ---  Parser for robots.txt
+
+  * "http" --- HTTP modules
+
+  * "http.client" --- HTTP protocol client
+
+  * "ftplib" --- FTP protocol client
+
+  * "poplib" --- POP3 protocol client
+
+  * "imaplib" --- IMAP4 protocol client
+
+  * "smtplib" --- SMTP protocol client
+
+  * "uuid" --- UUID objects according to **RFC 4122**
+
+  * "socketserver" --- A framework for network servers
+
+  * "http.server" --- HTTP servers
+
+  * "http.cookies" --- HTTP state management
+
+  * "http.cookiejar" --- Cookie handling for HTTP clients
+
+  * "xmlrpc" --- XMLRPC server and client modules
+
+  * "xmlrpc.client" --- XML-RPC client access
+
+  * "xmlrpc.server" --- Basic XML-RPC servers
+
+  * "ipaddress" --- IPv4/IPv6 manipulation library
+
+* 멀티미디어 서비스
+
+  * "wave" --- Read and write WAV files
+
+  * "colorsys" --- Conversions between color systems
+
+* 국제화
+
+  * "gettext" --- Multilingual internationalization services
+
+  * "locale" --- Internationalization services
+
+* 프로그램 프레임워크
+
+  * "turtle" --- 터틀 그래픽
+
+  * "cmd" --- Support for line-oriented command interpreters
+
+  * "shlex" --- Simple lexical analysis
+
+* Tk를 사용한 그래픽 사용자 인터페이스
+
+  * "tkinter" --- Python interface to Tcl/Tk
+
+  * "tkinter.colorchooser" --- Color choosing dialog
+
+  * "tkinter.font" --- Tkinter font wrapper
+
+  * Tkinter 대화 상자
+
+  * "tkinter.messagebox" --- Tkinter message prompts
+
+  * "tkinter.scrolledtext" --- Scrolled Text Widget
+
+  * "tkinter.dnd" --- Drag and drop support
+
+  * "tkinter.ttk" --- Tk themed widgets
+
+  * "tkinter.tix" --- Extension widgets for Tk
+
+  * IDLE
+
+* 개발 도구
+
+  * "typing" --- 형 힌트 지원
+
+  * "pydoc" --- Documentation generator and online help system
+
+  * 파이썬 개발 모드
+
+  * 파이썬 개발 모드의 효과
+
+  * ResourceWarning 예
+
+  * 잘못된 파일 기술자 에러 예
+
+  * "doctest" --- Test interactive Python examples
+
+  * "unittest" --- Unit testing framework
+
+  * "unittest.mock" --- mock object library
+
+  * "unittest.mock" --- getting started
+
+  * 2to3 --- Automated Python 2 to 3 code translation
+
+  * "test" --- Regression tests package for Python
+
+  * "test.support" --- 파이썬 테스트 스위트용 유틸리티
+
+  * "test.support.socket_helper" --- 소켓 테스트용 유틸리티
+
+  * "test.support.script_helper" --- 파이썬 실행 테스트용 유틸리티
+
+  * "test.support.bytecode_helper" --- 올바른 바이트 코드 생성 테스트
+    를 위한 지원 도구
+
+  * "test.support.threading_helper" --- threading 테스트용 유틸리티
+
+  * "test.support.os_helper" --- os 테스트용 유틸리티
+
+  * "test.support.import_helper" --- 임포트 테스트용 유틸리티
+
+  * "test.support.warnings_helper" --- warnings 테스트용 유틸리티
+
+* 디버깅과 프로파일링
+
+  * 감사 이벤트 표
+
+  * "bdb" --- Debugger framework
+
+  * "faulthandler" --- Dump the Python traceback
+
+  * "pdb" --- 파이썬 디버거
+
+  * 파이썬 프로파일러
+
+  * "timeit" --- Measure execution time of small code snippets
+
+  * "trace" --- Trace or track Python statement execution
+
+  * "tracemalloc" --- Trace memory allocations
+
+* 소프트웨어 패키징 및 배포
+
+  * "distutils" --- Building and installing Python modules
+
+  * "ensurepip" --- Bootstrapping the "pip" installer
+
+  * "venv" --- Creation of virtual environments
+
+  * "zipapp" --- Manage executable Python zip archives
+
+* 파이썬 실행시간 서비스
+
+  * "sys" --- System-specific parameters and functions
+
+  * "sysconfig" --- Provide access to Python's configuration
+    information
+
+  * "builtins" --- Built-in objects
+
+  * "__main__" --- Top-level code environment
+
+  * "warnings" --- Warning control
+
+  * "dataclasses" --- Data Classes
+
+  * "contextlib" --- "with" 문 컨텍스트를 위한 유틸리티
+
+  * "abc" --- Abstract Base Classes
+
+  * "atexit" --- Exit handlers
+
+  * "traceback" --- Print or retrieve a stack traceback
+
+  * "__future__" --- Future statement definitions
+
+  * "gc" --- Garbage Collector interface
+
+  * "inspect" --- Inspect live objects
+
+  * "site" --- Site-specific configuration hook
+
+* 사용자 정의 파이썬 인터프리터
+
+  * "code" --- Interpreter base classes
+
+  * "codeop" --- Compile Python code
+
+* 모듈 임포트 하기
+
+  * "zipimport" --- Import modules from Zip archives
+
+  * "pkgutil" --- Package extension utility
+
+  * "modulefinder" --- Find modules used by a script
+
+  * "runpy" --- Locating and executing Python modules
+
+  * "importlib" --- "import"의 구현
+
+  * Using "importlib.metadata"
+
+* 파이썬 언어 서비스
+
+  * "ast" --- Abstract Syntax Trees
+
+  * "symtable" --- Access to the compiler's symbol tables
+
+  * "token" --- Constants used with Python parse trees
+
+  * "keyword" --- Testing for Python keywords
+
+  * "tokenize" --- Tokenizer for Python source
+
+  * "tabnanny" --- Detection of ambiguous indentation
+
+  * "pyclbr" --- Python module browser support
+
+  * "py_compile" --- Compile Python source files
+
+  * "compileall" --- Byte-compile Python libraries
+
+  * "dis" --- Disassembler for Python bytecode
+
+  * "pickletools" --- Tools for pickle developers
+
+* MS 윈도우 특정 서비스
+
+  * "msvcrt" --- Useful routines from the MS VC++ runtime
+
+  * "winreg" --- Windows registry access
+
+  * "winsound" --- Sound-playing interface for Windows
+
+* 유닉스 특정 서비스
+
+  * "posix" --- The most common POSIX system calls
+
+  * "pwd" --- The password database
+
+  * "grp" --- The group database
+
+  * "termios" --- POSIX style tty control
+
+  * "tty" --- Terminal control functions
+
+  * "pty" --- Pseudo-terminal utilities
+
+  * "fcntl" --- The "fcntl" and "ioctl" system calls
+
+  * "resource" --- Resource usage information
+
+  * "syslog" --- Unix syslog library routines
+
+* 대체된 모듈
+
+  * "aifc" --- Read and write AIFF and AIFC files
+
+  * "asynchat" --- Asynchronous socket command/response handler
+
+  * "asyncore" --- Asynchronous socket handler
+
+  * "audioop" --- Manipulate raw audio data
+
+  * "cgi" --- Common Gateway Interface support
+
+  * "cgitb" --- Traceback manager for CGI scripts
+
+  * "chunk" --- Read IFF chunked data
+
+  * "crypt" --- Function to check Unix passwords
+
+  * "imghdr" --- Determine the type of an image
+
+  * "imp" --- Access the *import* internals
+
+  * "mailcap" --- Mailcap file handling
+
+  * "msilib" --- Read and write Microsoft Installer files
+
+  * "nis" --- Interface to Sun's NIS (Yellow Pages)
+
+  * "nntplib" --- NNTP protocol client
+
+  * "optparse" --- Parser for command line options
+
+  * "ossaudiodev" --- Access to OSS-compatible audio devices
+
+  * "pipes" --- Interface to shell pipelines
+
+  * "smtpd" --- SMTP Server
+
+  * "sndhdr" --- Determine type of sound file
+
+  * "spwd" --- The shadow password database
+
+  * "sunau" --- Read and write Sun AU files
+
+  * "telnetlib" --- Telnet client
+
+  * "uu" --- Encode and decode uuencode files
+
+  * "xdrlib" --- Encode and decode XDR data
+
+* Security Considerations

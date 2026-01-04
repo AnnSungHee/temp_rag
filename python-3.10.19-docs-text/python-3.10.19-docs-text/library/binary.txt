@@ -1,0 +1,75 @@
+바이너리 데이터 서비스
+**********************
+
+이 장에서 설명하는 모듈은 바이너리 데이터를 다루기 위한 기본 서비스 연
+산을 제공합니다. 파일 포맷, 네트워크 프로토콜과 관련 있는 바이너리 데
+이터에 대한 연산은 관련 절에서 설명합니다.
+
+텍스트 처리 서비스에서 설명한 일부 라이브러리는 ASCII 호환 바이너리 형
+식 (예를 들면, "re") 또는 모든 바이너리 데이터 (예를 들면, "difflib")
+에 사용할 수 있습니다.
+
+또한, 파이썬 내장 바이너리 데이터형에 대한 설명은 바이너리 시퀀스 형
+--- bytes, bytearray, memoryview 문서를 참고하세요.
+
+* "struct" --- Interpret bytes as packed binary data
+
+  * 함수와 예외
+
+  * 포맷 문자열
+
+    * 바이트 순서, 크기 및 정렬
+
+    * 포맷 문자
+
+    * 예
+
+  * 응용
+
+    * 네이티브 포맷
+
+    * 표준 포맷
+
+  * 클래스
+
+* "codecs" --- Codec registry and base classes
+
+  * 코덱 베이스 클래스
+
+    * 에러 처리기
+
+    * 상태 없는 인코딩과 디코딩
+
+    * 증분 인코딩과 디코딩
+
+      * IncrementalEncoder 객체
+
+      * IncrementalDecoder 객체
+
+    * 스트림 인코딩과 디코딩
+
+      * StreamWriter 객체
+
+      * StreamReader 객체
+
+      * StreamReaderWriter 객체
+
+      * StreamRecoder 객체
+
+  * 인코딩과 유니코드
+
+  * 표준 인코딩
+
+  * 파이썬 특정 인코딩
+
+    * 텍스트 인코딩
+
+    * 바이너리 변환
+
+    * 텍스트 변환
+
+  * "encodings.idna" --- 응용 프로그램에서의 국제화된 도메인 이름
+
+  * "encodings.mbcs" --- 윈도우 ANSI 코드 페이지
+
+  * "encodings.utf_8_sig" --- BOM 서명이 있는 UTF-8 코덱

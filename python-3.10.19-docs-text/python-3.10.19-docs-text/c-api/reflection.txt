@@ -1,0 +1,72 @@
+리플렉션
+********
+
+PyObject *PyEval_GetBuiltins(void)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   현재 실행 프레임이나 현재 실행 중인 프레임이 없으면 스레드 상태의
+   인터프리터의 builtins의 딕셔너리를 반환합니다.
+
+PyObject *PyEval_GetLocals(void)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   Return a dictionary of the local variables in the current execution
+   frame, or "NULL" if no frame is currently executing.
+
+PyObject *PyEval_GetGlobals(void)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   현재 실행 프레임의 전역 변수 딕셔너리를 반환하거나, 현재 실행 중인
+   프레임이 없으면 "NULL"을 반환합니다.
+
+PyFrameObject *PyEval_GetFrame(void)
+    *반환값: 빌린 참조.** Part of the Stable ABI.*
+
+   현재의 스레드 상태의 프레임을 반환합니다. 현재 실행 중의 프레임이
+   없으면 "NULL"입니다.
+
+   "PyThreadState_GetFrame()"도 참조하십시오.
+
+PyFrameObject *PyFrame_GetBack(PyFrameObject *frame)
+
+   Get the *frame* next outer frame.
+
+   Return a *strong reference*, or "NULL" if *frame* has no outer
+   frame.
+
+   *frame* must not be "NULL".
+
+   버전 3.9에 추가.
+
+PyCodeObject *PyFrame_GetCode(PyFrameObject *frame)
+    * Part of the Stable ABI since version 3.10.*
+
+   Get the *frame* code.
+
+   Return a *strong reference*.
+
+   *frame* must not be "NULL". The result (frame code) cannot be
+   "NULL".
+
+   버전 3.9에 추가.
+
+int PyFrame_GetLineNumber(PyFrameObject *frame)
+    * Part of the Stable ABI since version 3.10.*
+
+   Return the line number that *frame* is currently executing.
+
+   *frame* must not be "NULL".
+
+const char *PyEval_GetFuncName(PyObject *func)
+    * Part of the Stable ABI.*
+
+   *func*가 함수, 클래스 또는 인스턴스 객체면 *func*의 이름을 반환하고
+   , 그렇지 않으면 *func*의 형의 이름을 반환합니다.
+
+const char *PyEval_GetFuncDesc(PyObject *func)
+    * Part of the Stable ABI.*
+
+   *func*의 형에 따라 설명 문자열을 반환합니다. 반환 값에는 함수 및 메
+   서드의 "()", " constructor", " instance" 및 " object" 가 포함됩니다
+   . "PyEval_GetFuncName()"의 결과와 이어붙이면 *func*의 설명이 됩니다
+   .

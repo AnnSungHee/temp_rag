@@ -1,0 +1,48 @@
+"quopri" --- Encode and decode MIME quoted-printable data
+*********************************************************
+
+**소스 코드:** Lib/quopri.py
+
+======================================================================
+
+이 모듈은 **RFC 1521**: "MIME (Multipurpose Internet Mail Extensions)
+1부: 인터넷 메시지 본문의 형식을 지정하고 설명하기 위한 메커니즘"에 정
+의된 대로, quoted-printable 전송 인코딩과 디코딩을 수행합니다. quoted-
+printable 인코딩은 인쇄할 수 없는 문자가 비교적 적은 데이터를 위해 설
+계되었습니다; "base64" 모듈을 통해 사용할 수 있는 base64 인코딩 체계는
+그래픽 파일을 보낼 때와 같이 그런 문자가 많은 경우 더 압축적입니다.
+
+quopri.decode(input, output, header=False)
+
+   *input* 파일의 내용을 디코딩하고 결과로 디코딩된 바이너리 데이터를
+   *output* 파일에 씁니다. *input* 과 *output*는 *바이너리 파일 객체*
+   여야 합니다. 선택적 인자 *header*가 있고 참이면, 밑줄은 스페이스로
+   디코딩됩니다. 이것은 **RFC 1522**: "MIME (Multipurpose Internet
+   Mail Extensions) 2부: 비 ASCII 텍스트를 위한 메시지 헤더 확장"에서
+   설명한 대로 "Q"-인코딩된 헤더를 디코딩하는 데 사용됩니다.
+
+quopri.encode(input, output, quotetabs, header=False)
+
+   *input* 파일의 내용을 인코딩하고 결과 quoted-printable 데이터를
+   *output* 파일에 씁니다. *input* 과 *output*은 *바이너리 파일 객체*
+   여야 합니다. *quotetabs*는 포함 된 스페이스와 탭을 인코딩할지를 제
+   어하는 비 선택적 플래그입니다; 참이면 그러한 공백 문자를 인코드하고
+   , 거짓이면 인코드하지 않고 남겨둡니다. 줄 끝에 나타나는 공백과 탭은
+   **RFC 1521**에 따라 항상 인코딩됨에 유의하십시오. *header*는 스페이
+   스를 **RFC 1522**에 따라 밑줄로 인코딩할지를 제어하는 플래그입니다.
+
+quopri.decodestring(s, header=False)
+
+   "decode()"와 비슷하지만, 소스 "bytes"를 받아들이고 해독된 해당
+   "bytes"를 반환합니다.
+
+quopri.encodestring(s, quotetabs=False, header=False)
+
+   "encode()"와 비슷하지만, 소스 "bytes"를 받아들이고 인코딩된 해당
+   "bytes"를 반환합니다. 기본적으로 "encode()" 함수의 *quotetabs* 매개
+   변수에 "False" 값을 보냅니다.
+
+더 보기:
+
+  모듈 "base64"
+     MIME base64 데이터 인코딩과 디코딩

@@ -1,0 +1,1012 @@
+"tkinter" --- Python interface to Tcl/Tk
+****************************************
+
+**소스 코드:** Lib/tkinter/__init__.py
+
+======================================================================
+
+"tkinter" 패키지("Tk 인터페이스")는 Tcl/Tk GUI 툴킷에 대한 표준 파이썬
+인터페이스입니다. Tk와 "tkinter"는 macOS를 포함하는 대부분의 유닉스 플
+랫폼과 윈도우 시스템에서 사용할 수 있습니다.
+
+명령 줄에서 "python -m tkinter"를 실행하면 간단한 Tk 인터페이스를 보여
+주는 창을 열어, "tkinter"가 시스템에 제대로 설치되었는지 알 수 있도록
+하고, 설치된 Tcl/Tk 버전을 보여주기 때문에, 그 버전에 해당하는 Tcl/Tk
+설명서를 읽을 수 있습니다.
+
+Tkinter supports a range of Tcl/Tk versions, built either with or
+without thread support. The official Python binary release bundles
+Tcl/Tk 8.6 threaded. See the source code for the "_tkinter" module for
+more information about supported versions.
+
+Tkinter is not a thin wrapper, but adds a fair amount of its own logic
+to make the experience more pythonic. This documentation will
+concentrate on these additions and changes, and refer to the official
+Tcl/Tk documentation for details that are unchanged.
+
+참고:
+
+  Tcl/Tk 8.5 (2007) introduced a modern set of themed user interface
+  components along with a new API to use them. Both old and new APIs
+  are still available. Most documentation you will find online still
+  uses the old API and can be woefully outdated.
+
+더 보기:
+
+  * TkDocs
+       Extensive tutorial on creating user interfaces with Tkinter.
+       Explains key concepts, and illustrates recommended approaches
+       using the modern API.
+
+  * Tkinter 8.5 reference: a GUI for Python
+       Reference documentation for Tkinter 8.5 detailing available
+       classes, methods, and options.
+
+  Tcl/Tk Resources:
+
+  * Tk commands
+       Comprehensive reference to each of the underlying Tcl/Tk
+       commands used by Tkinter.
+
+  * Tcl/Tk 홈 페이지
+       Additional documentation, and links to Tcl/Tk core development.
+
+  Books:
+
+  * Modern Tkinter for Busy Python Developers
+       Mark Roseman 지음. (ISBN 978-1999149567)
+
+  * Python and Tkinter Programming
+       By Alan Moore. (ISBN 978-1788835886)
+
+  * Programming Python
+       Mark Lutz 지음; 탁월하게 Tkinter를 다루고 있습니다. (ISBN
+       978-0596158101)
+
+  * Tcl and the Tk Toolkit (2nd edition)
+       By John Ousterhout, inventor of Tcl/Tk, and Ken Jones; does not
+       cover Tkinter. (ISBN 978-0321336330)
+
+
+Architecture
+============
+
+Tcl/Tk is not a single library but rather consists of a few distinct
+modules, each with separate functionality and its own official
+documentation. Python's binary releases also ship an add-on module
+together with it.
+
+Tcl
+   Tcl is a dynamic interpreted programming language, just like
+   Python. Though it can be used on its own as a general-purpose
+   programming language, it is most commonly embedded into C
+   applications as a scripting engine or an interface to the Tk
+   toolkit. The Tcl library has a C interface to create and manage one
+   or more instances of a Tcl interpreter, run Tcl commands and
+   scripts in those instances, and add custom commands implemented in
+   either Tcl or C. Each interpreter has an event queue, and there are
+   facilities to send events to it and process them. Unlike Python,
+   Tcl's execution model is designed around cooperative multitasking,
+   and Tkinter bridges this difference (see Threading model for
+   details).
+
+Tk
+   Tk is a Tcl package implemented in C that adds custom commands to
+   create and manipulate GUI widgets. Each "Tk" object embeds its own
+   Tcl interpreter instance with Tk loaded into it. Tk's widgets are
+   very customizable, though at the cost of a dated appearance. Tk
+   uses Tcl's event queue to generate and process GUI events.
+
+Ttk
+   Themed Tk (Ttk) is a newer family of Tk widgets that provide a much
+   better appearance on different platforms than many of the classic
+   Tk widgets. Ttk is distributed as part of Tk, starting with Tk
+   version 8.5. Python bindings are provided in a separate module,
+   "tkinter.ttk".
+
+Internally, Tk and Ttk use facilities of the underlying operating
+system, i.e., Xlib on Unix/X11, Cocoa on macOS, GDI on Windows.
+
+When your Python application uses a class in Tkinter, e.g., to create
+a widget, the "tkinter" module first assembles a Tcl/Tk command
+string. It passes that Tcl command string to an internal "_tkinter"
+binary module, which then calls the Tcl interpreter to evaluate it.
+The Tcl interpreter will then call into the Tk and/or Ttk packages,
+which will in turn make calls to Xlib, Cocoa, or GDI.
+
+
+Tkinter 모듈
+============
+
+Support for Tkinter is spread across several modules. Most
+applications will need the main "tkinter" module, as well as the
+"tkinter.ttk" module, which provides the modern themed widget set and
+API:
+
+   from tkinter import *
+   from tkinter import ttk
+
+class tkinter.Tk(screenName=None, baseName=None, className='Tk', useTk=True, sync=False, use=None)
+
+   최상위 Tk 위젯을 만들고 이 위젯에 대한 Tcl 인터프리터를 초기화합니
+   다. 이 위젯은 일반적으로 응용 프로그램의 메인 창입니다. 인스턴스마
+   다 고유한 Tcl 인터프리터가 연결됩니다.
+
+   The "Tk" class is typically instantiated using all default values.
+   However, the following keyword arguments are currently recognized:
+
+   *screenName*
+      When given (as a string), sets the "DISPLAY" environment
+      variable. (X11 only)
+
+   *baseName*
+      Name of the profile file.  By default, *baseName* is derived
+      from the program name ("sys.argv[0]").
+
+   *className*
+      Name of the widget class.  Used as a profile file and also as
+      the name with which Tcl is invoked (*argv0* in *interp*).
+
+   *useTk*
+      If "True", initialize the Tk subsystem.  The "tkinter.Tcl()"
+      function sets this to "False".
+
+   *sync*
+      If "True", execute all X server commands synchronously, so that
+      errors are reported immediately.  Can be used for debugging.
+      (X11 only)
+
+   *use*
+      Specifies the *id* of the window in which to embed the
+      application, instead of it being created as an independent
+      toplevel window. *id* must be specified in the same way as the
+      value for the -use option for toplevel widgets (that is, it has
+      a form like that returned by "winfo_id()").
+
+      Note that on some platforms this will only work correctly if
+      *id* refers to a Tk frame or toplevel that has its -container
+      option enabled.
+
+   "Tk" reads and interprets profile files, named ".*className*.tcl"
+   and ".*baseName*.tcl", into the Tcl interpreter and calls "exec()"
+   on the contents of ".*className*.py" and ".*baseName*.py".  The
+   path for the profile files is the "HOME" environment variable or,
+   if that isn't defined, then "os.curdir".
+
+   tk
+
+      The Tk application object created by instantiating "Tk".  This
+      provides access to the Tcl interpreter.  Each widget that is
+      attached the same instance of "Tk" has the same value for its
+      "tk" attribute.
+
+   master
+
+      The widget object that contains this widget.  For "Tk", the
+      *master* is "None" because it is the main window.  The terms
+      *master* and *parent* are similar and sometimes used
+      interchangeably as argument names; however, calling
+      "winfo_parent()" returns a string of the widget name whereas
+      "master" returns the object. *parent*/*child* reflects the tree-
+      like relationship while *master*/*slave* reflects the container
+      structure.
+
+   children
+
+      The immediate descendants of this widget as a "dict" with the
+      child widget names as the keys and the child instance objects as
+      the values.
+
+tkinter.Tcl(screenName=None, baseName=None, className='Tk', useTk=False)
+
+   "Tcl()" 함수는 Tk 서브 시스템을 초기화하지 않는다는 것을 제외하고는
+   , "Tk" 클래스에 의해 만들어지는 것과 비슷한 객체를 만드는 팩토리 함
+   수입니다. 불필요한 최상위 창을 만들고 싶지 않거나 만들 수 없는 (가
+   령 X 서버가 없는 유닉스/리눅스 시스템) 환경에서 Tcl 인터프리터를 구
+   동할 때 가장 유용합니다. "Tcl()" 객체에 의해 만들어진 객체는
+   "loadtk()" 메서드를 호출하여 만들어지는 최상위 창(과 초기화된 Tk 서
+   브 시스템)을 가질 수 있습니다.
+
+Tk 지원을 제공하는 모듈은 다음과 같습니다:
+
+"tkinter"
+   주 Tkinter 모듈.
+
+"tkinter.colorchooser"
+   사용자가 색상을 선택할 수 있게 하는 대화 상자.
+
+"tkinter.commondialog"
+   여기에 나열된 다른 모듈에 정의된 대화 상자의 베이스 기본 클래스.
+
+"tkinter.filedialog"
+   사용자가 열거나 저장할 파일을 지정할 수 있도록 하는 일반 대화 상자
+   입니다.
+
+"tkinter.font"
+   글꼴과 관련된 작업에 도움이 되는 유틸리티.
+
+"tkinter.messagebox"
+   표준 Tk 대화 상자에 액세스합니다.
+
+"tkinter.scrolledtext"
+   세로 스크롤 막대가 내장된 Text 위젯.
+
+"tkinter.simpledialog"
+   기본 대화 상자와 편리 함수.
+
+"tkinter.ttk"
+   Themed widget set introduced in Tk 8.5, providing modern
+   alternatives for many of the classic widgets in the main "tkinter"
+   module.
+
+추가 모듈:
+
+"_tkinter"
+   Tcl/Tk 에 대한 저수준 인터페이스를 포함하는 바이너리 모듈. 주
+   "tkinter" 모듈에 의해 자동으로 임포트되고, 응용 프로그램 프로그래머
+   가 직접 사용해서는 안 됩니다. 일반적으로 공유 라이브러리(또는 DLL)
+   이지만, 때에 따라 파이썬 인터프리터에 정적으로 링크될 수도 있습니다
+   .
+
+"idlelib"
+   Python's Integrated Development and Learning Environment (IDLE).
+   Based on "tkinter".
+
+"tkinter.constants"
+   Symbolic constants that can be used in place of strings when
+   passing various parameters to Tkinter calls. Automatically imported
+   by the main "tkinter" module.
+
+"tkinter.dnd"
+   (실험적) "tkinter"를 위한 드래그 앤드 드롭 지원. Tk DND로 대체 될
+   때 폐지될 것입니다.
+
+"tkinter.tix"
+   (deprecated) An older third-party Tcl/Tk package that adds several
+   new widgets. Better alternatives for most can be found in
+   "tkinter.ttk".
+
+"turtle"
+   Tk 창에서의 터틀(turtle) 그래픽.
+
+
+Tkinter 구명조끼
+================
+
+This section is not designed to be an exhaustive tutorial on either Tk
+or Tkinter.  For that, refer to one of the external resources noted
+earlier. Instead, this section provides a very quick orientation to
+what a Tkinter application looks like, identifies foundational Tk
+concepts, and explains how the Tkinter wrapper is structured.
+
+The remainder of this section will help you to identify the classes,
+methods, and options you'll need in your Tkinter application, and
+where to find more detailed documentation on them, including in the
+official Tcl/Tk reference manual.
+
+
+Hello World 프로그램
+--------------------
+
+We'll start by walking through a "Hello World" application in Tkinter.
+This isn't the smallest one we could write, but has enough to
+illustrate some key concepts you'll need to know.
+
+   from tkinter import *
+   from tkinter import ttk
+   root = Tk()
+   frm = ttk.Frame(root, padding=10)
+   frm.grid()
+   ttk.Label(frm, text="Hello World!").grid(column=0, row=0)
+   ttk.Button(frm, text="Quit", command=root.destroy).grid(column=1, row=0)
+   root.mainloop()
+
+After the imports, the next line creates an instance of the "Tk"
+class, which initializes Tk and creates its associated Tcl
+interpreter. It also creates a toplevel window, known as the root
+window, which serves as the main window of the application.
+
+The following line creates a frame widget, which in this case will
+contain a label and a button we'll create next. The frame is fit
+inside the root window.
+
+The next line creates a label widget holding a static text string. The
+"grid()" method is used to specify the relative layout (position) of
+the label within its containing frame widget, similar to how tables in
+HTML work.
+
+A button widget is then created, and placed to the right of the label.
+When pressed, it will call the "destroy()" method of the root window.
+
+Finally, the "mainloop()" method puts everything on the display, and
+responds to user input until the program terminates.
+
+
+Important Tk Concepts
+---------------------
+
+Even this simple program illustrates the following key Tk concepts:
+
+위젯
+   A Tkinter user interface is made up of individual *widgets*. Each
+   widget is represented as a Python object, instantiated from classes
+   like "ttk.Frame", "ttk.Label", and "ttk.Button".
+
+widget hierarchy
+   Widgets are arranged in a *hierarchy*. The label and button were
+   contained within a frame, which in turn was contained within the
+   root window. When creating each *child* widget, its *parent* widget
+   is passed as the first argument to the widget constructor.
+
+구성 옵션
+   Widgets have *configuration options*, which modify their appearance
+   and behavior, such as the text to display in a label or button.
+   Different classes of widgets will have different sets of options.
+
+geometry management
+   Widgets aren't automatically added to the user interface when they
+   are created. A *geometry manager* like "grid" controls where in the
+   user interface they are placed.
+
+event loop
+   Tkinter reacts to user input, changes from your program, and even
+   refreshes the display only when actively running an *event loop*.
+   If your program isn't running the event loop, your user interface
+   won't update.
+
+
+Understanding How Tkinter Wraps Tcl/Tk
+--------------------------------------
+
+When your application uses Tkinter's classes and methods, internally
+Tkinter is assembling strings representing Tcl/Tk commands, and
+executing those commands in the Tcl interpreter attached to your
+applicaton's "Tk" instance.
+
+Whether it's trying to navigate reference documentation, trying to
+find the right method or option, adapting some existing code, or
+debugging your Tkinter application, there are times that it will be
+useful to understand what those underlying Tcl/Tk commands look like.
+
+To illustrate, here is the Tcl/Tk equivalent of the main part of the
+Tkinter script above.
+
+   ttk::frame .frm -padding 10
+   grid .frm
+   grid [ttk::label .frm.lbl -text "Hello World!"] -column 0 -row 0
+   grid [ttk::button .frm.btn -text "Quit" -command "destroy ."] -column 1 -row 0
+
+Tcl's syntax is similar to many shell languages, where the first word
+is the command to be executed, with arguments to that command
+following it, separated by spaces. Without getting into too many
+details, notice the following:
+
+* The commands used to create widgets (like "ttk::frame") correspond
+  to widget classes in Tkinter.
+
+* Tcl widget options (like "-text") correspond to keyword arguments in
+  Tkinter.
+
+* Widgets are referred to by a *pathname* in Tcl (like ".frm.btn"),
+  whereas Tkinter doesn't use names but object references.
+
+* A widget's place in the widget hierarchy is encoded in its
+  (hierarchical) pathname, which uses a "." (dot) as a path separator.
+  The pathname for the root window is just "." (dot). In Tkinter, the
+  hierarchy is defined not by pathname but by specifying the parent
+  widget when creating each child widget.
+
+* Operations which are implemented as separate *commands* in Tcl (like
+  "grid" or "destroy") are represented as *methods* on Tkinter widget
+  objects. As you'll see shortly, at other times Tcl uses what appear
+  to be method calls on widget objects, which more closely mirror what
+  would is used in Tkinter.
+
+
+How do I...? What option does...?
+---------------------------------
+
+If you're not sure how to do something in Tkinter, and you can't
+immediately find it in the tutorial or reference documentation you're
+using, there are a few strategies that can be helpful.
+
+First, remember that the details of how individual widgets work may
+vary across different versions of both Tkinter and Tcl/Tk. If you're
+searching documentation, make sure it corresponds to the Python and
+Tcl/Tk versions installed on your system.
+
+When searching for how to use an API, it helps to know the exact name
+of the class, option, or method that you're using. Introspection,
+either in an interactive Python shell or with "print()", can help you
+identify what you need.
+
+To find out what configuration options are available on any widget,
+call its "configure()" method, which returns a dictionary containing a
+variety of information about each object, including its default and
+current values. Use "keys()" to get just the names of each option.
+
+   btn = ttk.Button(frm, ...)
+   print(btn.configure().keys())
+
+As most widgets have many configuration options in common, it can be
+useful to find out which are specific to a particular widget class.
+Comparing the list of options to that of a simpler widget, like a
+frame, is one way to do that.
+
+   print(set(btn.configure().keys()) - set(frm.configure().keys()))
+
+Similarly, you can find the available methods for a widget object
+using the standard "dir()" function. If you try it, you'll see there
+are over 200 common widget methods, so again identifying those
+specific to a widget class is helpful.
+
+   print(dir(btn))
+   print(set(dir(btn)) - set(dir(frm)))
+
+
+Navigating the Tcl/Tk Reference Manual
+--------------------------------------
+
+As noted, the official Tk commands reference manual (man pages) is
+often the most accurate description of what specific operations on
+widgets do. Even when you know the name of the option or method that
+you need, you may still have a few places to look.
+
+While all operations in Tkinter are implemented as method calls on
+widget objects, you've seen that many Tcl/Tk operations appear as
+commands that take a widget pathname as its first parameter, followed
+by optional parameters, e.g.
+
+   destroy .
+   grid .frm.btn -column 0 -row 0
+
+Others, however, look more like methods called on a widget object (in
+fact, when you create a widget in Tcl/Tk, it creates a Tcl command
+with the name of the widget pathname, with the first parameter to that
+command being the name of a method to call).
+
+   .frm.btn invoke
+   .frm.lbl configure -text "Goodbye"
+
+In the official Tcl/Tk reference documentation, you'll find most
+operations that look like method calls on the man page for a specific
+widget (e.g., you'll find the "invoke()" method on the ttk::button man
+page), while functions that take a widget as a parameter often have
+their own man page (e.g., grid).
+
+You'll find many common options and methods in the options or
+ttk::widget man pages, while others are found in the man page for a
+specific widget class.
+
+You'll also find that many Tkinter methods have compound names, e.g.,
+"winfo_x()", "winfo_height()", "winfo_viewable()". You'd find
+documentation for all of these in the winfo man page.
+
+참고:
+
+  Somewhat confusingly, there are also methods on all Tkinter widgets
+  that don't actually operate on the widget, but operate at a global
+  scope, independent of any widget. Examples are methods for accessing
+  the clipboard or the system bell. (They happen to be implemented as
+  methods in the base "Widget" class that all Tkinter widgets inherit
+  from).
+
+
+Threading model
+===============
+
+Python and Tcl/Tk have very different threading models, which
+"tkinter" tries to bridge. If you use threads, you may need to be
+aware of this.
+
+A Python interpreter may have many threads associated with it. In Tcl,
+multiple threads can be created, but each thread has a separate Tcl
+interpreter instance associated with it. Threads can also create more
+than one interpreter instance, though each interpreter instance can be
+used only by the one thread that created it.
+
+Each "Tk" object created by "tkinter" contains a Tcl interpreter. It
+also keeps track of which thread created that interpreter. Calls to
+"tkinter" can be made from any Python thread. Internally, if a call
+comes from a thread other than the one that created the "Tk" object,
+an event is posted to the interpreter's event queue, and when
+executed, the result is returned to the calling Python thread.
+
+Tcl/Tk applications are normally event-driven, meaning that after
+initialization, the interpreter runs an event loop (i.e.
+"Tk.mainloop()") and responds to events. Because it is single-
+threaded, event handlers must respond quickly, otherwise they will
+block other events from being processed. To avoid this, any long-
+running computations should not run in an event handler, but are
+either broken into smaller pieces using timers, or run in another
+thread. This is different from many GUI toolkits where the GUI runs in
+a completely separate thread from all application code including event
+handlers.
+
+If the Tcl interpreter is not running the event loop and processing
+events, any "tkinter" calls made from threads other than the one
+running the Tcl interpreter will fail.
+
+A number of special cases exist:
+
+   * Tcl/Tk libraries can be built so they are not thread-aware. In
+     this case, "tkinter" calls the library from the originating
+     Python thread, even if this is different than the thread that
+     created the Tcl interpreter. A global lock ensures only one call
+     occurs at a time.
+
+   * While "tkinter" allows you to create more than one instance of a
+     "Tk" object (with its own interpreter), all interpreters that are
+     part of the same thread share a common event queue, which gets
+     ugly fast. In practice, don't create more than one instance of
+     "Tk" at a time. Otherwise, it's best to create them in separate
+     threads and ensure you're running a thread-aware Tcl/Tk build.
+
+   * Blocking event handlers are not the only way to prevent the Tcl
+     interpreter from reentering the event loop. It is even possible
+     to run multiple nested event loops or abandon the event loop
+     entirely. If you're doing anything tricky when it comes to events
+     or threads, be aware of these possibilities.
+
+   * There are a few select "tkinter" functions that presently work
+     only when called from the thread that created the Tcl
+     interpreter.
+
+
+간편한 레퍼런스
+===============
+
+
+옵션 설정
+---------
+
+옵션은 위젯의 색상과 테두리 너비와 같은 것을 제어합니다. 옵션은 세 가
+지 방법으로 설정할 수 있습니다:
+
+객체 생성 시, 키워드 인자 사용하기
+      fred = Button(self, fg="red", bg="blue")
+
+객체 생성 후, 딕셔너리 인덱스처럼 옵션 이름을 다루기
+      fred["fg"] = "red"
+      fred["bg"] = "blue"
+
+config() 메서드를 사용하여 객체 생성 이후 여러 어트리뷰트를 갱신하기.
+      fred.config(fg="red", bg="blue")
+
+주어진 옵션과 그 동작에 대한 완전한 설명은, 해당 위젯의 Tk 매뉴얼 페이
+지를 참조하십시오.
+
+매뉴얼 페이지는 각 위젯에 대해 "표준 옵션(STANDARD OPTIONS)"과 "위젯
+특정 옵션(WIDGET SPECIFIC OPTIONS)"을 나열합니다. 전자는 많은 위젯에
+공통적인 옵션 목록이며, 후자는 그 위젯에만 적용되는 옵션입니다. 표준
+옵션은 *options(3)* 매뉴얼 페이지에 설명되어 있습니다.
+
+이 문서에서는 표준과 위젯 특정 옵션을 구분하지 않습니다. 일부 옵션은
+일부 위젯에 적용되지 않습니다. 특정 위젯이 특정 옵션에 응답하는지는 위
+젯의 클래스에 따라 다릅니다; 버튼에는 "command" 옵션이 있는데, 레이블
+은 그렇지 않습니다.
+
+주어진 위젯이 지원하는 옵션은 위젯의 매뉴얼 페이지에 나열되거나, 실행
+시간에 인자 없이 "config()" 메서드를 호출하거나 해당 위젯에서 "keys()"
+메서드를 호출하여 조회할 수 있습니다. 이러한 호출의 반환 값은 키가 옵
+션의 이름인 문자열(예를 들어, "'relief'")이고 값이 5-튜플인 딕셔너리입
+니다.
+
+"bg"와 같은 일부 옵션은 긴 이름을 가진 공통 옵션의 동의어입니다 ("bg"
+는 "background"의 줄임말입니다). "config()" 메서드에 줄인 옵션을 전달
+하면 5-튜플이 아닌 2-튜플을 반환합니다. 전달된 2-튜플에는 동의어의 이
+름과 "실제" 옵션이 담겨있습니다 (가령 "('bg', 'background')").
+
++---------+-----------------------------------+----------------+
+| 인덱스  | 의미                              | 예             |
+|=========|===================================|================|
+| 0       | 옵션 이름                         | "'relief'"     |
++---------+-----------------------------------+----------------+
+| 1       | 데이터베이스 조회를 위한 옵션 이  | "'relief'"     |
+|         | 름                                |                |
++---------+-----------------------------------+----------------+
+| 2       | 데이터베이스 조회를 위한 옵션 클  | "'Relief'"     |
+|         | 래스                              |                |
++---------+-----------------------------------+----------------+
+| 3       | 기본값                            | "'raised'"     |
++---------+-----------------------------------+----------------+
+| 4       | 현재 값                           | "'groove'"     |
++---------+-----------------------------------+----------------+
+
+예:
+
+   >>> print(fred.config())
+   {'relief': ('relief', 'relief', 'Relief', 'raised', 'groove')}
+
+물론, 인쇄된 딕셔너리에는 사용 가능한 모든 옵션과 해당 값이 포함됩니다
+. 이것은 예시일뿐입니다.
+
+
+패커
+----
+
+패커(packer)는 Tk의 지오메트리 관리 메커니즘 중 하나입니다. 지오메트리
+관리자는 컨테이너(위젯들의 공동 *master*) 내에서의 위젯의 상대 위치를
+지정하는 데 사용됩니다. 더 성가신 *placer*(잘 사용되지 않고, 여기서는
+다루지 않습니다) 와는 달리, 패커는 *위에*, *왼쪽에*, *채우기* 등의 정
+성적(qualitative) 관계 규정을 취하고, 여러분을 위해 정확한 배치 좌표를
+결정하기 위한 모든 작업을 수행합니다.
+
+모든 *master* 위젯의 크기는 안에 있는 "슬레이브(slave) 위젯"의 크기에
+의해 결정됩니다. 패커는 슬레이브 위젯이 패킹 되는 마스터 내부에 나타나
+는 위치를 제어하는 데 사용됩니다. 원하는 배치를 얻기 위해 프레임에 위
+젯을 팩하고, 프레임을 다른 프레임에 팩할 수 있습니다. 또한, 일단 팩 되
+면, 점진적인 구성의 변경을 수용하기 위해 배치가 동적으로 조정됩니다.
+
+위젯은 지오메트리 관리자로 지오메트리를 지정할 때까지 표시되지 않습니
+다. 지오메트리 명세를 빠뜨리는 것은 초기에 흔한 실수이고, 위젯을 만들
+었지만, 아무것도 나타나지 않을 때 놀라게 됩니다. 위젯은 예를 들어 패커
+의 "pack()" 메서드가 적용된 후에만 나타납니다.
+
+pack() 메서드는 컨테이너 내에서 위젯이 표시되는 위치와 메인 응용 프로
+그램 윈도우의 크기가 조정될 때 어떻게 동작할지를 제어하는 키워드 옵션/
+값 쌍으로 호출할 수 있습니다. 여기 몇 가지 예가 있습니다:
+
+   fred.pack()                     # defaults to side = "top"
+   fred.pack(side="left")
+   fred.pack(expand=1)
+
+
+패커 옵션
+---------
+
+패커와 그것이 받을 수 있는 옵션에 대한 더 자세한 정보는 매뉴얼 페이지
+와 John Ousterhout의 책의 183쪽을 참조하십시오.
+
+anchor
+   앵커(anchor)형. 패커가 각 슬레이브를 컨테이너에 넣을 위치를 나타냅
+   니다.
+
+expand
+   불리언(boolean), "0" 또는 "1".
+
+fill
+   유효한 값: "'x'", "'y'", "'both'", "'none'".
+
+ipadx와 ipady
+   거리(distance) - 슬레이브 위젯의 각 변의 내부 패딩을 지정합니다.
+
+padx와 pady
+   거리(distance) - 슬레이브 위젯의 각 변의 외부 패딩을 지정합니다.
+
+side
+   유효한 값: "'left'", "'right'", "'top'", "'bottom'".
+
+
+위젯 변수 결합하기
+------------------
+
+(텍스트 입력 위젯과 같은) 일부 위젯의 현재 값 설정은 특수 옵션을 사용
+하여 응용 프로그램 변수에 직접 연결할 수 있습니다. 이 옵션은
+"variable", "textvariable", "onvalue", "offvalue" 및 "value"입니다. 이
+연결은 양방향으로 작동합니다: 어떤 이유로 든 변수가 변경되면, 연결된
+위젯은 새 값을 반영하도록 갱신됩니다.
+
+불행히도, "tkinter"의 현재 구현에서는 "variable" 또는 "textvariable"
+옵션을 통해 임의의 파이썬 변수를 위젯으로 넘길 수 없습니다. 작동하는
+유일한 종류의 변수는 "tkinter"에 정의된 Variable이라는 클래스에서 서브
+클래싱되는 변수입니다.
+
+이미 정의된 Variable의 유용한 서브 클래스가 많이 있습니다:
+"StringVar", "IntVar", "DoubleVar" 및 "BooleanVar". 이러한 변수의 현재
+값을 읽으려면 "get()" 메서드를 호출하고, 값을 바꾸려면 "set()" 메서드
+를 호출합니다. 이 프로토콜을 따르면, 여러분이 더는 개입하지 않더라도
+위젯은 변수의 값을 항상 추적합니다.
+
+예를 들면:
+
+   import tkinter as tk
+
+   class App(tk.Frame):
+       def __init__(self, master):
+           super().__init__(master)
+           self.pack()
+
+           self.entrythingy = tk.Entry()
+           self.entrythingy.pack()
+
+           # Create the application variable.
+           self.contents = tk.StringVar()
+           # Set it to some value.
+           self.contents.set("this is a variable")
+           # Tell the entry widget to watch this variable.
+           self.entrythingy["textvariable"] = self.contents
+
+           # Define a callback for when the user hits return.
+           # It prints the current value of the variable.
+           self.entrythingy.bind('<Key-Return>',
+                                self.print_contents)
+
+       def print_contents(self, event):
+           print("Hi. The current entry content is:",
+                 self.contents.get())
+
+   root = tk.Tk()
+   myapp = App(root)
+   myapp.mainloop()
+
+
+창 관리자
+---------
+
+Tk에는, 창 관리자와 상호 작용하기 위한 유틸리티 명령인 "wm"이 있습니다
+. "wm" 명령 옵션을 사용하여 제목, 배치, 아이콘 비트맵 등과 같은 항목을
+제어할 수 있습니다. "tkinter"에서, 이러한 명령은 "Wm" 클래스의 메서드
+로 구현되었습니다. 최상위 위젯은 "Wm" 클래스의 서브 클래스이므로, "Wm"
+메서드를 직접 호출할 수 있습니다.
+
+주어진 위젯을 포함하는 최상위 창을 가져오려면, 종종 위젯의 마스터를 참
+조하는 것만으로도 됩니다. 물론 위젯이 프레임 안에 팩 되어 있다면, 마스
+터는 최상위 창을 나타내지 않을 것입니다. 임의의 위젯이 포함된 최상위
+창을 가져오려면, "_root()" 메서드를 호출하면 됩니다. 이 메서드는 이 함
+수가 구현 일부이며, Tk 기능에 대한 인터페이스가 아니라는 사실을 나타내
+기 위해 밑줄로 시작합니다.
+
+다음은 일반적인 사용 예입니다:
+
+   import tkinter as tk
+
+   class App(tk.Frame):
+       def __init__(self, master=None):
+           super().__init__(master)
+           self.pack()
+
+   # create the application
+   myapp = App()
+
+   #
+   # here are method calls to the window manager class
+   #
+   myapp.master.title("My Do-Nothing Application")
+   myapp.master.maxsize(1000, 400)
+
+   # start the program
+   myapp.mainloop()
+
+
+Tk 옵션 데이터형
+----------------
+
+anchor
+   유효한 값은 나침반의 눈금입니다: ""n"", ""ne"", ""e"", ""se"",
+   ""s"", ""sw"", ""w"", ""nw"", 그리고 ""center"".
+
+bitmap
+   8개의 내장된, 이름있는 비트맵이 있습니다: "'error'", "'gray25'",
+   "'gray50'", "'hourglass'", "'info'", "'questhead'", "'question'",
+   "'warning'". X 비트맵 파일명을 지정하려면
+   ""@/usr/contrib/bitmap/gumby.bit""처럼 "@"를 앞에 붙인 파일의 전체
+   경로를 지정하십시오.
+
+boolean
+   정수 0이나 1 또는 문자열 ""yes""나 ""no""를 전달할 수 있습니다.
+
+callback
+   인자를 취하지 않는 파이썬 함수입니다. 예를 들면:
+
+      def print_it():
+          print("hi there")
+      fred["command"] = print_it
+
+color
+   색상은 rgb.txt 파일에 있는 X 색상의 이름이나, RGB 값을 4비트:
+   ""#RGB"", 8비트: ""#RRGGBB"", 12비트: ""#RRRGGGBBB"", 또는 16비트:
+   ""#RRRRGGGGBBBB"" 범위로 표현하는 문자열로 제공됩니다. 여기서 R, G,
+   B는 유효한 임의의 16진수를 나타냅니다. 자세한 내용은 Ousterhout의
+   책 160쪽을 참조하십시오.
+
+cursor
+   "XC_" 접두사 없이 "cursorfont.h"의 표준 X 커서 이름을 사용할 수 있
+   습니다. 예를 들어, 손 모양 커서("XC_hand2")를 얻으려면, ""hand2""
+   문자열을 사용하십시오. 여러분 자신의 비트맵과 마스크 파일을 지정할
+   수도 있습니다. Ousterhout의 책 179쪽을 보십시오.
+
+distance
+   화면 거리는 픽셀이나 절대 거리로 지정할 수 있습니다. 픽셀은 숫자로
+   절대 거리는 문자열로 지정되며, 끝에 붙는 문자는 단위를 나타냅니다:
+   "c"는 센티미터, "i"는 인치, "m"은 밀리미터, "p"는 프린터의 포인트입
+   니다. 예를 들어, 3.5 인치는 ""3.5i""로 표현됩니다.
+
+font
+   Tk는 "{courier 10 bold}"와 같은, 목록 글꼴 이름 형식을 사용합니다.
+   양수로 표현된 글꼴 크기는 포인트로 측정됩니다; 음수로 표현된 크기는
+   픽셀 단위로 측정됩니다.
+
+geometry
+   이것은 "너비x높이" 형식의 문자열로, 대부분의 위젯에서 너비와 높이는
+   픽셀 단위로 측정됩니다 (텍스트를 표시하는 위젯에서는 문자 단위). 예
+   를 들어: "fred["geometry"] = "200x100"".
+
+justify
+   유효한 값은 문자열입니다: ""left"", ""center"", ""right"" 및
+   ""fill"".
+
+region
+   이것은 스페이스로 구분된 네 개의 요소가 있는 문자열이며, 각 요소는
+   유효한 거리(위를 참조하세요)입니다. 예를 들어: ""2 3 4 5""와 ""3i
+   2i 4.5i 2i""와 ""3c 2c 4c 10.43c""는 모두 유효한 영역(region)입니다
+   .
+
+relief
+   위젯의 테두리 스타일을 결정합니다. 유효한 값은 다음과 같습니다:
+   ""raised"", ""sunken"", ""flat"", ""groove"" 및 ""ridge"".
+
+scrollcommand
+   이것은 거의 항상 어떤 스크롤 막대 위젯의 "set()" 메서드이지만, 단일
+   인자를 취하는 어떤 위젯 메서드도 가능합니다.
+
+wrap
+   ""none"", ""char"" 또는 ""word"" 중 하나여야 합니다.
+
+
+바인딩과 이벤트
+---------------
+
+위젯 명령의 bind 메서드를 사용하면 특정 이벤트를 감시하고 해당 이벤트
+유형이 발생할 때 콜백 함수가 트리거 되도록 할 수 있습니다. bind 메서드
+의 형식은 다음과 같습니다:
+
+   def bind(self, sequence, func, add=''):
+
+여기에서:
+
+sequence
+   는 대상 이벤트의 종류를 나타내는 문자열입니다. (자세한 내용은
+   *bind(3tk)* 매뉴얼 페이지와 John Ousterhout의 책 *Tcl and the Tk
+   Toolkit (2nd edition)*의 201쪽을 참조하십시오).
+
+func
+   는 하나의 인자를 취하는 파이썬 함수로, 이벤트가 발생할 때 호출됩니
+   다. 이벤트 인스턴스가 인자로 전달됩니다. (이런 식으로 설치되는 함수
+   를 흔히 *콜백(callbacks)*이라고 합니다.)
+
+add
+   는 선택적이고, "''"나 "'+'"입니다. 빈 문자열을 전달하면 이 바인딩이
+   이 이벤트와 연관된 다른 바인딩을 대체 함을 나타냅니다. "'+'"를 전달
+   하면 이 함수가 이 이벤트 유형에 바인딩 된 함수 목록에 추가됩니다.
+
+예를 들면:
+
+   def turn_red(self, event):
+       event.widget["activeforeground"] = "red"
+
+   self.button.bind("<Enter>", self.turn_red)
+
+이벤트의 widget 필드가 "turn_red()" 콜백에서 어떻게 액세스 되는지 주목
+하십시오. 이 필드는 X 이벤트를 포착한 위젯을 포함합니다. 다음 표에는
+사용자가 액세스할 수 있는 다른 이벤트 필드와 Tk에서 이들을 표시하는 방
+법이 나열되어 있습니다. Tk 매뉴얼 페이지를 참조할 때 유용할 수 있습니
+다.
+
++------+-----------------------+------+-----------------------+
+| Tk   | Tkinter 이벤트 필드   | Tk   | Tkinter 이벤트 필드   |
+|======|=======================|======|=======================|
+| %f   | focus                 | %A   | char                  |
++------+-----------------------+------+-----------------------+
+| %h   | height                | %E   | send_event            |
++------+-----------------------+------+-----------------------+
+| %k   | keycode               | %K   | keysym                |
++------+-----------------------+------+-----------------------+
+| %s   | state                 | %N   | keysym_num            |
++------+-----------------------+------+-----------------------+
+| %t   | time                  | %T   | type                  |
++------+-----------------------+------+-----------------------+
+| %w   | width                 | %W   | widget                |
++------+-----------------------+------+-----------------------+
+| %x   | x                     | %X   | x_root                |
++------+-----------------------+------+-----------------------+
+| %y   | y                     | %Y   | y_root                |
++------+-----------------------+------+-----------------------+
+
+
+index 매개 변수
+---------------
+
+많은 위젯에는 "index" 매개 변수가 전달되어야 합니다. 이들은 Text 위젯
+의 특정 위치, Entry 위젯의 특정 문자 또는 Menu 위젯의 특정 메뉴 항목을
+가리키는 데 사용됩니다.
+
+Entry 위젯 인덱스 (인덱스, 뷰 인덱스 등)
+   Entry 위젯에는 표시되는 텍스트의 문자 위치를 참조하는 옵션이 있습니
+   다. 다음 "tkinter" 함수를 사용하여 텍스트 위젯에서 이러한 특수 지점
+   에 액세스할 수 있습니다:
+
+Text 위젯 인덱스
+   Text 위젯의 인덱스 표기법은 매우 풍부하며 Tk 매뉴얼 페이지에 자세히
+   설명되어 있습니다.
+
+메뉴 인덱스 (menu.invoke(), menu.entryconfig() 등)
+   메뉴에 대한 일부 옵션 및 메서드는 특정 메뉴 항목을 조작합니다. 옵션
+   이나 매개 변수에 메뉴 인덱스가 필요한 때는 언제든지 다음과 같이 전
+   달할 수 있습니다:
+
+   * 위에서부터 세고, 0에서 시작하는, 위젯에서 항목의 숫자 위치를 나타
+     내는 정수.
+
+   * 현재 커서 아래에 있는 메뉴 위치를 나타내는, 문자열 ""active"".
+
+   * 마지막 메뉴 항목을 나타내는, 문자열 ""last"".
+
+   * "@6"과 같이, "@"이 앞에 오는 정수로, 정수는 메뉴의 좌표계에서 y
+     픽셀 좌표로 해석됩니다.
+
+   * 아무런 메뉴 항목을 가리키지 않는, 문자열 ""none""은
+     menu.activate()와 함께 사용되어 모든 항목을 비활성화합니다, 마지
+     막으로,
+
+   * 메뉴 맨 위에서 아래로 스캔할 때, 메뉴 항목의 레이블과 패턴 일치하
+     는 텍스트 문자열. 이 인덱스 유형은 다른 모든 항목 다음에 고려되므
+     로, "last", "active" 또는 "none" 레이블이 붙은 메뉴 항목과의 일치
+     가 대신 위의 리터럴로 해석될 수 있음을 의미합니다.
+
+
+이미지
+------
+
+서로 다른 형식의 이미지를 "tkinter.Image"의 해당 서브 클래스를 통해 만
+들 수 있습니다:
+
+* XBM 형식의 이미지를 위한 "BitmapImage".
+
+* PGM, PPM, GIF 및 PNG 형식의 이미지를 위한 "PhotoImage". 후자는 Tk
+  8.6부터 지원됩니다.
+
+두 가지 유형의 이미지는 "file" 또는 "data" 옵션을 통해 만들어집니다 (
+다른 옵션도 사용할 수 있습니다).
+
+그런 다음 "image" 옵션이 일부 위젯(예를 들어, 레이블, 버튼, 메뉴)에서
+지원되는 곳이면 어디든 이미지 객체를 사용할 수 있습니다. 이 경우, Tk는
+이미지에 대한 참조를 유지하지 않습니다. 이미지 객체에 대한 마지막 파이
+썬 참조가 삭제되면 이미지 데이터도 삭제되고, Tk는 이미지가 사용된 곳마
+다 빈 상자를 표시합니다.
+
+더 보기: Pillow 패키지는 BMP, JPEG, TIFF 및 WebP와 같은 형식을 위한 지원을 추
+      가합니다.
+
+
+파일 처리기
+===========
+
+Tk는 파일 기술자에서 I/O가 가능할 때 Tk 메인 루프에서 호출할 콜백 함수
+를 등록하고 등록 취소할 수 있도록 합니다. 파일 기술자당 하나의 처리기
+만 등록 될 수 있습니다. 예제 코드:
+
+   import tkinter
+   widget = tkinter.Tk()
+   mask = tkinter.READABLE | tkinter.WRITABLE
+   widget.tk.createfilehandler(file, mask, callback)
+   ...
+   widget.tk.deletefilehandler(file)
+
+윈도우에서는 이 기능을 사용할 수 없습니다.
+
+얼마나 많은 바이트를 읽을 수 있는지 모르므로, "BufferedIOBase"나
+"TextIOBase" "read()"나 "readline()" 메서드를 사용하고 싶지 않을것입니
+다, 이것들은 미리 정의 된 바이트 수를 읽으려고하기 때문입니다. 소켓의
+경우, "recv()" 또는 "recvfrom()" 메서드가 제대로 작동합니다; 다른 파일
+의 경우, 날(raw) 읽기나 "os.read(file.fileno(), maxbytecount)"를 사용
+하십시오.
+
+Widget.tk.createfilehandler(file, mask, func)
+
+   파일 처리기 콜백 함수 *func*를 등록합니다. *file* 인자는 "fileno()"
+   메서드가 있는 객체이거나(가령 파일이나 소켓 객체), 정수 파일 기술자
+   일 수 있습니다. *mask* 인자는 아래의 세 가지 상수들을 OR로 조합한
+   것입니다. 콜백은 다음과 같이 호출됩니다:
+
+      callback(file, mask)
+
+Widget.tk.deletefilehandler(file)
+
+   파일 처리기를 등록 취소합니다.
+
+tkinter.READABLE
+tkinter.WRITABLE
+tkinter.EXCEPTION
+
+   *mask* 인자에 사용되는 상수입니다.

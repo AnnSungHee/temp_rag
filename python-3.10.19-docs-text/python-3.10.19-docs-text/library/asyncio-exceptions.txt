@@ -1,0 +1,66 @@
+예외
+****
+
+**소스 코드:** Lib/asyncio/exceptions.py
+
+======================================================================
+
+exception asyncio.TimeoutError
+
+   The operation has exceeded the given deadline.
+
+   중요:
+
+     This exception is different from the builtin "TimeoutError"
+     exception.
+
+exception asyncio.CancelledError
+
+   작업이 취소되었습니다.
+
+   이 예외는 asyncio 태스크가 취소될 때 사용자 정의 작업을 수행하기 위
+   해 잡을 수 있습니다. 거의 모든 상황에서 예외를 다시 일으켜야 합니다
+   .
+
+   버전 3.8에서 변경: "CancelledError" is now a subclass of
+   "BaseException".
+
+exception asyncio.InvalidStateError
+
+   "Task" 나 "Future"의 내부 상태가 잘못되었습니다.
+
+   이미 결괏값이 설정된 *Future* 객체에 대해 결괏값을 설정하는 것과 같
+   은 상황에서 발생할 수 있습니다.
+
+exception asyncio.SendfileNotAvailableError
+
+   주어진 소켓이나 파일 유형에서는 "sendfile" 시스템 호출을 사용할 수
+   없습니다.
+
+   "RuntimeError"의 서브 클래스입니다.
+
+exception asyncio.IncompleteReadError
+
+   요청한 읽기 작업이 완전히 완료되지 않았습니다.
+
+   asyncio 스트림 API가 일으킵니다.
+
+   이 예외는 "EOFError"의 서브 클래스입니다.
+
+   expected
+
+      기대하는 바이트의 총수 ("int").
+
+   partial
+
+      스트림이 끝나기 전에 읽은 "bytes" 문자열.
+
+exception asyncio.LimitOverrunError
+
+   구분 기호를 찾는 동안 버퍼 크기 제한에 도달했습니다.
+
+   asyncio 스트림 API가 일으킵니다.
+
+   consumed
+
+      소비된 바이트의 총수.
