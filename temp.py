@@ -5,7 +5,10 @@ from chromadb.utils import embedding_functions
 # 1. 모델 로드
 model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
-# 2. 샘플 문서 준비
+# 2. ./chroma_db 경로에 ChromaDB 클라이언트 생성
+client = chromadb.PersistentClient(path="./chroma_db")
+
+# 3. 샘플 문서 준비
 documents = [
     "파이썬은 데이터 분석에 매우 유용한 프로그래밍 언어입니다.",
     "머신러닝 모델을 학습시키기 위해서는 많은 데이터가 필요합니다.",
@@ -13,9 +16,6 @@ documents = [
     "벡터 데이터베이스는 유사도 검색에 최적화되어 있습니다.",
     "한국어와 영어를 모두 지원하는 다국어 모델입니다."
 ]
-
-# 3. ChromaDB 클라이언트 생성
-client = chromadb.PersistentClient(path="./chroma_db")
 
 # 4. 컬렉션 생성 (임베딩 함수 지정)
 sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
